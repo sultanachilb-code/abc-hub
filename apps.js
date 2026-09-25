@@ -68,7 +68,7 @@ window.HUB = {
       color: "#8A5A1F",
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/"
     }
-
+      },
       {
       id: "abc-connect",
       name: "ABC Connect",
