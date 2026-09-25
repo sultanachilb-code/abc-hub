@@ -19,14 +19,23 @@ const SSO_SECONDS = 60;
 const BRIEF_CACHE_MS = 90 * 1000;
 
 /* Systems connected to the hub. The key must match the system's id in apps.js.
-   stats: the system answers GET /api?hubstats=1  (badges + daily brief)
-   sso:   the system answers GET /api?sso=<token> (single sign-in)
-   Systems on THIS Cloudflare account need a Service Binding instead of a URL
-   (Cloudflare blocks workers.dev → workers.dev calls on the same account):
-   add  binding: "INCIDENTS"  and declare it in wrangler.jsonc. */
+   stats: path that returns badge + brief figures   ({site} is filled in)
+   sso:   path that signs the person in              ({token} is filled in)
+   binding: systems on THIS Cloudflare account must be reached through a
+   Service Binding (declared in wrangler.jsonc) — Cloudflare blocks direct
+   workers.dev → workers.dev calls between Workers on the same account. */
 const CONNECTORS = {
-  snaglist: { base: "https://abc-snaglist.sultanalachi-work.workers.dev", stats: true, sso: true }
-  // incidents: { base: "https://abc-incident-system.sultanachi-lb-61f.workers.dev", binding: "INCIDENTS", stats: true, sso: true },
+  snaglist: {
+    base: "https://abc-snaglist.sultanalachi-work.workers.dev",
+    stats: "/api?hubstats=1&site={site}",
+    sso: "/api?sso={token}"
+  },
+  incidents: {
+    base: "https://abc-incident-system.sultanachi-lb-61f.workers.dev",
+    binding: "INCIDENTS",
+    stats: "/api/hubstats?site={site}",
+    sso: "/api/sso?token={token}"
+  }
 };
 
 /* ---------- helpers ---------- */
@@ -318,7 +327,7 @@ async function brief(env, me, fresh) {
 }
 async function pull(env, id, c, site) {
   if (!env.HUB_KEY) return { ok: false, error: "HUB_KEY is not set on the hub" };
-  const target = `${c.base}/api?hubstats=1&site=${encodeURIComponent(site)}`;
+  const target = c.base + c.stats.replace("{site}", encodeURIComponent(site));
   const init = { headers: { "x-hub-key": env.HUB_KEY }, signal: AbortSignal.timeout(6000) };
   try {
     const r = c.binding && env[c.binding] ? await env[c.binding].fetch(target, init) : await fetch(target, init);
@@ -339,5 +348,5 @@ async function ssoLink(env, me, appId) {
     exp: Date.now() + SSO_SECONDS * 1000, nonce: randomId(9) };
   const body = b64url(enc.encode(JSON.stringify(payload)));
   const token = `${body}.${await hmac(env.HUB_KEY, body)}`;
-  return { url: `${c.base}/api?sso=${encodeURIComponent(token)}` };
+  return { url: c.base + c.sso.replace("{token}", encodeURIComponent(token)) };
 }

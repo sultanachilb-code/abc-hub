@@ -53,7 +53,8 @@ window.HUB = {
       group: "Incidents & Security",
       icon: "alert",
       color: "#A33B3B",
-      url: "https://abc-incident-system.sultanachi-lb-61f.workers.dev/"
+      url: "https://abc-incident-system.sultanachi-lb-61f.workers.dev/",
+      sso: true
     },
     {
       id: "cleaner-qr",
