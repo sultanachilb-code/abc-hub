@@ -31,16 +31,52 @@ window.HUB = {
       icon: "clipboard",
       color: "#4A1F73",
       url: "https://abc-snaglist.sultanalachi-work.workers.dev"
-    }
-
-    /* Next system goes here — add a comma after the } above, then paste:
-    ,{
+    },
+    {
+      id: "restroom",
+      name: "Restroom Inspection Dashboard",
+      desc: "Restroom QR inspection findings and reports",
+      group: "Inspections",
+      icon: "qr",
+      color: "#2F6F73",
+      url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/"
+    },
+    {
       id: "incidents",
       name: "Incident Report System",
       desc: "Incident log, SLAs, blacklist and escalation",
       group: "Incidents & Security",
       icon: "alert",
       color: "#A33B3B",
+      url: "https://abc-incident-system.sultanachi-lb-61f.workers.dev/"
+    },
+    {
+      id: "cleaner-qr",
+      name: "Cleaner QR Access",
+      desc: "Issue and manage loading area cleaner passes",
+      group: "Incidents & Security",
+      icon: "shield",
+      color: "#3C4F8A",
+      url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/"
+    },
+    {
+      id: "footfall",
+      name: "Footfall Hub",
+      desc: "Daily visitors and vehicles, year on year",
+      group: "Data & Reporting",
+      icon: "footfall",
+      color: "#8A5A1F",
+      url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/"
+    }
+
+    /* Next system goes here — add a comma after the } above, then paste:
+    ,{
+      id: "unique-id",
+      name: "System name",
+      desc: "One-line description",
+      group: "Operations",
+      icon: "calendar",
+      color: "#2E6B4F",
       url: "https://..."
     }
     */
