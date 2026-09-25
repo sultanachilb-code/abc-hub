@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ABC Operations Hub</title>
+<meta name="theme-color" content="#2A0F45">
+<meta name="description" content="ABC Operations — all operational systems in one app">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ABC Hub">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2A0F45; --brand:#4A1F73; --brand-2:#7B4BB0; --gold:#C8A24A;
+  --paper:#F6F4F9; --surface:#FFFFFF; --line:#E3DCEC; --text:#221A2E; --muted:#6D6479;
+  --font:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --bar:52px;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --paper:#16101F; --surface:#211930; --line:#342A45; --text:#EFEAF5; --muted:#A99EB8; }
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--paper);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:8px}
+.hidden{display:none!important}
+
+/* ---------- Home ---------- */
+#home{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.masthead{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 28px) 24px 64px;position:relative;overflow:hidden}
+.masthead::after{content:"";position:absolute;right:-60px;top:-80px;width:320px;height:320px;border-radius:50%;
+  border:48px solid rgba(123,75,176,.28)}
+.mh-inner{max-width:1080px;margin:0 auto;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.brandmark{display:flex;align-items:center;gap:12px}
+.brandmark img{width:44px;height:44px;border-radius:12px}
+.brandmark h1{font-size:1.5rem;font-weight:800;letter-spacing:-.01em;line-height:1.1}
+.brandmark p{font-size:.9rem;color:#CDBFE0;margin-top:2px}
+.mh-actions{display:flex;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;font-size:.85rem;font-weight:600;
+  background:rgba(255,255,255,.1);color:#fff}
+.pill:hover{background:rgba(255,255,255,.18)}
+.pill.gold{background:var(--gold);color:var(--ink)}
+.net{width:8px;height:8px;border-radius:50%;background:#5FD08A;display:inline-block}
+.net.off{background:#E06666}
+
+.searchwrap{max-width:1080px;margin:-28px auto 0;padding:0 24px;position:relative;z-index:2}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0 16px;height:56px}
+.search input{flex:1;border:0;background:none;font:inherit;font-size:1rem;color:var(--text);outline:none;height:100%}
+.search kbd{font:inherit;font-size:.75rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+
+main{max-width:1080px;margin:0 auto;padding:12px 24px calc(env(safe-area-inset-bottom,0px) + 40px)}
+section{margin-top:28px}
+section h2{font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+.tile{display:flex;gap:14px;align-items:center;text-align:left;padding:12px;border-radius:18px;width:100%}
+.tile:hover{background:var(--surface)}
+.tile:active .ico{transform:scale(.94)}
+.ico{flex:none;width:56px;height:56px;border-radius:15px;display:grid;place-items:center;color:#fff;transition:transform .12s}
+.ico svg{width:26px;height:26px}
+.tile b{display:block;font-weight:700;font-size:.98rem;line-height:1.25}
+.tile small{display:block;color:var(--muted);font-size:.82rem;line-height:1.35;margin-top:2px}
+.tile .tag{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:600;color:var(--brand-2)}
+.tile.locked{opacity:.45;cursor:not-allowed}
+.tile.locked:hover{background:none}
+.empty{color:var(--muted);padding:24px 0}
+.recent .grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
+.recent .tile{flex-direction:column;text-align:center;gap:8px}
+.recent .tile small,.recent .tile .tag{display:none}
+.recent .tile b{font-size:.8rem;font-weight:600}
+footer{max-width:1080px;margin:0 auto;padding:0 24px 32px;color:var(--muted);font-size:.8rem}
+
+/* ---------- App view ---------- */
+#appview{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+.bar{flex:none;height:calc(var(--bar) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 8px 0;
+  background:var(--ink);color:#fff;display:flex;align-items:center;gap:4px}
+.ib{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;flex:none}
+.ib:hover{background:rgba(255,255,255,.12)}
+.ib svg{width:20px;height:20px}
+.tabs{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:0 4px;min-width:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-radius:10px;white-space:nowrap;font-size:.86rem;font-weight:600;color:#CDBFE0;flex:none}
+.tab .dot{width:10px;height:10px;border-radius:3px}
+.tab.on{background:rgba(255,255,255,.14);color:#fff}
+.tab .x{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;opacity:.7}
+.tab .x:hover{background:rgba(255,255,255,.2);opacity:1}
+.tab .x svg{width:14px;height:14px}
+#stage{flex:1;position:relative;background:#fff}
+#stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.loader{position:absolute;inset:0;display:grid;place-items:center;background:var(--paper);color:var(--muted);font-size:.9rem;z-index:2}
+.loader div{display:flex;flex-direction:column;align-items:center;gap:14px}
+.spin{width:30px;height:30px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand-2);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);transform:translateX(-50%);z-index:3;
+  background:var(--ink);color:#fff;border-radius:12px;padding:10px 12px 10px 16px;font-size:.85rem;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px)}
+.hint button{color:var(--gold);font-weight:700;white-space:nowrap}
+
+/* ---------- Sheet (flagship picker / iOS hint) ---------- */
+dialog{border:0;border-radius:20px;padding:0;width:min(420px,calc(100% - 32px));background:var(--surface);color:var(--text)}
+dialog::backdrop{background:rgba(20,8,34,.55)}
+.sheet-h{padding:20px 20px 8px;display:flex;align-items:center;gap:12px}
+.sheet-h .ico{width:44px;height:44px;border-radius:12px}
+.sheet-h .ico svg{width:22px;height:22px}
+.sheet-h b{font-size:1.05rem}
+.sheet-h small{display:block;color:var(--muted);font-size:.85rem}
+.sheet-list{padding:8px 12px 12px}
+.sheet-list button{display:flex;justify-content:space-between;width:100%;padding:14px 12px;border-radius:12px;font-weight:600;text-align:left}
+.sheet-list button:hover{background:var(--paper)}
+.sheet-list button[disabled]{opacity:.4;cursor:not-allowed}
+.sheet-list button span{color:var(--muted);font-weight:500;font-size:.85rem}
+.sheet-f{padding:0 20px 20px;text-align:right}
+.sheet-f button{font-weight:700;color:var(--brand-2);padding:8px 4px}
+.sheet-p{padding:4px 20px 12px;color:var(--muted);line-height:1.5;font-size:.92rem}
+
+@media (max-width:600px){
+  .masthead{padding-left:16px;padding-right:16px}
+  .searchwrap,main,footer{padding-left:16px;padding-right:16px}
+  .grid{grid-template-columns:1fr}
+  .brandmark h1{font-size:1.25rem}
+  .search kbd,.mh-actions .pill span.lbl{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home">
+  <header class="masthead">
+    <div class="mh-inner">
+      <div class="brandmark">
+        <img src="icons/icon-192.png" alt="">
+        <div><h1 id="hubTitle">ABC Operations Hub</h1><p id="greet"></p></div>
+      </div>
+      <div class="mh-actions">
+        <span class="pill" title="Connection"><i class="net" id="net"></i><span class="lbl" id="netLbl">Online</span></span>
+        <button class="pill gold hidden" id="installBtn">Install app</button>
+      </div>
+    </div>
+  </header>
+  <div class="searchwrap">
+    <label class="search">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Find a system" autocomplete="off" aria-label="Find a system">
+      <kbd>Ctrl K</kbd>
+    </label>
+  </div>
+  <main id="list"></main>
+  <footer id="foot"></footer>
+</div>
+
+<!-- APP VIEW -->
+<div id="appview" class="hidden">
+  <div class="bar">
+    <button class="ib" id="homeBtn" title="All systems (Alt+H)" aria-label="All systems">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+    </button>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <button class="ib" id="reloadBtn" title="Reload this system" aria-label="Reload">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button class="ib" id="extBtn" title="Open in its own window" aria-label="Open in its own window">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>
+    </button>
+  </div>
+  <div id="stage"></div>
+</div>
+
+<dialog id="sheet"></dialog>
+
+<script src="apps.js"></script>
+<script>
+(() => {
+"use strict";
+const H = window.HUB, APPS = H.APPS;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const isSet = u => !!u && !/REPLACE/i.test(u);
+
+/* ---------- icons ---------- */
+const P = {
+  clipboard:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m9 13 2 2 4-4"/>',
+  alert:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+  qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
+  truck:'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.6 4 2.8 4 6"/>',
+  footfall:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>',
+  bug:'<rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 11v9M3 13h4M17 13h4M4 7l3 2M20 7l-3 2M4 20l3-2M20 20l-3-2M9 5l1 2M15 5l-1 2"/>',
+  book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>'
+};
+const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.clipboard}</svg>`;
+const icoHTML = a => `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${svg(a.icon)}</span>`;
+
+/* ---------- helpers ---------- */
+const byId = id => APPS.find(a => a.id === id);
+const appReady = a => a.sites ? Object.values(a.sites).some(isSet) : isSet(a.url);
+const keyOf = (id, site) => site ? `${id}::${site}` : id;
+const parseKey = k => { const [id, site] = k.split("::"); return { app: byId(id), site: site || null }; };
+const urlOf = (a, site) => site ? a.sites[site] : a.url;
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+/* ---------- home render ---------- */
+$("#hubTitle").textContent = H.title;
+document.title = H.title;
+$("#foot").textContent = `${H.org} · ${APPS.length} systems`;
+const hr = new Date().getHours();
+$("#greet").textContent = (hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening") + " — " +
+  new Date().toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long" });
+
+function tile(a, site){
+  const ready = site ? isSet(a.sites[site]) : appReady(a);
+  const tag = site ? site : a.sites ? `${Object.keys(a.sites).length} flagships` : a.embed === false ? "Opens in own window" : "";
+  return `<button class="tile ${ready ? "" : "locked"}" data-id="${esc(a.id)}" ${site ? `data-site="${esc(site)}"` : ""}
+    ${ready ? "" : 'aria-disabled="true" title="Not configured — add the link in apps.js"'}>
+    ${icoHTML(a)}<span><b>${esc(a.name)}</b><small>${esc(ready ? a.desc : "Not configured")}</small>${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span></button>`;
+}
+
+function renderHome(){
+  const q = $("#q").value.trim().toLowerCase();
+  const match = a => !q || [a.name, a.desc, a.group, ...(a.sites ? Object.keys(a.sites) : [])].join(" ").toLowerCase().includes(q);
+  let html = "";
+  if (!q){
+    const rec = store.get("hub.recent", []).map(parseKey).filter(r => r.app && (r.site ? isSet(r.app.sites?.[r.site]) : isSet(r.app.url))).slice(0, 8);
+    if (rec.length) html += `<section class="recent"><h2>Recently opened</h2><div class="grid">${rec.map(r => tile(r.app, r.site)).join("")}</div></section>`;
+  }
+  const groups = [...H.GROUPS, ...new Set(APPS.map(a => a.group).filter(g => !H.GROUPS.includes(g)))];
+  for (const g of groups){
+    const list = APPS.filter(a => a.group === g && match(a));
+    if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(a => tile(a)).join("")}</div></section>`;
+  }
+  $("#list").innerHTML = html || `<p class="empty">No system matches “${esc(q)}”. Try a flagship or system name.</p>`;
+}
+$("#q").addEventListener("input", renderHome);
+$("#list").addEventListener("click", e => {
+  const t = e.target.closest(".tile"); if (!t || t.classList.contains("locked")) return;
+  launch(byId(t.dataset.id), t.dataset.site || null);
+});
+
+/* ---------- launching ---------- */
+function launch(a, site){
+  if (!a) return;
+  if (a.sites && !site) return pickSite(a);
+  const url = urlOf(a, site); if (!isSet(url)) return;
+  const k = keyOf(a.id, site);
+  const rec = store.get("hub.recent", []).filter(x => x !== k); rec.unshift(k); store.set("hub.recent", rec.slice(0, 12));
+  if (a.embed === false){ openWindow(url, k); renderHome(); return; }
+  location.hash = "#/app/" + encodeURIComponent(k);
+}
+function openWindow(url, name){
+  const w = Math.min(1280, screen.availWidth - 80), h = Math.min(860, screen.availHeight - 80);
+  const win = window.open(url, "abc_" + name.replace(/\W/g, "_"),
+    `popup,width=${w},height=${h},left=${(screen.availWidth - w) / 2},top=${(screen.availHeight - h) / 2}`);
+  if (!win) window.open(url, "_blank", "noopener");
+}
+
+/* ---------- flagship picker ---------- */
+const sheet = $("#sheet");
+function pickSite(a){
+  sheet.innerHTML = `<div class="sheet-h">${icoHTML(a)}<div><b>${esc(a.name)}</b><small>Choose a flagship</small></div></div>
+    <div class="sheet-list">${Object.entries(a.sites).map(([s, u]) =>
+      `<button data-s="${esc(s)}" ${isSet(u) ? "" : "disabled"}>${esc(s)}${isSet(u) ? "" : "<span>Not configured</span>"}</button>`).join("")}</div>
+    <div class="sheet-f"><button data-close>Cancel</button></div>`;
+  sheet.onclick = e => {
+    if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
+    const b = e.target.closest("[data-s]"); if (b && !b.disabled){ sheet.close(); launch(a, b.dataset.s); }
+  };
+  sheet.showModal();
+}
+
+/* ---------- app view: keeps every opened system alive ---------- */
+const open = new Map();   // key -> { frame, loader }
+let active = null;
+const stage = $("#stage");
+
+function ensureFrame(k){
+  if (open.has(k)) return open.get(k);
+  const { app, site } = parseKey(k);
+  const frame = document.createElement("iframe");
+  frame.title = app.name + (site ? " — " + site : "");
+  frame.allow = "camera; microphone; geolocation; clipboard-read; clipboard-write; fullscreen; web-share; autoplay";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  const loader = document.createElement("div");
+  loader.className = "loader";
+  loader.innerHTML = `<div><span class="spin"></span>Opening ${esc(frame.title)}</div>`;
+  const slow = setTimeout(() => showHint(k), 9000);
+  frame.addEventListener("load", () => { clearTimeout(slow); loader.remove(); });
+  frame.src = urlOf(app, site);
+  stage.append(frame, loader);
+  const rec = { frame, loader, slow };
+  open.set(k, rec);
+  return rec;
+}
+
+function showHint(k){
+  if (active !== k || stage.querySelector(".hint")) return;
+  const d = document.createElement("div");
+  d.className = "hint";
+  d.innerHTML = `<span>Taking longer than usual.</span><button>Open in window</button><button aria-label="Dismiss" style="color:#CDBFE0">✕</button>`;
+  const [, openB, x] = d.children;
+  openB.onclick = () => { d.remove(); $("#extBtn").click(); };
+  x.onclick = () => d.remove();
+  stage.append(d);
+}
+
+function show(k){
+  const { app } = parseKey(k);
+  if (!app) return goHome();
+  active = k;
+  const rec = ensureFrame(k);
+  for (const [key, r] of open){
+    const on = key === k;
+    r.frame.style.visibility = on ? "visible" : "hidden";
+    r.frame.style.zIndex = on ? 1 : 0;
+    if (r.loader.isConnected) r.loader.classList.toggle("hidden", !on);
+  }
+  stage.querySelectorAll(".hint").forEach(h => h.remove());
+  $("#home").classList.add("hidden");
+  $("#appview").classList.remove("hidden");
+  document.title = rec.frame.title + " · " + H.title;
+  renderTabs();
+}
+
+function renderTabs(){
+  $("#tabs").innerHTML = [...open.keys()].map(k => {
+    const { app, site } = parseKey(k);
+    return `<div class="tab ${k === active ? "on" : ""}" role="tab" aria-selected="${k === active}" data-k="${esc(k)}" tabindex="0">
+      <i class="dot" style="background:${esc(app.color)}"></i>${esc(app.name)}${site ? ` · ${esc(site)}` : ""}
+      <button class="x" data-close="${esc(k)}" aria-label="Close ${esc(app.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`;
+  }).join("");
+  $("#tabs .tab.on")?.scrollIntoView({ block:"nearest", inline:"nearest" });
+}
+$("#tabs").addEventListener("click", e => {
+  const c = e.target.closest("[data-close]");
+  if (c){ e.stopPropagation(); return closeApp(c.dataset.close); }
+  const t = e.target.closest(".tab"); if (t) location.hash = "#/app/" + encodeURIComponent(t.dataset.k);
+});
+$("#tabs").addEventListener("keydown", e => { if (e.key === "Enter") e.target.closest(".tab")?.click(); });
+
+function closeApp(k){
+  const r = open.get(k); if (!r) return;
+  clearTimeout(r.slow); r.frame.remove(); r.loader.remove(); open.delete(k);
+  if (active === k){
+    const next = [...open.keys()].pop();
+    if (next) location.hash = "#/app/" + encodeURIComponent(next); else goHome();
+  } else renderTabs();
+}
+function goHome(){
+  active = null;
+  if (location.hash !== "#/") history.replaceState(null, "", "#/");
+  $("#appview").classList.add("hidden");
+  $("#home").classList.remove("hidden");
+  document.title = H.title;
+  renderHome();
+}
+
+$("#homeBtn").onclick = () => { location.hash = "#/"; };
+$("#reloadBtn").onclick = () => {
+  if (!active) return;
+  const r = open.get(active); const { app, site } = parseKey(active);
+  stage.append(r.loader); r.loader.classList.remove("hidden");
+  r.frame.src = urlOf(app, site);
+};
+$("#extBtn").onclick = () => { if (active){ const { app, site } = parseKey(active); openWindow(urlOf(app, site), active); } };
+
+/* ---------- routing (browser back / mouse back button work) ---------- */
+function route(){
+  const m = location.hash.match(/^#\/app\/(.+)$/);
+  if (m) show(decodeURIComponent(m[1])); else goHome();
+}
+addEventListener("hashchange", route);
+
+/* ---------- keyboard ---------- */
+addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k"){ e.preventDefault(); location.hash = "#/"; setTimeout(() => $("#q").focus(), 0); }
+  if (e.altKey && e.key.toLowerCase() === "h"){ e.preventDefault(); location.hash = "#/"; }
+});
+
+/* ---------- connection status ---------- */
+function net(){ const on = navigator.onLine; $("#net").classList.toggle("off", !on); $("#netLbl").textContent = on ? "Online" : "Offline"; }
+addEventListener("online", net); addEventListener("offline", net); net();
+
+/* ---------- install as app ---------- */
+let deferred = null;
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; $("#installBtn").classList.remove("hidden"); });
+addEventListener("appinstalled", () => $("#installBtn").classList.add("hidden"));
+const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (iOS && !standalone) $("#installBtn").classList.remove("hidden");
+$("#installBtn").onclick = async () => {
+  if (deferred){ deferred.prompt(); await deferred.userChoice; deferred = null; $("#installBtn").classList.add("hidden"); return; }
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Add to Home Screen</b></div></div>
+    <p class="sheet-p">In Safari, tap the Share button, then choose “Add to Home Screen”. The hub will open full-screen like a native app.</p>
+    <div class="sheet-f"><button data-close>Done</button></div>`;
+  sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
+  sheet.showModal();
+};
+
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+
+renderHome();
+route();
+})();
+</script>
+</body>
+</html>
