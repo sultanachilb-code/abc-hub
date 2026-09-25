@@ -60,6 +60,16 @@ window.HUB = {
       url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/"
     },
     {
+      id: "abc-connect",
+      name: "ABC Connect",
+      desc: "Employee portal (Salesforce)",
+      group: "Operations",
+      icon: "users",
+      color: "#1B5E9E",
+      url: "https://abclebanon.my.site.com/abcemployee/s/",
+      embed: false
+    },
+    {
       id: "footfall",
       name: "Footfall Hub",
       desc: "Daily visitors and vehicles, year on year",
@@ -68,17 +78,7 @@ window.HUB = {
       color: "#8A5A1F",
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/"
     }
-      },
-      {
-      id: "abc-connect",
-      name: "ABC Connect",
-      desc: "Tenant portal (Salesforce)",
-      group: "Operations",
-      icon: "users",
-      color: "#1B5E9E",
-      url: "https://abclebanon.my.site.com/abcemployee/login?ec=302&startURL=%2Fabcemployee%2Fs%2F",
-      embed: false
-    }
+
     /* Next system goes here — add a comma after the } above, then paste:
     ,{
       id: "unique-id",
