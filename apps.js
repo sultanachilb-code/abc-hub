@@ -76,7 +76,7 @@ window.HUB = {
       group: "Operations",
       icon: "users",
       color: "#1B5E9E",
-      url: "https://YOUR-PORTAL.my.site.com/",
+      url: "https://abclebanon.my.site.com/abcemployee/login?ec=302&startURL=%2Fabcemployee%2Fs%2F",
       embed: false
     }
     /* Next system goes here — add a comma after the } above, then paste:
