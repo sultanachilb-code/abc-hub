@@ -4,6 +4,6 @@
   "compatibility_date": "2026-09-01",
   "assets": { "directory": "./", "binding": "ASSETS" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "hub-db", "database_id": "PASTE-YOUR-DATABASE-ID-HERE" }
+    { "binding": "DB", "database_name": "hub-db", "database_id": "e7ae150f-de70-4376-a15b-65390159f65c" }
   ]
 }
