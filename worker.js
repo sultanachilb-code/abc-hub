@@ -35,6 +35,11 @@ const CONNECTORS = {
     binding: "INCIDENTS",
     stats: "/api/hubstats?site={site}",
     sso: "/api/sso?token={token}"
+  },
+  restroom: {
+    base: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev",
+    binding: "RESTROOM",
+    stats: "/api/hubstats?site={site}"
   }
 };
 
