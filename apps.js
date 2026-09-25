@@ -69,6 +69,16 @@ window.HUB = {
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/"
     }
 
+      {
+      id: "abc-connect",
+      name: "ABC Connect",
+      desc: "Tenant portal (Salesforce)",
+      group: "Operations",
+      icon: "users",
+      color: "#1B5E9E",
+      url: "https://YOUR-PORTAL.my.site.com/",
+      embed: false
+    }
     /* Next system goes here — add a comma after the } above, then paste:
     ,{
       id: "unique-id",
