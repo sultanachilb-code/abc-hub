@@ -1,9 +1,9 @@
 /* ABC Operations Hub — service worker
    Caches the hub shell only (never the embedded systems), network-first so
    every change you commit to GitHub shows up on the next launch. */
-const CACHE = "abc-hub-v1";
+const CACHE = "abc-hub-v2";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
-  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-180.png"];
+  "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
