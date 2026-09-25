@@ -1,2 +1,7 @@
-   wrangler.jsonc
-   .assetsignore
+worker.js
+wrangler.jsonc
+.assetsignore
+snaglist-hub-connector.js
+README.md
+.wrangler
+node_modules

@@ -1,5 +1,9 @@
-   {
-     "name": "operations-hub",
-     "compatibility_date": "2026-09-01",
-     "assets": { "directory": "./" }
-   }
+{
+  "name": "operations-hub",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hub-db", "database_id": "PASTE-YOUR-DATABASE-ID-HERE" }
+  ]
+}

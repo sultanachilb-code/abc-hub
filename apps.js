@@ -13,6 +13,9 @@
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
      embed   false = open in its own window instead of inside the hub
+     roles   who sees the tile: ["MANAGER","SUPERVISOR","SECURITY"]
+             (leave out = everyone; Admins always see everything)
+     sso     true = sign in automatically with the hub account
    Empty groups are hidden automatically.
    ===================================================================== */
 
@@ -30,7 +33,8 @@ window.HUB = {
       group: "Inspections",
       icon: "clipboard",
       color: "#4A1F73",
-      url: "https://abc-snaglist.sultanalachi-work.workers.dev"
+      url: "https://abc-snaglist.sultanalachi-work.workers.dev",
+      sso: true
     },
     {
       id: "restroom",
@@ -39,7 +43,8 @@ window.HUB = {
       group: "Inspections",
       icon: "qr",
       color: "#2F6F73",
-      url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/"
+      url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/",
+      roles: ["MANAGER", "SUPERVISOR"]
     },
     {
       id: "incidents",
@@ -57,7 +62,8 @@ window.HUB = {
       group: "Incidents & Security",
       icon: "shield",
       color: "#3C4F8A",
-      url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/"
+      url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/",
+      roles: ["MANAGER", "SECURITY"]
     },
     {
       id: "abc-connect",
@@ -77,7 +83,8 @@ window.HUB = {
       icon: "box",
       color: "#B4471F",
       url: "https://jdesrvweb.abc.com.lb:8882/jde/E1Menu.maf",
-      embed: false
+      embed: false,
+      roles: ["MANAGER"]
     },
     {
       id: "archibus",
@@ -87,7 +94,8 @@ window.HUB = {
       icon: "bolt",
       color: "#2E6B4F",
       url: "http://192.168.5.68:8080/archibus/login.axvw",
-      embed: false
+      embed: false,
+      roles: ["MANAGER", "SUPERVISOR"]
     },
     {
       id: "successfactors",
@@ -106,7 +114,8 @@ window.HUB = {
       group: "Data & Reporting",
       icon: "footfall",
       color: "#8A5A1F",
-      url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/"
+      url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/",
+      roles: ["MANAGER"]
     }
 
     /* Next system goes here — add a comma after the } above, then paste:

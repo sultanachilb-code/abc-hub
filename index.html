@@ -20,123 +20,173 @@
 :root{
   --ink:#2A0F45; --brand:#4A1F73; --brand-2:#7B4BB0; --gold:#C8A24A;
   --paper:#F6F4F9; --surface:#FFFFFF; --line:#E3DCEC; --text:#221A2E; --muted:#6D6479;
+  --ok:#2E8B57; --warn:#C07A12; --alert:#C0392B;
   --font:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   --bar:52px;
 }
 @media (prefers-color-scheme:dark){
-  :root{ --paper:#16101F; --surface:#211930; --line:#342A45; --text:#EFEAF5; --muted:#A99EB8; }
+  :root{ --paper:#16101F; --surface:#211930; --line:#342A45; --text:#EFEAF5; --muted:#A99EB8; --ok:#5FD08A; --warn:#F0B44C; --alert:#FF7A6B; }
 }
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
 body{font-family:var(--font);background:var(--paper);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:8px}
 .hidden{display:none!important}
+.view{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
-/* ---------- Home ---------- */
-#home{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.masthead{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 22px) 28px 26px;position:relative;overflow:hidden}
+/* ---------- shared form bits ---------- */
+.field{display:block;margin-bottom:14px}
+.field span{display:block;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 14px;font-size:.95rem;outline:none}
+.field textarea{height:auto;min-height:84px;padding:12px 14px;resize:vertical;line-height:1.45}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:12px;font-weight:700;font-size:.92rem;background:var(--brand);color:#fff}
+.btn:hover{background:var(--brand-2)}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--surface)}
+.btn.small{height:34px;padding:0 12px;font-size:.82rem;border-radius:10px}
+.btn[disabled]{opacity:.55;cursor:wait}
+.msg{font-size:.88rem;padding:10px 12px;border-radius:10px;margin-bottom:14px}
+.msg.err{background:rgba(192,57,43,.12);color:var(--alert)}
+.msg.okm{background:rgba(46,139,87,.12);color:var(--ok)}
+
+/* ---------- sign-in ---------- */
+#auth{display:grid;place-items:center;background:var(--ink);padding:24px}
+.auth-card{width:min(420px,100%);background:var(--surface);border-radius:24px;padding:32px 28px}
+.auth-card .logo{width:64px;height:64px;border-radius:18px;background:var(--ink);display:grid;place-items:center;margin-bottom:18px}
+.auth-card .logo img{width:42px}
+.auth-card h1{font-size:1.4rem;font-weight:800}
+.auth-card p.sub{color:var(--muted);font-size:.92rem;margin:4px 0 22px;line-height:1.45}
+.auth-card .btn{width:100%;margin-top:6px}
+#boot{display:grid;place-items:center;background:var(--ink)}
+#boot img{width:64px;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45;transform:scale(.94)}}
+
+/* ---------- masthead ---------- */
+.masthead{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 20px) 28px 22px;position:relative;overflow:hidden}
 .masthead::after{content:"";position:absolute;right:-70px;top:-110px;width:340px;height:340px;border-radius:50%;border:52px solid rgba(123,75,176,.22);pointer-events:none}
-.mh-inner{max-width:1240px;margin:0 auto;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.mh-inner{max-width:1280px;margin:0 auto;position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .brandmark{display:flex;align-items:center;gap:14px;min-width:0}
 .brandmark img{width:46px;height:46px;object-fit:contain;flex:none}
 .brandmark .rule{width:1px;height:38px;background:rgba(255,255,255,.22);flex:none}
-.brandmark h1{font-size:1.45rem;font-weight:800;letter-spacing:-.01em;line-height:1.1}
+.brandmark h1{font-size:1.42rem;font-weight:800;letter-spacing:-.01em;line-height:1.1}
 .brandmark p{font-size:.88rem;color:#CDBFE0;margin-top:3px}
+.brandmark .chip{display:inline-block;margin-left:6px;font-size:.72rem;font-weight:700;background:rgba(200,162,74,.22);color:#F1D896;padding:2px 8px;border-radius:999px;vertical-align:1px}
 .mh-actions{display:flex;gap:8px;align-items:center}
 .pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;font-size:.85rem;font-weight:600;background:rgba(255,255,255,.1);color:#fff}
 .pill:hover{background:rgba(255,255,255,.18)}
 .pill.gold{background:var(--gold);color:var(--ink)}
 .net{width:8px;height:8px;border-radius:50%;background:#5FD08A;display:inline-block}
 .net.off{background:#E06666}
-
-/* compact search that widens on focus */
-.search{display:flex;align-items:center;gap:8px;height:38px;width:230px;padding:0 10px 0 13px;border-radius:999px;
-  background:rgba(255,255,255,.1);color:#fff;transition:width .28s cubic-bezier(.2,.8,.2,1),background .2s}
+.search{display:flex;align-items:center;gap:8px;height:38px;width:230px;padding:0 10px 0 13px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;transition:width .28s cubic-bezier(.2,.8,.2,1),background .2s}
 .search:hover{background:rgba(255,255,255,.16)}
-.search:focus-within{width:320px;background:#fff;color:var(--text)}
+.search:focus-within{width:320px;background:#fff;color:#221A2E}
 .search svg{flex:none;opacity:.8}
-.search input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:.88rem;color:inherit;outline:none;height:100%}
+.search input{flex:1;min-width:0;border:0;background:none;font-size:.88rem;outline:none;height:100%}
 .search input::placeholder{color:currentColor;opacity:.7}
 .search kbd{font:inherit;font-size:.7rem;opacity:.7;border:1px solid currentColor;border-radius:6px;padding:1px 5px;white-space:nowrap}
 .search:focus-within kbd{display:none}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:800;font-size:.85rem;display:grid;place-items:center;flex:none}
+.menu{position:absolute;right:0;top:46px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:6px;min-width:220px;z-index:30;box-shadow:0 18px 40px rgba(20,8,34,.25)}
+.menu .who{padding:10px 12px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.menu .who b{display:block;font-size:.92rem}
+.menu .who small{color:var(--muted);font-size:.78rem}
+.menu button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:10px;font-size:.9rem;font-weight:600}
+.menu button:hover{background:var(--paper)}
+.umenu{position:relative}
 
-/* two-column shell: systems + recent rail */
-.shell{max-width:1240px;margin:0 auto;padding:8px 28px calc(env(safe-area-inset-bottom,0px) + 40px);display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:32px;align-items:start}
+/* ---------- announcements ---------- */
+.ann-wrap{max-width:1280px;margin:0 auto;padding:16px 28px 0;display:grid;gap:8px}
+.ann{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border-radius:14px;font-size:.93rem;line-height:1.4;
+  background:rgba(123,75,176,.12);border-left:4px solid var(--brand-2);animation:annIn .4s cubic-bezier(.2,.8,.2,1) both}
+.ann.warning{background:rgba(192,122,18,.12);border-left-color:var(--warn)}
+.ann.urgent{background:rgba(192,57,43,.12);border-left-color:var(--alert)}
+.ann svg{flex:none;width:20px;height:20px}
+.ann.info svg{color:var(--brand-2)} .ann.warning svg{color:var(--warn)} .ann.urgent svg{color:var(--alert)}
+.ann p{flex:1}
+.ann small{display:block;color:var(--muted);font-size:.76rem;margin-top:1px}
+.ann .x{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted);flex:none}
+.ann .x:hover{background:rgba(0,0,0,.06)}
+@keyframes annIn{from{opacity:0;transform:translateY(-6px)}}
+
+/* ---------- layout ---------- */
+.shell{max-width:1280px;margin:0 auto;padding:8px 28px calc(env(safe-area-inset-bottom,0px) + 40px);display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:28px;align-items:start}
 main section{margin-top:28px}
 main section h2{font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:14px}
+
+/* ---------- daily brief ---------- */
+.brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
+.brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+.brief-h h2{font-size:1.15rem;font-weight:800;color:var(--text);margin:0}
+.brief-h p{color:var(--muted);font-size:.84rem;margin-top:2px}
+.refresh{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--muted);flex:none}
+.refresh:hover{background:var(--paper);color:var(--text)}
+.refresh.spin svg{animation:sp .8s linear infinite}
+.brief-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.bcard{border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;width:100%;display:block;background:var(--paper)}
+button.bcard:hover{border-color:var(--brand-2)}
+.bcard-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.bcard-h .ico{width:32px;height:32px;border-radius:9px}
+.bcard-h .ico svg{width:17px;height:17px}
+.bcard-h b{font-size:.9rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
+.stat strong{display:block;font-size:1.55rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{display:block;font-size:.75rem;color:var(--muted);margin-top:3px;line-height:1.3}
+.tone-warn strong{color:var(--warn)} .tone-alert strong{color:var(--alert)} .tone-ok strong{color:var(--ok)}
+.bcard .off{font-size:.82rem;color:var(--muted)}
+.sk{height:52px;border-radius:10px;background:linear-gradient(90deg,var(--line),transparent,var(--line));background-size:200% 100%;animation:sk 1.2s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.brief-empty{color:var(--muted);font-size:.9rem;line-height:1.5}
+
+/* ---------- tiles ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
 .tile{display:flex;gap:14px;align-items:center;text-align:left;padding:12px;border-radius:18px;width:100%}
 .tile:hover{background:var(--surface)}
 .tile:active .ico{transform:scale(.94)}
-.ico{flex:none;width:56px;height:56px;border-radius:15px;display:grid;place-items:center;color:#fff;transition:transform .12s}
+.ico{position:relative;flex:none;width:56px;height:56px;border-radius:15px;display:grid;place-items:center;color:#fff;transition:transform .12s}
 .ico svg{width:26px;height:26px}
+.bdg{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--alert);color:#fff;font-size:.72rem;font-weight:800;display:grid;place-items:center;border:2px solid var(--paper);animation:pop .35s cubic-bezier(.2,1.6,.4,1) both}
+.bdg.warn{background:var(--warn)}
+@keyframes pop{from{transform:scale(0)}}
 .tile b{display:block;font-weight:700;font-size:.98rem;line-height:1.25}
 .tile small{display:block;color:var(--muted);font-size:.82rem;line-height:1.35;margin-top:2px}
 .tile .tag{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:600;color:var(--brand-2)}
+.tile .live{display:block;margin-top:4px;font-size:.76rem;font-weight:700;color:var(--alert)}
+.tile .live.warn{color:var(--warn)}
 .tile.locked{opacity:.45;cursor:not-allowed}
 .tile.locked:hover{background:none}
 .empty{color:var(--muted);padding:24px 0}
 footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 
-/* ---------- Recent rail (dock with magnification) ---------- */
-.rail{position:sticky;top:20px;margin-top:28px;height:min(640px,calc(100vh - 40px));display:flex;flex-direction:column;
-  background:var(--ink);border-radius:28px;padding:16px 0 12px;color:#fff;overflow:visible}
-.rail-h{text-align:center;font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#CDBFE0;padding:0 8px 10px}
-.dock{flex:1;overflow-y:auto;overflow-x:visible;scrollbar-width:none;display:flex;flex-direction:column;align-items:center;gap:6px;
-  padding:14px 0 18px;scroll-snap-type:y proximity;
-  -webkit-mask-image:linear-gradient(transparent 0,#000 22px,#000 calc(100% - 26px),transparent 100%);
-          mask-image:linear-gradient(transparent 0,#000 22px,#000 calc(100% - 26px),transparent 100%)}
-.dock::-webkit-scrollbar{display:none}
-.dock-item{--s:1;position:relative;display:grid;place-items:center;scroll-snap-align:center;flex:none;
-  width:100%;height:calc(58px * var(--s) + 6px);transition:height .18s cubic-bezier(.2,.8,.2,1);
-  animation:dockIn .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 60ms)}
-.dock-item .ico{width:52px;height:52px;border-radius:15px;transform:scale(var(--s));transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s;
-  box-shadow:0 0 0 rgba(0,0,0,0)}
-.dock-item:hover .ico,.dock-item:focus-visible .ico{box-shadow:0 10px 24px rgba(0,0,0,.35)}
-.dock-item .ico svg{width:24px;height:24px}
-.dock-item .site{position:absolute;right:14px;bottom:4px;font-size:.6rem;font-weight:800;background:var(--gold);color:var(--ink);border-radius:6px;padding:1px 4px;
-  transform:scale(var(--s));transform-origin:bottom right;transition:transform .18s}
-@keyframes dockIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
-.rail-empty{font-size:.78rem;color:#CDBFE0;text-align:center;padding:10px 14px;line-height:1.45}
-.rail-f{padding:8px 10px 0;text-align:center}
-.rail-f button{font-size:.72rem;color:#CDBFE0;padding:4px 8px;border-radius:8px}
-.rail-f button:hover{color:#fff;background:rgba(255,255,255,.1)}
-/* floating label beside the hovered icon */
-.dock-tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);color:var(--text);border:1px solid var(--line);
-  font-size:.82rem;font-weight:700;padding:7px 11px;border-radius:10px;white-space:nowrap;opacity:0;transform:translateX(6px);transition:opacity .15s,transform .15s}
-.dock-tip.on{opacity:1;transform:none}
+/* ---------- recent: icons travelling along a curve ---------- */
+.rail{position:sticky;top:16px;margin-top:24px;height:min(660px,calc(100vh - 32px));touch-action:none;user-select:none}
+.rail svg.arc{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.arc .line{fill:none;stroke:url(#arcGrad);stroke-width:2.5;stroke-linecap:round}
+.arc .glow{fill:none;stroke:url(#arcGrad);stroke-width:14;stroke-linecap:round;opacity:.12;filter:blur(4px)}
+.arc .comet{fill:var(--gold)}
+.rail-title{position:absolute;right:4px;top:0;font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.rail-empty{position:absolute;right:0;top:45%;width:120px;font-size:.78rem;color:var(--muted);text-align:right;line-height:1.45}
+.orb{position:absolute;left:0;top:0;width:52px;height:52px;will-change:transform,opacity;transform-origin:center}
+.orb .in{width:52px;height:52px;animation:orbIn .55s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(var(--i) * 70ms)}
+.orb .ico{width:52px;height:52px;border-radius:16px;box-shadow:0 0 0 3px var(--paper);transition:box-shadow .2s}
+.orb:hover .ico,.orb:focus-visible .ico{box-shadow:0 0 0 3px var(--paper),0 12px 26px rgba(20,8,34,.35)}
+.orb .ico svg{width:24px;height:24px}
+.orb .site{position:absolute;left:-4px;bottom:-4px;font-size:.58rem;font-weight:800;background:var(--gold);color:var(--ink);border-radius:6px;padding:1px 4px;border:2px solid var(--paper)}
+@keyframes orbIn{from{opacity:0;transform:scale(.3)}}
+.tip{position:fixed;z-index:60;pointer-events:none;background:var(--surface);color:var(--text);border:1px solid var(--line);font-size:.82rem;font-weight:700;padding:7px 11px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .15s;box-shadow:0 8px 20px rgba(20,8,34,.15)}
+.tip.on{opacity:1}
 
-@media (max-width:900px){
-  .shell{grid-template-columns:1fr;gap:0;padding-left:16px;padding-right:16px}
-  .rail{order:-1;position:relative;top:0;height:auto;margin-top:18px;flex-direction:row;align-items:center;border-radius:22px;padding:6px 0 6px 14px}
-  .rail-h{writing-mode:vertical-rl;transform:rotate(180deg);padding:0 4px;font-size:.62rem}
-  .dock{flex-direction:row;overflow-x:auto;overflow-y:visible;padding:6px 14px;scroll-snap-type:x proximity;
-    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 22px),transparent 100%);
-            mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 22px),transparent 100%)}
-  .dock-item{width:calc(58px * var(--s) + 6px);height:74px;transition:width .18s cubic-bezier(.2,.8,.2,1)}
-  .rail-f{display:none}
-  .rail-empty{text-align:left}
-}
-@media (max-width:600px){
-  .masthead{padding-left:16px;padding-right:16px}
-  .mh-inner{flex-direction:column;align-items:stretch}
-  .mh-actions{justify-content:space-between}
-  .search,.search:focus-within{width:auto;flex:1}
-  .grid{grid-template-columns:1fr}
-  .brandmark h1{font-size:1.2rem}
-  .search kbd{display:none}
-}
-/* ---------- App view ---------- */
-#appview{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
-.bar{flex:none;height:calc(var(--bar) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 8px 0;
-  background:var(--ink);color:#fff;display:flex;align-items:center;gap:4px}
+/* ---------- app view ---------- */
+#appview{display:flex;flex-direction:column;background:var(--paper);overflow:hidden}
+.bar{flex:none;height:calc(var(--bar) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 8px 0;background:var(--ink);color:#fff;display:flex;align-items:center;gap:4px}
 .ib{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;flex:none}
 .ib:hover{background:rgba(255,255,255,.12)}
 .ib svg{width:20px;height:20px}
 .tabs{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:0 4px;min-width:0}
 .tabs::-webkit-scrollbar{display:none}
-.tab{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-radius:10px;white-space:nowrap;font-size:.86rem;font-weight:600;color:#CDBFE0;flex:none}
+.tab{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-radius:10px;white-space:nowrap;font-size:.86rem;font-weight:600;color:#CDBFE0;flex:none;cursor:pointer}
 .tab .dot{width:10px;height:10px;border-radius:3px}
 .tab.on{background:rgba(255,255,255,.14);color:#fff}
 .tab .x{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;opacity:.7}
@@ -148,11 +198,29 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .loader div{display:flex;flex-direction:column;align-items:center;gap:14px}
 .spin{width:30px;height:30px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand-2);animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);transform:translateX(-50%);z-index:3;
-  background:var(--ink);color:#fff;border-radius:12px;padding:10px 12px 10px 16px;font-size:.85rem;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px)}
+.hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);transform:translateX(-50%);z-index:3;background:var(--ink);color:#fff;border-radius:12px;padding:10px 12px 10px 16px;font-size:.85rem;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px)}
 .hint button{color:var(--gold);font-weight:700;white-space:nowrap}
 
-/* ---------- Sheet (flagship picker / iOS hint) ---------- */
+/* ---------- admin ---------- */
+.adm-head{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 0}
+.adm-head .row{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.adm-head h1{font-size:1.2rem;font-weight:800}
+.adm-tabs{max-width:1100px;margin:10px auto 0;display:flex;gap:4px}
+.adm-tabs button{padding:10px 14px;border-radius:10px 10px 0 0;font-weight:700;font-size:.9rem;color:#CDBFE0}
+.adm-tabs button.on{background:var(--paper);color:var(--text)}
+.adm-body{max-width:1100px;margin:0 auto;padding:22px 20px 60px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
+.panel h3{font-size:1rem;font-weight:800;margin-bottom:14px}
+.rows{display:grid;gap:8px}
+.row-i{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:14px}
+.row-i .main{flex:1;min-width:0}
+.row-i b{display:block;font-size:.92rem}
+.row-i small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+.row-i .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.badge{display:inline-block;font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--paper);color:var(--muted);margin-left:6px;vertical-align:1px}
+.badge.live{background:rgba(46,139,87,.14);color:var(--ok)} .badge.off{background:rgba(192,57,43,.12);color:var(--alert)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
 dialog{border:0;border-radius:20px;padding:0;width:min(420px,calc(100% - 32px));background:var(--surface);color:var(--text)}
 dialog::backdrop{background:rgba(20,8,34,.55)}
 .sheet-h{padding:20px 20px 8px;display:flex;align-items:center;gap:12px}
@@ -165,17 +233,40 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 .sheet-list button:hover{background:var(--paper)}
 .sheet-list button[disabled]{opacity:.4;cursor:not-allowed}
 .sheet-list button span{color:var(--muted);font-weight:500;font-size:.85rem}
-.sheet-f{padding:0 20px 20px;text-align:right}
-.sheet-f button{font-weight:700;color:var(--brand-2);padding:8px 4px}
+.sheet-f{padding:0 20px 20px;display:flex;justify-content:flex-end;gap:8px}
 .sheet-p{padding:4px 20px 12px;color:var(--muted);line-height:1.5;font-size:.92rem}
+.sheet-body{padding:6px 20px 4px}
 
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;gap:0;padding-left:16px;padding-right:16px}
+  .ann-wrap{padding-left:16px;padding-right:16px}
+  .rail{order:-1;position:relative;top:0;height:128px;margin-top:14px}
+  .rail-title{right:auto;left:0}
+  .rail-empty{position:absolute;left:0;right:0;top:56px;width:auto;text-align:center}
+  .adm-body{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .masthead{padding-left:16px;padding-right:16px}
+  .mh-inner{flex-direction:column;align-items:stretch}
+  .mh-actions{justify-content:space-between}
+  .search,.search:focus-within{width:auto;flex:1}
+  .search kbd,#netPill span{display:none}
+  .grid{grid-template-columns:1fr}
+  .brandmark h1{font-size:1.2rem}
+  .two{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.arc .comet{display:none}}
 </style>
 </head>
 <body>
 
+<div id="boot" class="view"><img src="icons/abc-logo-white.png" alt="ABC"></div>
+
+<!-- SIGN IN / FIRST-RUN SETUP / FORCED PASSWORD CHANGE -->
+<div id="auth" class="view hidden"><div class="auth-card" id="authCard"></div></div>
+
 <!-- HOME -->
-<div id="home">
+<div id="home" class="view hidden">
   <header class="masthead">
     <div class="mh-inner">
       <div class="brandmark">
@@ -186,30 +277,48 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <div class="mh-actions">
         <label class="search">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="q" type="search" placeholder="Search systems" autocomplete="off" aria-label="Find a system">
+          <input id="q" type="search" placeholder="Search systems" autocomplete="off" aria-label="Search systems">
           <kbd>Ctrl K</kbd>
         </label>
-        <span class="pill" title="Connection"><i class="net" id="net"></i><span id="netLbl">Online</span></span>
+        <span class="pill" id="netPill" title="Connection"><i class="net" id="net"></i><span id="netLbl">Online</span></span>
         <button class="pill gold hidden" id="installBtn">Install app</button>
+        <div class="umenu">
+          <button class="avatar" id="avatar" aria-haspopup="true" aria-label="Account"></button>
+          <div class="menu hidden" id="menu"></div>
+        </div>
       </div>
     </div>
   </header>
+  <div class="ann-wrap" id="anns"></div>
   <div class="shell">
     <main>
+      <div id="brief"></div>
       <div id="list"></div>
       <footer id="foot"></footer>
     </main>
-    <aside class="rail" aria-label="Recently opened">
-      <div class="rail-h">Recent</div>
-      <div class="dock" id="dock"></div>
-      <div class="rail-f"><button id="clearRecent" class="hidden">Clear</button></div>
+    <aside class="rail" id="rail" aria-label="Recently opened">
+      <svg class="arc" id="arc">
+        <defs>
+          <linearGradient id="arcGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7B4BB0" stop-opacity="0"/>
+            <stop offset=".3" stop-color="#7B4BB0"/>
+            <stop offset=".55" stop-color="#C8A24A"/>
+            <stop offset=".8" stop-color="#7B4BB0"/>
+            <stop offset="1" stop-color="#7B4BB0" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="glow" id="arcGlow"/>
+        <path class="line" id="arcLine"/>
+        <circle class="comet" r="3.5"><animateMotion id="comet" dur="9s" repeatCount="indefinite" path="M0 0"/></circle>
+      </svg>
+      <div class="rail-title">Recent</div>
+      <div id="orbs"></div>
     </aside>
   </div>
 </div>
-<div class="dock-tip" id="dockTip"></div>
 
 <!-- APP VIEW -->
-<div id="appview" class="hidden">
+<div id="appview" class="view hidden">
   <div class="bar">
     <button class="ib" id="homeBtn" title="All systems (Alt+H)" aria-label="All systems">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
@@ -225,16 +334,46 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
   <div id="stage"></div>
 </div>
 
+<!-- ADMIN -->
+<div id="admin" class="view hidden">
+  <div class="adm-head">
+    <div class="row">
+      <button class="ib" id="admBack" aria-label="Back to hub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1>Hub administration</h1>
+    </div>
+    <div class="adm-tabs">
+      <button data-t="announcements" class="on">Announcements</button>
+      <button data-t="users">People &amp; roles</button>
+    </div>
+  </div>
+  <div class="adm-body" id="admBody"></div>
+</div>
+
 <dialog id="sheet"></dialog>
+<div class="tip" id="tip"></div>
 
 <script src="apps.js"></script>
 <script>
 (() => {
 "use strict";
-const H = window.HUB, APPS = H.APPS;
+const H = window.HUB, ALL_APPS = H.APPS;
 const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const isSet = u => !!u && !/REPLACE/i.test(u);
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let ME = null, SITES = {}, ROLES = {}, APPS = [], BRIEF = null;
+
+/* ---------- api ---------- */
+async function api(path, body){
+  const r = await fetch("/api/" + path, body === undefined ? { credentials: "same-origin" } :
+    { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  let j = null; try { j = await r.json(); } catch {}
+  if (!r.ok || !j || !j.ok){ const e = new Error((j && j.error) || `Error ${r.status}`); e.status = r.status; e.data = j || {}; throw e; }
+  return j.data;
+}
 
 /* ---------- icons ---------- */
 const P = {
@@ -251,10 +390,15 @@ const P = {
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.6 4 2.8 4 6"/>',
   footfall:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>',
   bug:'<rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 11v9M3 13h4M17 13h4M4 7l3 2M20 7l-3 2M4 20l3-2M20 20l-3-2M9 5l1 2M15 5l-1 2"/>',
-  book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>'
+  book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+  megaphone:'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 8a5 5 0 0 1 0 8M18 5a9 9 0 0 1 0 14"/>'
 };
 const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.clipboard}</svg>`;
-const icoHTML = a => `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${svg(a.icon)}</span>`;
+const badgeOf = a => BRIEF && BRIEF.systems && BRIEF.systems[a.id] && BRIEF.systems[a.id].ok ? BRIEF.systems[a.id].badge : null;
+const icoHTML = (a, withBadge) => {
+  const b = withBadge ? badgeOf(a) : null;
+  return `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${svg(a.icon)}${b && b.count ? `<span class="bdg ${b.tone === "warn" ? "warn" : ""}">${b.count > 99 ? "99+" : b.count}</span>` : ""}</span>`;
+};
 
 /* ---------- helpers ---------- */
 const byId = id => APPS.find(a => a.id === id);
@@ -262,27 +406,184 @@ const appReady = a => a.sites ? Object.values(a.sites).some(isSet) : isSet(a.url
 const keyOf = (id, site) => site ? `${id}::${site}` : id;
 const parseKey = k => { const [id, site] = k.split("::"); return { app: byId(id), site: site || null }; };
 const urlOf = (a, site) => site ? a.sites[site] : a.url;
-const store = {
-  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
-  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-};
+const initials = s => String(s).split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+const mySiteName = () => ME && ME.user.siteName;
+const show = id => ["boot","auth","home","appview","admin"].forEach(v => $("#" + v).classList.toggle("hidden", v !== id));
 
-/* ---------- home render ---------- */
-$("#hubTitle").textContent = H.title;
-document.title = H.title;
-$("#foot").textContent = `${H.org} · ${APPS.length} systems`;
-const hr = new Date().getHours();
-$("#greet").textContent = (hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening") + " — " +
-  new Date().toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long" });
-
-function tile(a, site){
-  const ready = site ? isSet(a.sites[site]) : appReady(a);
-  const tag = site ? site : a.sites ? `${Object.keys(a.sites).length} flagships` : a.embed === false ? "Opens in own window" : "";
-  return `<button class="tile ${ready ? "" : "locked"}" data-id="${esc(a.id)}" ${site ? `data-site="${esc(site)}"` : ""}
-    ${ready ? "" : 'aria-disabled="true" title="Not configured — add the link in apps.js"'}>
-    ${icoHTML(a)}<span><b>${esc(a.name)}</b><small>${esc(ready ? a.desc : "Not configured")}</small>${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span></button>`;
+/* =====================================================================
+   BOOT & SIGN-IN
+   ===================================================================== */
+async function boot(){
+  try {
+    ME = await api("me");
+  } catch (e){
+    if (e.status === 401) return authScreen(e.data.needsSetup ? "setup" : "login");
+    return authScreen("error", e.message);
+  }
+  SITES = ME.sites; ROLES = ME.roles;
+  if (ME.user.mustChange) return authScreen("change");
+  startHub();
+}
+function authScreen(mode, errText){
+  show("auth");
+  const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
+  const forms = {
+    login: `${logo}<h1>ABC Operations Hub</h1><p class="sub">Sign in to reach every operational system in one place.</p>
+      <div id="aMsg"></div>
+      <label class="field"><span>Email</span><input id="aEmail" type="email" autocomplete="username" required></label>
+      <label class="field"><span>Password</span><input id="aPass" type="password" autocomplete="current-password" required></label>
+      <button class="btn" id="aGo">Sign in</button>`,
+    setup: `${logo}<h1>Set up the hub</h1><p class="sub">No accounts exist yet. Create the first administrator account — this screen only appears once.</p>
+      <div id="aMsg"></div>
+      <label class="field"><span>Full name</span><input id="aName" autocomplete="name"></label>
+      <label class="field"><span>Email</span><input id="aEmail" type="email" autocomplete="username"></label>
+      <label class="field"><span>Password (8+ characters)</span><input id="aPass" type="password" autocomplete="new-password"></label>
+      <button class="btn" id="aGo">Create administrator</button>`,
+    change: `${logo}<h1>Choose your password</h1><p class="sub">You signed in with a temporary password. Set your own to continue.</p>
+      <div id="aMsg"></div>
+      <label class="field"><span>Temporary password</span><input id="aCur" type="password" autocomplete="current-password"></label>
+      <label class="field"><span>New password (8+ characters)</span><input id="aPass" type="password" autocomplete="new-password"></label>
+      <button class="btn" id="aGo">Save and continue</button>`,
+    error: `${logo}<h1>Hub unavailable</h1><p class="sub">${esc(errText || "")}</p><button class="btn" id="aGo">Try again</button>`
+  };
+  $("#authCard").innerHTML = forms[mode];
+  const msg = (t, cls = "err") => { $("#aMsg").innerHTML = t ? `<div class="msg ${cls}">${esc(t)}</div>` : ""; };
+  const go = $("#aGo");
+  const submit = async () => {
+    if (mode === "error") return location.reload();
+    go.disabled = true; msg("");
+    try {
+      if (mode === "login") await api("login", { email: $("#aEmail").value, password: $("#aPass").value });
+      if (mode === "setup") await api("setup", { name: $("#aName").value, email: $("#aEmail").value, password: $("#aPass").value });
+      if (mode === "change") await api("password", { current: $("#aCur").value, next: $("#aPass").value });
+      boot();
+    } catch (e){ msg(e.message); go.disabled = false; }
+  };
+  go.onclick = submit;
+  $("#authCard").onkeydown = e => { if (e.key === "Enter") submit(); };
+  setTimeout(() => $("#authCard input")?.focus(), 50);
 }
 
+/* =====================================================================
+   HUB
+   ===================================================================== */
+function startHub(){
+  const role = ME.user.role;
+  APPS = ALL_APPS.filter(a => !a.roles || role === "ADMIN" || a.roles.includes(role));
+  $("#hubTitle").textContent = H.title;
+  const hr = new Date().getHours();
+  const first = ME.user.name.split(" ")[0];
+  $("#greet").innerHTML = `${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(first)}` +
+    `<span class="chip">${esc(ME.user.roleLabel)}${ME.user.siteName ? " · " + esc(ME.user.siteName) : ""}</span>`;
+  $("#avatar").textContent = initials(ME.user.name);
+  $("#foot").textContent = `${H.org} · ${APPS.length} systems available to you`;
+  buildMenu();
+  renderHome();
+  loadAnnouncements();
+  loadBrief();
+  route();
+  setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
+}
+
+/* ---------- account menu ---------- */
+function buildMenu(){
+  const m = $("#menu");
+  m.innerHTML = `<div class="who"><b>${esc(ME.user.name)}</b><small>${esc(ME.user.email)}</small></div>
+    ${ME.user.role === "ADMIN" ? `<button data-a="admin">Hub administration</button>` : ""}
+    <button data-a="pw">Change password</button>
+    <button data-a="out">Sign out</button>`;
+  $("#avatar").onclick = e => { e.stopPropagation(); m.classList.toggle("hidden"); };
+  document.addEventListener("click", () => m.classList.add("hidden"));
+  m.onclick = async e => {
+    const a = e.target.closest("button")?.dataset.a; if (!a) return;
+    m.classList.add("hidden");
+    if (a === "admin") location.hash = "#/admin";
+    if (a === "pw") changePwDialog();
+    if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
+  };
+}
+function changePwDialog(){
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Change password</b></div></div>
+    <div class="sheet-body"><div id="pwMsg"></div>
+      <label class="field"><span>Current password</span><input id="pwCur" type="password" autocomplete="current-password"></label>
+      <label class="field"><span>New password (8+ characters)</span><input id="pwNew" type="password" autocomplete="new-password"></label></div>
+    <div class="sheet-f"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="pwGo">Save</button></div>`;
+  sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
+  $("#pwGo").onclick = async () => {
+    try { await api("password", { current: $("#pwCur").value, next: $("#pwNew").value });
+      $("#pwMsg").innerHTML = `<div class="msg okm">Password changed.</div>`; setTimeout(() => sheet.close(), 900);
+    } catch (e){ $("#pwMsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+  };
+  sheet.showModal();
+}
+
+/* ---------- announcements ---------- */
+const ANN_ICON = { info: P.megaphone, warning: P.alert, urgent: P.alert };
+async function loadAnnouncements(){
+  try {
+    const { announcements } = await api("announcements");
+    const gone = store.get("hub.dismissed", []);
+    $("#anns").innerHTML = announcements.filter(a => !gone.includes(a.id)).map(a =>
+      `<div class="ann ${esc(a.level)}" data-id="${a.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ANN_ICON[a.level] || P.megaphone}</svg>
+        <p>${esc(a.message)}<small>${esc(a.siteName)}${a.endsAt ? " · until " + esc(fmtLocal(a.endsAt)) : ""}</small></p>
+        <button class="x" aria-label="Dismiss"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>`).join("");
+  } catch {}
+}
+$("#anns").addEventListener("click", e => {
+  const b = e.target.closest(".x"); if (!b) return;
+  const card = b.closest(".ann"); const id = Number(card.dataset.id);
+  store.set("hub.dismissed", [...store.get("hub.dismissed", []), id].slice(-50));
+  card.remove();
+});
+const fmtLocal = v => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
+
+/* ---------- daily brief ---------- */
+async function loadBrief(fresh){
+  const btn = $("#briefRefresh");
+  btn && btn.classList.add("spin");
+  if (!BRIEF) renderBrief(true);
+  try { BRIEF = await api("brief" + (fresh ? "?fresh=1" : "")); }
+  catch { BRIEF = BRIEF || { systems: {} }; }
+  renderBrief(false);
+  renderHome();
+}
+function renderBrief(loading){
+  const box = $("#brief");
+  const ids = APPS.filter(a => BRIEF ? BRIEF.systems && BRIEF.systems[a.id] : false).map(a => a.id);
+  if (!loading && !ids.length){
+    box.innerHTML = ME.user.role === "ADMIN" && BRIEF && BRIEF.keyMissing
+      ? `<section class="brief"><div class="brief-h"><div><h2>Daily brief</h2><p>Waiting for setup</p></div></div><p class="brief-empty">Set the <b>HUB_KEY</b> secret on the hub and on each connected system to see live figures here.</p></section>` : "";
+    return;
+  }
+  const hr = new Date().getHours();
+  const title = hr < 12 ? "Morning brief" : hr < 18 ? "Afternoon brief" : "Evening brief";
+  const when = BRIEF && BRIEF.generatedAt ? new Date(BRIEF.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+  const card = id => {
+    const a = byId(id), s = BRIEF.systems[id];
+    const body = s.ok
+      ? (s.brief.length ? `<div class="stats">${s.brief.map(x => `<div class="stat tone-${esc(x.tone || "")}"><strong>${esc(x.value)}</strong><span>${esc(x.label)}</span></div>`).join("")}</div>` : `<p class="off">Nothing needs attention.</p>`)
+      : `<p class="off">Figures unavailable right now.${ME.user.role === "ADMIN" ? " (" + esc(s.error) + ")" : ""}</p>`;
+    return `<button class="bcard" data-id="${esc(id)}"><div class="bcard-h">${icoHTML(a)}<b>${esc(a.name)}</b></div>${body}</button>`;
+  };
+  box.innerHTML = `<section class="brief">
+    <div class="brief-h"><div><h2>${title}</h2><p>${esc(BRIEF && BRIEF.siteName || mySiteName() || "All flagships")}${when ? " · updated " + when : ""}</p></div>
+      <button class="refresh" id="briefRefresh" aria-label="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button></div>
+    <div class="brief-grid">${loading ? `<div class="sk"></div><div class="sk"></div>` : ids.map(card).join("")}</div></section>`;
+  $("#briefRefresh").onclick = () => loadBrief(true);
+}
+$("#brief").addEventListener("click", e => { const c = e.target.closest(".bcard"); if (c) launch(byId(c.dataset.id)); });
+
+/* ---------- tiles ---------- */
+function tile(a){
+  const ready = appReady(a);
+  const b = badgeOf(a);
+  const tag = a.sites ? (mySiteName() && a.sites[mySiteName()] ? mySiteName() : `${Object.keys(a.sites).length} flagships`) : a.embed === false ? "Opens in own window" : "";
+  return `<button class="tile ${ready ? "" : "locked"}" data-id="${esc(a.id)}" ${ready ? "" : 'aria-disabled="true"'}>
+    ${icoHTML(a, true)}<span><b>${esc(a.name)}</b><small>${esc(ready ? a.desc : "Not configured")}</small>
+    ${b && b.count ? `<span class="live ${b.tone === "warn" ? "warn" : ""}">${esc(b.count)} ${esc(b.label || "")}</span>` : tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span></button>`;
+}
 function renderHome(){
   const q = $("#q").value.trim().toLowerCase();
   const match = a => !q || [a.name, a.desc, a.group, ...(a.sites ? Object.keys(a.sites) : [])].join(" ").toLowerCase().includes(q);
@@ -290,92 +591,168 @@ function renderHome(){
   const groups = [...H.GROUPS, ...new Set(APPS.map(a => a.group).filter(g => !H.GROUPS.includes(g)))];
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a));
-    if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(a => tile(a)).join("")}</div></section>`;
+    if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(tile).join("")}</div></section>`;
   }
-  $("#list").innerHTML = html || `<p class="empty">No system matches “${esc(q)}”. Try a flagship or system name.</p>`;
-  renderDock();
+  $("#list").innerHTML = html || `<p class="empty">No system matches “${esc(q)}”.</p>`;
+  $("#brief").classList.toggle("hidden", !!q);
+  renderRail();
 }
-
-/* ---------- recent rail ---------- */
-const dock = $("#dock"), tip = $("#dockTip");
-const initials = s => s.split(/\s+/).map(w => w[0]).join("").slice(0, 3).toUpperCase();
-function recentList(){
-  return store.get("hub.recent", []).map(k => ({ k, ...parseKey(k) }))
-    .filter(r => r.app && (r.site ? isSet(r.app.sites?.[r.site]) : isSet(r.app.url))).slice(0, 12);
-}
-function renderDock(){
-  const rec = recentList();
-  $("#clearRecent").classList.toggle("hidden", !rec.length);
-  if (!rec.length){ dock.innerHTML = `<p class="rail-empty">Systems you open will appear here.</p>`; return; }
-  dock.innerHTML = rec.map((r, i) =>
-    `<button class="dock-item" style="--i:${i}" data-id="${esc(r.app.id)}" ${r.site ? `data-site="${esc(r.site)}"` : ""}
-       data-label="${esc(r.app.name + (r.site ? " — " + r.site : ""))}" aria-label="${esc(r.app.name + (r.site ? " — " + r.site : ""))}">
-       ${icoHTML(r.app)}${r.site ? `<span class="site">${esc(initials(r.site))}</span>` : ""}</button>`).join("");
-}
-const horizontal = () => matchMedia("(max-width:900px)").matches;
-let raf = 0, lastPt = null;
-function magnify(){
-  raf = 0; if (!lastPt) return;
-  const hz = horizontal();
-  dock.querySelectorAll(".dock-item").forEach(el => {
-    const r = el.getBoundingClientRect();
-    const d = Math.abs(hz ? lastPt.x - (r.left + r.width / 2) : lastPt.y - (r.top + r.height / 2));
-    const s = 1 + 0.55 * Math.max(0, 1 - d / 120) ** 1.6;
-    el.style.setProperty("--s", s.toFixed(3));
-  });
-}
-function reset(){ lastPt = null; dock.querySelectorAll(".dock-item").forEach(el => el.style.setProperty("--s", 1)); tip.classList.remove("on"); }
-dock.addEventListener("pointermove", e => {
-  if (e.pointerType === "touch") return;
-  lastPt = { x: e.clientX, y: e.clientY };
-  if (!raf) raf = requestAnimationFrame(magnify);
-  const it = e.target.closest(".dock-item");
-  if (it){
-    tip.textContent = it.dataset.label;
-    const r = it.getBoundingClientRect();
-    if (horizontal()){ tip.style.left = Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2) + "px"; tip.style.top = (r.bottom + 8) + "px"; }
-    else { tip.style.left = (r.left - tip.offsetWidth - 10) + "px"; tip.style.top = (r.top + r.height / 2 - tip.offsetHeight / 2) + "px"; }
-    tip.classList.add("on");
-  } else tip.classList.remove("on");
-});
-dock.addEventListener("pointerleave", reset);
-dock.addEventListener("scroll", () => { if (lastPt && !raf) raf = requestAnimationFrame(magnify); tip.classList.remove("on"); }, { passive: true });
-dock.addEventListener("click", e => {
-  const it = e.target.closest(".dock-item"); if (!it) return;
-  reset(); launch(byId(it.dataset.id), it.dataset.site || null);
-});
-$("#clearRecent").onclick = () => { store.set("hub.recent", []); renderDock(); };
-
 $("#q").addEventListener("input", renderHome);
 $("#list").addEventListener("click", e => {
   const t = e.target.closest(".tile"); if (!t || t.classList.contains("locked")) return;
-  launch(byId(t.dataset.id), t.dataset.site || null);
+  launch(byId(t.dataset.id));
 });
 
-/* ---------- launching ---------- */
+/* =====================================================================
+   RECENT — icons travelling along a curved line
+   ===================================================================== */
+const rail = $("#rail"), orbsEl = $("#orbs"), tip = $("#tip");
+let REC = [], off = 0, target = 0, G = null, ptr = null, anim = 0, dragging = null, moved = false, snapT = 0;
+const horizontal = () => matchMedia("(max-width:900px)").matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function recentList(){
+  return store.get("hub.recent", []).map(k => ({ k, ...parseKey(k) }))
+    .filter(r => r.app && (r.site ? isSet(r.app.sites?.[r.site]) : isSet(r.app.url))).slice(0, 14);
+}
+function geometry(){
+  const w = rail.clientWidth, h = rail.clientHeight, hz = horizontal();
+  if (!w || !h) return null;
+  if (!hz){
+    const R = h * 0.82, cx = 30 + R, cy = h / 2 + 10;
+    const tMax = Math.asin(clamp((h / 2 - 44) / R, 0.2, 0.98));
+    return { hz, w, h, R, tMax, SP: 84, pt: t => ({ x: cx - R * Math.cos(t), y: cy + R * Math.sin(t) }) };
+  }
+  const R = Math.max(w * 1.05, 320), cx = w / 2, cy = 40 + R;
+  const tMax = Math.asin(clamp((w / 2 - 34) / R, 0.2, 0.98));
+  return { hz, w, h, R, tMax, SP: 72, pt: t => ({ x: cx + R * Math.sin(t), y: cy - R * Math.cos(t) }) };
+}
+function drawArc(){
+  if (!G) return;
+  const pts = [], ext = G.tMax + 0.22;
+  for (let i = 0; i <= 48; i++){ const p = G.pt(-ext + (2 * ext * i) / 48); pts.push(`${p.x.toFixed(1)} ${p.y.toFixed(1)}`); }
+  const d = "M" + pts.join(" L");
+  $("#arcLine").setAttribute("d", d); $("#arcGlow").setAttribute("d", d);
+  $("#comet").setAttribute("path", d);
+  const grad = $("#arcGrad");
+  grad.setAttribute("x2", G.hz ? "1" : "0"); grad.setAttribute("y2", G.hz ? "0" : "1");
+}
+const visibleCount = () => G ? Math.floor((2 * G.tMax * G.R) / G.SP) + 1 : 0;
+const maxOff = () => Math.max(0, REC.length - visibleCount());
+
+function renderRail(){
+  REC = recentList();
+  G = geometry();
+  drawArc();
+  if (!REC.length){
+    orbsEl.innerHTML = `<p class="rail-empty">Systems you open will travel along this line.</p>`;
+    return;
+  }
+  orbsEl.innerHTML = REC.map((r, i) =>
+    `<button class="orb" style="--i:${i}" data-k="${esc(r.k)}" aria-label="${esc(r.app.name + (r.site ? " — " + r.site : ""))}">
+      <div class="in">${icoHTML(r.app, true)}${r.site ? `<span class="site">${esc(initials(r.site))}</span>` : ""}</div></button>`).join("");
+  target = off = clamp(off, 0, maxOff());
+  layout();
+}
+function layout(){
+  if (!G) return;
+  const vis = Math.min(REC.length, visibleCount());
+  const pad = (2 * G.tMax * G.R - (vis - 1) * G.SP) / 2;
+  const railBox = rail.getBoundingClientRect();
+  orbsEl.querySelectorAll(".orb").forEach((el, i) => {
+    const t = -G.tMax + ((i - off) * G.SP + pad) / G.R;
+    const p = G.pt(t);
+    const over = Math.max(0, Math.abs(t) - G.tMax) * G.R;
+    const op = clamp(1 - over / 46, 0, 1);
+    let s = 1;
+    if (ptr && op > 0.3){
+      const d = Math.hypot(ptr.x - railBox.left - p.x, ptr.y - railBox.top - p.y);
+      s = 1 + 0.62 * Math.max(0, 1 - d / 96) ** 1.5;
+    }
+    el.style.transform = `translate(${(p.x - 26).toFixed(1)}px,${(p.y - 26).toFixed(1)}px) scale(${s.toFixed(3)})`;
+    el.style.opacity = op.toFixed(2);
+    el.style.zIndex = Math.round(s * 100);
+    el.style.pointerEvents = op < 0.35 ? "none" : "";
+    el.tabIndex = op < 0.35 ? -1 : 0;
+  });
+}
+function kick(){ if (!anim) anim = requestAnimationFrame(frame); }
+function frame(){
+  anim = 0;
+  const d = target - off;
+  off = Math.abs(d) < 0.002 ? target : off + d * 0.18;
+  layout();
+  if (off !== target) kick();
+}
+function scheduleSnap(){ clearTimeout(snapT); snapT = setTimeout(() => { target = clamp(Math.round(target), 0, maxOff()); kick(); }, 160); }
+function showTip(el){
+  const r = el.getBoundingClientRect();
+  tip.textContent = el.getAttribute("aria-label");
+  tip.classList.add("on");
+  if (horizontal()){ tip.style.left = clamp(r.left + r.width / 2 - tip.offsetWidth / 2, 8, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (r.bottom + 8) + "px"; }
+  else { tip.style.left = (r.left - tip.offsetWidth - 12) + "px"; tip.style.top = (r.top + r.height / 2 - tip.offsetHeight / 2) + "px"; }
+}
+rail.addEventListener("pointermove", e => {
+  if (dragging){
+    const delta = (G.hz ? e.clientX - dragging.x : e.clientY - dragging.y);
+    if (Math.abs(delta) > 6) moved = true;
+    target = clamp(dragging.off - delta / G.SP, -0.4, maxOff() + 0.4); off = target; layout(); return;
+  }
+  if (e.pointerType === "touch") return;
+  ptr = { x: e.clientX, y: e.clientY }; kick();
+  const o = e.target.closest(".orb"); o ? showTip(o) : tip.classList.remove("on");
+});
+rail.addEventListener("pointerleave", () => { ptr = null; tip.classList.remove("on"); kick(); });
+rail.addEventListener("pointerdown", e => {
+  if (!G || maxOff() <= 0) return;
+  moved = false; dragging = { x: e.clientX, y: e.clientY, off: target };
+  rail.setPointerCapture(e.pointerId);
+});
+const endDrag = () => { if (!dragging) return; dragging = null; target = clamp(Math.round(target), 0, maxOff()); kick(); };
+rail.addEventListener("pointerup", endDrag); rail.addEventListener("pointercancel", endDrag);
+rail.addEventListener("wheel", e => {
+  if (!G || maxOff() <= 0) return;
+  e.preventDefault();
+  target = clamp(target + (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX) / G.SP * 0.8, 0, maxOff());
+  tip.classList.remove("on"); kick(); scheduleSnap();
+}, { passive: false });
+orbsEl.addEventListener("click", e => {
+  const o = e.target.closest(".orb"); if (!o || moved) return;
+  tip.classList.remove("on"); ptr = null;
+  const { app, site } = parseKey(o.dataset.k); launch(app, site);
+});
+orbsEl.addEventListener("focusin", e => {
+  const o = e.target.closest(".orb"); if (!o) return;
+  const i = [...orbsEl.children].indexOf(o);
+  target = clamp(i - Math.floor(visibleCount() / 2), 0, maxOff()); kick();
+});
+new ResizeObserver(() => { G = geometry(); drawArc(); target = off = clamp(off, 0, maxOff()); layout(); }).observe(rail);
+
+/* =====================================================================
+   LAUNCHING & APP VIEW
+   ===================================================================== */
 function launch(a, site){
   if (!a) return;
-  if (a.sites && !site) return pickSite(a);
+  if (a.sites && !site){
+    const mine = mySiteName();
+    if (mine && isSet(a.sites[mine])) site = mine; else return pickSite(a);
+  }
   const url = urlOf(a, site); if (!isSet(url)) return;
   const k = keyOf(a.id, site);
-  const rec = store.get("hub.recent", []).filter(x => x !== k); rec.unshift(k); store.set("hub.recent", rec.slice(0, 12));
-  if (a.embed === false){ openWindow(url, k); renderHome(); return; }
+  const rec = store.get("hub.recent", []).filter(x => x !== k); rec.unshift(k); store.set("hub.recent", rec.slice(0, 14));
+  if (a.embed === false){ openWindow(url, k); off = target = 0; renderRail(); return; }
   location.hash = "#/app/" + encodeURIComponent(k);
 }
 function openWindow(url, name){
   const w = Math.min(1280, screen.availWidth - 80), h = Math.min(860, screen.availHeight - 80);
-  const win = window.open(url, "abc_" + name.replace(/\W/g, "_"),
-    `popup,width=${w},height=${h},left=${(screen.availWidth - w) / 2},top=${(screen.availHeight - h) / 2}`);
+  const win = window.open(url, "abc_" + name.replace(/\W/g, "_"), `popup,width=${w},height=${h},left=${(screen.availWidth - w) / 2},top=${(screen.availHeight - h) / 2}`);
   if (!win) window.open(url, "_blank", "noopener");
 }
-
-/* ---------- flagship picker ---------- */
 const sheet = $("#sheet");
 function pickSite(a){
   sheet.innerHTML = `<div class="sheet-h">${icoHTML(a)}<div><b>${esc(a.name)}</b><small>Choose a flagship</small></div></div>
-    <div class="sheet-list">${Object.entries(a.sites).map(([s, u]) =>
-      `<button data-s="${esc(s)}" ${isSet(u) ? "" : "disabled"}>${esc(s)}${isSet(u) ? "" : "<span>Not configured</span>"}</button>`).join("")}</div>
-    <div class="sheet-f"><button data-close>Cancel</button></div>`;
+    <div class="sheet-list">${Object.entries(a.sites).map(([s, u]) => `<button data-s="${esc(s)}" ${isSet(u) ? "" : "disabled"}>${esc(s)}${isSet(u) ? "" : "<span>Not configured</span>"}</button>`).join("")}</div>
+    <div class="sheet-f"><button class="btn ghost" data-close>Cancel</button></div>`;
   sheet.onclick = e => {
     if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
     const b = e.target.closest("[data-s]"); if (b && !b.disabled){ sheet.close(); launch(a, b.dataset.s); }
@@ -383,11 +760,8 @@ function pickSite(a){
   sheet.showModal();
 }
 
-/* ---------- app view: keeps every opened system alive ---------- */
-const open = new Map();   // key -> { frame, loader }
-let active = null;
+const open = new Map(); let active = null;
 const stage = $("#stage");
-
 function ensureFrame(k){
   if (open.has(k)) return open.get(k);
   const { app, site } = parseKey(k);
@@ -398,15 +772,16 @@ function ensureFrame(k){
   const loader = document.createElement("div");
   loader.className = "loader";
   loader.innerHTML = `<div><span class="spin"></span>Opening ${esc(frame.title)}</div>`;
-  const slow = setTimeout(() => showHint(k), 9000);
-  frame.addEventListener("load", () => { clearTimeout(slow); loader.remove(); });
-  frame.src = urlOf(app, site);
+  const slow = setTimeout(() => showHint(k), 10000);
+  frame.addEventListener("load", () => { if (frame.src){ clearTimeout(slow); loader.remove(); } });
   stage.append(frame, loader);
   const rec = { frame, loader, slow };
   open.set(k, rec);
+  /* Single sign-in: ask the hub for a one-minute pass into the system */
+  if (app.sso) api("sso?app=" + encodeURIComponent(app.id)).then(d => { frame.src = d.url; }).catch(() => { frame.src = urlOf(app, site); });
+  else frame.src = urlOf(app, site);
   return rec;
 }
-
 function showHint(k){
   if (active !== k || stage.querySelector(".hint")) return;
   const d = document.createElement("div");
@@ -417,8 +792,7 @@ function showHint(k){
   x.onclick = () => d.remove();
   stage.append(d);
 }
-
-function show(k){
+function showApp(k){
   const { app } = parseKey(k);
   if (!app) return goHome();
   active = k;
@@ -430,12 +804,10 @@ function show(k){
     if (r.loader.isConnected) r.loader.classList.toggle("hidden", !on);
   }
   stage.querySelectorAll(".hint").forEach(h => h.remove());
-  $("#home").classList.add("hidden");
-  $("#appview").classList.remove("hidden");
+  show("appview");
   document.title = rec.frame.title + " · " + H.title;
   renderTabs();
 }
-
 function renderTabs(){
   $("#tabs").innerHTML = [...open.keys()].map(k => {
     const { app, site } = parseKey(k);
@@ -443,7 +815,7 @@ function renderTabs(){
       <i class="dot" style="background:${esc(app.color)}"></i>${esc(app.name)}${site ? ` · ${esc(site)}` : ""}
       <button class="x" data-close="${esc(k)}" aria-label="Close ${esc(app.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`;
   }).join("");
-  $("#tabs .tab.on")?.scrollIntoView({ block:"nearest", inline:"nearest" });
+  $("#tabs .tab.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 $("#tabs").addEventListener("click", e => {
   const c = e.target.closest("[data-close]");
@@ -451,24 +823,20 @@ $("#tabs").addEventListener("click", e => {
   const t = e.target.closest(".tab"); if (t) location.hash = "#/app/" + encodeURIComponent(t.dataset.k);
 });
 $("#tabs").addEventListener("keydown", e => { if (e.key === "Enter") e.target.closest(".tab")?.click(); });
-
 function closeApp(k){
   const r = open.get(k); if (!r) return;
   clearTimeout(r.slow); r.frame.remove(); r.loader.remove(); open.delete(k);
-  if (active === k){
-    const next = [...open.keys()].pop();
-    if (next) location.hash = "#/app/" + encodeURIComponent(next); else goHome();
-  } else renderTabs();
+  if (active === k){ const next = [...open.keys()].pop(); if (next) location.hash = "#/app/" + encodeURIComponent(next); else goHome(); }
+  else renderTabs();
 }
 function goHome(){
   active = null;
-  if (location.hash !== "#/") history.replaceState(null, "", "#/");
-  $("#appview").classList.add("hidden");
-  $("#home").classList.remove("hidden");
+  if (location.hash && location.hash !== "#/") history.replaceState(null, "", "#/");
+  show("home");
   document.title = H.title;
+  off = target = 0;
   renderHome();
 }
-
 $("#homeBtn").onclick = () => { location.hash = "#/"; };
 $("#reloadBtn").onclick = () => {
   if (!active) return;
@@ -478,24 +846,116 @@ $("#reloadBtn").onclick = () => {
 };
 $("#extBtn").onclick = () => { if (active){ const { app, site } = parseKey(active); openWindow(urlOf(app, site), active); } };
 
-/* ---------- routing (browser back / mouse back button work) ---------- */
+/* =====================================================================
+   ADMIN
+   ===================================================================== */
+let admTab = "announcements";
+$("#admBack").onclick = () => { location.hash = "#/"; };
+document.querySelectorAll(".adm-tabs button").forEach(b => b.onclick = () => {
+  admTab = b.dataset.t;
+  document.querySelectorAll(".adm-tabs button").forEach(x => x.classList.toggle("on", x === b));
+  renderAdmin();
+});
+const siteOptions = (sel, allLabel) => (allLabel ? `<option value="ALL">${esc(allLabel)}</option>` : `<option value="">— none —</option>`) +
+  Object.entries(SITES).map(([c, n]) => `<option value="${c}" ${sel === c ? "selected" : ""}>${esc(n)}</option>`).join("");
+async function renderAdmin(){
+  if (ME.user.role !== "ADMIN") return goHome();
+  show("admin");
+  const body = $("#admBody");
+  body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
+  try { admTab === "users" ? await adminUsers(body) : await adminAnnouncements(body); }
+  catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
+}
+async function adminAnnouncements(body, editing){
+  const d = await api("admin/announcements");
+  const e = editing || {};
+  body.innerHTML = `<div class="panel"><h3>Announcements</h3><div class="rows">${d.announcements.length ? d.announcements.map(a => `
+      <div class="row-i"><div class="main"><b>${esc(a.message)}</b>
+        <small>${esc(a.level)} · ${esc(a.siteName)}${a.startsAt ? " · from " + esc(fmtLocal(a.startsAt)) : ""}${a.endsAt ? " · until " + esc(fmtLocal(a.endsAt)) : ""}
+        <span class="badge ${a.state === "Live" ? "live" : a.state === "Ended" ? "off" : ""}">${esc(a.state)}</span></small></div>
+        <div class="acts"><button class="btn small ghost" data-edit="${a.id}">Edit</button><button class="btn small ghost" data-del="${a.id}">Delete</button></div></div>`).join("")
+      : `<p class="brief-empty">No announcements yet.</p>`}</div></div>
+    <div class="panel"><h3>${e.id ? "Edit announcement" : "New announcement"}</h3><div id="fMsg"></div>
+      <label class="field"><span>Message</span><textarea id="fMsgTxt" maxlength="280" placeholder="Fire drill at Verdun Mall 10:00 tomorrow">${esc(e.message || "")}</textarea></label>
+      <div class="two">
+        <label class="field"><span>Level</span><select id="fLvl">${["info","warning","urgent"].map(l => `<option ${e.level === l ? "selected" : ""} value="${l}">${l[0].toUpperCase() + l.slice(1)}</option>`).join("")}</select></label>
+        <label class="field"><span>Show to</span><select id="fSite">${siteOptions(e.site || "ALL", "All flagships")}</select></label>
+      </div>
+      <label class="field"><span>Start (optional)</span><input id="fStart" type="datetime-local" value="${esc(e.startsAt || "")}"></label>
+      <label class="field"><span>End (optional)</span><input id="fEnd" type="datetime-local" value="${esc(e.endsAt || "")}"></label>
+      <div style="display:flex;gap:8px">${e.id ? `<button class="btn ghost" id="fCancel">Cancel</button>` : ""}<button class="btn" id="fSave">${e.id ? "Save changes" : "Publish"}</button></div>
+    </div>`;
+  body.onclick = async ev => {
+    const ed = ev.target.closest("[data-edit]"), del = ev.target.closest("[data-del]");
+    if (ed) return adminAnnouncements(body, d.announcements.find(a => a.id === Number(ed.dataset.edit)));
+    if (del && confirm("Delete this announcement?")){ await api("admin/announcements/delete", { id: Number(del.dataset.del) }); adminAnnouncements(body); loadAnnouncements(); }
+    if (ev.target.id === "fCancel") adminAnnouncements(body);
+    if (ev.target.id === "fSave"){
+      try {
+        await api("admin/announcements", { id: e.id, message: $("#fMsgTxt").value, level: $("#fLvl").value, site: $("#fSite").value, startsAt: $("#fStart").value, endsAt: $("#fEnd").value });
+        adminAnnouncements(body); loadAnnouncements();
+      } catch (er){ $("#fMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+    }
+  };
+}
+async function adminUsers(body, editing){
+  const d = await api("admin/users");
+  const e = editing || {};
+  const roleOpts = sel => Object.entries(d.roles).map(([c, n]) => `<option value="${c}" ${sel === c ? "selected" : ""}>${esc(n)}</option>`).join("");
+  body.innerHTML = `<div class="panel"><h3>People &amp; roles</h3><div class="rows">${d.users.map(u => `
+      <div class="row-i"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(u.name))}</span>
+        <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.roleLabel) : "Switched off"}</span></b>
+        <small>${esc(u.email)}${u.siteName ? " · " + esc(u.siteName) : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}</small></div>
+        <div class="acts"><button class="btn small ghost" data-edit="${esc(u.email)}">Edit</button>
+          <button class="btn small ghost" data-reset="${esc(u.email)}">Reset</button>
+          ${u.email !== ME.user.email ? `<button class="btn small ghost" data-act="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`).join("")}</div></div>
+    <div class="panel"><h3>${e.email ? "Edit person" : "Add a person"}</h3><div id="fMsg"></div>
+      <label class="field"><span>Full name</span><input id="uName" value="${esc(e.name || "")}"></label>
+      <label class="field"><span>Email</span><input id="uEmail" type="email" value="${esc(e.email || "")}" ${e.email ? "readonly" : ""}></label>
+      <div class="two">
+        <label class="field"><span>Role</span><select id="uRole">${roleOpts(e.role || "SUPERVISOR")}</select></label>
+        <label class="field"><span>Flagship</span><select id="uSite">${siteOptions(e.site || "")}</select></label>
+      </div>
+      ${e.email ? "" : `<label class="field"><span>Temporary password (8+)</span><input id="uPass" type="text" autocomplete="off"></label>`}
+      <p class="brief-empty" style="font-size:.8rem;margin-bottom:12px">Admins may leave the flagship empty to see all flagships. Everyone else needs one.</p>
+      <div style="display:flex;gap:8px">${e.email ? `<button class="btn ghost" id="uCancel">Cancel</button>` : ""}<button class="btn" id="uSave">${e.email ? "Save changes" : "Add person"}</button></div>
+    </div>`;
+  body.onclick = async ev => {
+    const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
+    const ed = ev.target.closest("[data-edit]"), rs = ev.target.closest("[data-reset]"), ac = ev.target.closest("[data-act]");
+    try {
+      if (ed) return adminUsers(body, d.users.find(u => u.email === ed.dataset.edit));
+      if (rs){ const p = prompt(`Temporary password for ${rs.dataset.reset} (8+ characters):`); if (!p) return;
+        await api("admin/users/reset", { email: rs.dataset.reset, password: p }); msg(`Password reset. They will be asked to change it at next sign-in.`, "okm"); return; }
+      if (ac){ await api("admin/users/active", { email: ac.dataset.act, active: ac.dataset.on === "1" }); return adminUsers(body); }
+      if (ev.target.id === "uCancel") return adminUsers(body);
+      if (ev.target.id === "uSave"){
+        await api("admin/users", { isNew: !e.email, name: $("#uName").value, email: $("#uEmail").value, role: $("#uRole").value, site: $("#uSite").value, password: $("#uPass") ? $("#uPass").value : "" });
+        adminUsers(body);
+      }
+    } catch (er){ msg(er.message); }
+  };
+}
+
+/* =====================================================================
+   ROUTING, SHORTCUTS, STATUS, INSTALL
+   ===================================================================== */
 function route(){
-  const m = location.hash.match(/^#\/app\/(.+)$/);
-  if (m) show(decodeURIComponent(m[1])); else goHome();
+  if (!ME) return;
+  const h = location.hash;
+  const m = h.match(/^#\/app\/(.+)$/);
+  if (m) return showApp(decodeURIComponent(m[1]));
+  if (h === "#/admin") return renderAdmin();
+  goHome();
 }
 addEventListener("hashchange", route);
-
-/* ---------- keyboard ---------- */
 addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k"){ e.preventDefault(); location.hash = "#/"; setTimeout(() => $("#q").focus(), 0); }
   if (e.altKey && e.key.toLowerCase() === "h"){ e.preventDefault(); location.hash = "#/"; }
 });
-
-/* ---------- connection status ---------- */
 function net(){ const on = navigator.onLine; $("#net").classList.toggle("off", !on); $("#netLbl").textContent = on ? "Online" : "Offline"; }
 addEventListener("online", net); addEventListener("offline", net); net();
 
-/* ---------- install as app ---------- */
 let deferred = null;
 const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; $("#installBtn").classList.remove("hidden"); });
@@ -505,16 +965,14 @@ if (iOS && !standalone) $("#installBtn").classList.remove("hidden");
 $("#installBtn").onclick = async () => {
   if (deferred){ deferred.prompt(); await deferred.userChoice; deferred = null; $("#installBtn").classList.add("hidden"); return; }
   sheet.innerHTML = `<div class="sheet-h"><div><b>Add to Home Screen</b></div></div>
-    <p class="sheet-p">In Safari, tap the Share button, then choose “Add to Home Screen”. The hub will open full-screen like a native app.</p>
-    <div class="sheet-f"><button data-close>Done</button></div>`;
+    <p class="sheet-p">In Safari, tap the Share button, then choose “Add to Home Screen”.</p>
+    <div class="sheet-f"><button class="btn" data-close>Done</button></div>`;
   sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
   sheet.showModal();
 };
-
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
-renderHome();
-route();
+boot();
 })();
 </script>
 </body>
