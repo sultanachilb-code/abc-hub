@@ -22,6 +22,7 @@ window.HUB = {
 
   GROUPS: ["Inspections", "Incidents & Security", "Operations", "Data & Reporting"],
 
+   
   APPS: [
     {
       id: "snaglist",
