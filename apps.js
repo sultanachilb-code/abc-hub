@@ -20,9 +20,8 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Inspections", "Incidents & Security", "Operations", "Data & Reporting"],
+  GROUPS: ["Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting"],
 
-   
   APPS: [
     {
       id: "snaglist",
@@ -68,6 +67,36 @@ window.HUB = {
       icon: "users",
       color: "#1B5E9E",
       url: "https://abclebanon.my.site.com/abcemployee/s/",
+      embed: false
+    },
+    {
+      id: "jde",
+      name: "JD Edwards",
+      desc: "Procurement — office network only",
+      group: "Enterprise Systems",
+      icon: "box",
+      color: "#B4471F",
+      url: "https://jdesrvweb.abc.com.lb:8882/jde/E1Menu.maf",
+      embed: false
+    },
+    {
+      id: "archibus",
+      name: "Archibus",
+      desc: "Technical / maintenance — office network only",
+      group: "Enterprise Systems",
+      icon: "bolt",
+      color: "#2E6B4F",
+      url: "http://192.168.5.68:8080/archibus/login.axvw",
+      embed: false
+    },
+    {
+      id: "successfactors",
+      name: "SAP SuccessFactors",
+      desc: "HR — performance and people",
+      group: "Enterprise Systems",
+      icon: "users",
+      color: "#0A6ED1",
+      url: "https://performancemanager8.successfactors.com/login#/companyEntry",
       embed: false
     },
     {
