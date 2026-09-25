@@ -7,6 +7,7 @@
     { "binding": "DB", "database_name": "hub-db", "database_id": "e7ae150f-de70-4376-a15b-65390159f65c" }
   ],
   "services": [
-    { "binding": "INCIDENTS", "service": "abc-incident-system" }
+    { "binding": "INCIDENTS", "service": "abc-incident-system" },
+    { "binding": "RESTROOM", "service": "abc-restroom-report" }
   ]
 }
