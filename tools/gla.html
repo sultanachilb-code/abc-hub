@@ -39,6 +39,9 @@
 .u.fit{background:rgba(200,162,74,.2)}
 .u.pop .b::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#2E8B7A;margin-right:4px;vertical-align:1px}
 .u.ds{background:rgba(74,111,165,.14)} .u.ds .b{color:#3A5A8C}
+.u.closed .b{color:var(--muted);font-style:italic}
+.u.term{background:rgba(229,72,77,.14)} .u.term .b{color:var(--alert);text-decoration:line-through}
+.u.edit{cursor:pointer} .u.edit:hover{outline:1.5px solid var(--brand-2);outline-offset:-1.5px}
 .u.dim{opacity:.18}
 .u.hit{outline:2px solid var(--gold);outline-offset:-2px}
 .grp{font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:3px 6px;background:var(--paper);border-top:1px solid var(--line)}
@@ -55,6 +58,17 @@
 .lg span{display:flex;align-items:center;gap:6px}.lg i{width:11px;height:9px;border-radius:2px;display:inline-block}
 .dp{display:grid;grid-template-columns:1fr auto;gap:1px 6px;font-size:.64rem;padding:0 6px 6px}
 .dp b{text-align:right;font-variant-numeric:tabular-nums}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .full{grid-column:1/-1}.form .inp,.form .sel{width:100%}
+.effbox{margin-top:12px;padding:12px;border-radius:12px;background:rgba(123,75,176,.08);display:grid;grid-template-columns:170px 1fr;gap:10px;align-items:end}
+.err{color:var(--alert);font-size:.84rem;margin-top:8px}
+.hist{display:grid;gap:6px;max-height:60vh;overflow:auto}
+.hi{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;font-size:.86rem}
+.hi b{display:block}.hi small{color:var(--muted);font-size:.76rem;display:block;margin-top:2px}
+.hi .chg{margin-top:3px}.hi .chg span{display:inline-block;margin-right:8px}
+.hi .old{color:var(--muted);text-decoration:line-through}
+.hi .edited{color:var(--warn);font-weight:700}
+dialog.wide{width:min(720px,calc(100% - 24px))}
 .foot{font-size:.62rem;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between}
 @media print{
   body{background:#fff} .stage{overflow:visible;padding:0}
@@ -70,68 +84,82 @@
   <span id="siteBox"></span>
   <div class="bar noprint">
     <input class="inp" id="q" placeholder="Find a brand or unit">
+    <button class="btn gold small hidden" id="addBtn">+ Add unit</button>
+    <button class="btn ghost small" id="histBtn">History</button>
     <button class="btn ghost small" id="fitBtn">Actual size</button>
     <button class="btn ghost small" id="csvBtn">Export CSV</button>
     <button class="btn small" id="printBtn">Print (A4 landscape)</button>
   </div>
 </div>
 <div class="stage" id="stage"><div class="card empty">Loading…</div></div>
+<dialog id="ed"></dialog>
+<dialog id="hist" class="wide"></dialog>
+<datalist id="deptList"></datalist>
 
 <script src="common.js"></script>
 <script>
-let CTX = null, G = null, FIT = innerWidth > 900;
+let CTX = null, G = null, FIT = innerWidth > 900, CAN = {}, STATUSES = [], SECTIONS = [];
 const fmt = n => Math.round(n).toLocaleString("en-US");
 const pct = (x, d = 1) => (Math.round(x * Math.pow(10, d + 2)) / Math.pow(10, d)).toFixed(d) + "%";
-const st = u => /vacant/i.test(u.status) || /^vacant/i.test(u.brand) ? "vac" : /fit/i.test(u.status) ? "fit" : "ok";
-const kind = u => /^ds$/i.test(u.type) || /iplay/i.test(u.type) ? "ds" : /pop/i.test(u.type) ? "pop" : "lease";
+/* live statuses: Open · Closed · Fit-out · Terminated · Vacant  (Terminated and Vacant count as empty space) */
+const st = u => u.status === "Vacant" ? "vac" : u.status === "Terminated" ? "term" : u.status === "Fit-out" ? "fit" : u.status === "Closed" ? "closed" : "ok";
+const empty = u => u.status === "Vacant" || u.status === "Terminated";
+const kind = u => u.section === "DS" || u.section === "iPlay" ? "ds" : u.section === "Pop-up" ? "pop" : "lease";
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Beirut" });
 
 async function boot(site){
   CTX = await api("ops/context" + (site ? "?site=" + site : ""));
   $("#sub").textContent = CTX.siteName;
   $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
   const d = await api(`ops/gla/get?site=${CTX.site}`);
-  G = d.report;
+  G = d.report; CAN = d.can || {}; STATUSES = d.statuses || []; SECTIONS = d.sections || [];
+  $("#addBtn").classList.toggle("hidden", !CAN.gla || !G);
   document.querySelector(".bar").classList.toggle("hidden", !G);
   if (!G){ $("#stage").innerHTML = `<div class="wrap"><div class="card empty">The GLA for ${esc(CTX.siteName)} hasn't been added to the system yet.</div></div>`; return; }
   render();
 }
 function render(){
-  const U = G.units, O = G.official || {}, sum = f => U.filter(f).reduce((a, u) => a + u.area, 0);
-  const total = sum(() => true), ds = sum(u => /^ds$/i.test(u.type)), iplay = sum(u => /iplay/i.test(u.type)), pop = sum(u => kind(u) === "pop");
-  const leasing = sum(u => kind(u) === "lease"), vac = sum(u => st(u) === "vac" && kind(u) !== "pop"), fit = sum(u => st(u) === "fit");
-  const occ = typeof O["Occupancy Rate"] === "number" ? O["Occupancy Rate"] : 1 - vac / leasing;
-  const monthName = D.fmt(G.month + "-15", { day: undefined, month: "long", year: "numeric" });
+  const U = G.units, sum = f => U.filter(f).reduce((a, u) => a + u.area, 0);
+  const total = sum(() => true), ds = sum(u => u.section === "DS"), iplay = sum(u => u.section === "iPlay"), pop = sum(u => u.section === "Pop-up");
+  const leasing = sum(u => u.section === "Leasing" || u.section === "Additional");
+  const base = sum(u => u.section === "Leasing"), vac = sum(u => u.section === "Leasing" && empty(u)), fit = sum(u => u.status === "Fit-out");
+  const occ = base ? 1 - vac / base : 0;
+  const monthName = G.lastChange ? `Live · last change ${D.fmt(G.lastChange, { year: "numeric" })}` : `Live · from ${esc((G.baseline && G.baseline.source) || "GLA workbook")}`;
+  $("#deptList").innerHTML = [...new Set(U.map(u => u.dept).filter(Boolean))].sort().map(d => `<option value="${esc(d)}">`).join("");
   /* main levels get a column each; small levels (B2, B6…) share the last column with the totals */
   const big = G.levels.filter(l => U.filter(u => u.level === l).length > 6).slice(0, 6);
   const small = G.levels.filter(l => !big.includes(l));
   const levelCol = l => {
     const us = U.filter(u => u.level === l), a = f => us.filter(f).reduce((t, u) => t + u.area, 0);
-    const lt = a(() => true), lv = a(u => st(u) === "vac"), lf = a(u => st(u) === "fit"), ld = a(u => kind(u) === "ds"), lp = a(u => kind(u) === "pop");
+    const lt = a(() => true), lv = a(u => empty(u) && kind(u) === "lease"), lf = a(u => st(u) === "fit"), ld = a(u => kind(u) === "ds"), lp = a(u => kind(u) === "pop");
     const lease = us.filter(u => kind(u) === "lease"), pops = us.filter(u => kind(u) === "pop"), dss = us.filter(u => kind(u) === "ds");
     const base = lt - ld - lp, locc = base ? 1 - lv / base : 1;
-    const row = u => `<div class="u ${st(u) === "ok" ? "" : st(u)} ${kind(u) === "pop" ? "pop" : ""} ${kind(u) === "ds" ? "ds" : ""}" data-s="${esc((u.brand + " " + u.code).toLowerCase())}" title="${esc(u.brand)} · ${esc(u.code)} · ${esc(u.dept || u.type)} · ${esc(u.status)} · ${fmt(u.area)} sqm"><span class="c">${esc(u.code)}</span><span class="b">${esc(u.brand)}</span><span class="a">${fmt(u.area)}</span></div>`;
+    const row = u => `<div class="u ${st(u) === "ok" ? "" : st(u)} ${kind(u) === "pop" ? "pop" : ""} ${kind(u) === "ds" ? "ds" : ""} ${CAN.gla ? "edit" : ""}" data-id="${u.id}" data-s="${esc(((u.brand || "vacant") + " " + u.code).toLowerCase())}" title="${esc(u.brand || "Vacant")} · ${esc(u.code)} · ${esc(u.dept || u.section)} · ${esc(u.status)} · ${fmt(u.area)} sqm${u.updatedBy ? " · updated by " + esc(u.updatedBy) : ""}"><span class="c">${esc(u.code)}</span><span class="b">${esc(u.brand || "VACANT")}${u.status === "Closed" ? " · closed" : u.status === "Terminated" ? "" : ""}</span><span class="a">${fmt(u.area)}</span></div>`;
     return `<div class="col"><div class="col-h"><b>${esc(l)}</b><small>${fmt(lt)} sqm</small>
         <div class="mini">${[["#7B4BB0", lt - lv - lf - ld - lp], ["#4A6FA5", ld], ["#2E8B7A", lp], ["#C8A24A", lf], ["#E5484D", lv]].filter(([, v]) => v > 0).map(([c, v]) => `<i style="width:${v / lt * 100}%;background:${c}"></i>`).join("")}</div>
-        <span class="oc">${pct(locc)} occupied · ${us.filter(u => st(u) === "vac").length} vacant</span></div>
+        <span class="oc">${pct(locc)} occupied · ${us.filter(u => empty(u)).length} vacant</span></div>
       ${lease.map(row).join("")}
       ${pops.length ? `<div class="grp">Pop-ups · ${fmt(lp)} sqm</div>${pops.map(row).join("")}` : ""}
       ${dss.length ? `<div class="grp">Department store / iPlay</div>${dss.map(row).join("")}` : ""}
       <div class="sub"><span>Total ${esc(l)}</span><span>${fmt(lt)}</span></div></div>`;
   };
-  const cats = {}; U.filter(u => st(u) !== "vac" && kind(u) !== "ds" && !/warehouse/i.test(u.dept)).forEach(u => { const k = (u.dept || "Other").toUpperCase(); cats[k] = (cats[k] || 0) + u.area; });
+  const cats = {}; U.filter(u => !empty(u) && kind(u) !== "ds" && !/warehouse/i.test(u.dept)).forEach(u => { const k = (u.dept || "Other").toUpperCase(); cats[k] = (cats[k] || 0) + u.area; });
   const topC = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const LT = G.levelTotals || [];
-  const keys = [["Total Leasing GLA including DS and Iplay", "Total"], ["DS", "DS"], ["Leasing GLA Excluding DS and Pop Up", "Lease"], ["Leasing Pop-Up", "Pop"], ["Fit out-", "Fit"], ["Leasing Vacant Spaces", "Vac"]];
+  const keys = [["t", "Total"], ["d", "DS"], ["l", "Lease"], ["p", "Pop"], ["f", "Fit"], ["v", "Vac"]];
+  const tally = us => ({ t: us.reduce((a, u) => a + u.area, 0), d: us.filter(u => kind(u) === "ds").reduce((a, u) => a + u.area, 0),
+    l: us.filter(u => kind(u) === "lease").reduce((a, u) => a + u.area, 0), p: us.filter(u => kind(u) === "pop").reduce((a, u) => a + u.area, 0),
+    f: us.filter(u => st(u) === "fit").reduce((a, u) => a + u.area, 0), v: us.filter(u => empty(u) && kind(u) === "lease").reduce((a, u) => a + u.area, 0) });
+  const LT = [...G.levels.map(l => ({ level: l, ...tally(U.filter(u => u.level === l)) })), { level: "Total", ...tally(U) }];
   $("#stage").innerHTML = `<div class="sheet" id="sheet">
-    <div class="sh-head"><div><h2>ABC ${esc(G.siteName || G.name).toUpperCase()} — GLA &amp; OCCUPANCY</h2><small>Leasing spaces, pop-ups and department store by level</small></div><div class="mo">${esc(monthName)}</div></div>
+    <div class="sh-head"><div><h2>ABC ${esc(G.siteName || G.name).toUpperCase()} — GLA &amp; OCCUPANCY</h2><small>Leasing spaces, pop-ups and department store by level${CAN.gla ? " · click a unit to update it" : ""}</small></div><div class="mo">${esc(monthName)}</div></div>
     <div class="kp">
       <div class="occ"><strong>${pct(occ, 2)}</strong><span>Occupancy</span></div>
       <div><strong>${fmt(total)}</strong><span>Total GLA incl. DS (sqm)</span></div>
       <div><strong>${fmt(leasing)}</strong><span>Leasing GLA (sqm)</span></div>
       <div><strong>${fmt(ds)}</strong><span>Department store</span></div>
-      <div><strong style="color:var(--alert)">${fmt(vac)}</strong><span>Vacant · ${U.filter(u => st(u) === "vac").length} units</span></div>
+      <div><strong style="color:var(--alert)">${fmt(vac)}</strong><span>Vacant · ${U.filter(u => empty(u) && u.section === "Leasing").length} units</span></div>
       <div><strong style="color:#8A6A1C">${fmt(fit)}</strong><span>Fit-out</span></div>
-      <div><strong>${fmt(pop)}</strong><span>Pop-ups · ${U.filter(u => kind(u) === "pop").length}</span></div>
+      <div><strong>${fmt(pop)}</strong><span>Pop-ups · ${U.filter(u => kind(u) === "pop" && !empty(u)).length}</span></div>
       <div><strong>${fmt(iplay)}</strong><span>iPlay</span></div>
     </div>
     <div class="cols" style="grid-template-columns:repeat(${big.length},minmax(0,1fr)) minmax(0,1.45fr)">
@@ -141,10 +169,10 @@ function render(){
         ${LT.length ? `<h3>Level totals (sqm)</h3><table class="lt"><tr><th></th>${keys.map(([, h]) => `<th>${h}</th>`).join("")}</tr>
           ${LT.map(r => `<tr class="${/^total/i.test(r.level) ? "tot" : ""}"><td>${esc(r.level.replace(/^Add\. Spaces$/, "Add."))}</td>${keys.map(([k]) => `<td>${r[k] ? fmt(r[k]) : "–"}</td>`).join("")}</tr>`).join("")}</table>` : ""}
         <h3>Largest categories (sqm)</h3><div class="dp">${topC.map(([k, v]) => `<span>${esc(k)}</span><b>${fmt(v)}</b>`).join("")}</div>
-        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>Department store / iPlay</span></div>
+        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:var(--line)"></i>Closed (grey italic)</span><span><i style="background:rgba(229,72,77,.5)"></i>Terminated (struck through)</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>Department store / iPlay</span></div>
       </div>
     </div>
-    <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA</span><span>${U.length} units · figures in square metres</span></div>
+    <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA · ${G.changes} change${G.changes === 1 ? "" : "s"} since ${esc((G.baseline && G.baseline.source) || "the workbook")}</span><span>${U.length} units · figures in square metres</span></div>
   </div>`;
   applyFit(); search();
 }
@@ -170,11 +198,81 @@ $("#fitBtn").onclick = () => { FIT = !FIT; applyFit(); };
 addEventListener("resize", applyFit);
 $("#printBtn").onclick = () => print();
 $("#csvBtn").onclick = () => {
-  const rows = [["Level", "Type", "Unit", "Brand", "Status", "Category", "Area SQM"], ...G.units.map(u => [u.level, u.type, u.code, u.brand, u.status, u.dept, u.area])];
+  const rows = [["Level", "Section", "Unit", "Brand", "Status", "Category", "Area SQM", "Last updated by"], ...G.units.map(u => [u.level, u.section, u.code, u.brand, u.status, u.dept, u.area, u.updatedBy])];
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n")], { type: "text/csv" }));
-  a.download = `GLA-${CTX.site}-${G.month}.csv`; a.click();
+  a.download = `GLA-${CTX.site}-${today()}.csv`; a.click();
 };
+/* ---------- update a unit ---------- */
+function editUnit(u){
+  const isNew = !u;
+  u = u || { id: 0, level: G.levels[0], code: "", brand: "", status: "Open", section: "Leasing", dept: "", area: "" };
+  const d = $("#ed");
+  d.innerHTML = `<div class="dlg-h"><b>${isNew ? "Add a unit" : `${esc(u.level)} · ${esc(u.code)}`}</b><small>${isNew ? esc(CTX.siteName) : `Currently: ${u.brand ? `${esc(u.brand)} · ${esc(u.status)}` : esc(u.status)}`}</small></div>
+    <div class="dlg-b"><div class="form">
+      <label><span class="lbl">Level</span><input class="inp" id="eLevel" list="lvList" value="${esc(u.level)}"><datalist id="lvList">${G.levels.map(l => `<option value="${esc(l)}">`).join("")}</datalist></label>
+      <label><span class="lbl">Unit code</span><input class="inp" id="eCode" value="${esc(u.code)}" placeholder="L4-005"></label>
+      <label class="full"><span class="lbl">Brand</span><input class="inp" id="eBrand" value="${esc(u.brand)}" placeholder="Leave empty when the unit is vacant"></label>
+      <label><span class="lbl">Status</span><select class="sel" id="eStatus">${STATUSES.map(x => `<option ${x === u.status ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+      <label><span class="lbl">Area (sqm)</span><input class="inp" id="eArea" type="number" min="0" step="0.01" value="${esc(u.area)}"></label>
+      <label><span class="lbl">Category</span><input class="inp" id="eDept" list="deptList" value="${esc(u.dept)}"></label>
+      <label><span class="lbl">Space type</span><select class="sel" id="eSec">${SECTIONS.map(x => `<option ${x === u.section ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+    </div>
+    <div class="effbox"><label><span class="lbl">Effective date</span><input class="inp" type="date" id="eDate" value="${today()}" max="${today()}"></label>
+      <label><span class="lbl">Note (optional)</span><input class="inp" id="eNote" placeholder="e.g. lease signed, handover of keys"></label></div>
+    <p class="muted" style="font-size:.78rem;margin-top:8px">The effective date is when the change actually happened. If it's being recorded late, set the real date — the executive report uses this date.</p>
+    <div class="err hidden" id="eErr"></div></div>
+    <div class="dlg-f">${isNew ? "" : `<button class="btn ghost danger" id="eDel" style="margin-right:auto">Remove unit</button>`}<button class="btn ghost" id="eClose">Cancel</button><button class="btn gold" id="eSave">${isNew ? "Add unit" : "Save change"}</button></div>`;
+  const syncBrand = () => { const v = $("#eStatus").value === "Vacant"; $("#eBrand").placeholder = v ? "Vacant — no brand" : "Brand name";
+    if (!v && /^vacant/i.test($("#eDept").value)){ $("#eDept").value = ""; $("#eDept").placeholder = "e.g. RESTAURANTS"; } };
+  syncBrand();
+  d.oninput = e => { if (e.target.id === "eStatus") syncBrand(); $("#eErr").classList.add("hidden"); };
+  d.onclick = async e => {
+    const t = e.target;
+    if (t === d || t.id === "eClose") return d.close();
+    const effDate = $("#eDate").value, note = $("#eNote").value;
+    if (t.id === "eDel"){
+      if (!(await confirmBox("Remove this unit?", `${esc(u.code)} is removed from the GLA as of ${esc(D.fmt(effDate, { year: "numeric" }))} (use this when units are merged or split). The history keeps it.`, "Remove"))) return;
+      try { await api("ops/gla/remove", { site: CTX.site, id: u.id, effDate, note }); d.close(); toast("Unit removed"); boot(CTX.site); } catch (er){ toast(er.message, true); } return;
+    }
+    if (t.id === "eSave"){
+      const unit = { id: u.id, level: $("#eLevel").value.trim(), code: $("#eCode").value.trim(), brand: $("#eBrand").value.trim(), status: $("#eStatus").value,
+        area: $("#eArea").value, dept: $("#eDept").value.trim(), section: $("#eSec").value };
+      const err = !unit.level || !unit.code ? "Level and unit code are required" : unit.status !== "Vacant" && !unit.brand ? "Enter the brand" : !effDate ? "Choose the effective date" : "";
+      if (err){ $("#eErr").textContent = err; $("#eErr").classList.remove("hidden"); return; }
+      t.disabled = true;
+      try { const r = await api("ops/gla/save", { site: CTX.site, unit, effDate, note }); d.close(); toast(r.changed === false ? "Nothing changed" : isNew ? "Unit added" : "GLA updated"); boot(CTX.site); }
+      catch (er){ $("#eErr").textContent = er.message; $("#eErr").classList.remove("hidden"); t.disabled = false; }
+    }
+  };
+  d.showModal();
+}
+/* ---------- change history, with correctable effective dates ---------- */
+async function history(){
+  const d = $("#hist");
+  d.innerHTML = `<div class="dlg-h"><b>GLA change history · ${esc(CTX.siteName)}</b><small>Newest first. ${CAN.gla ? "Correct an effective date if a change was recorded late — the executive report follows it." : ""}</small></div><div class="dlg-b"><div class="hist" id="hList"><p class="muted">Loading…</p></div></div><div class="dlg-f"><button class="btn ghost" id="hClose">Close</button></div>`;
+  d.onclick = e => { if (e.target === d || e.target.id === "hClose") d.close(); };
+  d.showModal();
+  const r = await api(`ops/gla/history?site=${CTX.site}`);
+  const label = { level: "Level", code: "Unit", brand: "Brand", status: "Status", section: "Type", dept: "Category", area: "Area" };
+  $("#hList").innerHTML = r.events.length ? r.events.map(e => {
+    const unit = e.unit.code ? `${esc(e.unit.level)} · ${esc(e.unit.code)} · ${esc(e.unit.brand || "Vacant")}` : "Unit";
+    const what = e.kind === "add" ? `<span>Added: <b style="display:inline">${esc(e.after.brand || "Vacant")}</b> · ${esc(e.after.status)} · ${fmt(e.after.area)} sqm</span>`
+      : e.kind === "remove" ? `<span>Removed from the GLA</span>`
+      : Object.keys(e.after).map(k => `<span>${label[k] || k}: <span class="old">${esc(e.before[k] || "—")}</span> → <b style="display:inline">${esc(e.after[k] || "—")}</b></span>`).join("");
+    return `<div class="hi"><div>${CAN.gla ? `<input class="inp" type="date" data-ev="${e.id}" value="${esc(e.effDate)}" max="${today()}" style="width:100%">` : `<b>${esc(D.fmt(e.effDate, { year: "numeric" }))}</b>`}
+        ${e.dateEditedAt ? `<small class="edited">date corrected by ${esc(e.dateEditedBy)}</small>` : ""}</div>
+      <div><b>${unit}</b><div class="chg">${what}</div><small>${e.note ? esc(e.note) + " · " : ""}recorded by ${esc(e.by)} on ${esc(new Date(e.createdAt).toLocaleDateString("en-GB"))}</small></div></div>`;
+  }).join("") : `<p class="muted">No changes yet — the GLA is as loaded from ${esc((G.baseline && G.baseline.source) || "the workbook")}.</p>`;
+  $("#hList").onchange = async e => {
+    const id = e.target.dataset.ev; if (!id) return;
+    try { await api("ops/gla/eventdate", { site: CTX.site, id: Number(id), effDate: e.target.value }); toast("Effective date corrected"); boot(CTX.site); history(); }
+    catch (er){ toast(er.message, true); }
+  };
+}
+$("#stage").addEventListener("click", e => { const r = e.target.closest(".u.edit"); if (r) editUnit(G.units.find(u => u.id === Number(r.dataset.id))); });
+$("#addBtn").onclick = () => editUnit(null);
+$("#histBtn").onclick = history;
 boot().catch(e => { $("#stage").innerHTML = `<div class="wrap"><div class="card empty">${esc(e.message)}</div></div>`; });
 </script>
 </body>
