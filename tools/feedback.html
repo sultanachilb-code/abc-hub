@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Feedback · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.kpi{padding:14px 16px}
+.kpi strong{display:block;font-size:1.5rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.78rem;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:.8rem;font-weight:700;background:var(--surface);color:var(--muted)}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip b{margin-left:4px}
+.doc{background:var(--surface);border:1.5px solid #2F3B52;border-radius:4px;overflow:hidden}
+.hd{background:var(--blueHead);color:#10203F;font-weight:800;padding:8px 12px;display:flex;align-items:center;gap:10px}
+:root[data-theme="dark"] .hd{color:#E6ECFA}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .hd{color:#E6ECFA} }
+.scroll{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;min-width:980px;font-size:.86rem}
+.t th{background:var(--blueSoft);font-size:.78rem;padding:8px;text-align:left;border:1px solid var(--line);white-space:nowrap}
+.t td{border:1px solid var(--line);padding:8px;vertical-align:top}
+.t tr.row{cursor:pointer}
+.t tr.row:hover td{background:rgba(123,75,176,.06)}
+.t td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+.t .tn{font-weight:700}
+.rep{display:inline-block;margin-left:6px;font-size:.68rem;font-weight:800;padding:2px 6px;border-radius:6px;background:rgba(192,57,43,.13);color:var(--alert)}
+.act{font-weight:700}
+.act.serious{color:var(--alert)}
+.cat-Covid-19{color:#8E6BD8}.cat-Operations{color:#2F5597}.cat-Safety{color:#C0392B}.cat-Customer{color:#2E8B57}.cat-Incident{color:#C07A12}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.form .inp,.form .sel{width:100%}
+.err{color:var(--alert);font-size:.84rem;margin-top:8px}
+.guide{font-size:.8rem;color:var(--muted);line-height:1.5}
+.top-t{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:.86rem}
+.top-t b{text-align:right}
+@media (max-width:640px){ .form{grid-template-columns:1fr} }
+@media print{ .bar,.chips,.noprint{display:none!important} .hd,.t th{-webkit-print-color-adjust:exact;print-color-adjust:exact} table.t{min-width:0} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Tenant Feedback <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+</div>
+<div class="wrap">
+  <div class="bar noprint">
+    <input class="inp" type="month" id="month" aria-label="Month">
+    <input class="inp" id="q" placeholder="Search tenant" style="flex:1;min-width:160px">
+    <button class="btn gold" id="addBtn">+ Log feedback</button>
+    <button class="btn ghost small" id="csvBtn">Export</button>
+    <button class="btn ghost small" id="printBtn">Print</button>
+    <button class="btn ghost small hidden" id="impBtn">Import Excel</button>
+  </div>
+  <div id="stats"></div>
+  <div class="chips noprint" id="chips"></div>
+  <div class="doc"><div class="hd" id="docHead"></div><div class="scroll" id="list"></div></div>
+</div>
+<dialog id="dlg"></dialog>
+<datalist id="tenantList"></datalist>
+
+<script src="xlsx.full.min.js"></script>
+<script src="common.js"></script>
+<script>
+let CTX = null, FB = null, ENTRIES = [], CAT = "", TENANTS = [];
+const monthRange = m => { const [y, mo] = m.split("-").map(Number); const last = new Date(Date.UTC(y, mo, 0)).getUTCDate(); return [`${m}-01`, `${m}-${String(last).padStart(2, "0")}`]; };
+const catCls = c => "cat-" + String(c).split(" ")[0].replace(/[^A-Za-z0-9-]/g, "");
+const nowTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  FB = CTX.feedback;
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  if (!$("#month").value) $("#month").value = CTX.today.slice(0, 7);
+  $("#addBtn").classList.toggle("hidden", !CTX.can.feedback);
+  $("#impBtn").classList.toggle("hidden", !CTX.can.feedbackAdmin);
+  api(`ops/feedback/tenants?site=${CTX.site}`).then(d => { TENANTS = d.tenants; $("#tenantList").innerHTML = TENANTS.map(t => `<option value="${esc(t)}">`).join(""); }).catch(() => {});
+  await load();
+}
+async function load(){
+  const [from, to] = monthRange($("#month").value || CTX.today.slice(0, 7));
+  const d = await api(`ops/feedback/list?site=${CTX.site}&from=${from}&to=${to}`);
+  ENTRIES = d.entries;
+  render();
+}
+function render(){
+  const q = $("#q").value.trim().toLowerCase();
+  const counts = {}; ENTRIES.forEach(e => counts[e.category] = (counts[e.category] || 0) + 1);
+  const perTenant = {}; ENTRIES.filter(e => e.category !== "Customer Feedback" || e.description === "Negative").forEach(e => { const k = e.tenant.trim().toUpperCase(); perTenant[k] = (perTenant[k] || 0) + 1; });
+  const top = Object.entries(perTenant).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const warnings = ENTRIES.filter(e => /warning/i.test(e.action)).length;
+  const serious = ENTRIES.filter(e => FB.serious.includes(e.action)).length;
+  const monthName = D.fmt($("#month").value + "-15", { day: undefined, month: "long", year: "numeric" });
+  $("#stats").innerHTML = `<div class="kpis">
+    <div class="card kpi"><strong>${ENTRIES.length}</strong><span>entries in ${esc(monthName)}</span></div>
+    <div class="card kpi"><strong>${ENTRIES.filter(e => /violation/i.test(e.category)).length}</strong><span>violations</span></div>
+    <div class="card kpi"><strong>${warnings}</strong><span>warnings issued</span></div>
+    <div class="card kpi"><strong style="color:${serious ? "var(--alert)" : "inherit"}">${serious}</strong><span>serious actions</span></div>
+    <div class="card kpi"><span style="display:block;margin-bottom:6px">Most reported</span>${top.length ? `<div class="top-t">${top.map(([t, n]) => `<span>${esc(t)}</span><b>${n}</b>`).join("")}</div>` : `<span>—</span>`}</div>
+  </div>`;
+  $("#chips").innerHTML = `<button class="chip ${CAT ? "" : "on"}" data-cat="">All<b>${ENTRIES.length}</b></button>` +
+    Object.keys(FB.categories).map(c => `<button class="chip ${CAT === c ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}<b>${counts[c] || 0}</b></button>`).join("");
+  const rows = ENTRIES.filter(e => (!CAT || e.category === CAT) && (!q || e.tenant.toLowerCase().includes(q)));
+  $("#docHead").textContent = `ABC ${CTX.siteName} — Tenant Feedback — ${monthName}`;
+  $("#list").innerHTML = rows.length ? `<table class="t"><tr><th>Location</th><th>Tenant</th><th>Date</th><th>Time</th><th>Feedback</th><th>Feedback description</th><th>Action taken</th><th>Action taken description</th><th class="noprint">Logged by</th></tr>
+    ${rows.map(e => { const rep = perTenant[e.tenant.trim().toUpperCase()] || 0;
+      return `<tr class="row" data-id="${e.id}"><td class="d">ABC ${esc(CTX.siteName.replace(/ Mall$/, ""))}</td><td class="tn">${esc(e.tenant)}${rep >= 3 ? `<span class="rep" title="${rep} entries this month">×${rep}</span>` : ""}</td>
+        <td class="d">${esc(D.fmt(e.day, { year: "2-digit" }))}</td><td class="d">${esc(e.time)}</td><td class="${catCls(e.category)}"><b>${esc(e.category)}</b></td><td>${esc(e.description)}</td>
+        <td class="act ${FB.serious.includes(e.action) ? "serious" : ""}">${esc(e.action)}</td><td>${esc(e.actionDesc)}</td><td class="muted noprint" style="font-size:.78rem">${esc(e.createdName || "")}</td></tr>`; }).join("")}</table>`
+    : `<div class="empty">No feedback logged${CAT ? " for " + esc(CAT) : ""} in ${esc(monthName)}.${CTX.can.feedback ? " Use <b>+ Log feedback</b> to add one." : ""}</div>`;
+}
+
+/* ---------- add / edit ---------- */
+function openForm(e){
+  const isNew = !e;
+  e = e || { tenant: "", day: CTX.today, time: nowTime(), category: "Operations Violation", description: "", action: "None", actionDesc: "" };
+  const mine = isNew || e.createdBy === CTX.me.email || CTX.can.feedbackAdmin;
+  const dis = mine ? "" : "disabled";
+  const d = $("#dlg");
+  const descOpts = c => { const l = FB.categories[c] || []; return l.length ? `<select class="sel" id="fDesc" ${dis}><option value="">— Choose —</option>${l.map(x => `<option ${x === e.description ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>`
+    : `<input class="inp" id="fDesc" value="${esc(e.description)}" placeholder="Describe the incident" ${dis}>`; };
+  d.innerHTML = `<div class="dlg-h"><b>${isNew ? "Log tenant feedback" : "Feedback entry"}</b><small>ABC ${esc(CTX.siteName)}${e.createdName ? " · logged by " + esc(e.createdName) : ""}</small></div>
+    <div class="dlg-b"><div class="form">
+      <label class="full"><span class="lbl">Tenant</span><input class="inp" id="fTenant" list="tenantList" value="${esc(e.tenant)}" placeholder="Start typing — tenants come from the GLA" autocomplete="off" ${dis}></label>
+      <label><span class="lbl">Date</span><input class="inp" type="date" id="fDay" value="${esc(e.day)}" ${dis}></label>
+      <label><span class="lbl">Time</span><input class="inp" type="time" id="fTime" value="${esc(e.time)}" ${dis}></label>
+      <label><span class="lbl">Feedback</span><select class="sel" id="fCat" ${dis}>${Object.keys(FB.categories).map(c => `<option ${c === e.category ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+      <label><span class="lbl">Feedback description</span><span id="descBox">${descOpts(e.category)}</span></label>
+      <label><span class="lbl">Action taken</span><select class="sel" id="fAct" ${dis}>${FB.actions.map(a => `<option ${a === e.action ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label>
+      <label class="full"><span class="lbl">Action taken description</span><textarea id="fActD" rows="2" placeholder="What was done, who was spoken to" ${dis}>${esc(e.actionDesc)}</textarea></label>
+    </div><p class="guide" id="guide"></p><div class="err hidden" id="fErr"></div></div>
+    <div class="dlg-f">${!isNew && mine ? `<button class="btn ghost danger" id="fDel" style="margin-right:auto">Delete</button>` : ""}<button class="btn ghost" id="fClose">${mine ? "Cancel" : "Close"}</button>${mine ? `<button class="btn gold" id="fSave">${isNew ? "Save" : "Save changes"}</button>` : ""}</div>`;
+  const guide = () => { const a = $("#fAct").value; $("#guide").innerHTML = FB.serious.includes(a) ? `<b style="color:var(--alert)">${esc(a)}</b> notifies the flagship team through the hub.` : ""; };
+  guide();
+  d.oninput = ev => { if (ev.target.id === "fCat"){ $("#descBox").innerHTML = descOpts(ev.target.value); } if (ev.target.id === "fAct") guide(); $("#fErr").classList.add("hidden"); };
+  d.onclick = async ev => {
+    const t = ev.target;
+    if (t === d || t.id === "fClose") return d.close();
+    if (t.id === "fDel"){ if (!(await confirmBox("Delete this entry?", "It is removed from the log permanently.", "Delete"))) return;
+      try { await api("ops/feedback/delete", { site: CTX.site, id: e.id }); d.close(); toast("Entry deleted"); load(); } catch (er){ toast(er.message, true); } return; }
+    if (t.id === "fSave"){
+      const entry = { id: e.id || 0, tenant: $("#fTenant").value.trim(), day: $("#fDay").value, time: $("#fTime").value, category: $("#fCat").value,
+        description: $("#fDesc").value.trim(), action: $("#fAct").value, actionDesc: $("#fActD").value.trim() };
+      const err = !entry.tenant ? "Enter the tenant" : !entry.day ? "Choose the date" : (FB.categories[entry.category].length && !entry.description) ? "Choose the feedback description" : "";
+      if (err){ $("#fErr").textContent = err; $("#fErr").classList.remove("hidden"); return; }
+      t.disabled = true;
+      try { await api("ops/feedback/save", { site: CTX.site, entry }); d.close(); toast(isNew ? "Feedback logged" : "Saved");
+        if (entry.day.slice(0, 7) !== $("#month").value) $("#month").value = entry.day.slice(0, 7);
+        if (!TENANTS.some(x => x.toLowerCase() === entry.tenant.toLowerCase())){ TENANTS.push(entry.tenant); $("#tenantList").insertAdjacentHTML("beforeend", `<option value="${esc(entry.tenant)}">`); }
+        load(); }
+      catch (er){ $("#fErr").textContent = er.message; $("#fErr").classList.remove("hidden"); t.disabled = false; }
+    }
+  };
+  d.showModal();
+  if (isNew) setTimeout(() => $("#fTenant").focus(), 50);
+}
+
+/* ---------- import the existing Excel log (same columns) ---------- */
+function importExcel(){
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".xlsx,.xlsm,.xls,.csv";
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: false });
+      const entries = [];
+      for (const name of wb.SheetNames){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
+        const hi = rows.findIndex(r => r.some(v => /^tenants?$/i.test(String(v || "").trim())) && r.some(v => /^feedback$/i.test(String(v || "").trim())));
+        if (hi < 0) continue;
+        const H = rows[hi].map(v => String(v || "").trim().toLowerCase());
+        const col = k => H.indexOf(k);
+        const c = { tenant: H.findIndex(h => /^tenants?$/.test(h)), date: col("date"), time: col("time"), cat: col("feedback"), desc: col("feedback description"), act: col("action taken"), actd: col("action taken description") };
+        const norm = (v, list) => { const s = String(v ?? "").trim(); const m = list.find(x => x.toLowerCase() === s.toLowerCase()); return m || s; };
+        for (const r of rows.slice(hi + 1)){
+          if (!r[c.tenant]) continue;
+          let day = r[c.date], time = r[c.time];
+          if (typeof day === "number"){ const p = XLSX.SSF.parse_date_code(day); day = `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`; }
+          else { const dt = new Date(String(day)); day = isNaN(dt) ? "" : dt.toISOString().slice(0, 10); }
+          if (typeof time === "number"){ const mins = Math.round((time % 1) * 1440); time = `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`; }
+          else time = /^\d{1,2}:\d{2}/.test(String(time || "")) ? String(time).trim().slice(0, 5).padStart(5, "0") : "";
+          const category = norm(r[c.cat], Object.keys(FB.categories));
+          entries.push({ tenant: String(r[c.tenant]).trim(), day, time, category, description: norm(r[c.desc], FB.categories[category] || []),
+            action: norm(r[c.act], FB.actions), actionDesc: c.actd >= 0 ? String(r[c.actd] ?? "").trim() : "" });
+        }
+      }
+      if (!entries.length) return toast("No rows found — the sheet needs Tenants, Date, Time and Feedback columns", true);
+      if (!(await confirmBox("Import feedback history?", `<b>${entries.length}</b> rows found in ${esc(f.name)}. They are added to ${esc(CTX.siteName)}; rows already in the log are skipped.`, "Import"))) return;
+      const r = await api("ops/feedback/import", { site: CTX.site, entries });
+      toast(`${r.imported} imported${r.skipped ? ` · ${r.skipped} skipped (${r.reasons.join("; ")})` : ""}`, !!r.skipped && !r.imported);
+      load();
+    } catch (er){ toast(er.message, true); }
+  };
+  inp.click();
+}
+
+/* ---------- export (same columns as the Excel log) ---------- */
+function exportXlsx(){
+  const rows = ENTRIES.filter(e => !CAT || e.category === CAT).slice().reverse().map(e => ({
+    Location: `ABC ${CTX.siteName.replace(/ Mall$/, "")}`, Tenants: e.tenant, Date: D.fmt(e.day, { year: "2-digit" }), Time: e.time,
+    Feedback: e.category, "Feedback Description": e.description, "Action Taken": e.action, "Action Taken Description": e.actionDesc }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [14, 28, 11, 8, 22, 30, 22, 40].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tenant Feedback");
+  XLSX.writeFile(wb, `Tenant-Feedback-${CTX.site}-${$("#month").value}.xlsx`);
+}
+
+$("#list").addEventListener("click", e => { const r = e.target.closest("tr.row"); if (r) openForm(ENTRIES.find(x => x.id === Number(r.dataset.id))); });
+$("#chips").addEventListener("click", e => { const c = e.target.closest("[data-cat]"); if (c){ CAT = c.dataset.cat; render(); } });
+$("#q").addEventListener("input", render);
+$("#month").addEventListener("change", load);
+$("#addBtn").onclick = () => openForm(null);
+$("#impBtn").onclick = importExcel;
+$("#csvBtn").onclick = exportXlsx;
+$("#printBtn").onclick = () => print();
+boot().catch(e => { $("#list").innerHTML = `<div class="empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
