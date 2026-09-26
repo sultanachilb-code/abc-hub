@@ -23,7 +23,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Operations Tools", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting"],
+  GROUPS: ["Operations Tools", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -53,6 +53,25 @@ window.HUB = {
       icon: "clipboard",
       color: "#2F6F73",
       url: "/tools/handover"
+    },
+    {
+      id: "feedback",
+      name: "Tenant Feedback",
+      desc: "Violations, customer feedback and actions by tenant",
+      group: "Operations Tools",
+      icon: "megaphone",
+      color: "#A0442F",
+      url: "/tools/feedback"
+    },
+    /* Property Overview & Info — more property references will join this section */
+    {
+      id: "gla",
+      name: "GLA & Occupancy",
+      desc: "Units, brands, areas and occupancy by level",
+      group: "Property Overview & Info",
+      icon: "chart",
+      color: "#3E5C8A",
+      url: "/tools/gla"
     },
     {
       id: "snaglist",

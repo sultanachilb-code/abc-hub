@@ -210,6 +210,7 @@ button.bcard:hover{border-color:var(--brand-2)}
 .tfab-btn svg{width:24px;height:24px;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
 .tfab.open .tfab-btn svg{transform:rotate(90deg) scale(.9)}
 .tfab.open .tfab-btn{background:var(--gold);color:var(--ink)}
+.masthead.tools-open .mh-actions,.masthead.tools-open .brandmark > img,.masthead.tools-open .brandmark > .rule,.masthead.tools-open .brandmark > div:last-child{opacity:.25;transition:opacity .25s;pointer-events:none}
 .tfab-cnt{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:#E5484D;color:#fff;font-size:.7rem;font-weight:800;display:grid;place-items:center;border:2px solid var(--ink)}
 .tfab-panel{position:absolute;left:0;top:0;width:340px;height:0;pointer-events:none;z-index:45}
 .tfab-curve{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
@@ -225,7 +226,7 @@ button.bcard:hover{border-color:var(--brand-2)}
 .tfab-it .lb b{display:block;font-size:.9rem}
 .tfab-it .lb small{display:block;font-size:.74rem;color:var(--muted)}
 .tfab-it .lb small.hot{color:var(--alert);font-weight:700}
-.tfab-veil{position:fixed;inset:0;background:rgba(20,8,34,.45);opacity:0;pointer-events:none;transition:opacity .25s;z-index:15}
+.tfab-veil{position:fixed;inset:0;background:rgba(12,4,24,.78);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:15}
 .tfab-veil.on{opacity:1;pointer-events:auto}
 @media (max-width:600px){ .tfab-btn{width:44px;height:44px} .tfab-btn svg{width:21px;height:21px} .tfab-it .lb small{display:none} }
 @media (prefers-reduced-motion:reduce){ .tfab-it,.tfab-btn svg{transition:none} .tfab.open .tfab-curve path{animation:none} }
@@ -940,6 +941,7 @@ function setToolsOpen(open){
   const items = [...$("#tfabItems").children];
   items.forEach((el, k) => { el.style.transitionDelay = (open ? k * 80 : (items.length - 1 - k) * 45) + "ms"; el.tabIndex = open ? 0 : -1; });
   f.classList.toggle("open", open);
+  document.querySelector(".masthead").classList.toggle("tools-open", open);
   $("#tfabVeil").classList.toggle("on", open);
   $("#tfabBtn").setAttribute("aria-expanded", open);
   $("#tfabPanel").setAttribute("aria-hidden", !open);

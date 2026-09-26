@@ -166,6 +166,12 @@ async function ensureSchema(env) {
       site TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, text TEXT NOT NULL, owner_email TEXT NOT NULL DEFAULT '',
       owner_name TEXT NOT NULL DEFAULT '', due TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Open',
       done_at TEXT NOT NULL DEFAULT '', notified_at TEXT NOT NULL DEFAULT '', created_at TEXT)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS gla_reports (site TEXT NOT NULL, month TEXT NOT NULL, data TEXT NOT NULL,
+      units INTEGER NOT NULL DEFAULT 0, file_name TEXT NOT NULL DEFAULT '', uploaded_by TEXT, uploaded_at TEXT, PRIMARY KEY (site, month))`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS tenant_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL,
+      tenant TEXT NOT NULL, day TEXT NOT NULL, time TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+      action TEXT NOT NULL DEFAULT '', action_desc TEXT NOT NULL DEFAULT '', created_by TEXT, created_name TEXT, created_at TEXT, updated_at TEXT)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS tf_site_day ON tenant_feedback (site, day)`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS ops_settings (site TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY (site, k))`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS handovers (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, day TEXT NOT NULL,
       shift TEXT NOT NULL DEFAULT 'AM', doc TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft',
@@ -810,7 +816,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -872,8 +878,40 @@ function rights(me, site) {
   return {
     schedule: mine && lead,
     mom: mine && (lead || me.role === "SUPERVISOR"),
-    handover: mine && me.role !== "SECURITY"
+    handover: mine && me.role !== "SECURITY",
+    feedback: mine,                 // anyone at the flagship can log tenant feedback
+    feedbackAdmin: mine && lead,    // edit anyone's entries, import history
+    gla: mine && lead               // upload the monthly GLA
   };
+}
+
+/* Tenant feedback lists — the categories, their descriptions and the actions */
+const FEEDBACK = {
+  categories: {
+    "Covid-19 Violation": ["Mask Violation", "Capacity Limit Violation", "Social Distancing Violation", "Mask & Capacity Limit Violation",
+      "Mask & Social Distancing Violation", "Capacity Limit & Social Distancing Violation", "Sick Employees not reported"],
+    "Operations Violation": ["Early Closing", "Late Opening", "Closed - Didn't Open", "Closed - Legal / Leasing Issues", "Closed - Covid-19 Measures", "Other"],
+    "Safety Violation": ["Smoking", "Patio Heaters", "Blocking emergency exits / corridor", "Preventive Maintenance", "Other"],
+    "Customer Feedback": ["Positive", "Negative"],
+    "Incident": []
+  },
+  actions: ["Verbal Warning", "Written Warning", "Legal Warning", "Closed Temporarily", "Employee Banned From Entry", "None", "Others"],
+  serious: ["Written Warning", "Legal Warning", "Closed Temporarily", "Employee Banned From Entry"]
+};
+const fbOut = r => ({ id: r.id, site: r.site, tenant: r.tenant, day: r.day, time: r.time, category: r.category, description: r.description,
+  action: r.action, actionDesc: r.action_desc, createdBy: r.created_by, createdName: r.created_name, createdAt: r.created_at });
+function cleanFeedback(e) {
+  const cat = FEEDBACK.categories[e.category] ? e.category : "";
+  if (!cat) throw fail("Choose the feedback type");
+  const tenant = String(e.tenant || "").trim().slice(0, 120);
+  if (!tenant) throw fail("Enter the tenant");
+  if (!isDay(e.day)) throw fail("Choose the date");
+  const list = FEEDBACK.categories[cat];
+  const description = String(e.description || "").trim().slice(0, 200);
+  if (list.length && description && !list.includes(description)) throw fail("Choose a description from the list");
+  const action = FEEDBACK.actions.includes(e.action) ? e.action : "None";
+  return { tenant, day: e.day, time: /^\d{2}:\d{2}$/.test(String(e.time || "")) ? e.time : "", category: cat, description,
+    action, actionDesc: String(e.actionDesc || "").trim().slice(0, 500) };
 }
 async function getSetting(env, site, k, dflt) {
   const r = await env.DB.prepare("SELECT v FROM ops_settings WHERE site = ? AND k = ?").bind(site, k).first();
@@ -902,9 +940,99 @@ async function opsRoute(env, me, p, method, b, url) {
              handover: { count: Number(handovers.n || 0), label: "to receive" } };
   }
   if (p === "context") {
-    return { me: { ...userOut(me) }, site, siteName: siteName(site), sites: SITES,
+    return { me: { ...userOut(me) }, site, siteName: siteName(site), sites: SITES, feedback: FEEDBACK,
       canPickSite: me.role === "ADMIN", can, staff: await siteStaff(env, site),
       positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])), codes: SHIFT_CODES, today: beirutToday() };
+  }
+
+  /* ----- GLA & occupancy ----- */
+  if (p === "gla/list") {
+    const { results } = await env.DB.prepare("SELECT month, units, file_name, uploaded_by, uploaded_at FROM gla_reports WHERE site = ? ORDER BY month DESC").bind(site).all();
+    return { site, can, reports: results || [] };
+  }
+  if (p === "gla/get") {
+    const m = /^\d{4}-\d{2}$/.test(q("month") || "") ? q("month") : null;
+    const r = await env.DB.prepare(m ? "SELECT * FROM gla_reports WHERE site = ? AND month = ?" : "SELECT * FROM gla_reports WHERE site = ? ORDER BY month DESC LIMIT 1")
+      .bind(...(m ? [site, m] : [site])).first();
+    return { site, can, report: r ? { month: r.month, fileName: r.file_name, uploadedBy: r.uploaded_by, uploadedAt: r.uploaded_at, ...JSON.parse(r.data) } : null };
+  }
+  if (p === "gla/save" && method === "POST") {
+    if (!can.gla) throw fail("Only the flagship's Manager or Senior Mall Supervisor can upload the GLA", 403);
+    const month = String(b.month || "");
+    if (!/^\d{4}-\d{2}$/.test(month)) throw fail("The report month is missing");
+    const units = (Array.isArray(b.units) ? b.units : []).slice(0, 3000).map(u => ({
+      level: s(u.level, 20), type: s(u.type, 30), code: s(u.code, 30), brand: s(u.brand, 120), status: s(u.status, 30),
+      dept: s(u.dept, 60), area: Math.max(0, Math.round(Number(u.area) * 100) / 100 || 0) })).filter(u => u.code || u.brand);
+    if (!units.length) throw fail("No units were found in this file");
+    const official = b.official && typeof b.official === "object" ? Object.fromEntries(Object.entries(b.official).slice(0, 20).map(([k, v]) => [s(k, 40), Number(v) || 0])) : {};
+    const data = JSON.stringify({ units, official, levels: (Array.isArray(b.levels) ? b.levels : []).map(x => s(x, 20)).slice(0, 30) });
+    if (data.length > 900000) throw fail("This file is too large");
+    await env.DB.prepare(`INSERT INTO gla_reports (site, month, data, units, file_name, uploaded_by, uploaded_at) VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(site, month) DO UPDATE SET data = excluded.data, units = excluded.units, file_name = excluded.file_name, uploaded_by = excluded.uploaded_by, uploaded_at = excluded.uploaded_at`)
+      .bind(site, month, data, units.length, s(b.fileName, 120), me.full_name, nowIso()).run();
+    await raiseEvent(env, { site, app: "gla", tone: "info", title: `GLA updated · ${siteName(site)}`, body: `${month} · ${units.length} units · by ${me.full_name}` });
+    return { saved: units.length, month };
+  }
+
+  /* ----- tenant feedback ----- */
+  if (p === "feedback/list") {
+    const from = isDay(q("from")) ? q("from") : "0000-00-00", to = isDay(q("to")) ? q("to") : "9999-12-31";
+    const { results } = await env.DB.prepare("SELECT * FROM tenant_feedback WHERE site = ? AND day BETWEEN ? AND ? ORDER BY day DESC, time DESC, id DESC LIMIT 2000")
+      .bind(site, from, to).all();
+    return { site, can, entries: (results || []).map(fbOut) };
+  }
+  if (p === "feedback/tenants") {
+    const gla = await env.DB.prepare("SELECT data FROM gla_reports WHERE site = ? ORDER BY month DESC LIMIT 1").bind(site).first();
+    const names = new Set();
+    if (gla) for (const u of JSON.parse(gla.data).units || []) {
+      const b = String(u.brand || "").trim();
+      if (b && !/vacant|w\.?h\.?$|warehouse/i.test(b) && !/vacant/i.test(u.status || "") && u.type !== "DS") names.add(b.toUpperCase() === b ? b : b);
+    }
+    const { results } = await env.DB.prepare("SELECT DISTINCT tenant FROM tenant_feedback WHERE site = ? ORDER BY tenant LIMIT 500").bind(site).all();
+    (results || []).forEach(r => names.add(r.tenant));
+    return { tenants: [...names].sort((a, b) => a.localeCompare(b)) };
+  }
+  if (p === "feedback/save" && method === "POST") {
+    if (!can.feedback) throw fail("Not allowed", 403);
+    const e = cleanFeedback(b.entry || {});
+    const id = Number((b.entry || {}).id) || 0, at = nowIso();
+    if (id) {
+      const ex = await env.DB.prepare("SELECT * FROM tenant_feedback WHERE id = ? AND site = ?").bind(id, site).first();
+      if (!ex) throw fail("Entry not found", 404);
+      if (ex.created_by !== me.email && !can.feedbackAdmin) throw fail("Only the person who logged this entry or the flagship leads can change it", 403);
+      await env.DB.prepare("UPDATE tenant_feedback SET tenant=?, day=?, time=?, category=?, description=?, action=?, action_desc=?, updated_at=? WHERE id=?")
+        .bind(e.tenant, e.day, e.time, e.category, e.description, e.action, e.actionDesc, at, id).run();
+      return { id };
+    }
+    const r = await env.DB.prepare(`INSERT INTO tenant_feedback (site, tenant, day, time, category, description, action, action_desc, created_by, created_name, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, e.tenant, e.day, e.time, e.category, e.description, e.action, e.actionDesc, me.email, me.full_name, at, at).run();
+    if (FEEDBACK.serious.includes(e.action)) await raiseEvent(env, { site, app: "feedback", tone: "warn",
+      title: `${e.action} · ${e.tenant}`, body: `${siteName(site)} · ${e.category}${e.description ? " — " + e.description : ""}` });
+    return { id: r.meta.last_row_id };
+  }
+  if (p === "feedback/delete" && method === "POST") {
+    const ex = await env.DB.prepare("SELECT * FROM tenant_feedback WHERE id = ? AND site = ?").bind(Number(b.id) || 0, site).first();
+    if (!ex) throw fail("Entry not found", 404);
+    if (ex.created_by !== me.email && !can.feedbackAdmin) throw fail("Only the person who logged this entry or the flagship leads can delete it", 403);
+    await env.DB.prepare("DELETE FROM tenant_feedback WHERE id = ?").bind(ex.id).run();
+    return { deleted: true };
+  }
+  if (p === "feedback/import" && method === "POST") {
+    if (!can.feedbackAdmin) throw fail("Only the flagship's Manager or Senior Mall Supervisor can import history", 403);
+    const rows = (Array.isArray(b.entries) ? b.entries : []).slice(0, 3000);
+    const existing = await env.DB.prepare("SELECT day, time, tenant, category, description FROM tenant_feedback WHERE site = ?").bind(site).all();
+    const seen = new Set((existing.results || []).map(r => [r.day, r.time, r.tenant.toLowerCase(), r.category, r.description].join("|")));
+    const at = nowIso(), ops = [], skipped = [];
+    for (const raw of rows) {
+      let e; try { e = cleanFeedback({ ...raw, description: FEEDBACK.categories[raw.category] && FEEDBACK.categories[raw.category].length && !FEEDBACK.categories[raw.category].includes(raw.description) ? "" : raw.description }); }
+      catch (er) { skipped.push(er.message); continue; }
+      const k = [e.day, e.time, e.tenant.toLowerCase(), e.category, e.description].join("|");
+      if (seen.has(k)) continue; seen.add(k);
+      ops.push(env.DB.prepare(`INSERT INTO tenant_feedback (site, tenant, day, time, category, description, action, action_desc, created_by, created_name, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, e.tenant, e.day, e.time, e.category, e.description, e.action, e.actionDesc, me.email, `${me.full_name} (import)`, at, at));
+    }
+    for (let i = 0; i < ops.length; i += 90) await env.DB.batch(ops.slice(i, i + 90));
+    return { imported: ops.length, skipped: skipped.length, reasons: [...new Set(skipped)].slice(0, 5) };
   }
 
   /* ----- schedule ----- */
