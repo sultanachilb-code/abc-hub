@@ -28,18 +28,21 @@ const CONNECTORS = {
   snaglist: {
     base: "https://abc-snaglist.sultanalachi-work.workers.dev",
     stats: "/api?hubstats=1&site={site}",
+    notify: "/api?hubnotify=1&site={site}&since={since}",
     sso: "/api?sso={token}"
   },
   incidents: {
     base: "https://abc-incident-system.sultanachi-lb-61f.workers.dev",
     binding: "INCIDENTS",
     stats: "/api/hubstats?site={site}",
+    notify: "/api/hubnotify?site={site}&since={since}",
     sso: "/api/sso?token={token}"
   },
   restroom: {
     base: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev",
     binding: "RESTROOM",
-    stats: "/api/hubstats?site={site}"
+    stats: "/api/hubstats?site={site}",
+    notify: "/api/hubnotify?site={site}&since={since}"
   }
 };
 
@@ -58,6 +61,14 @@ const HEALTH = {
   archibus:       { name: "Archibus", internal: true }
 };
 const HEALTH_CACHE_MS = 60 * 1000;
+
+/* Notifications & push */
+const NOTIFY_DAYS = 7;
+const NOTIFY_CACHE_MS = 60 * 1000;
+const VAPID_SUBJECT = "mailto:salaachi@abc.com.lb";
+/* Who may receive each system's events — keep in line with "roles" in apps.js
+   (systems not listed go to everyone; Admins always receive everything). */
+const APP_ROLES = { restroom: ["MANAGER", "SUPERVISOR"] };
 
 /* Morning email */
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
@@ -123,10 +134,13 @@ async function ensureSchema(env) {
       app_id TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', sort INTEGER NOT NULL DEFAULT 0)`)
   ]);
   await seedControlSheet(env);
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_subs (
+      endpoint TEXT PRIMARY KEY, email TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL,
+      level TEXT NOT NULL DEFAULT 'important', device TEXT, created_at TEXT, last_ok_at TEXT)`).run();
   const cols = await env.DB.prepare("PRAGMA table_info(users)").all();
-  if (!(cols.results || []).some(c => c.name === "morning_email")) {
-    await env.DB.prepare("ALTER TABLE users ADD COLUMN morning_email INTEGER NOT NULL DEFAULT 1").run();
-  }
+  const has = n => (cols.results || []).some(c => c.name === n);
+  if (!has("morning_email")) await env.DB.prepare("ALTER TABLE users ADD COLUMN morning_email INTEGER NOT NULL DEFAULT 1").run();
+  if (!has("notif_read_at")) await env.DB.prepare("ALTER TABLE users ADD COLUMN notif_read_at TEXT NOT NULL DEFAULT ''").run();
   schemaReady = true;
 }
 
@@ -164,14 +178,15 @@ export default {
     }
     return env.ASSETS.fetch(request);
   },
-  /* Cron runs at 05:00 and 06:00 UTC; only the run that lands on 08:00 Beirut
-     sends (this keeps 08:00 through summer and winter time). */
+  /* One cron trigger, every 2 minutes (free plan allows 5 per account):
+     • pushes new events to subscribed phones and laptops
+     • sends the morning email once, in the 08:00 Beirut hour (safe through summer/winter time) */
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       if (!env.DB) return;
       await ensureSchema(env);
-      if (beirutHour() !== MAIL_HOUR) return;
-      await morningRun(env, { force: false });
+      await pushRun(env).catch(e => console.error("push", e && e.message));
+      if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
     })());
   }
 };
@@ -206,6 +221,19 @@ async function route(request, env, ctx, url) {
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
   if (path === "sso") return ok(await ssoLink(env, me, url.searchParams.get("app")));
   if (path === "health") return ok(await health(env));
+  if (path === "notifications") return ok(await notificationsFor(env, me));
+  if (path === "notifications/read" && method === "POST") {
+    await env.DB.prepare("UPDATE users SET notif_read_at = ? WHERE email = ?").bind(nowIso(), me.email).run();
+    return ok({ read: true });
+  }
+  if (path === "push/key") return ok({ key: (await vapidKeys(env)).pub });
+  if (path === "push/status") return ok(await pushStatus(env, me, url.searchParams.get("endpoint")));
+  if (path === "push/subscribe" && method === "POST") return ok(await pushSubscribe(env, me, body, request));
+  if (path === "push/unsubscribe" && method === "POST") {
+    await env.DB.prepare("DELETE FROM push_subs WHERE endpoint = ? AND email = ?").bind(String(body.endpoint || ""), me.email).run();
+    return ok({ removed: true });
+  }
+  if (path === "push/test" && method === "POST") return ok(await pushTest(env, me, body));
 
   /* ----- admin ----- */
   if (path.startsWith("admin/")) {
@@ -590,4 +618,162 @@ async function saveControl(env, b) {
   const r = await env.DB.prepare("INSERT INTO control_sheet (name, category, live_url, github_url, cloudflare_url, app_id, notes, sort) VALUES (?,?,?,?,?,?,?,?)")
     .bind(...vals, Number(max.m) + 1).run();
   return { id: r.meta && r.meta.last_row_id };
+}
+
+/* ---------- notifications (bell) ---------- */
+const notifyCache = new Map();
+async function gatherNotify(env, site, since) {
+  const ids = Object.keys(CONNECTORS).filter(id => CONNECTORS[id].notify);
+  const lists = await Promise.all(ids.map(async id => {
+    const c = CONNECTORS[id];
+    if (!env.HUB_KEY) return [];
+    const target = c.base + c.notify.replace("{site}", encodeURIComponent(site)).replace("{since}", encodeURIComponent(since));
+    const init = { headers: { "x-hub-key": env.HUB_KEY }, signal: AbortSignal.timeout(6000) };
+    try {
+      const r = c.binding && env[c.binding] ? await env[c.binding].fetch(target, init) : await fetch(target, init);
+      const j = await r.json().catch(() => null);
+      if (!j || !j.ok || !j.data || !Array.isArray(j.data.events)) return [];
+      return j.data.events.slice(0, 100).map(e => ({
+        id: `${id}:${e.id}`, app: id, at: String(e.at || ""), site: e.site || "",
+        title: String(e.title || "").slice(0, 140), body: String(e.body || "").slice(0, 240),
+        tone: ["alert", "warn", "ok", "info"].includes(e.tone) ? e.tone : "info"
+      }));
+    } catch { return []; }
+  }));
+  return lists.flat().filter(e => e.at).sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+async function notificationsFor(env, me) {
+  const site = me.site_code || "ALL";
+  const hit = notifyCache.get(site);
+  let events;
+  if (hit && Date.now() - hit.at < NOTIFY_CACHE_MS) events = hit.events;
+  else {
+    events = (await gatherNotify(env, site, new Date(Date.now() - NOTIFY_DAYS * 864e5).toISOString())).slice(0, 80);
+    notifyCache.set(site, { at: Date.now(), events });
+  }
+  return { events, readAt: me.notif_read_at || "" };
+}
+const roleAllows = (role, app) => role === "ADMIN" || !APP_ROLES[app] || APP_ROLES[app].includes(role);
+
+/* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
+async function vapidKeys(env) {
+  const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'vapid'").first();
+  if (row) return JSON.parse(row.v);
+  const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const v = { jwk: await crypto.subtle.exportKey("jwk", kp.privateKey), pub: b64url(await crypto.subtle.exportKey("raw", kp.publicKey)) };
+  await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('vapid', ?)").bind(JSON.stringify(v)).run();
+  return JSON.parse((await env.DB.prepare("SELECT v FROM meta WHERE k = 'vapid'").first()).v);
+}
+async function vapidHeader(env, endpoint) {
+  const { jwk, pub } = await vapidKeys(env);
+  const key = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const h = b64url(enc.encode(JSON.stringify({ typ: "JWT", alg: "ES256" })));
+  const p = b64url(enc.encode(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: VAPID_SUBJECT })));
+  const sig = b64url(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, enc.encode(`${h}.${p}`)));
+  return `vapid t=${h}.${p}.${sig}, k=${pub}`;
+}
+const cat = (...parts) => { const out = new Uint8Array(parts.reduce((n, x) => n + x.length, 0)); let i = 0; for (const x of parts) { out.set(x, i); i += x.length; } return out; };
+async function hkdf(salt, ikm, info, len) {
+  const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info }, k, len * 8));
+}
+async function encryptPush(sub, text) {
+  const uaPub = unb64url(sub.p256dh), authSecret = unb64url(sub.auth);
+  const as = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const asPub = new Uint8Array(await crypto.subtle.exportKey("raw", as.publicKey));
+  const uaKey = await crypto.subtle.importKey("raw", uaPub, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaKey }, as.privateKey, 256));
+  const ikm = await hkdf(authSecret, shared, cat(enc.encode("WebPush: info\0"), uaPub, asPub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, enc.encode("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = await hkdf(salt, ikm, enc.encode("Content-Encoding: nonce\0"), 12);
+  const key = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, cat(enc.encode(text), new Uint8Array([2]))));
+  const head = new Uint8Array(21); head.set(salt, 0); new DataView(head.buffer).setUint32(16, 4096); head[20] = 65;
+  return cat(head, asPub, ct);
+}
+async function sendPush(env, sub, msg) {
+  try {
+    const r = await fetch(sub.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: await vapidHeader(env, sub.endpoint),
+        "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream",
+        TTL: "3600", Urgency: msg.tone === "alert" ? "high" : "normal"
+      },
+      body: await encryptPush(sub, JSON.stringify(msg))
+    });
+    if (r.status === 404 || r.status === 410) {
+      await env.DB.prepare("DELETE FROM push_subs WHERE endpoint = ?").bind(sub.endpoint).run();
+      return { ok: false, gone: true, status: r.status };
+    }
+    if (r.status >= 200 && r.status < 300) {
+      await env.DB.prepare("UPDATE push_subs SET last_ok_at = ? WHERE endpoint = ?").bind(nowIso(), sub.endpoint).run();
+      return { ok: true };
+    }
+    return { ok: false, status: r.status, error: (await r.text()).slice(0, 200) };
+  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
+}
+async function pushSubscribe(env, me, b, request) {
+  const s = b.subscription || {};
+  const endpoint = String(s.endpoint || ""), keys = s.keys || {};
+  if (!/^https:\/\//.test(endpoint) || !keys.p256dh || !keys.auth) throw fail("This device did not return a valid push subscription");
+  const level = b.level === "all" ? "all" : "important";
+  const device = String(request.headers.get("user-agent") || "").slice(0, 160);
+  await env.DB.prepare(`INSERT INTO push_subs (endpoint, email, p256dh, auth, level, device, created_at) VALUES (?,?,?,?,?,?,?)
+    ON CONFLICT(endpoint) DO UPDATE SET email=excluded.email, p256dh=excluded.p256dh, auth=excluded.auth, level=excluded.level, device=excluded.device`)
+    .bind(endpoint, me.email, keys.p256dh, keys.auth, level, device, nowIso()).run();
+  await ensureWatermark(env);
+  return { subscribed: true, level };
+}
+async function pushStatus(env, me, endpoint) {
+  const row = endpoint ? await env.DB.prepare("SELECT level FROM push_subs WHERE endpoint = ? AND email = ?").bind(endpoint, me.email).first() : null;
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM push_subs WHERE email = ?").bind(me.email).first();
+  return { subscribed: !!row, level: row ? row.level : "important", devices: Number(n.n || 0) };
+}
+async function pushTest(env, me, b) {
+  const row = await env.DB.prepare("SELECT * FROM push_subs WHERE endpoint = ? AND email = ?").bind(String(b.endpoint || ""), me.email).first();
+  if (!row) throw fail("Notifications are not turned on for this device");
+  const r = await sendPush(env, row, { title: "ABC Operations Hub", body: "Test notification — this device will receive hub alerts.", tone: "info", url: "/", tag: "hub-test" });
+  if (!r.ok) throw fail(r.gone ? "This device's subscription has expired — turn notifications on again" : `The push service refused the message (${r.status || r.error})`, 502);
+  return { sent: true };
+}
+async function ensureWatermark(env) {
+  await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('push:wm', ?)").bind(nowIso()).run();
+}
+
+/* Runs every 2 minutes from the cron: finds events newer than the last run
+   and pushes them to each subscribed device the person is allowed to see. */
+async function pushRun(env) {
+  const subsQ = await env.DB.prepare(
+    "SELECT s.*, u.site_code, u.role FROM push_subs s JOIN users u ON u.email = s.email WHERE u.active = 1").all();
+  const subs = subsQ.results || [];
+  const wmRow = await env.DB.prepare("SELECT v FROM meta WHERE k = 'push:wm'").first();
+  if (!wmRow) { await ensureWatermark(env); return; }
+  const wm = wmRow.v;
+  if (!subs.length) { await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(nowIso()).run(); return; }
+  const events = (await gatherNotify(env, "ALL", wm)).filter(e => e.at > wm && e.at <= nowIso());
+  if (!events.length) return;
+  const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
+  await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom" };
+  for (const sub of subs) {
+    const mine = events.filter(e =>
+      (!sub.site_code || !e.site || e.site === sub.site_code) &&
+      roleAllows(sub.role, e.app) &&
+      (sub.level === "all" || e.tone === "alert" || e.tone === "warn"));
+    if (!mine.length) continue;
+    if (mine.length <= 3) {
+      for (const e of mine.reverse()) {
+        await sendPush(env, sub, { title: `${names[e.app] || e.app} · ${e.title}`, body: e.body, tone: e.tone, url: `/#/app/${e.app}`, tag: e.id });
+      }
+    } else {
+      const alerts = mine.filter(e => e.tone === "alert").length;
+      await sendPush(env, sub, {
+        title: `${mine.length} new alerts in the hub`,
+        body: `${alerts ? alerts + " urgent · " : ""}${[...new Set(mine.map(e => names[e.app] || e.app))].join(", ")}`,
+        tone: alerts ? "alert" : "warn", url: "/#/", tag: "hub-summary"
+      });
+    }
+  }
 }

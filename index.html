@@ -118,14 +118,6 @@ button{background:none;border:0;cursor:pointer}
 main section{margin-top:28px}
 main section h2{font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:14px}
 
-/* ---------- health dots ---------- */
-async function loadHealth(){
-  try { HEALTH = await api("health"); } catch { return; }
-  renderHome();
-  if (BRIEF) renderBrief(false);
-}
-const downApps = () => HEALTH && HEALTH.systems ? APPS.filter(a => HEALTH.systems[a.id] && HEALTH.systems[a.id].state === "down") : [];
-
 /* ---------- daily brief ---------- */
 .brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
@@ -180,6 +172,35 @@ button.bcard:hover{border-color:var(--brand-2)}
 .prog strong{color:var(--text);font-variant-numeric:tabular-nums}
 .brows.collapsed{display:none}
 @media (max-width:700px){.brow{grid-template-columns:1fr}}
+
+/* notification bell */
+.bellwrap{position:relative}
+.bell{position:relative;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.1);color:#fff}
+.bell:hover{background:rgba(255,255,255,.18)}
+.bell svg{width:19px;height:19px}
+.bell .cnt{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#E5484D;color:#fff;font-size:.68rem;font-weight:800;display:grid;place-items:center;border:2px solid var(--ink)}
+.bell.ring svg{animation:ring 1s ease-in-out 2}
+@keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}80%{transform:rotate(-4deg)}}
+.npanel{position:absolute;right:0;top:46px;width:min(400px,calc(100vw - 24px));max-height:min(560px,calc(100vh - 120px));display:flex;flex-direction:column;
+  background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:16px;z-index:30;box-shadow:0 18px 40px rgba(20,8,34,.28);overflow:hidden}
+.np-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.np-h b{font-size:.98rem}
+.np-h button{font-size:.8rem;font-weight:700;color:var(--brand-2);padding:4px 6px;border-radius:8px}
+.np-list{overflow-y:auto;padding:6px}
+.ni{display:flex;gap:12px;width:100%;text-align:left;padding:10px;border-radius:12px;position:relative}
+.ni:hover{background:var(--paper)}
+.ni .ico{width:34px;height:34px;border-radius:10px}
+.ni .ico svg{width:17px;height:17px}
+.ni b{display:block;font-size:.88rem;line-height:1.3}
+.ni small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px;line-height:1.35}
+.ni time{display:block;color:var(--muted);font-size:.72rem;margin-top:4px}
+.ni.unread{background:rgba(123,75,176,.08)}
+.ni.unread::after{content:"";position:absolute;right:10px;top:14px;width:8px;height:8px;border-radius:50%;background:var(--brand-2)}
+.ni .tn{width:4px;border-radius:4px;flex:none;background:var(--line)}
+.ni .tn.alert{background:var(--alert)}.ni .tn.warn{background:var(--warn)}.ni .tn.ok{background:var(--ok)}
+.np-empty{padding:30px 16px;text-align:center;color:var(--muted);font-size:.9rem}
+.np-f{padding:10px 16px;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.np-f button{font-weight:700;color:var(--brand-2)}
 
 /* AI quick access */
 .aimenu{position:relative}
@@ -328,7 +349,8 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
   .mh-inner{flex-direction:column;align-items:stretch}
   .mh-actions{justify-content:space-between}
   .search,.search:focus-within{width:auto;flex:1}
-  .search kbd,#netPill span{display:none}
+  .search kbd,#netPill span,.ai-btn span{display:none}
+  .ai-btn{padding:0 11px}
   .grid{grid-template-columns:1fr}
   .brandmark h1{font-size:1.2rem}
   .two{grid-template-columns:1fr}
@@ -360,6 +382,10 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
         </label>
         <span class="pill" id="netPill" title="Connection"><i class="net" id="net"></i><span id="netLbl">Online</span></span>
         <button class="pill gold hidden" id="installBtn">Install app</button>
+        <div class="bellwrap">
+          <button class="bell" id="bellBtn" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="cnt hidden" id="bellCnt"></span></button>
+          <div class="npanel hidden" id="npanel"></div>
+        </div>
         <div class="aimenu">
           <button class="ai-btn" id="aiBtn" aria-haspopup="true" title="AI assistants"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span>AI</span></button>
           <div class="menu hidden" id="aiMenu"></div>
@@ -447,7 +473,7 @@ const store = {
   get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-let ME = null, SITES = {}, ROLES = {}, APPS = [], BRIEF = null, HEALTH = null;
+let ME = null, SITES = {}, ROLES = {}, APPS = [], BRIEF = null, HEALTH = null, NOTIF = { events: [], readAt: "" };
 
 /* ---------- api ---------- */
 async function api(path, body){
@@ -567,7 +593,9 @@ function startHub(){
   loadAnnouncements();
   loadBrief();
   loadHealth();
-  setInterval(() => { if (!document.hidden) loadHealth(); }, 60 * 1000);
+  loadNotifications();
+  setInterval(() => { if (!document.hidden){ loadHealth(); loadNotifications(); } }, 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadNotifications(); });
   route();
   setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
 }
@@ -581,7 +609,10 @@ function buildMenu(){
     <button data-a="pw">Change password</button>
     <button data-a="out">Sign out</button>`;
   $("#avatar").onclick = e => { e.stopPropagation(); $("#aiMenu").classList.add("hidden"); m.classList.toggle("hidden"); };
-  document.addEventListener("click", () => { m.classList.add("hidden"); $("#aiMenu").classList.add("hidden"); });
+  document.addEventListener("click", e => {
+    m.classList.add("hidden"); $("#aiMenu").classList.add("hidden");
+    if (!e.target.closest("#npanel")) $("#npanel").classList.add("hidden");
+  });
   buildAiMenu();
   m.onclick = async e => {
     const a = e.target.closest("button")?.dataset.a; if (!a) return;
@@ -608,6 +639,8 @@ function settingsDialog(){
       <div class="seg" id="segBrief" style="grid-template-columns:1fr 1fr">
         <button data-v="0" class="${collapsed ? "" : "on"}">Show everything</button>
         <button data-v="1" class="${collapsed ? "on" : ""}">Attention only</button></div>
+      <div class="set-label">Alerts on this device</div>
+      <div id="pushBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Recently opened</div>
       <button class="btn ghost small" id="setClear" style="margin-bottom:8px">Clear the Recent line</button>
     </div>
@@ -621,6 +654,38 @@ function settingsDialog(){
     if (e.target.id === "setClear"){ store.set("hub.recent", []); renderRail(); e.target.textContent = "Cleared ✓"; }
   };
   sheet.showModal();
+  renderPushBox();
+}
+async function renderPushBox(msg){
+  const box = $("#pushBox"); if (!box) return;
+  const note = msg ? `<div class="msg ${msg.ok ? "okm" : "err"}" style="margin:0 0 10px">${esc(msg.text)}</div>` : "";
+  const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (iOS && !isStandalone()){
+    box.innerHTML = note + `<p class="brief-empty" style="font-size:.86rem;line-height:1.5">On iPhone, alerts work once the hub is on your Home Screen: tap <b>Share → Add to Home Screen</b>, open the hub from that icon, then come back here.</p>`;
+    return;
+  }
+  if (!pushSupported()){ box.innerHTML = note + `<p class="brief-empty" style="font-size:.86rem">This browser does not support notifications. Use Chrome, Edge or the installed hub.</p>`; return; }
+  let sub = null, st = { subscribed: false, level: "important" };
+  try { sub = await currentSub(); st = await api("push/status" + (sub ? "?endpoint=" + encodeURIComponent(sub.endpoint) : "")); } catch {}
+  const on = !!(sub && st.subscribed);
+  box.innerHTML = note + (on
+    ? `<div class="seg" id="segLevel" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
+         <button data-v="important" class="${st.level !== "all" ? "on" : ""}">Urgent &amp; important</button>
+         <button data-v="all" class="${st.level === "all" ? "on" : ""}">Everything</button></div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="pushTest">Send a test</button><button class="btn small ghost" id="pushOff">Turn off on this device</button></div>
+       <p class="brief-empty" style="font-size:.78rem;margin-top:8px">On for this device${st.devices > 1 ? ` · ${st.devices} devices in total` : ""}.</p>`
+    : `<p class="brief-empty" style="font-size:.86rem;line-height:1.5;margin-bottom:10px">Get new incidents, site visits and missed inspections on this ${/android|iphone|ipad/i.test(navigator.userAgent) ? "phone's lock screen" : "computer"}, even when the hub is closed.</p>
+       <button class="btn small" id="pushOn">Turn on alerts</button>`);
+  box.onclick = async e => {
+    const t = e.target; if (!(t instanceof HTMLElement)) return;
+    try {
+      if (t.id === "pushOn"){ t.disabled = true; t.textContent = "Turning on…"; await pushOn("important"); return renderPushBox({ ok: true, text: "Alerts are on for this device." }); }
+      if (t.id === "pushOff"){ await pushOff(); return renderPushBox({ ok: true, text: "Alerts are off for this device." }); }
+      if (t.id === "pushTest"){ const s2 = await currentSub(); await api("push/test", { endpoint: s2 && s2.endpoint }); return renderPushBox({ ok: true, text: "Test sent — it should appear within a few seconds." }); }
+      const lv = t.closest("#segLevel button");
+      if (lv){ await pushOn(lv.dataset.v); return renderPushBox({ ok: true, text: lv.dataset.v === "all" ? "You'll get every event." : "You'll get urgent and important events only." }); }
+    } catch (er){ renderPushBox({ ok: false, text: er.message }); }
+  };
 }
 
 /* ---------- AI quick access ---------- */
@@ -678,6 +743,81 @@ $("#anns").addEventListener("click", e => {
   card.remove();
 });
 const fmtLocal = v => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
+
+/* ---------- notification bell ---------- */
+const visibleEvents = () => (NOTIF.events || []).filter(e => byId(e.app));
+const unreadCount = () => visibleEvents().filter(e => !NOTIF.readAt || e.at > NOTIF.readAt).length;
+const ago = iso => {
+  const m = Math.round((Date.now() - new Date(iso)) / 6e4);
+  if (m < 1) return "just now"; if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60); if (h < 24) return `${h} h ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+};
+let lastUnread = 0;
+async function loadNotifications(){
+  try { NOTIF = await api("notifications"); } catch { return; }
+  const n = unreadCount();
+  const c = $("#bellCnt");
+  c.textContent = n > 99 ? "99+" : n;
+  c.classList.toggle("hidden", !n);
+  if (n > lastUnread){ $("#bellBtn").classList.remove("ring"); void $("#bellBtn").offsetWidth; $("#bellBtn").classList.add("ring"); }
+  lastUnread = n;
+  try { n ? navigator.setAppBadge && navigator.setAppBadge(n) : navigator.clearAppBadge && navigator.clearAppBadge(); } catch {}
+  if (!$("#npanel").classList.contains("hidden")) renderPanel();
+}
+function renderPanel(){
+  const list = visibleEvents();
+  $("#npanel").innerHTML = `<div class="np-h"><b>Notifications</b><button id="npSettings">Phone &amp; laptop alerts</button></div>
+    <div class="np-list">${list.length ? list.map(e => { const a = byId(e.app); const unread = !NOTIF.readAt || e.at > NOTIF.readAt;
+      return `<button class="ni ${unread ? "unread" : ""}" data-app="${esc(e.app)}"><span class="tn ${esc(e.tone)}"></span>${icoHTML(a)}<span><b>${esc(e.title)}</b><small>${esc(e.body)}</small><time>${esc(a.name)} · ${esc(ago(e.at))}</time></span></button>`; }).join("")
+      : `<div class="np-empty">No notifications in the last 7 days.</div>`}</div>
+    <div class="np-f"><span>Last 7 days · your flagship</span><button id="npRefresh">Refresh</button></div>`;
+}
+$("#bellBtn").addEventListener("click", async e => {
+  e.stopPropagation();
+  $("#menu").classList.add("hidden"); $("#aiMenu").classList.add("hidden");
+  const p = $("#npanel");
+  const opening = p.classList.contains("hidden");
+  p.classList.toggle("hidden");
+  if (!opening) return;
+  renderPanel();
+  if (unreadCount()){
+    const stamp = new Date().toISOString();
+    api("notifications/read", {}).then(() => {
+      NOTIF.readAt = stamp; lastUnread = 0;
+      $("#bellCnt").classList.add("hidden");
+      try { navigator.clearAppBadge && navigator.clearAppBadge(); } catch {}
+    }).catch(() => {});
+  }
+});
+$("#npanel").addEventListener("click", e => {
+  e.stopPropagation();
+  if (e.target.id === "npSettings"){ $("#npanel").classList.add("hidden"); return settingsDialog(); }
+  if (e.target.id === "npRefresh") return loadNotifications();
+  const it = e.target.closest(".ni");
+  if (it){ $("#npanel").classList.add("hidden"); launch(byId(it.dataset.app)); }
+});
+
+/* ---------- push notifications (this device) ---------- */
+const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+function b64ToBytes(s){ s = s.replace(/-/g, "+").replace(/_/g, "/"); const b = atob(s + "===".slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+async function currentSub(){ if (!pushSupported()) return null; const reg = await navigator.serviceWorker.ready; return reg.pushManager.getSubscription(); }
+async function pushOn(level){
+  if (Notification.permission === "denied") throw new Error("Notifications are blocked for the hub in this browser's site settings. Allow them there, then try again.");
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") throw new Error("Permission was not given.");
+  const reg = await navigator.serviceWorker.ready;
+  const { key } = await api("push/key");
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+  await api("push/subscribe", { subscription: sub.toJSON(), level });
+}
+async function pushOff(){
+  const sub = await currentSub(); if (!sub) return;
+  await api("push/unsubscribe", { endpoint: sub.endpoint }).catch(() => {});
+  await sub.unsubscribe();
+}
 
 /* ---------- health dots ---------- */
 async function loadHealth(){
