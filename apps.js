@@ -73,6 +73,16 @@ window.HUB = {
       color: "#3E5C8A",
       url: "/tools/gla"
     },
+    /* Mall Layouts feature — see docs/FEATURE-layouts.md */
+    {
+      id: "layouts",
+      name: "Mall Layouts",
+      desc: "Level plans with live unit status — find any brand",
+      group: "Property Overview & Info",
+      icon: "box",
+      color: "#2F6F5E",
+      url: "/tools/layouts"
+    },
     {
       id: "snaglist",
       name: "Snaglist Manager",

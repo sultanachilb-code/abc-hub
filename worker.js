@@ -1,4 +1,5 @@
 import { GLA } from "./data/gla-data.js";
+import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js";   // Mall Layouts feature — see docs/FEATURE-layouts.md
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -149,6 +150,7 @@ async function ensureSchema(env) {
   if (!has("morning_email")) await env.DB.prepare("ALTER TABLE users ADD COLUMN morning_email INTEGER NOT NULL DEFAULT 1").run();
   if (!has("notif_read_at")) await env.DB.prepare("ALTER TABLE users ADD COLUMN notif_read_at TEXT NOT NULL DEFAULT ''").run();
   if (!has("position")) await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT NOT NULL DEFAULT ''").run();
+  await layoutsSchema(env);   // Mall Layouts feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -282,6 +284,7 @@ async function route(request, env, ctx, url) {
   }
   if (path === "push/test" && method === "POST") return ok(await pushTest(env, me, body));
   if (path === "usage" && method === "POST") { await logUsage(env, me, String(body.app || "").slice(0, 40)); return ok({ logged: true }); }
+  if (path === "ops/layouts/image") return layoutsImage(env, opsSite(me, url.searchParams.get("site")), url);   // Mall Layouts feature
   if (path.startsWith("ops/")) return ok(await opsRoute(env, me, path.slice(4), method, body, url));
 
   /* ----- admin ----- */
@@ -889,7 +892,8 @@ function rights(me, site) {
     handover: mine && me.role !== "SECURITY",
     feedback: mine,                 // anyone at the flagship can log tenant feedback
     feedbackAdmin: mine && lead,    // edit anyone's entries, import history
-    gla: mine && (lead || me.role === "SUPERVISOR")   // keep the GLA up to date
+    gla: mine && (lead || me.role === "SUPERVISOR"),  // keep the GLA up to date
+    layouts: mine && lead                              // Mall Layouts feature: upload plans, adjust pins
   };
 }
 
@@ -1039,6 +1043,9 @@ async function opsRoute(env, me, p, method, b, url) {
     const day = isDay(q("date")) ? q("date") : beirutToday();
     return { site, date: day, units: await glaAsOf(env, site, day) };
   }
+
+  /* ----- Mall Layouts feature (modules/layouts.js) ----- */
+  if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso });
 
   /* ----- tenant feedback ----- */
   if (p === "feedback/list") {
