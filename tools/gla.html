@@ -175,7 +175,11 @@ function render(){
     <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA · ${G.changes} change${G.changes === 1 ? "" : "s"} since ${esc((G.baseline && G.baseline.source) || "the workbook")}</span><span>${U.length} units · figures in square metres</span></div>
   </div>`;
   applyFit(); search();
+  /* Mall Layouts feature: arriving from a plan pin opens that unit's editor, and returns to the plan afterwards */
+  const up = new URLSearchParams(location.search), uid = Number(up.get("unit"));
+  if (uid && !render.opened){ render.opened = true; const u = G.units.find(x => x.id === uid); if (u && CAN.gla) editUnit(u); }
 }
+const BACK = (() => { const b = new URLSearchParams(location.search).get("back"); return b && b.startsWith("/tools/") ? b : ""; })();
 /* fit the whole landscape sheet on screen */
 function applyFit(){
   const sh = $("#sheet"); if (!sh) return;
@@ -229,7 +233,7 @@ function editUnit(u){
   d.oninput = e => { if (e.target.id === "eStatus") syncBrand(); $("#eErr").classList.add("hidden"); };
   d.onclick = async e => {
     const t = e.target;
-    if (t === d || t.id === "eClose") return d.close();
+    if (t === d || t.id === "eClose"){ d.close(); if (BACK) location.href = BACK; return; }
     const effDate = $("#eDate").value, note = $("#eNote").value;
     if (t.id === "eDel"){
       if (!(await confirmBox("Remove this unit?", `${esc(u.code)} is removed from the GLA as of ${esc(D.fmt(effDate, { year: "numeric" }))} (use this when units are merged or split). The history keeps it.`, "Remove"))) return;
@@ -241,7 +245,8 @@ function editUnit(u){
       const err = !unit.level || !unit.code ? "Level and unit code are required" : unit.status !== "Vacant" && !unit.brand ? "Enter the brand" : !effDate ? "Choose the effective date" : "";
       if (err){ $("#eErr").textContent = err; $("#eErr").classList.remove("hidden"); return; }
       t.disabled = true;
-      try { const r = await api("ops/gla/save", { site: CTX.site, unit, effDate, note }); d.close(); toast(r.changed === false ? "Nothing changed" : isNew ? "Unit added" : "GLA updated"); boot(CTX.site); }
+      try { const r = await api("ops/gla/save", { site: CTX.site, unit, effDate, note }); d.close(); toast(r.changed === false ? "Nothing changed" : isNew ? "Unit added" : "GLA updated");
+        if (BACK) return setTimeout(() => location.href = BACK, 600); boot(CTX.site); }
       catch (er){ $("#eErr").textContent = er.message; $("#eErr").classList.remove("hidden"); t.disabled = false; }
     }
   };

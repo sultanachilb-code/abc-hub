@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mall Layouts · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Mall Layouts feature — see docs/FEATURE-layouts.md -->
+<style>
+html,body{height:100%}
+body{display:flex;flex-direction:column;overflow:hidden}
+.top{flex:none}
+.srch{position:relative;flex:1;min-width:200px;max-width:420px}
+.srch .inp{width:100%;padding-left:34px}
+.srch svg{position:absolute;left:10px;top:10px;width:18px;height:18px;color:var(--muted)}
+.res{position:absolute;left:0;right:0;top:44px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 30px rgba(20,8,34,.2);max-height:360px;overflow:auto;z-index:50}
+.res button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+.res button:hover,.res button.on{background:rgba(123,75,176,.08)}
+.res b{font-size:.9rem}.res small{color:var(--muted);font-size:.76rem;display:block}
+.res .lv{margin-left:auto;font-weight:900;font-size:.78rem;color:var(--brand-2);white-space:nowrap}
+.levels{flex:none;display:flex;gap:4px;padding:8px 20px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--surface)}
+.levels button{padding:7px 14px;border-radius:9px;font-weight:800;font-size:.86rem;color:var(--muted);white-space:nowrap;border:1px solid transparent}
+.levels button.on{background:var(--ink);color:#fff}
+.levels button .n{font-size:.68rem;opacity:.7;margin-left:4px}
+.main{flex:1;display:flex;min-height:0}
+.vp{flex:1;position:relative;overflow:hidden;background:#EEF0F4;touch-action:none;cursor:grab}
+:root[data-theme="dark"] .vp{background:#0E0A14}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .vp{background:#0E0A14} }
+.vp.drag{cursor:grabbing}
+.world{position:absolute;left:0;top:0;transform-origin:0 0}
+.world img{display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;background:#fff}
+.pins{position:absolute;inset:0}
+.pin{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);
+  transform:scale(var(--inv,1));cursor:pointer;padding:0;background:#7B4BB0}
+.pin.s-fit{background:#C8A24A}.pin.s-vac,.pin.s-term{background:#E5484D}.pin.s-closed{background:#8A8494}.pin.s-place{background:#1F9E8F;border-radius:5px}
+.pin.s-none{background:#fff;border-color:#8A8494;border-style:dashed}
+.pin.sel{outline:3px solid var(--gold);outline-offset:2px}
+.pin.dim{opacity:.15}
+.pin.pulse::after,.pin.pulse::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--gold);animation:pulse 1.4s ease-out 4}
+.pin.pulse::before{animation-delay:.45s}
+@keyframes pulse{from{transform:scale(.6);opacity:1}to{transform:scale(3.2);opacity:0}}
+.adjust .pin{cursor:move}
+.zoom{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:5}
+.zoom button{width:40px;height:40px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:1.2rem;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--gold);color:var(--ink);font-weight:800;font-size:.84rem;padding:8px 14px;border-radius:12px;z-index:6;box-shadow:0 6px 16px rgba(0,0,0,.15);text-align:center;max-width:calc(100% - 24px)}
+.side{width:300px;flex:none;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:16px}
+.side h3{font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+.side h3:first-child{margin-top:0}
+.fg{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:.86rem}
+.fg b{text-align:right;font-variant-numeric:tabular-nums}
+.leg{display:grid;gap:5px;font-size:.8rem;color:var(--muted)}
+.leg span{display:flex;align-items:center;gap:8px}.leg i{width:12px;height:12px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.mm{display:grid;gap:4px}
+.mm button{text-align:left;font-size:.8rem;padding:6px 8px;border-radius:8px;border:1px solid var(--line)}
+.mm button:hover{border-color:var(--brand-2)}
+.card{position:absolute;z-index:20;width:270px;padding:14px 16px;box-shadow:0 16px 36px rgba(20,8,34,.28)}
+.card .x{position:absolute;right:8px;top:6px;width:28px;height:28px;border-radius:8px;color:var(--muted);font-size:1.1rem}
+.card h4{font-size:1rem;font-weight:800;padding-right:24px}
+.card .row{display:flex;justify-content:space-between;font-size:.84rem;padding:4px 0;border-bottom:1px solid var(--line)}
+.card .row span{color:var(--muted)}
+.card .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.upl table{width:100%;border-collapse:collapse;font-size:.84rem}
+.upl td,.upl th{padding:6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.upl img{width:90px;border:1px solid var(--line);border-radius:6px;display:block}
+.upl .inp{height:32px;width:80px}
+.prog{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:10px}.prog i{display:block;height:100%;background:var(--brand-2);width:0;transition:width .3s}
+.sheetbtn{display:none}
+@media (max-width:820px){
+  .side{position:absolute;left:0;right:0;bottom:0;width:auto;max-height:55%;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;transform:translateY(calc(100% - 46px));transition:transform .25s;z-index:15}
+  .side.open{transform:none}
+  .sheetbtn{display:block;width:100%;text-align:center;font-weight:800;font-size:.84rem;padding:4px 0 12px;color:var(--muted)}
+  .main{position:relative}
+  .zoom{bottom:60px}
+  .levels{padding:8px 12px}
+  .card{left:10px!important;right:10px;width:auto;top:auto!important;bottom:60px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Mall Layouts <small id="sub"></small></h1>
+  <div class="srch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input class="inp" id="q" placeholder="Where is… (brand, unit or place)" autocomplete="off"><div class="res hidden" id="res"></div></div>
+  <span id="siteBox"></span>
+  <button class="btn ghost small hidden" id="adjBtn">Adjust pins</button>
+  <button class="btn ghost small hidden" id="uplBtn">Upload layout PDF</button>
+</div>
+<div class="levels" id="levels"></div>
+<div class="main">
+  <div class="vp" id="vp">
+    <div class="world" id="world"><img id="plan" alt=""><div class="pins" id="pins"></div></div>
+    <div class="banner hidden" id="banner"></div>
+    <div class="zoom"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Fit" style="font-size:.8rem">Fit</button></div>
+    <div class="card hidden" id="card"></div>
+    <div class="empty hidden" id="emptyMsg" style="position:absolute;inset:0;display:grid;place-items:center"></div>
+  </div>
+  <aside class="side" id="side"></aside>
+</div>
+<dialog id="dlg"></dialog>
+
+<script src="pdfjs/pdf.min.js"></script>
+<script src="common.js"></script>
+<script>
+let CTX = null, L = null, UNITS = [], CAN = {}, LEVEL = null, ADJUST = false, PENDING = null;
+const V = { s: 1, x: 0, y: 0, w: 0, h: 0 };
+const norm = c => String(c || "").replace(/^VM[\s-]*/i, "").trim().toUpperCase();
+const byCode = () => { const m = new Map(); UNITS.forEach(u => m.set(norm(u.code), u)); return m; };
+const stCls = u => !u ? "s-none" : u.status === "Fit-out" ? "s-fit" : u.status === "Vacant" ? "s-vac" : u.status === "Terminated" ? "s-term" : u.status === "Closed" ? "s-closed" : "s-open";
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const params = new URLSearchParams(location.search);
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => { LEVEL = null; boot(s); });
+  const [l, g] = await Promise.all([api(`ops/layouts/list?site=${CTX.site}`), api(`ops/gla/get?site=${CTX.site}`).catch(() => ({ report: null, can: {} }))]);
+  L = l; CAN = { ...l.can, gla: g.can && g.can.gla };
+  UNITS = g.report ? g.report.units : [];
+  $("#adjBtn").classList.toggle("hidden", !CAN.layouts || !L.levels.length);
+  $("#uplBtn").classList.toggle("hidden", !CAN.layouts);
+  if (!L.levels.length){
+    $("#levels").innerHTML = ""; $("#side").innerHTML = ""; $("#world").style.display = "none";
+    const m = $("#emptyMsg"); m.classList.remove("hidden");
+    m.innerHTML = `<div class="card" style="position:static;width:auto;max-width:420px;text-align:center;box-shadow:none;padding:24px">No layout plans for ${esc(CTX.siteName)} yet.${CAN.layouts ? `<br><br><button class="btn gold" onclick="openUpload()">Upload the layout PDF</button><br><small class="muted">One page per level, like “Verdun Mall Layouts — August 2026”.</small>` : "<br>Ask the flagship Manager to upload them."}</div>`;
+    return;
+  }
+  $("#emptyMsg").classList.add("hidden"); $("#world").style.display = "";
+  const want = params.get("level");
+  LEVEL = L.levels.find(x => x.level === (LEVEL || want)) ? (LEVEL || want) : L.levels[0].level;
+  renderLevels(); await showLevel(LEVEL);
+  const f = params.get("focus"); if (f){ params.delete("focus"); const pin = L.pins.find(p => norm(p.code) === norm(f)); if (pin) focusPin(pin); }
+}
+function renderLevels(){
+  $("#levels").innerHTML = L.levels.map(x => { const n = L.pins.filter(p => p.level === x.level).length;
+    return `<button data-lv="${esc(x.level)}" class="${x.level === LEVEL ? "on" : ""}">${esc(x.level)}${n ? `<span class="n">${n}</span>` : ""}</button>`; }).join("");
+}
+function showLevel(lv){
+  LEVEL = lv; renderLevels(); hideCard();
+  const meta = L.levels.find(x => x.level === lv);
+  V.w = meta.width; V.h = meta.height;
+  const img = $("#plan"); img.style.width = V.w + "px"; img.style.height = V.h + "px";
+  $("#world").style.width = V.w + "px"; $("#world").style.height = V.h + "px";
+  return new Promise(res => { img.onload = () => { fit(); res(); }; img.onerror = res; img.src = `/api/ops/layouts/image?site=${CTX.site}&level=${encodeURIComponent(lv)}&v=${encodeURIComponent(meta.uploadedAt || "")}`; drawPins(); renderSide(); });
+}
+function drawPins(){
+  const map = byCode();
+  $("#pins").innerHTML = L.pins.filter(p => p.level === LEVEL).map(p => {
+    const u = p.kind === "unit" ? map.get(norm(p.code)) : null;
+    const cls = p.kind === "place" ? "s-place" : stCls(u);
+    const title = p.kind === "place" ? p.label : u ? `${u.brand || "Vacant"} · ${u.code} · ${u.status}` : `${p.code} · not in the GLA`;
+    return `<button class="pin ${cls}" data-id="${p.id}" style="left:${p.x * 100}%;top:${p.y * 100}%" title="${esc(title)}" aria-label="${esc(title)}"></button>`;
+  }).join("");
+}
+function renderSide(){
+  const meta = L.levels.find(x => x.level === LEVEL), f = meta.figures || {};
+  const map = byCode(), pinsHere = L.pins.filter(p => p.level === LEVEL && p.kind === "unit");
+  const pinned = new Set(L.pins.filter(p => p.kind === "unit").map(p => norm(p.code)));
+  const us = UNITS.filter(u => u.level === LEVEL || (LEVEL === "LGF" && u.level === "LG"));
+  const missingOnPlan = us.filter(u => !pinned.has(norm(u.code)));
+  const notInGla = pinsHere.filter(p => !map.get(norm(p.code)));
+  const label = { total: "Total level area", circulation: "Circulation", leasing: "Leasing", vacant: "Leasing – vacant", fitout: "Leasing – fit-out", popup: "Pop-up", store: "ABC store area", iplay: "iPlay", park: "Central park", parking: "Parking area" };
+  const live = { units: us.length, vac: us.filter(u => u.status === "Vacant" || u.status === "Terminated").length, fit: us.filter(u => u.status === "Fit-out").length, closed: us.filter(u => u.status === "Closed").length };
+  $("#side").innerHTML = `<button class="sheetbtn" id="sheetBtn">Level ${esc(LEVEL)} · details ▴</button>
+    <h3>Level ${esc(LEVEL)} · from the plan</h3>
+    <div class="fg">${Object.keys(label).filter(k => f[k]).map(k => `<span>${label[k]}</span><b>${fmt(f[k])} m²</b>`).join("") || `<span class="muted">No figures on this plan</span>`}</div>
+    ${us.length ? `<h3>Live from the GLA</h3><div class="fg"><span>Units</span><b>${live.units}</b><span>Vacant / terminated</span><b style="color:var(--alert)">${live.vac}</b><span>Fit-out</span><b>${live.fit}</b>${live.closed ? `<span>Closed</span><b>${live.closed}</b>` : ""}</div>` : ""}
+    <h3>Key</h3><div class="leg"><span><i style="background:#7B4BB0"></i>Open</span><span><i style="background:#C8A24A"></i>Fit-out</span><span><i style="background:#E5484D"></i>Vacant / terminated</span><span><i style="background:#8A8494"></i>Closed</span><span><i style="background:#1F9E8F;border-radius:3px"></i>Place (ATM, room, office…)</span><span><i style="background:#fff;border:2px dashed #8A8494"></i>On the plan, not in the GLA</span></div>
+    ${notInGla.length ? `<h3>On the plan, not in the GLA · ${notInGla.length}</h3><div class="mm">${notInGla.map(p => `<button data-focus="${p.id}">${esc(p.code)}</button>`).join("")}</div>` : ""}
+    ${missingOnPlan.length ? `<h3>In the GLA, not on the plan · ${missingOnPlan.length}</h3><div class="mm">${missingOnPlan.map(u => `<button data-place="${u.id}">${esc(u.code)} · ${esc(u.brand || "Vacant")}${CAN.layouts ? " — place it" : ""}</button>`).join("")}</div>` : ""}
+    <p class="muted" style="font-size:.74rem;margin-top:14px">${esc(meta.source || "")}${meta.uploadedBy ? ` · uploaded by ${esc(meta.uploadedBy)}` : ""}</p>
+    ${CAN.layouts ? `<button class="btn ghost small danger" id="delLevel" style="margin-top:10px">Remove this level's plan</button>` : ""}`;
+}
+
+/* ---------------- zoom & pan ---------------- */
+function apply(){ $("#world").style.transform = `translate(${V.x}px,${V.y}px) scale(${V.s})`; $("#world").style.setProperty("--inv", (1 / V.s).toFixed(4)); }
+function fit(){ const r = $("#vp").getBoundingClientRect(); V.s = Math.min(r.width / V.w, r.height / V.h) * 0.96; V.x = (r.width - V.w * V.s) / 2; V.y = (r.height - V.h * V.s) / 2; V.min = V.s * 0.7; apply(); }
+function zoomAt(f, cx, cy){ const ns = Math.max(V.min || .05, Math.min(V.s * f, 6)); V.x = cx - (cx - V.x) * (ns / V.s); V.y = cy - (cy - V.y) * (ns / V.s); V.s = ns; apply(); }
+const vp = $("#vp"), pts = new Map();
+let dragPin = null, moved = false, start = null, pinchD = 0;
+vp.addEventListener("wheel", e => { e.preventDefault(); const r = vp.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+vp.addEventListener("pointerdown", e => {
+  if (e.target.closest(".card,.zoom,.banner")) return;
+  vp.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = false; start = { x: e.clientX, y: e.clientY };
+  const pin = e.target.closest(".pin");
+  dragPin = ADJUST && pin ? pin : null;
+  if (pts.size === 2){ const [a, b] = [...pts.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); }
+  vp.classList.add("drag");
+});
+vp.addEventListener("pointermove", e => {
+  if (!pts.has(e.pointerId)) return;
+  const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4) moved = true;
+  const r = vp.getBoundingClientRect();
+  if (pts.size === 2){ const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (pinchD) zoomAt(d / pinchD, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); pinchD = d; return; }
+  if (dragPin){ const x = (e.clientX - r.left - V.x) / V.s / V.w, y = (e.clientY - r.top - V.y) / V.s / V.h; dragPin.style.left = (x * 100) + "%"; dragPin.style.top = (y * 100) + "%"; dragPin.dataset.nx = x; dragPin.dataset.ny = y; return; }
+  V.x += e.clientX - prev.x; V.y += e.clientY - prev.y; apply(); hideCard();
+});
+vp.addEventListener("pointerup", async e => {
+  pts.delete(e.pointerId); if (pts.size < 2) pinchD = 0; vp.classList.remove("drag");
+  if (dragPin && moved){ const p = L.pins.find(x => x.id === Number(dragPin.dataset.id)); p.x = +dragPin.dataset.nx; p.y = +dragPin.dataset.ny;
+    try { await api("ops/layouts/pin", { site: CTX.site, id: p.id, x: p.x, y: p.y }); p.source = "manual"; toast("Pin moved"); } catch (er){ toast(er.message, true); } dragPin = null; return; }
+  dragPin = null;
+  if (moved) return;
+  const pin = e.target.closest(".pin");
+  if (pin) return openCard(L.pins.find(x => x.id === Number(pin.dataset.id)));
+  if (e.target.closest(".card,.zoom,.banner")) return;
+  hideCard();
+  const r = vp.getBoundingClientRect(), x = (e.clientX - r.left - V.x) / V.s / V.w, y = (e.clientY - r.top - V.y) / V.s / V.h;
+  if (x < 0 || y < 0 || x > 1 || y > 1) return;
+  if (PENDING){ const u = PENDING; PENDING = null; $("#banner").classList.add("hidden"); return addPin({ level: LEVEL, code: u.code, x, y }); }
+  if (ADJUST) addDialog(x, y);
+});
+vp.addEventListener("dblclick", e => { const r = vp.getBoundingClientRect(); zoomAt(1.8, e.clientX - r.left, e.clientY - r.top); });
+$("#zIn").onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(1.4, r.width / 2, r.height / 2); };
+$("#zOut").onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(1 / 1.4, r.width / 2, r.height / 2); };
+$("#zFit").onclick = fit;
+addEventListener("resize", () => V.w && fit());
+
+/* ---------------- pin card ---------------- */
+function openCard(p){
+  document.querySelectorAll(".pin.sel").forEach(x => x.classList.remove("sel"));
+  const el = document.querySelector(`.pin[data-id="${p.id}"]`); if (el) el.classList.add("sel");
+  const u = p.kind === "unit" ? byCode().get(norm(p.code)) : null;
+  const c = $("#card");
+  c.innerHTML = `<button class="x" id="cx">×</button>
+    ${p.kind === "place" ? `<h4>${esc(p.label)}</h4><p class="muted" style="font-size:.8rem;margin-top:4px">Place · level ${esc(p.level)}</p>`
+      : u ? `<h4>${esc(u.brand || "Vacant")}</h4><div style="margin:6px 0 8px"><span class="pill ${u.status === "Open" ? "brand" : u.status === "Fit-out" ? "warn" : u.status === "Closed" ? "" : "alert"}">${esc(u.status)}</span></div>
+        <div class="row"><span>Unit</span><b>${esc(u.level)} · ${esc(u.code)}</b></div><div class="row"><span>Area</span><b>${fmt(u.area)} m²</b></div>
+        <div class="row"><span>Category</span><b>${esc(u.dept || "—")}</b></div><div class="row"><span>Space</span><b>${esc(u.section)}</b></div>
+        ${u.updatedBy ? `<p class="muted" style="font-size:.74rem;margin-top:6px">Last updated by ${esc(u.updatedBy)}</p>` : ""}`
+      : `<h4>${esc(p.code)}</h4><p style="font-size:.84rem;margin-top:6px">This code is on the plan but not in the GLA.</p>`}
+    <div class="acts">
+      ${u && CAN.gla ? `<button class="btn small" id="cGla">Update in GLA</button>` : ""}
+      ${ADJUST ? `${p.kind === "place" ? `<button class="btn ghost small" id="cRen">Rename</button>` : `<button class="btn ghost small" id="cLink">Link to unit</button>`}<button class="btn ghost small danger" id="cDel">Delete pin</button>` : ""}
+    </div>`;
+  c.classList.remove("hidden");
+  const r = vp.getBoundingClientRect(), px = V.x + p.x * V.w * V.s, py = V.y + p.y * V.h * V.s;
+  c.style.left = Math.max(10, Math.min(r.width - 280, px + 16)) + "px"; c.style.top = Math.max(10, Math.min(r.height - c.offsetHeight - 10, py - 30)) + "px";
+  c.onclick = async e => {
+    const t = e.target;
+    if (t.id === "cx") return hideCard();
+    if (t.id === "cGla") return location.href = `/tools/gla?unit=${u.id}&back=${encodeURIComponent(`/tools/layouts?level=${p.level}&focus=${norm(p.code)}`)}`;
+    if (t.id === "cDel"){ if (!(await confirmBox("Delete this pin?", "Only the pin on the plan is removed — the GLA isn't touched.", "Delete"))) return;
+      try { await api("ops/layouts/pin", { site: CTX.site, id: p.id, delete: true }); L.pins = L.pins.filter(x => x.id !== p.id); hideCard(); drawPins(); renderSide(); renderLevels(); } catch (er){ toast(er.message, true); } }
+    if (t.id === "cRen"){ const n = prompt("Place name", p.label); if (!n) return; try { await api("ops/layouts/pin", { site: CTX.site, id: p.id, x: p.x, y: p.y, label: n }); p.label = n; drawPins(); openCard(p); } catch (er){ toast(er.message, true); } }
+    if (t.id === "cLink") linkDialog(p);
+  };
+}
+function hideCard(){ $("#card").classList.add("hidden"); document.querySelectorAll(".pin.sel").forEach(x => x.classList.remove("sel")); }
+function focusPin(p, pulse = true){
+  const go = async () => {
+    if (p.level !== LEVEL) await showLevel(p.level);
+    const r = vp.getBoundingClientRect(); const s = Math.max(V.s, Math.min(r.width / V.w, r.height / V.h) * 3);
+    V.s = Math.min(s, 3); V.x = r.width / 2 - p.x * V.w * V.s; V.y = r.height / 2 - p.y * V.h * V.s; apply();
+    const el = document.querySelector(`.pin[data-id="${p.id}"]`);
+    if (el && pulse){ el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse"); setTimeout(() => el.classList.remove("pulse"), 6000); }
+    openCard(p);
+  };
+  go();
+}
+
+/* ---------------- search: brand, unit code or place ---------------- */
+function search(){
+  const q = $("#q").value.trim().toLowerCase(), box = $("#res");
+  if (q.length < 2){ box.classList.add("hidden"); return; }
+  const map = byCode(), out = [];
+  for (const p of L.pins){
+    const u = p.kind === "unit" ? map.get(norm(p.code)) : null;
+    const hay = (p.kind === "place" ? p.label : `${u ? u.brand : ""} ${p.code}`).toLowerCase();
+    const name = (p.kind === "place" ? p.label : (u && u.brand) || "").toLowerCase();
+    if (hay.includes(q)) out.push({ p, u, score: name === q || norm(p.code).toLowerCase() === q ? 0 : name.startsWith(q) ? 1 : 2 });
+  }
+  const pinned = new Set(L.pins.map(p => norm(p.code)));
+  const off = UNITS.filter(u => !pinned.has(norm(u.code)) && `${u.brand} ${u.code}`.toLowerCase().includes(q)).slice(0, 5);
+  out.sort((a, b) => a.score - b.score || String(a.p.level).localeCompare(String(b.p.level)));
+  box.innerHTML = out.slice(0, 12).map((r, i) => `<button data-pin="${r.p.id}" class="${i === 0 ? "on" : ""}"><span class="pin ${r.p.kind === "place" ? "s-place" : stCls(r.u)}" style="position:static;margin:0;transform:none;flex:none;width:14px;height:14px"></span>
+      <span><b>${esc(r.p.kind === "place" ? r.p.label : (r.u ? r.u.brand || "Vacant" : r.p.code))}</b><small>${esc(r.p.kind === "place" ? "Place" : `${r.p.code}${r.u ? " · " + r.u.status + " · " + fmt(r.u.area) + " m²" : ""}`)}</small></span><span class="lv">${esc(r.p.level)}</span></button>`).join("")
+    + off.map(u => `<button disabled style="opacity:.6"><span><b>${esc(u.brand || "Vacant")}</b><small>${esc(u.code)} · in the GLA, not placed on the plan yet</small></span><span class="lv">${esc(u.level)}</span></button>`).join("")
+    || `<button disabled><span class="muted">No match on the ${esc(CTX.siteName)} plans</span></button>`;
+  box.classList.remove("hidden");
+}
+$("#q").addEventListener("input", search);
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter"){ const b = $("#res button.on"); if (b) b.click(); } if (e.key === "Escape"){ $("#res").classList.add("hidden"); } });
+$("#res").addEventListener("click", e => { const b = e.target.closest("[data-pin]"); if (!b) return; $("#res").classList.add("hidden"); focusPin(L.pins.find(p => p.id === Number(b.dataset.pin))); });
+document.addEventListener("click", e => { if (!e.target.closest(".srch")) $("#res").classList.add("hidden"); });
+
+/* ---------------- adjust mode ---------------- */
+function setAdjust(on){
+  ADJUST = on; vp.classList.toggle("adjust", on); $("#adjBtn").textContent = on ? "Done adjusting" : "Adjust pins"; $("#adjBtn").classList.toggle("gold", on);
+  const b = $("#banner"); b.classList.toggle("hidden", !on); b.textContent = "Adjust mode · drag a pin to move it · tap an empty spot to add a place or a unit"; hideCard();
+}
+async function addPin(pin){
+  try { const r = await api("ops/layouts/pin", { site: CTX.site, ...pin }); L.pins.push({ id: r.id, kind: pin.code ? "unit" : "place", code: pin.code || "", label: pin.label || "", source: "manual", ...pin });
+    drawPins(); renderSide(); renderLevels(); toast("Pin added"); } catch (er){ toast(er.message, true); }
+}
+function addDialog(x, y){
+  const pinned = new Set(L.pins.map(p => norm(p.code)));
+  const free = UNITS.filter(u => !pinned.has(norm(u.code)));
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Add a pin on ${esc(LEVEL)}</b><small>A place (ATM, office, room…) or a GLA unit that isn't on the plan yet</small></div>
+    <div class="dlg-b"><label class="lbl">Place name</label><input class="inp" id="pName" placeholder="e.g. Security office, Baby feeding room" style="width:100%">
+      <p class="muted" style="text-align:center;margin:10px 0">or</p>
+      <label class="lbl">GLA unit</label><select class="sel" id="pUnit" style="width:100%"><option value="">— Choose a unit —</option>${free.map(u => `<option value="${esc(u.code)}">${esc(u.level)} · ${esc(u.code)} · ${esc(u.brand || "Vacant")}</option>`).join("")}</select></div>
+    <div class="dlg-f"><button class="btn ghost" id="pC">Cancel</button><button class="btn gold" id="pOk">Add pin</button></div>`;
+  d.onclick = async e => { if (e.target === d || e.target.id === "pC") return d.close();
+    if (e.target.id === "pOk"){ const code = $("#pUnit").value, label = $("#pName").value.trim(); if (!code && !label) return toast("Enter a place name or choose a unit", true); d.close(); addPin({ level: LEVEL, x, y, code, label: code ? "" : label }); } };
+  d.showModal();
+}
+function linkDialog(p){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Link ${esc(p.code || "pin")} to a GLA unit</b><small>Use this when the plan's code differs from the GLA's</small></div>
+    <div class="dlg-b"><select class="sel" id="lU" style="width:100%">${UNITS.map(u => `<option value="${esc(u.code)}" ${norm(u.code) === norm(p.code) ? "selected" : ""}>${esc(u.level)} · ${esc(u.code)} · ${esc(u.brand || "Vacant")}</option>`).join("")}</select></div>
+    <div class="dlg-f"><button class="btn ghost" id="lC">Cancel</button><button class="btn gold" id="lOk">Link</button></div>`;
+  d.onclick = async e => { if (e.target === d || e.target.id === "lC") return d.close();
+    if (e.target.id === "lOk"){ const code = $("#lU").value; d.close();
+      try { await api("ops/layouts/pin", { site: CTX.site, id: p.id, x: p.x, y: p.y, code }); p.code = code; p.kind = "unit"; drawPins(); renderSide(); openCard(p); toast("Pin linked"); } catch (er){ toast(er.message, true); } } };
+  d.showModal();
+}
+$("#adjBtn").onclick = () => setAdjust(!ADJUST);
+$("#levels").addEventListener("click", e => { const b = e.target.closest("[data-lv]"); if (b) showLevel(b.dataset.lv); });
+$("#side").addEventListener("click", async e => {
+  const t = e.target;
+  if (t.id === "sheetBtn") return $("#side").classList.toggle("open");
+  const f = t.closest("[data-focus]"); if (f) return focusPin(L.pins.find(p => p.id === Number(f.dataset.focus)));
+  const pl = t.closest("[data-place]");
+  if (pl && CAN.layouts){ PENDING = UNITS.find(u => u.id === Number(pl.dataset.place)); const b = $("#banner"); b.textContent = `Tap the plan where ${PENDING.code} · ${PENDING.brand || "Vacant"} is`; b.classList.remove("hidden"); $("#side").classList.remove("open"); return; }
+  if (t.id === "delLevel"){ if (!(await confirmBox(`Remove the ${esc(LEVEL)} plan?`, "The plan image and its pins are removed. The GLA isn't touched.", "Remove"))) return;
+    try { await api("ops/layouts/delete", { site: CTX.site, level: LEVEL }); LEVEL = null; toast("Plan removed"); boot(CTX.site); } catch (er){ toast(er.message, true); } }
+});
+
+/* ---------------- upload: read the layout PDF in the browser ---------------- */
+pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.min.js";
+const CODE_RE = /(?:VM[\s-]*)?(?:P-)?(?:L\d|GF|LGF|LG|PP|P\d|B\d)-[A-Z]?\d{2,3}\b/gi;
+const FIG = { total: /Total Level\s*[A-Z0-9-]*\s*Area\s*([\d,.]+)\s*m/i, circulation: /Circulation\s*([\d,.]+)\s*m/i, leasing: /Leasing\s+([\d,.]+)\s*m²/i,
+  vacant: /Leasing\s*-\s*Vacant\s*([\d,.]+)\s*m/i, fitout: /Fit\s*Out\s*([\d,.]+)\s*m/i, popup: /POP[\s-]*UP\s*([\d,.]+)\s*m/i, store: /ABC Store Area\s*([\d,.]+)\s*m/i,
+  parking: /Parking Area\s*([\d,.]+)\s*m/i, iplay: /IPLAY\s*([\d,.]+)\s*m/i, park: /Central park\s*([\d,.]+)\s*m/i };
+function levelName(txt){
+  const m = /PLAN\s+LEVEL\s+(-\s*\d|L\d|GF|LGF|LG)\b/i.exec(txt) || /LEVEL\s+(-\s*\d|L\d|GF|LGF|LG)\b/i.exec(txt);
+  if (!m) return "";
+  const v = m[1].replace(/\s/g, "").toUpperCase();
+  return v.startsWith("-") ? "B" + v.slice(1) : v === "LG" ? "LGF" : v;
+}
+async function readPdf(file, onPage){
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++){
+    const page = await doc.getPage(i);
+    const base = page.getViewport({ scale: 1 });
+    const vpt = page.getViewport({ scale: Math.min(3, 2600 / base.width) });
+    const canvas = document.createElement("canvas"); canvas.width = Math.round(vpt.width); canvas.height = Math.round(vpt.height);
+    const cx = canvas.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: cx, viewport: vpt }).promise;
+    let image = canvas.toDataURL("image/webp", 0.82); if (!image.startsWith("data:image/webp")) image = canvas.toDataURL("image/jpeg", 0.85);
+    const tc = await page.getTextContent(), txt = tc.items.map(t => t.str).join(" ");
+    const pins = [], seen = new Set();
+    for (const t of tc.items){
+      CODE_RE.lastIndex = 0; let m;
+      while ((m = CODE_RE.exec(t.str))){
+        const code = norm(m[0]);
+        const M = pdfjsLib.Util.transform(vpt.transform, t.transform);
+        const len = Math.hypot(M[0], M[1]) || 1, dx = M[0] / len, dy = M[1] / len;
+        const frac = t.str.length ? (m.index + m[0].length / 2) / t.str.length : .5;
+        const along = t.width * vpt.scale * frac;
+        const x = M[4] + dx * along + M[2] * .35, y = M[5] + dy * along + M[3] * .35;
+        const key = code + "|" + Math.round(x / 25) + "|" + Math.round(y / 25);
+        if (seen.has(key)) continue; seen.add(key);
+        pins.push({ code, x: +(x / canvas.width).toFixed(5), y: +(y / canvas.height).toFixed(5) });
+      }
+    }
+    const figures = {}; for (const [k, re] of Object.entries(FIG)){ const m = re.exec(txt); if (m) figures[k] = Number(m[1].replace(/,/g, "")); }
+    pages.push({ page: i, level: levelName(txt) || `P${i}`, width: canvas.width, height: canvas.height, image, pins, figures, include: true });
+    onPage && onPage(i, doc.numPages);
+  }
+  return pages;
+}
+function openUpload(){
+  const d = $("#dlg"); d.classList.add("upl"); d.style.width = "min(760px, calc(100% - 24px))";
+  let pages = null, fileName = "";
+  d.innerHTML = `<div class="dlg-h"><b>Upload the layout PDF · ${esc(CTX.siteName)}</b><small>One page per level. The hub reads each level's name, figures and unit positions from the PDF.</small></div>
+    <div class="dlg-b"><label class="btn ghost" style="cursor:pointer">Choose PDF<input type="file" id="pf" accept="application/pdf" hidden></label><div id="up" style="margin-top:12px"></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="uC">Cancel</button><button class="btn gold hidden" id="uS">Save</button></div>`;
+  d.onchange = async e => {
+    if (e.target.id !== "pf" || !e.target.files[0]) return;
+    fileName = e.target.files[0].name;
+    $("#up").innerHTML = `<p class="muted">Reading the plans…</p><div class="prog"><i id="pb"></i></div>`;
+    try { pages = await readPdf(e.target.files[0], (i, n) => { $("#pb").style.width = (i / n * 100) + "%"; }); }
+    catch (er){ $("#up").innerHTML = `<p style="color:var(--alert)">${esc(er.message)}</p>`; return; }
+    const map = byCode();
+    $("#up").innerHTML = `<table><tr><th></th><th>Level</th><th>Units found</th><th>Matched to GLA</th><th>Include</th></tr>${pages.map((p, i) => `<tr><td><img src="${p.image}" alt=""></td>
+      <td><input class="inp" data-lvl="${i}" value="${esc(p.level)}"></td><td>${p.pins.length}</td><td>${p.pins.filter(x => map.get(x.code)).length}</td>
+      <td><input type="checkbox" data-inc="${i}" checked></td></tr>`).join("")}</table>
+      <p class="muted" style="font-size:.8rem;margin-top:8px">Uploading a level again replaces its plan and its automatic pins. Pins you placed or moved by hand are kept.</p>`;
+    $("#uS").classList.remove("hidden");
+  };
+  d.oninput = e => { if (e.target.dataset.lvl) pages[+e.target.dataset.lvl].level = e.target.value.trim().toUpperCase(); if (e.target.dataset.inc) pages[+e.target.dataset.inc].include = e.target.checked; };
+  d.onclick = async e => {
+    if (e.target.id === "uC" || e.target === d) return d.close();
+    if (e.target.id === "uS" && pages){
+      const list = pages.filter(p => p.include && p.level); e.target.disabled = true;
+      $("#up").insertAdjacentHTML("beforeend", `<div class="prog"><i id="sb"></i></div>`);
+      try { for (let i = 0; i < list.length; i++){ const p = list[i];
+          await api("ops/layouts/level", { site: CTX.site, level: p.level, name: p.level, seq: p.page, width: p.width, height: p.height, figures: p.figures, image: p.image, pins: p.pins, source: fileName });
+          $("#sb").style.width = ((i + 1) / list.length * 100) + "%"; }
+        d.close(); toast(`${list.length} level plan${list.length === 1 ? "" : "s"} saved`); LEVEL = null; boot(CTX.site);
+      } catch (er){ toast(er.message, true); e.target.disabled = false; }
+    }
+  };
+  d.showModal();
+}
+$("#uplBtn").onclick = openUpload;
+boot().catch(e => { $("#emptyMsg").classList.remove("hidden"); $("#emptyMsg").innerHTML = `<div class="empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
