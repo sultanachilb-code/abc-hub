@@ -7,224 +7,175 @@
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
 <style>
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
-.kpi{padding:14px 16px}
-.kpi strong{display:block;font-size:1.55rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
-.kpi span{font-size:.78rem;color:var(--muted)}
-.kpi.big strong{color:var(--brand-2)}
-.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
-.panel{padding:16px 18px}
-.panel h2{font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-.lv{display:grid;grid-template-columns:58px 1fr 92px;gap:10px;align-items:center;font-size:.85rem;margin-bottom:9px}
-.lv b{font-variant-numeric:tabular-nums}
-.bar{display:flex;height:16px;border-radius:6px;overflow:hidden;background:var(--line)}
-.bar i{display:block;height:100%}
-.c-occ{background:#7B4BB0}.c-fit{background:#C8A24A}.c-vac{background:#E5484D}.c-ds{background:#4A6FA5}.c-pop{background:#2E8B7A}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.76rem;color:var(--muted);margin-top:10px}
-.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:11px;height:11px;border-radius:3px}
-.dp{display:grid;grid-template-columns:1fr 70px;gap:4px 10px;font-size:.84rem;align-items:center}
-.dp .t{height:7px;border-radius:99px;background:var(--line);overflow:hidden;grid-column:1/-1;margin-bottom:6px}
-.dp .t i{display:block;height:100%;background:var(--brand-2);border-radius:99px}
+@page{size:A4 landscape;margin:6mm}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar .inp{width:220px}
+.stage{overflow:auto;padding:10px 0 30px}
+.sheet{width:1600px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;transform-origin:top left}
+.sh-head{display:flex;align-items:flex-end;gap:16px;border-bottom:3px solid var(--ink);padding-bottom:8px;margin-bottom:10px}
+:root[data-theme="dark"] .sh-head{border-color:var(--gold)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .sh-head{border-color:var(--gold)} }
+.sh-head h2{font-size:1.25rem;font-weight:900;letter-spacing:.02em}
+.sh-head small{color:var(--muted);font-weight:700;font-size:.8rem}
+.sh-head .mo{margin-left:auto;text-align:right;font-weight:800;color:var(--brand-2);font-size:1rem}
+.kp{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:10px}
+.kp div{border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.kp strong{display:block;font-size:1.12rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.15}
+.kp span{font-size:.66rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.kp .occ strong{color:var(--brand-2);font-size:1.3rem}
+.cols{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:start}
+.col{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.col-h{background:var(--ink);color:#fff;padding:6px 8px}
+.col-h b{font-size:.95rem;font-weight:900}
+.col-h small{float:right;font-weight:700;opacity:.85;font-size:.7rem;margin-top:3px}
+.mini{display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.2);margin-top:5px}
+.mini i{display:block;height:100%}
+.col-h .oc{font-size:.66rem;opacity:.85;margin-top:3px;display:block}
+.u{display:grid;grid-template-columns:44px 1fr auto;gap:4px;padding:1.5px 6px;font-size:.68rem;line-height:1.3;border-top:1px solid var(--line);align-items:center}
+.u .c{color:var(--muted);font-variant-numeric:tabular-nums;font-size:.62rem}
+.u .b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u .a{font-variant-numeric:tabular-nums;font-weight:700}
+.u.vac{background:rgba(229,72,77,.14)} .u.vac .b{color:var(--alert)}
+.u.fit{background:rgba(200,162,74,.2)}
+.u.pop .b::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#2E8B7A;margin-right:4px;vertical-align:1px}
+.u.ds{background:rgba(74,111,165,.14)} .u.ds .b{color:#3A5A8C}
+.u.dim{opacity:.18}
+.u.hit{outline:2px solid var(--gold);outline-offset:-2px}
+.grp{font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:3px 6px;background:var(--paper);border-top:1px solid var(--line)}
+.sub{display:flex;justify-content:space-between;font-size:.68rem;font-weight:800;padding:3px 6px;border-top:2px solid var(--line);background:var(--paper)}
+.side h3{font-size:.62rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 6px 4px}
+.side{min-width:0}
+.lt{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.6rem;font-variant-numeric:tabular-nums}
+.lt th:first-child,.lt td:first-child{width:17%}
+.lt th,.lt td{padding:2px 2px;overflow:hidden;border-top:1px solid var(--line);text-align:right}
+.lt th:first-child,.lt td:first-child{text-align:left}
+.lt th{color:var(--muted);font-size:.58rem;text-transform:uppercase}
+.lt tr.tot td{font-weight:900;border-top:2px solid var(--line)}
+.lg{display:grid;gap:3px;font-size:.64rem;padding:0 6px 6px;color:var(--muted)}
+.lg span{display:flex;align-items:center;gap:6px}.lg i{width:11px;height:9px;border-radius:2px;display:inline-block}
+.dp{display:grid;grid-template-columns:1fr auto;gap:1px 6px;font-size:.64rem;padding:0 6px 6px}
 .dp b{text-align:right;font-variant-numeric:tabular-nums}
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.filters .inp{flex:1;min-width:180px}
-.tbl{width:100%;border-collapse:collapse;font-size:.86rem}
-.tbl th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);cursor:pointer;white-space:nowrap}
-.tbl td{padding:9px 8px;border-bottom:1px solid var(--line)}
-.tbl td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
-.scroll{max-height:560px;overflow:auto}
-.st-Active{background:rgba(46,139,87,.14);color:var(--ok)} .st-VACANT{background:rgba(192,57,43,.13);color:var(--alert)} .st-FIT{background:rgba(200,162,74,.2);color:#8A6A1C}
-.upl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.drop{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted);cursor:pointer}
-.drop:hover,.drop.on{border-color:var(--brand-2);color:var(--brand-2)}
-@media (max-width:900px){ .grid2{grid-template-columns:1fr} }
-@media print{ .filters,.noprint{display:none!important} .scroll{max-height:none;overflow:visible} }
+.foot{font-size:.62rem;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between}
+@media print{
+  body{background:#fff} .stage{overflow:visible;padding:0}
+  .sheet{border:0;border-radius:0;padding:0;margin:0;width:1600px!important;zoom:var(--pz,.66)!important;transform:none!important}
+  .col-h,.u.vac,.u.fit,.u.ds,.grp,.sub,.mini i,.lg i,.kp div{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .u.dim{opacity:1} .u.hit{outline:0}
+}
 </style>
 </head>
 <body>
 <div class="top">
   <h1>GLA &amp; Occupancy <small id="sub"></small></h1>
   <span id="siteBox"></span>
-  <select class="sel" id="monthSel" aria-label="Report month"></select>
-  <button class="btn ghost small noprint" id="uplBtn">Upload month</button>
-  <button class="btn ghost small noprint" id="csvBtn">Export CSV</button>
+  <div class="bar noprint">
+    <input class="inp" id="q" placeholder="Find a brand or unit">
+    <button class="btn ghost small" id="fitBtn">Actual size</button>
+    <button class="btn ghost small" id="csvBtn">Export CSV</button>
+    <button class="btn small" id="printBtn">Print (A4 landscape)</button>
+  </div>
 </div>
-<div class="wrap" id="app"></div>
-<dialog id="upl"></dialog>
+<div class="stage" id="stage"><div class="card empty">Loading…</div></div>
 
-<script src="xlsx.full.min.js"></script>
 <script src="common.js"></script>
 <script>
-let CTX = null, LIST = null, R = null, sortKey = "level", sortDir = 1;
-const app = $("#app");
+let CTX = null, G = null, FIT = innerWidth > 900;
 const fmt = n => Math.round(n).toLocaleString("en-US");
-const pct = x => (Math.round(x * 1000) / 10).toFixed(1) + "%";
-const statusOf = u => /vacant/i.test(u.status) || /^vacant$/i.test(u.brand) ? "VACANT" : /fit/i.test(u.status) ? "FIT OUT" : "Active";
-
-/* ---------- read the monthly GLA workbook (one sheet per level + TOTALS) ---------- */
-function parseGla(wb){
-  const out = { month: "", units: [], levels: [], official: {} };
-  for (const name of wb.SheetNames){
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
-    if (/^totals?$/i.test(name.trim())){
-      for (const r of rows) for (const v of r){ if (typeof v === "number" && v > 40000 && v < 60000 && !out.month){ const d = XLSX.SSF.parse_date_code(v); if (d) out.month = `${d.y}-${String(d.m).padStart(2, "0")}`; } }
-      const hi = rows.findIndex(r => r.some(v => /occupancy rate/i.test(String(v || ""))));
-      if (hi >= 0 && rows[hi + 1]) rows[hi].forEach((h, i) => { const v = rows[hi + 1][i]; if (h && typeof v === "number") out.official[String(h).trim()] = v; });
-      continue;
-    }
-    let map = null;
-    for (const r of rows){
-      const low = r.map(v => String(v ?? "").trim().toLowerCase());
-      if (low.includes("areacode")){ map = { level: low.indexOf("level"), type: low.indexOf("type"), code: low.indexOf("areacode"), brand: low.indexOf("brand"),
-          status: low.indexOf("operating status"), dept: low.indexOf("dept"), area: low.findIndex(x => x.startsWith("area sqm") || x === "area") }; continue; }
-      if (!map) continue;
-      const code = r[map.code], brand = r[map.brand];
-      if (!code || !brand || /^total/i.test(String(r[0] || ""))) continue;
-      const level = String(r[map.level] ?? name).trim() || name.trim();
-      const u = { level, type: String(r[map.type] ?? "").trim(), code: String(code).trim(), brand: String(brand).trim(),
-        status: map.status >= 0 ? String(r[map.status] ?? "").trim() : (/vacant/i.test(brand) ? "VACANT" : "Active"),
-        dept: map.dept >= 0 ? String(r[map.dept] ?? "").trim() : "", area: Number(r[map.area]) || 0, sheet: name.trim() };
-      out.units.push(u);
-      if (!out.levels.includes(level)) out.levels.push(level);
-    }
-  }
-  return out;
-}
-/* ---------- figures ---------- */
-function summarise(units, official){
-  const sum = f => units.filter(f).reduce((a, u) => a + u.area, 0);
-  const ds = sum(u => /^ds$/i.test(u.type)), iplay = sum(u => /iplay/i.test(u.type));
-  const popup = sum(u => /pop/i.test(u.type));
-  const leasing = sum(u => /leasing/i.test(u.type));
-  const vacant = sum(u => statusOf(u) === "VACANT" && !/pop/i.test(u.type));
-  const fit = sum(u => statusOf(u) === "FIT OUT");
-  const total = units.reduce((a, u) => a + u.area, 0);
-  const occ = official && typeof official["Occupancy Rate"] === "number" ? official["Occupancy Rate"] : (leasing ? 1 - vacant / leasing : 0);
-  return { ds, iplay, popup, leasing, vacant, fit, total, occ, official: official && typeof official["Occupancy Rate"] === "number",
-    vacantUnits: units.filter(u => statusOf(u) === "VACANT" && !/pop/i.test(u.type)).length, brands: units.filter(u => statusOf(u) !== "VACANT" && !/^ds$/i.test(u.type)).length };
-}
+const pct = (x, d = 1) => (Math.round(x * Math.pow(10, d + 2)) / Math.pow(10, d)).toFixed(d) + "%";
+const st = u => /vacant/i.test(u.status) || /^vacant/i.test(u.brand) ? "vac" : /fit/i.test(u.status) ? "fit" : "ok";
+const kind = u => /^ds$/i.test(u.type) || /iplay/i.test(u.type) ? "ds" : /pop/i.test(u.type) ? "pop" : "lease";
 
 async function boot(site){
   CTX = await api("ops/context" + (site ? "?site=" + site : ""));
   $("#sub").textContent = CTX.siteName;
   $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
-  $("#uplBtn").classList.toggle("hidden", !CTX.can.gla);
-  LIST = await api(`ops/gla/list?site=${CTX.site}`);
-  $("#monthSel").innerHTML = LIST.reports.map(r => `<option value="${r.month}">${esc(D.fmt(r.month + "-15", { day: undefined, month: "long", year: "numeric" }))}</option>`).join("");
-  $("#monthSel").classList.toggle("hidden", !LIST.reports.length);
-  $("#csvBtn").classList.toggle("hidden", !LIST.reports.length);
-  await load();
-}
-async function load(month){
-  const d = await api(`ops/gla/get?site=${CTX.site}${month ? "&month=" + month : ""}`);
-  R = d.report;
-  if (!R){
-    app.innerHTML = `<div class="card empty">No GLA uploaded yet for ${esc(CTX.siteName)}.${CTX.can.gla ? `<br><br><button class="btn gold" onclick="openUpload()">Upload the monthly GLA</button><br><small>Use the same Excel as “Verdun Mall GLA — August 2026”: one sheet per level plus TOTALS.</small>` : "<br>Ask the flagship Manager to upload it."}</div>`;
-    return;
-  }
-  $("#monthSel").value = R.month;
+  const d = await api(`ops/gla/get?site=${CTX.site}`);
+  G = d.report;
+  document.querySelector(".bar").classList.toggle("hidden", !G);
+  if (!G){ $("#stage").innerHTML = `<div class="wrap"><div class="card empty">The GLA for ${esc(CTX.siteName)} hasn't been added to the system yet.</div></div>`; return; }
   render();
 }
 function render(){
-  const U = R.units, S = summarise(U, R.official);
-  const levels = R.levels.length ? R.levels : [...new Set(U.map(u => u.level))];
-  const byLevel = levels.map(l => { const us = U.filter(u => u.level === l); const a = f => us.filter(f).reduce((t, u) => t + u.area, 0);
-    return { l, total: a(() => true), ds: a(u => /^ds$/i.test(u.type) || /iplay/i.test(u.type)), pop: a(u => /pop/i.test(u.type)),
-      vac: a(u => statusOf(u) === "VACANT"), fit: a(u => statusOf(u) === "FIT OUT"), units: us.length }; }).filter(x => x.total > 0);
-  byLevel.forEach(x => x.occ = x.total - x.ds - x.pop - x.vac - x.fit);
-  const maxL = Math.max(...byLevel.map(x => x.total));
-  const depts = {}; U.filter(u => statusOf(u) !== "VACANT" && !/^ds$/i.test(u.type) && !/warehouse/i.test(u.dept)).forEach(u => { const k = (u.dept || "Other").toUpperCase(); depts[k] = (depts[k] || 0) + u.area; });
-  const topD = Object.entries(depts).sort((a, b) => b[1] - a[1]).slice(0, 10), maxD = topD.length ? topD[0][1] : 1;
-  app.innerHTML = `
-  <div class="kpis">
-    <div class="card kpi big"><strong>${pct(S.occ)}</strong><span>occupancy${S.official ? " (as reported)" : ""}</span></div>
-    <div class="card kpi"><strong>${fmt(S.total)}</strong><span>sqm total GLA incl. DS</span></div>
-    <div class="card kpi"><strong>${fmt(S.leasing)}</strong><span>sqm leasing GLA</span></div>
-    <div class="card kpi"><strong style="color:var(--alert)">${fmt(S.vacant)}</strong><span>sqm vacant · ${S.vacantUnits} units</span></div>
-    <div class="card kpi"><strong style="color:#8A6A1C">${fmt(S.fit)}</strong><span>sqm in fit-out</span></div>
-    <div class="card kpi"><strong>${S.brands}</strong><span>trading units · ${fmt(S.popup)} sqm pop-ups</span></div>
-  </div>
-  <div class="grid2">
-    <div class="card panel"><h2>By level</h2>
-      ${byLevel.map(x => `<div class="lv"><b>${esc(x.l)}</b><div class="bar" style="width:${Math.max(8, x.total / maxL * 100)}%" title="${esc(x.l)}: ${fmt(x.total)} sqm">
-        ${[["occ", x.occ], ["ds", x.ds], ["pop", x.pop], ["fit", x.fit], ["vac", x.vac]].filter(([, v]) => v > 0).map(([c, v]) => `<i class="c-${c}" style="width:${v / x.total * 100}%" title="${fmt(v)} sqm"></i>`).join("")}</div>
-        <span class="muted" style="text-align:right">${fmt(x.total)} sqm</span></div>`).join("")}
-      <div class="legend"><span><i class="c-occ"></i>Leased</span><span><i class="c-ds"></i>DS / iPlay</span><span><i class="c-pop"></i>Pop-ups</span><span><i class="c-fit"></i>Fit-out</span><span><i class="c-vac"></i>Vacant</span></div>
+  const U = G.units, O = G.official || {}, sum = f => U.filter(f).reduce((a, u) => a + u.area, 0);
+  const total = sum(() => true), ds = sum(u => /^ds$/i.test(u.type)), iplay = sum(u => /iplay/i.test(u.type)), pop = sum(u => kind(u) === "pop");
+  const leasing = sum(u => kind(u) === "lease"), vac = sum(u => st(u) === "vac" && kind(u) !== "pop"), fit = sum(u => st(u) === "fit");
+  const occ = typeof O["Occupancy Rate"] === "number" ? O["Occupancy Rate"] : 1 - vac / leasing;
+  const monthName = D.fmt(G.month + "-15", { day: undefined, month: "long", year: "numeric" });
+  /* main levels get a column each; small levels (B2, B6…) share the last column with the totals */
+  const big = G.levels.filter(l => U.filter(u => u.level === l).length > 6).slice(0, 6);
+  const small = G.levels.filter(l => !big.includes(l));
+  const levelCol = l => {
+    const us = U.filter(u => u.level === l), a = f => us.filter(f).reduce((t, u) => t + u.area, 0);
+    const lt = a(() => true), lv = a(u => st(u) === "vac"), lf = a(u => st(u) === "fit"), ld = a(u => kind(u) === "ds"), lp = a(u => kind(u) === "pop");
+    const lease = us.filter(u => kind(u) === "lease"), pops = us.filter(u => kind(u) === "pop"), dss = us.filter(u => kind(u) === "ds");
+    const base = lt - ld - lp, locc = base ? 1 - lv / base : 1;
+    const row = u => `<div class="u ${st(u) === "ok" ? "" : st(u)} ${kind(u) === "pop" ? "pop" : ""} ${kind(u) === "ds" ? "ds" : ""}" data-s="${esc((u.brand + " " + u.code).toLowerCase())}" title="${esc(u.brand)} · ${esc(u.code)} · ${esc(u.dept || u.type)} · ${esc(u.status)} · ${fmt(u.area)} sqm"><span class="c">${esc(u.code)}</span><span class="b">${esc(u.brand)}</span><span class="a">${fmt(u.area)}</span></div>`;
+    return `<div class="col"><div class="col-h"><b>${esc(l)}</b><small>${fmt(lt)} sqm</small>
+        <div class="mini">${[["#7B4BB0", lt - lv - lf - ld - lp], ["#4A6FA5", ld], ["#2E8B7A", lp], ["#C8A24A", lf], ["#E5484D", lv]].filter(([, v]) => v > 0).map(([c, v]) => `<i style="width:${v / lt * 100}%;background:${c}"></i>`).join("")}</div>
+        <span class="oc">${pct(locc)} occupied · ${us.filter(u => st(u) === "vac").length} vacant</span></div>
+      ${lease.map(row).join("")}
+      ${pops.length ? `<div class="grp">Pop-ups · ${fmt(lp)} sqm</div>${pops.map(row).join("")}` : ""}
+      ${dss.length ? `<div class="grp">Department store / iPlay</div>${dss.map(row).join("")}` : ""}
+      <div class="sub"><span>Total ${esc(l)}</span><span>${fmt(lt)}</span></div></div>`;
+  };
+  const cats = {}; U.filter(u => st(u) !== "vac" && kind(u) !== "ds" && !/warehouse/i.test(u.dept)).forEach(u => { const k = (u.dept || "Other").toUpperCase(); cats[k] = (cats[k] || 0) + u.area; });
+  const topC = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const LT = G.levelTotals || [];
+  const keys = [["Total Leasing GLA including DS and Iplay", "Total"], ["DS", "DS"], ["Leasing GLA Excluding DS and Pop Up", "Lease"], ["Leasing Pop-Up", "Pop"], ["Fit out-", "Fit"], ["Leasing Vacant Spaces", "Vac"]];
+  $("#stage").innerHTML = `<div class="sheet" id="sheet">
+    <div class="sh-head"><div><h2>ABC ${esc(G.siteName || G.name).toUpperCase()} — GLA &amp; OCCUPANCY</h2><small>Leasing spaces, pop-ups and department store by level</small></div><div class="mo">${esc(monthName)}</div></div>
+    <div class="kp">
+      <div class="occ"><strong>${pct(occ, 2)}</strong><span>Occupancy</span></div>
+      <div><strong>${fmt(total)}</strong><span>Total GLA incl. DS (sqm)</span></div>
+      <div><strong>${fmt(leasing)}</strong><span>Leasing GLA (sqm)</span></div>
+      <div><strong>${fmt(ds)}</strong><span>Department store</span></div>
+      <div><strong style="color:var(--alert)">${fmt(vac)}</strong><span>Vacant · ${U.filter(u => st(u) === "vac").length} units</span></div>
+      <div><strong style="color:#8A6A1C">${fmt(fit)}</strong><span>Fit-out</span></div>
+      <div><strong>${fmt(pop)}</strong><span>Pop-ups · ${U.filter(u => kind(u) === "pop").length}</span></div>
+      <div><strong>${fmt(iplay)}</strong><span>iPlay</span></div>
     </div>
-    <div class="card panel"><h2>Largest categories (sqm)</h2><div class="dp">${topD.map(([k, v]) => `<span>${esc(k)}</span><b>${fmt(v)}</b><span class="t"><i style="width:${v / maxD * 100}%"></i></span>`).join("")}</div></div>
-  </div>
-  <div class="card panel" style="margin-top:14px"><h2>Units <span class="pill" id="uCount"></span></h2>
-    <div class="filters"><input class="inp" id="fQ" placeholder="Search brand or unit code">
-      <select class="sel" id="fL"><option value="">All levels</option>${levels.map(l => `<option>${esc(l)}</option>`).join("")}</select>
-      <select class="sel" id="fS"><option value="">All statuses</option><option>Active</option><option>VACANT</option><option>FIT OUT</option></select>
-      <select class="sel" id="fT"><option value="">All types</option>${[...new Set(U.map(u => u.type).filter(Boolean))].map(t => `<option>${esc(t)}</option>`).join("")}</select></div>
-    <div class="scroll"><table class="tbl"><thead><tr>${[["level","Level"],["code","Unit"],["brand","Brand"],["status","Status"],["dept","Category"],["type","Type"],["area","Area sqm"]].map(([k, l]) => `<th data-k="${k}">${l}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead><tbody id="uBody"></tbody></table></div>
-    <p class="muted" style="font-size:.78rem;margin-top:10px">${esc(R.fileName || "")} · uploaded ${esc(new Date(R.uploadedAt).toLocaleDateString("en-GB"))} by ${esc(R.uploadedBy || "")}</p>
+    <div class="cols" style="grid-template-columns:repeat(${big.length},minmax(0,1fr)) minmax(0,1.45fr)">
+      ${big.map(levelCol).join("")}
+      <div class="side">
+        ${small.map(levelCol).join("")}
+        ${LT.length ? `<h3>Level totals (sqm)</h3><table class="lt"><tr><th></th>${keys.map(([, h]) => `<th>${h}</th>`).join("")}</tr>
+          ${LT.map(r => `<tr class="${/^total/i.test(r.level) ? "tot" : ""}"><td>${esc(r.level.replace(/^Add\. Spaces$/, "Add."))}</td>${keys.map(([k]) => `<td>${r[k] ? fmt(r[k]) : "–"}</td>`).join("")}</tr>`).join("")}</table>` : ""}
+        <h3>Largest categories (sqm)</h3><div class="dp">${topC.map(([k, v]) => `<span>${esc(k)}</span><b>${fmt(v)}</b>`).join("")}</div>
+        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>Department store / iPlay</span></div>
+      </div>
+    </div>
+    <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA</span><span>${U.length} units · figures in square metres</span></div>
   </div>`;
-  const draw = () => {
-    const qv = $("#fQ").value.trim().toLowerCase(), lv = $("#fL").value, sv = $("#fS").value, tv = $("#fT").value;
-    const rows = U.filter(u => (!qv || (u.brand + " " + u.code).toLowerCase().includes(qv)) && (!lv || u.level === lv) && (!sv || statusOf(u) === sv) && (!tv || u.type === tv))
-      .sort((a, b) => { if (sortKey === "level"){ const d = levels.indexOf(a.level) - levels.indexOf(b.level); if (d) return d * sortDir; return a.code.localeCompare(b.code, undefined, { numeric: true }); }
-        const x = sortKey === "status" ? statusOf(a) : a[sortKey], y = sortKey === "status" ? statusOf(b) : b[sortKey];
-        return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true })) * sortDir; });
-    $("#uCount").textContent = `${rows.length} · ${fmt(rows.reduce((a, u) => a + u.area, 0))} sqm`;
-    $("#uBody").innerHTML = rows.map(u => { const st = statusOf(u);
-      return `<tr><td>${esc(u.level)}</td><td>${esc(u.code)}</td><td><b>${esc(u.brand)}</b></td><td><span class="pill st-${st.split(" ")[0]}">${esc(st)}</span></td><td>${esc(u.dept)}</td><td class="muted">${esc(u.type)}</td><td class="n">${fmt(u.area)}</td></tr>`; }).join("");
-  };
-  ["#fQ", "#fL", "#fS", "#fT"].forEach(id => $(id).addEventListener("input", draw));
-  app.querySelectorAll("th[data-k]").forEach(th => th.onclick = () => { const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : 1; sortKey = k; render(); });
-  draw();
+  applyFit(); search();
 }
-
-/* ---------- upload a month ---------- */
-function openUpload(){
-  const d = $("#upl");
-  d.innerHTML = `<div class="dlg-h"><b>Upload the monthly GLA · ${esc(CTX.siteName)}</b><small>The same Excel layout: one sheet per level plus TOTALS</small></div>
-    <div class="dlg-b"><label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xlsm,.xls" hidden>Choose or drop the Excel file</label><div id="prev" style="margin-top:12px"></div></div>
-    <div class="dlg-f"><button class="btn ghost" id="uClose">Cancel</button><button class="btn gold hidden" id="uSave">Save</button></div>`;
-  let parsed = null, fileName = "";
-  const handle = async f => {
-    fileName = f.name;
-    try {
-      parsed = parseGla(XLSX.read(await f.arrayBuffer(), { type: "array" }));
-      if (!parsed.units.length) throw new Error("No units were found — check that each level sheet has an AreaCode column.");
-      const S = summarise(parsed.units, parsed.official);
-      $("#prev").innerHTML = `<label class="lbl">Report month</label><input class="inp" type="month" id="uMonth" value="${parsed.month || new Date().toISOString().slice(0, 7)}">
-        <p style="margin-top:12px;line-height:1.6"><b>${parsed.units.length}</b> units on <b>${parsed.levels.length}</b> levels · <b>${fmt(S.total)}</b> sqm · occupancy <b>${pct(S.occ)}</b></p>
-        <p class="muted" style="font-size:.84rem">${esc(parsed.levels.join(" · "))}</p>`;
-      $("#uSave").classList.remove("hidden");
-    } catch (e){ $("#prev").innerHTML = `<p style="color:var(--alert)">${esc(e.message)}</p>`; }
-  };
-  d.onchange = e => { if (e.target.id === "file" && e.target.files[0]) handle(e.target.files[0]); };
-  const drop = d.querySelector("#drop");
-  drop.ondragover = e => { e.preventDefault(); drop.classList.add("on"); };
-  drop.ondragleave = () => drop.classList.remove("on");
-  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("on"); if (e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]); };
-  d.onclick = async e => {
-    if (e.target.id === "uClose" || e.target === d) return d.close();
-    if (e.target.id === "uSave" && parsed){
-      e.target.disabled = true;
-      try {
-        const month = $("#uMonth").value;
-        const exists = LIST.reports.some(r => r.month === month);
-        if (exists && !(await confirmBox("Replace this month?", `A GLA for ${esc(month)} is already saved for ${esc(CTX.siteName)}. It will be replaced.`, "Replace"))){ e.target.disabled = false; return; }
-        await api("ops/gla/save", { site: CTX.site, month, units: parsed.units, levels: parsed.levels, official: parsed.official, fileName });
-        d.close(); toast("GLA saved"); await boot(CTX.site);
-      } catch (er){ toast(er.message, true); e.target.disabled = false; }
-    }
-  };
-  d.showModal();
+/* fit the whole landscape sheet on screen */
+function applyFit(){
+  const sh = $("#sheet"); if (!sh) return;
+  sh.style.zoom = 1;
+  /* print: A4 landscape inside 6 mm margins ≈ 1077 × 748 px at 96 dpi — scale the whole sheet onto one page */
+  sh.style.setProperty("--pz", Math.min(1077 / sh.offsetWidth, 740 / sh.offsetHeight).toFixed(3));
+  if (FIT){
+    const avail = innerWidth - 24, h = innerHeight - document.querySelector(".top").offsetHeight - 24;
+    sh.style.zoom = Math.min(1, avail / sh.offsetWidth, Math.max(.55, h / sh.offsetHeight));
+  }
+  $("#fitBtn").textContent = FIT ? "Actual size" : "Fit to screen";
 }
-$("#uplBtn").onclick = openUpload;
-$("#monthSel").onchange = e => load(e.target.value);
+function search(){
+  const q = $("#q").value.trim().toLowerCase();
+  document.querySelectorAll(".u").forEach(el => { const m = q && el.dataset.s.includes(q); el.classList.toggle("dim", !!q && !m); el.classList.toggle("hit", !!m); });
+  const first = q && document.querySelector(".u.hit"); if (first) first.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+$("#q").addEventListener("input", search);
+$("#fitBtn").onclick = () => { FIT = !FIT; applyFit(); };
+addEventListener("resize", applyFit);
+$("#printBtn").onclick = () => print();
 $("#csvBtn").onclick = () => {
-  if (!R) return;
-  const rows = [["Level", "Type", "Unit", "Brand", "Status", "Category", "Area SQM"], ...R.units.map(u => [u.level, u.type, u.code, u.brand, statusOf(u), u.dept, u.area])];
+  const rows = [["Level", "Type", "Unit", "Brand", "Status", "Category", "Area SQM"], ...G.units.map(u => [u.level, u.type, u.code, u.brand, u.status, u.dept, u.area])];
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n")], { type: "text/csv" }));
-  a.download = `GLA-${CTX.site}-${R.month}.csv`; a.click();
+  a.download = `GLA-${CTX.site}-${G.month}.csv`; a.click();
 };
-boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+boot().catch(e => { $("#stage").innerHTML = `<div class="wrap"><div class="card empty">${esc(e.message)}</div></div>`; });
 </script>
 </body>
 </html>
