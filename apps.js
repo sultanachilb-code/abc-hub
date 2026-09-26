@@ -23,9 +23,37 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting"],
+  GROUPS: ["Operations Tools", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting"],
 
   APPS: [
+    /* Built into the hub — same sign-in, nothing to host separately */
+    {
+      id: "schedule",
+      name: "Operations Schedule",
+      desc: "Weekly shifts by flagship, ranked by position",
+      group: "Operations Tools",
+      icon: "calendar",
+      color: "#4A1F73",
+      url: "/tools/schedule"
+    },
+    {
+      id: "mom",
+      name: "Minutes of Meeting",
+      desc: "Attendance, agenda, actions and deadlines",
+      group: "Operations Tools",
+      icon: "book",
+      color: "#8A5A1F",
+      url: "/tools/mom"
+    },
+    {
+      id: "handover",
+      name: "Shift Handover",
+      desc: "Follow-ups, today, tomorrow, events and checklists",
+      group: "Operations Tools",
+      icon: "clipboard",
+      color: "#2F6F73",
+      url: "/tools/handover"
+    },
     {
       id: "snaglist",
       name: "Snaglist Manager",
