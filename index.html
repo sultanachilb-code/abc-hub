@@ -65,8 +65,7 @@ button{background:none;border:0;cursor:pointer}
 @keyframes pulse{50%{opacity:.45;transform:scale(.94)}}
 
 /* ---------- masthead ---------- */
-.masthead{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 20px) 28px 22px;position:relative;overflow:hidden}
-.masthead::after{content:"";position:absolute;right:-70px;top:-110px;width:340px;height:340px;border-radius:50%;border:52px solid rgba(123,75,176,.22);pointer-events:none}
+.masthead{background:radial-gradient(circle at calc(100% + 100px) -40px,transparent 118px,rgba(123,75,176,.22) 119px,rgba(123,75,176,.22) 170px,transparent 171px),var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 20px) 28px 22px;position:relative;z-index:20}
 .mh-inner{max-width:1280px;margin:0 auto;position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .brandmark{display:flex;align-items:center;gap:14px;min-width:0}
 .brandmark img{width:46px;height:46px;object-fit:contain;flex:none}
