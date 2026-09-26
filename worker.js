@@ -116,8 +116,13 @@ async function ensureSchema(env) {
       id INTEGER PRIMARY KEY AUTOINCREMENT, message TEXT NOT NULL, level TEXT NOT NULL DEFAULT 'info',
       site TEXT NOT NULL DEFAULT 'ALL', starts_at TEXT NOT NULL DEFAULT '', ends_at TEXT NOT NULL DEFAULT '',
       created_by TEXT, created_at TEXT)`),
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`)
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS control_sheet (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'Systems',
+      live_url TEXT NOT NULL DEFAULT '', github_url TEXT NOT NULL DEFAULT '', cloudflare_url TEXT NOT NULL DEFAULT '',
+      app_id TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', sort INTEGER NOT NULL DEFAULT 0)`)
   ]);
+  await seedControlSheet(env);
   const cols = await env.DB.prepare("PRAGMA table_info(users)").all();
   if (!(cols.results || []).some(c => c.name === "morning_email")) {
     await env.DB.prepare("ALTER TABLE users ADD COLUMN morning_email INTEGER NOT NULL DEFAULT 1").run();
@@ -210,6 +215,12 @@ async function route(request, env, ctx, url) {
     if (a === "users" && method === "POST") return ok(await saveUser(env, me, body));
     if (a === "users/reset" && method === "POST") return ok(await resetUser(env, body));
     if (a === "users/active" && method === "POST") return ok(await setActive(env, me, body));
+    if (a === "control" && method === "GET") return ok(await listControl(env));
+    if (a === "control" && method === "POST") return ok(await saveControl(env, body));
+    if (a === "control/delete" && method === "POST") {
+      await env.DB.prepare("DELETE FROM control_sheet WHERE id = ?").bind(Number(body.id) || 0).run();
+      return ok({ deleted: true });
+    }
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     if (a === "announcements" && method === "GET") return ok(await listAnnouncements(env));
@@ -525,4 +536,58 @@ function morningHtml({ user, site, ids, figures, down, anns }) {
     </td></tr>
     <tr><td style="padding:18px 24px;font:11px Arial,sans-serif;color:#6D6479">Automated morning brief · ABC Operations. Your administrator can switch this off in People &amp; roles.</td></tr>
   </table></td></tr></table></body></html>`;
+}
+
+/* ---------- admin control sheet ---------- */
+const CF_ACCOUNT = "61f649b35159d4a26df7dde3c09a91dd";          // sultanachi-lb-61f account
+const GH_OWNER = "https://github.com/sultanachilb-code/";
+const cfWorker = name => `https://dash.cloudflare.com/${CF_ACCOUNT}/workers/services/view/${name}/production`;
+const wd = name => `https://${name}.sultanachi-lb-61f.workers.dev`;
+const SEED = [
+  ["Operations Hub", "Hub", wd("operations-hub"), GH_OWNER + "abc-hub", cfWorker("operations-hub"), "", "This app"],
+  ["Hub database (D1)", "Hub", "", "", `https://dash.cloudflare.com/${CF_ACCOUNT}/workers/d1/databases/e7ae150f-de70-4376-a15b-65390159f65c`, "", "hub-db"],
+  ["Snaglist Manager", "Systems", "https://abc-snaglist.sultanalachi-work.workers.dev", "", "", "snaglist", "Cloudflare account: sultanalachi-work — add its links"],
+  ["Incident Report System", "Systems", wd("abc-incident-system"), GH_OWNER + "abc-incident-system", cfWorker("abc-incident-system"), "incidents", ""],
+  ["Restroom Inspection Dashboard", "Systems", wd("abc-restroom-report"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-restroom-report"), "restroom", "Deployed as env: report"],
+  ["Cleaner QR Access", "Systems", wd("abcv-admin-access"), "", cfWorker("abcv-admin-access"), "cleaner-qr", ""],
+  ["Footfall Hub", "Systems", wd("footfall-hub"), "", cfWorker("footfall-hub"), "footfall", ""],
+  ["Restroom QR · Verdun Mall", "Restroom QR apps", wd("abcv-digital-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abcv-digital-restroom-inspection"), "", "env: verdun_mall"],
+  ["Restroom QR · Verdun DS", "Restroom QR apps", wd("abc-vds-digital-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-vds-digital-restroom-inspection"), "", "env: verdun_ds"],
+  ["Restroom QR · Achrafieh Mall", "Restroom QR apps", wd("abc-ach-mall-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-ach-mall-restroom-inspection"), "", "env: achrafieh_mall"],
+  ["Restroom QR · Achrafieh DS", "Restroom QR apps", wd("abc-achds-digital-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-achds-digital-restroom-inspection"), "", "env: achrafieh_ds"],
+  ["Restroom QR · Dbayeh", "Restroom QR apps", wd("abc-restroom-inspection-dbayeh"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-restroom-inspection-dbayeh"), "", "env: dbayeh"],
+  ["Restroom scheduler", "Restroom QR apps", "", GH_OWNER + "abc-restroom-inspection", cfWorker("abc-restroom-scheduler"), "", "env: scheduler — reminders"]
+];
+async function seedControlSheet(env) {
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM control_sheet").first();
+  if (Number(n.n) > 0) return;
+  const done = await env.DB.prepare("SELECT v FROM meta WHERE k = 'control:seeded'").first();
+  if (done) return;                                     // admin emptied it on purpose
+  await env.DB.batch([
+    ...SEED.map((r, i) => env.DB.prepare(
+      "INSERT INTO control_sheet (name, category, live_url, github_url, cloudflare_url, app_id, notes, sort) VALUES (?,?,?,?,?,?,?,?)"
+    ).bind(r[0], r[1], r[2], r[3], r[4], r[5], r[6], i)),
+    env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('control:seeded', ?)").bind(nowIso())
+  ]);
+}
+async function listControl(env) {
+  const { results } = await env.DB.prepare("SELECT * FROM control_sheet ORDER BY sort, id").all();
+  return { rows: (results || []).map(r => ({ id: r.id, name: r.name, category: r.category, liveUrl: r.live_url,
+    githubUrl: r.github_url, cloudflareUrl: r.cloudflare_url, appId: r.app_id, notes: r.notes })) };
+}
+async function saveControl(env, b) {
+  const clean = v => String(v || "").trim().slice(0, 500);
+  const url = v => { const u = clean(v); if (u && !/^https?:\/\//i.test(u)) throw fail("Links must start with https://"); return u; };
+  const name = clean(b.name);
+  if (!name) throw fail("Enter a name");
+  const vals = [name, clean(b.category) || "Systems", url(b.liveUrl), url(b.githubUrl), url(b.cloudflareUrl), clean(b.appId), clean(b.notes)];
+  if (b.id) {
+    await env.DB.prepare("UPDATE control_sheet SET name=?, category=?, live_url=?, github_url=?, cloudflare_url=?, app_id=?, notes=? WHERE id=?")
+      .bind(...vals, Number(b.id)).run();
+    return { id: Number(b.id) };
+  }
+  const max = await env.DB.prepare("SELECT COALESCE(MAX(sort),0) AS m FROM control_sheet").first();
+  const r = await env.DB.prepare("INSERT INTO control_sheet (name, category, live_url, github_url, cloudflare_url, app_id, notes, sort) VALUES (?,?,?,?,?,?,?,?)")
+    .bind(...vals, Number(max.m) + 1).run();
+  return { id: r.meta && r.meta.last_row_id };
 }

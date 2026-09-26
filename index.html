@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ABC Operations Hub</title>
 <meta name="theme-color" content="#2A0F45">
+<script>try{var t=localStorage.getItem("hub.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <meta name="description" content="ABC Operations — all operational systems in one app">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/abc-48.png">
@@ -25,8 +26,10 @@
   --bar:52px;
 }
 @media (prefers-color-scheme:dark){
-  :root{ --paper:#16101F; --surface:#211930; --line:#342A45; --text:#EFEAF5; --muted:#A99EB8; --ok:#5FD08A; --warn:#F0B44C; --alert:#FF7A6B; }
+  :root:not([data-theme="light"]){ --paper:#16101F; --surface:#211930; --line:#342A45; --text:#EFEAF5; --muted:#A99EB8; --ok:#5FD08A; --warn:#F0B44C; --alert:#FF7A6B; }
 }
+:root[data-theme="dark"]{ --paper:#16101F; --surface:#211930; --line:#342A45; --text:#EFEAF5; --muted:#A99EB8; --ok:#5FD08A; --warn:#F0B44C; --alert:#FF7A6B; color-scheme:dark; }
+:root[data-theme="light"]{ color-scheme:light; }
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
 body{font-family:var(--font);background:var(--paper);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -147,6 +150,68 @@ button.bcard:hover{border-color:var(--brand-2)}
 @keyframes sk{to{background-position:-200% 0}}
 .brief-empty{color:var(--muted);font-size:.9rem;line-height:1.5}
 
+/* brief v2 */
+.brief-actions{display:flex;gap:4px;flex:none}
+.attn{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px 8px 10px;border-radius:12px;font-size:.86rem;font-weight:600;text-align:left;
+  background:rgba(192,122,18,.12);color:var(--text);border:1px solid rgba(192,122,18,.25)}
+.chip.alert{background:rgba(192,57,43,.12);border-color:rgba(192,57,43,.3)}
+.chip:hover{filter:brightness(1.08)}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--warn);flex:none}
+.chip.alert i{background:var(--alert)}
+.chip b{font-size:1rem;font-variant-numeric:tabular-nums}
+.chip small{color:var(--muted);font-weight:500}
+.allclear{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(46,139,87,.12);color:var(--ok);font-weight:700;font-size:.92rem;margin-bottom:14px}
+.brows{display:grid;gap:8px}
+.brow{display:grid;grid-template-columns:230px 1fr;align-items:center;gap:14px;width:100%;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--paper)}
+.brow:hover{border-color:var(--brand-2)}
+.brow-h{display:flex;align-items:center;gap:10px;min-width:0}
+.brow-h .ico{width:36px;height:36px;border-radius:10px}
+.brow-h .ico svg{width:18px;height:18px}
+.brow-h b{font-size:.9rem;line-height:1.25}
+.pills{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.pill-s{display:flex;align-items:baseline;gap:6px;font-size:.8rem;color:var(--muted)}
+.pill-s strong{font-size:1.15rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.pill-s.tone-warn strong{color:var(--warn)} .pill-s.tone-alert strong{color:var(--alert)} .pill-s.tone-ok strong{color:var(--ok)}
+.prog{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
+.prog .bar{width:110px;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.prog .bar span{display:block;height:100%;border-radius:99px;background:var(--warn)}
+.prog.done .bar span{background:var(--ok)}
+.prog strong{color:var(--text);font-variant-numeric:tabular-nums}
+.brows.collapsed{display:none}
+@media (max-width:700px){.brow{grid-template-columns:1fr}}
+
+/* AI quick access */
+.aimenu{position:relative}
+.ai-btn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;font-size:.85rem;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,rgba(123,75,176,.9),rgba(200,162,74,.85))}
+.ai-btn:hover{filter:brightness(1.1)}
+.ai-btn svg{width:16px;height:16px}
+.menu .ai-i{display:flex;align-items:center;gap:12px}
+.ai-dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:.85rem;flex:none}
+.menu .ai-i small{display:block;color:var(--muted);font-weight:500;font-size:.76rem}
+
+/* settings */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:12px;background:var(--paper);border:1px solid var(--line);margin-bottom:18px}
+.seg button{padding:10px 8px;border-radius:9px;font-weight:700;font-size:.88rem;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(20,8,34,.12)}
+.set-label{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+
+/* control sheet */
+.cs-group{margin-bottom:18px}
+.cs-group h4{font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.cs-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
+.cs-row b{display:flex;align-items:center;gap:8px;font-size:.93rem}
+.cs-row small{display:block;color:var(--muted);font-size:.78rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-dot{width:9px;height:9px;border-radius:50%;background:#9A91A6;flex:none}
+.cs-dot.up{background:#2EB872}.cs-dot.down{background:#E5484D}
+.cs-links{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.lk{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:9px;font-size:.8rem;font-weight:700;border:1px solid var(--line);color:var(--text);text-decoration:none;background:var(--surface)}
+.lk:hover{border-color:var(--brand-2)}
+.lk svg{width:14px;height:14px}
+.lk.off{opacity:.45;border-style:dashed}
+@media (max-width:700px){.cs-row{grid-template-columns:1fr}.cs-links{justify-content:flex-start}}
+
 /* ---------- tiles ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
 .tile{display:flex;gap:14px;align-items:center;text-align:left;padding:12px;border-radius:18px;width:100%}
@@ -234,7 +299,7 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .badge.live{background:rgba(46,139,87,.14);color:var(--ok)} .badge.off{background:rgba(192,57,43,.12);color:var(--alert)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-dialog{border:0;border-radius:20px;padding:0;width:min(420px,calc(100% - 32px));background:var(--surface);color:var(--text)}
+dialog{margin:auto;border:0;border-radius:20px;padding:0;width:min(420px,calc(100% - 32px));background:var(--surface);color:var(--text)}
 dialog::backdrop{background:rgba(20,8,34,.55)}
 .sheet-h{padding:20px 20px 8px;display:flex;align-items:center;gap:12px}
 .sheet-h .ico{width:44px;height:44px;border-radius:12px}
@@ -295,6 +360,10 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
         </label>
         <span class="pill" id="netPill" title="Connection"><i class="net" id="net"></i><span id="netLbl">Online</span></span>
         <button class="pill gold hidden" id="installBtn">Install app</button>
+        <div class="aimenu">
+          <button class="ai-btn" id="aiBtn" aria-haspopup="true" title="AI assistants"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span>AI</span></button>
+          <div class="menu hidden" id="aiMenu"></div>
+        </div>
         <div class="umenu">
           <button class="avatar" id="avatar" aria-haspopup="true" aria-label="Account"></button>
           <div class="menu hidden" id="menu"></div>
@@ -357,6 +426,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
     <div class="adm-tabs">
       <button data-t="announcements" class="on">Announcements</button>
       <button data-t="users">People &amp; roles</button>
+      <button data-t="control">Control sheet</button>
     </div>
   </div>
   <div class="adm-body" id="admBody"></div>
@@ -507,18 +577,71 @@ function buildMenu(){
   const m = $("#menu");
   m.innerHTML = `<div class="who"><b>${esc(ME.user.name)}</b><small>${esc(ME.user.email)}</small></div>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin">Hub administration</button>` : ""}
+    <button data-a="settings">Settings</button>
     <button data-a="pw">Change password</button>
     <button data-a="out">Sign out</button>`;
-  $("#avatar").onclick = e => { e.stopPropagation(); m.classList.toggle("hidden"); };
-  document.addEventListener("click", () => m.classList.add("hidden"));
+  $("#avatar").onclick = e => { e.stopPropagation(); $("#aiMenu").classList.add("hidden"); m.classList.toggle("hidden"); };
+  document.addEventListener("click", () => { m.classList.add("hidden"); $("#aiMenu").classList.add("hidden"); });
+  buildAiMenu();
   m.onclick = async e => {
     const a = e.target.closest("button")?.dataset.a; if (!a) return;
     m.classList.add("hidden");
     if (a === "admin") location.hash = "#/admin";
     if (a === "pw") changePwDialog();
+    if (a === "settings") settingsDialog();
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
 }
+/* ---------- theme & settings ---------- */
+function applyTheme(t){
+  if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  else document.documentElement.removeAttribute("data-theme");
+}
+function settingsDialog(){
+  const theme = store.get("hub.theme", "system");
+  const collapsed = store.get("hub.briefCollapsed", false);
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Settings</b><small>Saved on this device</small></div></div>
+    <div class="sheet-body">
+      <div class="set-label">Appearance</div>
+      <div class="seg" id="segTheme">${["light","dark","system"].map(t => `<button data-v="${t}" class="${theme === t ? "on" : ""}">${t === "system" ? "Automatic" : t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div>
+      <div class="set-label">Daily brief</div>
+      <div class="seg" id="segBrief" style="grid-template-columns:1fr 1fr">
+        <button data-v="0" class="${collapsed ? "" : "on"}">Show everything</button>
+        <button data-v="1" class="${collapsed ? "on" : ""}">Attention only</button></div>
+      <div class="set-label">Recently opened</div>
+      <button class="btn ghost small" id="setClear" style="margin-bottom:8px">Clear the Recent line</button>
+    </div>
+    <div class="sheet-f"><button class="btn" data-close>Done</button></div>`;
+  sheet.onclick = e => {
+    if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
+    const t = e.target.closest("#segTheme button");
+    if (t){ store.set("hub.theme", t.dataset.v); applyTheme(t.dataset.v); $("#segTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b === t)); }
+    const b = e.target.closest("#segBrief button");
+    if (b){ store.set("hub.briefCollapsed", b.dataset.v === "1"); $("#segBrief").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); renderBrief(false); }
+    if (e.target.id === "setClear"){ store.set("hub.recent", []); renderRail(); e.target.textContent = "Cleared ✓"; }
+  };
+  sheet.showModal();
+}
+
+/* ---------- AI quick access ---------- */
+const AI_TOOLS = [
+  { id: "gemini",  name: "Gemini",  by: "Google",    url: "https://gemini.google.com/app", mark: "G", bg: "linear-gradient(135deg,#4F7DF3,#9B72CB)" },
+  { id: "chatgpt", name: "ChatGPT", by: "OpenAI",    url: "https://chatgpt.com/",          mark: "C", bg: "#10A37F" },
+  { id: "claude",  name: "Claude",  by: "Anthropic", url: "https://claude.ai/new",         mark: "C", bg: "#D97757" }
+];
+function buildAiMenu(){
+  const m = $("#aiMenu");
+  m.innerHTML = `<div class="who"><b>AI assistants</b><small>Opens in its own window</small></div>` +
+    AI_TOOLS.map(t => `<button data-ai="${t.id}" class="ai-i"><span class="ai-dot" style="background:${t.bg}">${t.mark}</span><span>${esc(t.name)}<small>${esc(t.by)}</small></span></button>`).join("");
+  $("#aiBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.add("hidden"); m.classList.toggle("hidden"); };
+  m.onclick = e => {
+    const b = e.target.closest("[data-ai]"); if (!b) return;
+    e.stopPropagation(); m.classList.add("hidden");
+    const t = AI_TOOLS.find(x => x.id === b.dataset.ai);
+    openWindow(t.url, "ai_" + t.id);
+  };
+}
+
 function changePwDialog(){
   sheet.innerHTML = `<div class="sheet-h"><div><b>Change password</b></div></div>
     <div class="sheet-body"><div id="pwMsg"></div>
@@ -585,20 +708,58 @@ function renderBrief(loading){
   const hr = new Date().getHours();
   const title = hr < 12 ? "Morning brief" : hr < 18 ? "Afternoon brief" : "Evening brief";
   const when = BRIEF && BRIEF.generatedAt ? new Date(BRIEF.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
-  const card = id => {
+  const collapsed = store.get("hub.briefCollapsed", false);
+  const num = v => typeof v === "number" ? v : /^\d+$/.test(String(v)) ? Number(v) : null;
+
+  /* Needs attention: every red/amber figure above zero, most urgent first */
+  const chips = [];
+  if (!loading) ids.forEach(id => {
+    const a = byId(id), s = BRIEF.systems[id];
+    if (!s.ok) return;
+    s.brief.forEach(x => {
+      if (x.tone !== "alert" && x.tone !== "warn") return;
+      const n = num(x.value);
+      if (n === 0) return;
+      if (n === null && (x.value === "—" || /^\d+\/\d+$/.test(String(x.value)))) return;
+      chips.push({ id, a, x, rank: x.tone === "alert" ? 0 : 1, n: n ?? 0 });
+    });
+  });
+  chips.sort((p, q) => p.rank - q.rank || q.n - p.n);
+  downApps().forEach(a => chips.unshift({ id: a.id, a, x: { value: "Down", label: "not responding", tone: "alert" }, rank: -1 }));
+
+  const attn = loading ? "" : chips.length
+    ? `<div class="attn">${chips.slice(0, 8).map(c => `<button class="chip ${c.x.tone === "alert" ? "alert" : ""}" data-id="${esc(c.id)}"><i></i><b>${esc(c.x.value)}</b> ${esc(c.x.label)} <small>· ${esc(c.a.name)}</small></button>`).join("")}</div>`
+    : `<div class="allclear">✓ All clear — nothing needs attention right now</div>`;
+
+  const stat = x => {
+    const m = String(x.value).match(/^(\d+)\/(\d+)$/);
+    if (m){
+      const pct = Math.min(100, Math.round((Number(m[1]) / Math.max(1, Number(m[2]))) * 100));
+      return `<span class="prog ${pct >= 100 ? "done" : ""}"><strong>${esc(x.value)}</strong><span class="bar"><span style="width:${pct}%"></span></span>${esc(x.label)}</span>`;
+    }
+    return `<span class="pill-s tone-${esc(x.tone || "")}"><strong>${esc(x.value)}</strong>${esc(x.label)}</span>`;
+  };
+  const row = id => {
     const a = byId(id), s = BRIEF.systems[id];
     const body = s.ok
-      ? (s.brief.length ? `<div class="stats">${s.brief.map(x => `<div class="stat tone-${esc(x.tone || "")}"><strong>${esc(x.value)}</strong><span>${esc(x.label)}</span></div>`).join("")}</div>` : `<p class="off">Nothing needs attention.</p>`)
-      : `<p class="off">Figures unavailable right now.${ME.user.role === "ADMIN" ? " (" + esc(s.error) + ")" : ""}</p>`;
-    return `<button class="bcard" data-id="${esc(id)}"><div class="bcard-h">${icoHTML(a)}<b>${esc(a.name)}</b></div>${body}</button>`;
+      ? (s.brief.length ? s.brief.map(stat).join("") : `<span class="pill-s">Nothing needs attention</span>`)
+      : `<span class="pill-s">Figures unavailable right now${ME.user.role === "ADMIN" ? " (" + esc(s.error) + ")" : ""}</span>`;
+    return `<button class="brow" data-id="${esc(id)}"><span class="brow-h">${icoHTML(a, true)}<b>${esc(a.name)}</b></span><span class="pills">${body}</span></button>`;
   };
+  const chev = collapsed
+    ? '<path d="m6 9 6 6 6-6"/>' : '<path d="m18 15-6-6-6 6"/>';
   box.innerHTML = `<section class="brief">
-    <div class="brief-h"><div><h2>${title}</h2><p>${esc(BRIEF && BRIEF.siteName || mySiteName() || "All flagships")}${when ? " · updated " + when : ""}</p>${downApps().length ? `<div class="downline">● ${downApps().length === 1 ? "1 system not responding" : downApps().length + " systems not responding"}: ${downApps().map(a => esc(a.name)).join(", ")}</div>` : ""}</div>
-      <button class="refresh" id="briefRefresh" aria-label="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button></div>
-    <div class="brief-grid">${loading ? `<div class="sk"></div><div class="sk"></div>` : ids.map(card).join("")}</div></section>`;
-  $("#briefRefresh").onclick = () => loadBrief(true);
+    <div class="brief-h"><div><h2>${title}</h2><p>${esc(BRIEF && BRIEF.siteName || mySiteName() || "All flagships")}${when ? " · updated " + when : ""}</p></div>
+      <div class="brief-actions">
+        <button class="refresh" id="briefFold" aria-label="${collapsed ? "Show all figures" : "Attention only"}" title="${collapsed ? "Show all figures" : "Attention only"}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${chev}</svg></button>
+        <button class="refresh" id="briefRefresh" aria-label="Refresh" title="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      </div></div>
+    ${attn}
+    <div class="brows ${collapsed ? "collapsed" : ""}">${loading ? `<div class="sk"></div><div class="sk"></div>` : ids.map(row).join("")}</div></section>`;
+  $("#briefRefresh").onclick = e => { e.stopPropagation(); loadBrief(true); };
+  $("#briefFold").onclick = e => { e.stopPropagation(); store.set("hub.briefCollapsed", !collapsed); renderBrief(false); };
 }
-$("#brief").addEventListener("click", e => { const c = e.target.closest(".bcard"); if (c) launch(byId(c.dataset.id)); });
+$("#brief").addEventListener("click", e => { const c = e.target.closest(".brow, .chip"); if (c) launch(byId(c.dataset.id)); });
 
 /* ---------- tiles ---------- */
 function tile(a){
@@ -888,7 +1049,7 @@ async function renderAdmin(){
   show("admin");
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
-  try { admTab === "users" ? await adminUsers(body) : await adminAnnouncements(body); }
+  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : await adminAnnouncements(body); }
   catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
 }
 async function adminAnnouncements(body, editing){
@@ -921,6 +1082,55 @@ async function adminAnnouncements(body, editing){
         adminAnnouncements(body); loadAnnouncements();
       } catch (er){ $("#fMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
     }
+  };
+}
+const LINK_ICON = {
+  live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+  github: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></svg>',
+  cloudflare: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 17H5.3a3.3 3.3 0 0 1-.4-6.6 5 5 0 0 1 9.6-1.6A4.2 4.2 0 0 1 20.8 13 2 2 0 0 1 20 17h-3.5z" opacity=".9"/></svg>'
+};
+async function adminControl(body, editing){
+  const d = await api("admin/control");
+  const e = editing || {};
+  const groups = [...new Set(d.rows.map(r => r.category || "Other"))];
+  const hs = id => HEALTH && HEALTH.systems && id ? HEALTH.systems[id] : null;
+  const link = (kind, url, label) => url
+    ? `<a class="lk" href="${esc(url)}" target="_blank" rel="noopener">${LINK_ICON[kind]}${label}</a>`
+    : `<button class="lk off" data-fill>${LINK_ICON[kind]}${label}</button>`;
+  body.innerHTML = `<div class="panel"><h3>Control sheet</h3>
+      <p class="brief-empty" style="font-size:.85rem;margin:-6px 0 14px">Every system with its live site, GitHub repository and Cloudflare Worker. Dashed buttons have no link yet — click Edit to add it.</p>
+      ${groups.map(g => `<div class="cs-group"><h4>${esc(g)}</h4>${d.rows.filter(r => (r.category || "Other") === g).map(r => {
+        const h = hs(r.appId);
+        return `<div class="cs-row" data-row="${r.id}"><div style="min-width:0"><b><i class="cs-dot ${h ? (h.state === "up" ? "up" : h.state === "down" ? "down" : "") : ""}" title="${h ? esc(h.state) : "not monitored"}"></i>${esc(r.name)}</b>
+          <small>${esc(r.notes || r.liveUrl || "")}</small></div>
+          <div class="cs-links">${link("live", r.liveUrl, "Live")}${link("github", r.githubUrl, "GitHub")}${link("cloudflare", r.cloudflareUrl, "Cloudflare")}
+          <button class="btn small ghost" data-edit="${r.id}">Edit</button></div></div>`;
+      }).join("")}</div>`).join("")}
+    </div>
+    <div class="panel"><h3>${e.id ? "Edit entry" : "Add an entry"}</h3><div id="fMsg"></div>
+      <label class="field"><span>Name</span><input id="cName" value="${esc(e.name || "")}"></label>
+      <label class="field"><span>Group</span><input id="cCat" value="${esc(e.category || "Systems")}" list="cCats"><datalist id="cCats">${groups.map(g => `<option value="${esc(g)}">`).join("")}</datalist></label>
+      <label class="field"><span>Live address</span><input id="cLive" value="${esc(e.liveUrl || "")}" placeholder="https://…"></label>
+      <label class="field"><span>GitHub repository</span><input id="cGit" value="${esc(e.githubUrl || "")}" placeholder="https://github.com/…"></label>
+      <label class="field"><span>Cloudflare Worker</span><input id="cCf" value="${esc(e.cloudflareUrl || "")}" placeholder="https://dash.cloudflare.com/…"></label>
+      <label class="field"><span>Hub tile id (for the health dot)</span><input id="cApp" value="${esc(e.appId || "")}" placeholder="e.g. incidents"></label>
+      <label class="field"><span>Notes</span><input id="cNotes" value="${esc(e.notes || "")}"></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${e.id ? `<button class="btn ghost" id="cCancel">Cancel</button><button class="btn ghost" id="cDel" style="color:var(--alert)">Delete</button>` : ""}<button class="btn" id="cSave">${e.id ? "Save changes" : "Add entry"}</button></div>
+    </div>`;
+  body.onclick = async ev => {
+    const ed = ev.target.closest("[data-edit]");
+    if (ed) return adminControl(body, d.rows.find(r => r.id === Number(ed.dataset.edit)));
+    const fill = ev.target.closest("[data-fill]");
+    if (fill){ const id = Number(fill.closest("[data-row]").dataset.row); return adminControl(body, d.rows.find(r => r.id === id)); }
+    try {
+      if (ev.target.id === "cCancel") return adminControl(body);
+      if (ev.target.id === "cDel" && confirm("Delete this entry from the control sheet?")){ await api("admin/control/delete", { id: e.id }); return adminControl(body); }
+      if (ev.target.id === "cSave"){
+        await api("admin/control", { id: e.id, name: $("#cName").value, category: $("#cCat").value, liveUrl: $("#cLive").value,
+          githubUrl: $("#cGit").value, cloudflareUrl: $("#cCf").value, appId: $("#cApp").value, notes: $("#cNotes").value });
+        return adminControl(body);
+      }
+    } catch (er){ $("#fMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
   };
 }
 async function adminUsers(body, editing){
