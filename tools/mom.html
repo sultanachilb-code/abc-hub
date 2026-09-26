@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minutes of Meeting · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+.list{display:grid;gap:10px;margin-top:14px}
+.mrow{display:flex;align-items:center;gap:14px;padding:14px 16px;text-align:left;width:100%}
+.mrow:hover{border-color:var(--brand-2)}
+.mrow .date{width:58px;flex:none;text-align:center;border-radius:12px;background:var(--paper);padding:6px 0}
+.mrow .date b{display:block;font-size:1.3rem;line-height:1}
+.mrow .date small{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase}
+.mrow .main{flex:1;min-width:0}
+.mrow .main b{display:block}
+.mrow .main small{color:var(--muted);font-size:.82rem}
+.sec{margin-top:16px;padding:18px}
+.sec h2{font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec h2 .sp{flex:1}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.fields .inp,.fields .sel{width:100%}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.pc{display:flex;align-items:center;gap:10px;padding:10px 26px 10px 12px;border:1.5px solid var(--line);border-radius:14px;text-align:left;background:var(--surface);position:relative}
+.pc b{display:block;font-size:.88rem;line-height:1.2}
+.pc small{color:var(--muted);font-size:.74rem}
+.pc .av{background:var(--line);color:var(--muted)}
+.pc.on{border-color:var(--brand-2);background:rgba(123,75,176,.08)}
+.pc.on .av{background:var(--brand-2);color:#fff}
+.pc.on::after{content:"✓";position:absolute;top:6px;right:10px;color:var(--brand-2);font-weight:900}
+.pc .rm{position:absolute;top:4px;right:6px;color:var(--muted);font-size:.9rem;padding:2px 6px}
+.rows{display:grid;gap:8px}
+.r{display:grid;gap:8px;align-items:center}
+.r.pt{grid-template-columns:30px 1fr 34px}
+.r.act{grid-template-columns:30px minmax(200px,1fr) 190px 150px 110px 34px}
+.r .n{font-weight:800;color:var(--muted);text-align:center}
+.r .inp,.r .sel{width:100%}
+.x{width:34px;height:34px;border-radius:9px;color:var(--muted);font-size:1.1rem}
+.x:hover{background:var(--paper);color:var(--alert)}
+.carry{display:grid;gap:6px}
+.cr{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.cr p{flex:1;font-size:.9rem}
+.cr small{color:var(--muted)}
+.late{color:var(--alert);font-weight:700}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:18px}
+.task{display:flex;gap:12px;align-items:flex-start;padding:14px 16px}
+.task .ck{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-weight:900;color:#fff;margin-top:2px}
+.task.done .ck{background:var(--ok);border-color:var(--ok)}
+.task.done p{text-decoration:line-through;color:var(--muted)}
+.task p{font-weight:600;line-height:1.4}
+.task small{color:var(--muted);font-size:.8rem}
+@media (max-width:820px){ .r.act{grid-template-columns:30px 1fr 34px} .r.act .sel,.r.act .inp[type=date],.r.act .st{grid-column:2} }
+/* print view — mirrors the Excel minutes */
+#print{display:none}
+@media print{ #app,.top{display:none!important} #print{display:block;font-family:Arial,sans-serif;font-size:11px;color:#000}
+  #print table{width:100%;border-collapse:collapse;margin-bottom:10px} #print td,#print th{border:1px solid #777;padding:5px 7px;text-align:left;vertical-align:top}
+  #print th{background:#D9E2F3!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #print h1{font-size:15px;margin:0 0 8px;color:#2A0F45} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Minutes of Meeting <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+</div>
+<div class="wrap" id="app"></div>
+<div id="print"></div>
+
+<script src="common.js"></script>
+<script>
+let CTX = null, VIEW = "meetings", M = null;   // M = meeting being edited
+const app = $("#app");
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  const open = new URLSearchParams(location.search).get("id");
+  if (open) return edit(Number(open));
+  home();
+}
+function tabs(){
+  const t = [["meetings", "Meetings"], ["mine", "My tasks"]];
+  if (CTX.can.mom) t.push(["all", "All open tasks"]);
+  return `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="tabs">${t.map(([k, l]) => `<button data-tab="${k}" class="${VIEW === k ? "on" : ""}">${l}</button>`).join("")}</div>
+    <span style="flex:1"></span>${CTX.can.mom ? `<button class="btn gold" id="newBtn">+ New meeting</button>` : ""}</div>`;
+}
+async function home(){
+  M = null;
+  app.innerHTML = tabs() + `<div class="list"><div class="card empty">Loading…</div></div>`;
+  const list = app.querySelector(".list");
+  if (VIEW === "meetings"){
+    const d = await api(`ops/mom/list?site=${CTX.site}`);
+    list.innerHTML = d.meetings.length ? d.meetings.map(m => `<button class="card mrow" data-id="${m.id}">
+        <span class="date"><b>${D.parse(m.date).getUTCDate()}</b><small>${D.fmt(m.date, { day: undefined, month: "short" })}</small></span>
+        <span class="main"><b>${esc(m.title)}</b><small>${D.long(m.date)} · ${m.attended} attended · ${m.actions} action${m.actions === 1 ? "" : "s"}</small></span>
+        ${m.open ? `<span class="pill warn">${m.open} open</span>` : m.actions ? `<span class="pill ok">All done</span>` : ""}
+        <span class="pill ${m.status === "published" ? "brand" : ""}">${m.status === "published" ? "Published" : "Draft"}</span></button>`).join("")
+      : `<div class="card empty">No minutes yet for ${esc(CTX.siteName)}.${CTX.can.mom ? "<br>Start with <b>+ New meeting</b>." : ""}</div>`;
+  } else {
+    const d = await api(`ops/tasks?site=${CTX.site}${VIEW === "mine" ? "&mine=1" : ""}`);
+    const tasks = VIEW === "all" ? d.tasks.filter(t => t.status === "Open") : d.tasks;
+    list.innerHTML = tasks.length ? tasks.map(taskCard).join("")
+      : `<div class="card empty">${VIEW === "mine" ? "No tasks assigned to you from published minutes." : "No open tasks — everything from the minutes is done."}</div>`;
+  }
+}
+function taskCard(t){
+  const late = t.status === "Open" && t.due && t.due < CTX.today;
+  const mine = t.ownerEmail === CTX.me.email;
+  return `<div class="card task ${t.status === "Done" ? "done" : ""}">
+    <button class="ck" data-task="${t.id}" data-st="${t.status === "Done" ? "Open" : "Done"}" ${mine || CTX.can.mom ? "" : "disabled"} title="${t.status === "Done" ? "Mark as open" : "Mark as done"}">${t.status === "Done" ? "✓" : ""}</button>
+    <div style="flex:1"><p>${esc(t.text)}</p>
+      <small>${esc(t.ownerName || "Unassigned")} · ${t.due ? `<span class="${late ? "late" : ""}">due ${D.fmt(t.due)}${late ? " — overdue" : ""}</span>` : "no deadline"} · from <a href="?id=${t.meetingId}" data-open="${t.meetingId}">${esc(D.fmt(t.meetingDate))} meeting</a></small></div></div>`;
+}
+app.addEventListener("click", async e => {
+  const tb = e.target.closest("[data-tab]"); if (tb){ VIEW = tb.dataset.tab; return home(); }
+  if (e.target.id === "newBtn") return edit(0);
+  const row = e.target.closest(".mrow"); if (row) return edit(Number(row.dataset.id));
+  const op = e.target.closest("[data-open]"); if (op){ e.preventDefault(); return edit(Number(op.dataset.open)); }
+  const tk = e.target.closest("[data-task]");
+  if (tk && !M){ try { await api("ops/tasks/status", { id: Number(tk.dataset.task), status: tk.dataset.st }); home(); } catch (er){ toast(er.message, true); } }
+});
+
+/* ---------------- editor ---------------- */
+async function edit(id){
+  const d = id ? await api(`ops/mom/get?id=${id}`) : await api(`ops/mom/new?site=${CTX.site}`);
+  M = { ...d, meeting: { ...d.meeting }, actions: d.actions.map(a => ({ ...a })), carried: d.carried.map(a => ({ ...a })), guests: "" };
+  /* make sure everyone at the flagship is offered as a card, even if added after the meeting */
+  const have = new Set(M.meeting.participants.map(p => p.email).filter(Boolean));
+  d.staff.filter(s => s.atSite && !have.has(s.email)).forEach(s => M.meeting.participants.push({ email: s.email, name: s.name, position: s.positionLabel, attended: false }));
+  if (!M.meeting.points.length) M.meeting.points = [""];
+  if (!M.actions.length) M.actions = [{ id: 0, text: "", ownerEmail: "", ownerName: "", due: "", status: "Open" }];
+  renderEditor();
+}
+function ownerOptions(sel){
+  const ppl = [...M.meeting.participants].sort((a, b) => b.attended - a.attended);
+  return `<option value="">— Responsible —</option>` + ppl.map(p => `<option value="${esc(p.email || "guest:" + p.name)}" ${(p.email ? p.email === sel.ownerEmail : !sel.ownerEmail && p.name === sel.ownerName) ? "selected" : ""}>${esc(p.name)}${p.attended ? "" : " (absent)"}</option>`).join("");
+}
+function renderEditor(){
+  const m = M.meeting, ro = !M.can.mom;
+  const dis = ro ? "disabled" : "";
+  const late = a => a.status === "Open" && a.due && a.due < CTX.today;
+  app.innerHTML = `
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <button class="btn ghost small" id="back">‹ All minutes</button>
+    <span class="pill ${m.status === "published" ? "brand" : ""}">${m.status === "published" ? "Published" : "Draft"}</span>
+    <span style="flex:1"></span>
+    <button class="btn ghost small" id="printBtn">Print / PDF</button>
+  </div>
+
+  <div class="card sec"><h2>Meeting</h2>
+    <div class="fields">
+      <label><span class="lbl">Title</span><input class="inp" id="fTitle" value="${esc(m.title)}" ${dis}></label>
+      <label><span class="lbl">Date</span><input class="inp" type="date" id="fDate" value="${esc(m.date)}" ${dis}></label>
+      <label><span class="lbl">Week number</span><input class="inp" id="fWeek" value="${esc(m.weekNo)}" ${dis}></label>
+      <label><span class="lbl">Location</span><input class="inp" id="fLoc" value="${esc(m.location)}" ${dis}></label>
+      <label><span class="lbl">Last meeting</span><input class="inp" type="date" id="fLast" value="${esc(m.lastDate)}" ${dis}></label>
+      <label><span class="lbl">Next meeting</span><input class="inp" type="date" id="fNext" value="${esc(m.nextDate)}" ${dis}></label>
+    </div></div>
+
+  <div class="card sec"><h2>Participants <span class="pill brand" id="attCount"></span><span class="sp"></span><small class="muted" style="text-transform:none;letter-spacing:0;font-weight:600">Tap who attended</small></h2>
+    <div class="people" id="people">${m.participants.map((p, i) => `<button class="pc ${p.attended ? "on" : ""}" data-p="${i}" ${dis}>
+      <span class="av">${esc(initials(p.name))}</span><span><b>${esc(p.name)}</b><small>${esc(p.position || (p.email ? "" : "Guest"))}</small></span>
+      ${!p.email && !ro ? `<span class="rm" data-rmg="${i}" title="Remove guest">×</span>` : ""}</button>`).join("")}</div>
+    ${ro ? "" : `<div style="display:flex;gap:8px;margin-top:10px;max-width:420px"><input class="inp" id="guest" placeholder="Add a guest (e.g. Jean El Khoury)" style="flex:1"><button class="btn ghost small" id="addGuest">Add</button></div>`}
+  </div>
+
+  <div class="card sec"><h2>Points discussed<span class="sp"></span>${ro ? "" : `<button class="btn ghost small" id="saveAgenda" title="Use these points as the starting agenda for every new meeting">Save as default agenda</button>`}</h2>
+    <div class="rows">${m.points.map((p, i) => `<div class="r pt"><span class="n">${i + 1}</span><input class="inp" data-pt="${i}" value="${esc(p)}" placeholder="Agenda point" ${dis}>${ro ? "" : `<button class="x" data-rmp="${i}">×</button>`}</div>`).join("")}</div>
+    ${ro ? "" : `<button class="btn ghost small" id="addPt" style="margin-top:10px">+ Add point</button>`}
+  </div>
+
+  ${M.carried.length ? `<div class="card sec"><h2>Follow-up from earlier meetings <span class="pill warn">${M.carried.filter(a => a.status === "Open").length} open</span></h2>
+    <div class="carry">${M.carried.map((a, i) => `<div class="cr"><button class="btn small ${a.status === "Done" ? "" : "ghost"}" data-cr="${i}" ${dis}>${a.status === "Done" ? "✓ Done" : "Mark done"}</button>
+      <p>${esc(a.text)}<br><small>${esc(a.ownerName || "Unassigned")}${a.due ? ` · <span class="${late(a) ? "late" : ""}">due ${D.fmt(a.due)}</span>` : ""}</small></p></div>`).join("")}</div></div>` : ""}
+
+  <div class="card sec"><h2>Points agreed · actions needed</h2>
+    <div class="rows">${M.actions.map((a, i) => `<div class="r act">
+      <span class="n">${i + 1}</span>
+      <input class="inp" data-at="${i}" value="${esc(a.text)}" placeholder="Action needed" ${dis}>
+      <select class="sel" data-ao="${i}" ${dis}>${ownerOptions(a)}</select>
+      <input class="inp" type="date" data-ad="${i}" value="${esc(a.due)}" ${dis} title="Completion date">
+      <select class="sel st" data-as="${i}" ${dis}><option ${a.status === "Open" ? "selected" : ""}>Open</option><option ${a.status === "Done" ? "selected" : ""}>Done</option></select>
+      ${ro ? "" : `<button class="x" data-rma="${i}">×</button>`}</div>`).join("")}</div>
+    ${ro ? "" : `<button class="btn ghost small" id="addAct" style="margin-top:10px">+ Add action</button>`}
+  </div>
+
+  <div class="card sec"><h2>Prepared by</h2><p><b>${esc(m.preparedBy)}</b></p></div>
+
+  ${ro ? "" : `<div class="bar">
+    ${m.id && m.status !== "published" ? `<button class="btn ghost danger" id="delBtn">Delete draft</button>` : ""}
+    ${m.status === "published" ? "" : `<button class="btn ghost" id="saveBtn">Save draft</button>`}
+    <button class="btn gold" id="pubBtn">${m.status === "published" ? "Save & notify changes" : "Publish & notify"}</button></div>`}`;
+  $("#attCount").textContent = `${m.participants.filter(p => p.attended).length} attended`;
+}
+function collect(){
+  const m = M.meeting;
+  if (!M.can.mom) return;
+  m.title = $("#fTitle").value; m.date = $("#fDate").value; m.weekNo = $("#fWeek").value; m.location = $("#fLoc").value;
+  m.lastDate = $("#fLast").value; m.nextDate = $("#fNext").value;
+  app.querySelectorAll("[data-pt]").forEach(i => m.points[+i.dataset.pt] = i.value);
+  app.querySelectorAll("[data-at]").forEach(i => M.actions[+i.dataset.at].text = i.value);
+  app.querySelectorAll("[data-ad]").forEach(i => M.actions[+i.dataset.ad].due = i.value);
+  app.querySelectorAll("[data-as]").forEach(i => M.actions[+i.dataset.as].status = i.value);
+  app.querySelectorAll("[data-ao]").forEach(i => {
+    const a = M.actions[+i.dataset.ao], v = i.value;
+    if (!v){ a.ownerEmail = ""; a.ownerName = ""; }
+    else if (v.startsWith("guest:")){ a.ownerEmail = ""; a.ownerName = v.slice(6); }
+    else { a.ownerEmail = v; a.ownerName = (M.meeting.participants.find(p => p.email === v) || {}).name || ""; }
+  });
+}
+app.addEventListener("click", async e => {
+  if (!M) return;
+  const t = e.target;
+  if (t.id === "back") return home();
+  if (t.id === "printBtn"){ collect(); printView(); return print(); }
+  if (!M.can.mom) return;
+  const rmg = t.closest("[data-rmg]"); if (rmg){ e.stopPropagation(); collect(); M.meeting.participants.splice(+rmg.dataset.rmg, 1); return renderEditor(); }
+  const pc = t.closest("[data-p]"); if (pc){ collect(); const p = M.meeting.participants[+pc.dataset.p]; p.attended = !p.attended; return renderEditor(); }
+  if (t.id === "addGuest"){ const n = $("#guest").value.trim(); if (!n) return; collect(); M.meeting.participants.push({ email: "", name: n, position: "Guest", attended: true }); return renderEditor(); }
+  if (t.id === "addPt"){ collect(); M.meeting.points.push(""); renderEditor(); return app.querySelector(`[data-pt="${M.meeting.points.length - 1}"]`).focus(); }
+  const rmp = t.closest("[data-rmp]"); if (rmp){ collect(); M.meeting.points.splice(+rmp.dataset.rmp, 1); if (!M.meeting.points.length) M.meeting.points = [""]; return renderEditor(); }
+  if (t.id === "addAct"){ collect(); M.actions.push({ id: 0, text: "", ownerEmail: "", ownerName: "", due: "", status: "Open" }); renderEditor(); return app.querySelector(`[data-at="${M.actions.length - 1}"]`).focus(); }
+  const rma = t.closest("[data-rma]"); if (rma){ collect(); M.actions.splice(+rma.dataset.rma, 1); if (!M.actions.length) M.actions = [{ id: 0, text: "", ownerEmail: "", ownerName: "", due: "", status: "Open" }]; return renderEditor(); }
+  const cr = t.closest("[data-cr]"); if (cr){ collect(); const a = M.carried[+cr.dataset.cr]; a.status = a.status === "Done" ? "Open" : "Done"; return renderEditor(); }
+  if (t.id === "saveAgenda"){ collect(); try { const r = await api("ops/mom/agenda", { site: CTX.site, points: M.meeting.points }); toast(`Default agenda saved (${r.saved} points)`); } catch (er){ toast(er.message, true); } return; }
+  if (t.id === "delBtn"){ if (!(await confirmBox("Delete this draft?", "The draft and its actions are removed.", "Delete"))) return;
+    try { await api("ops/mom/delete", { site: CTX.site, id: M.meeting.id }); toast("Draft deleted"); home(); } catch (er){ toast(er.message, true); } return; }
+  if (t.id === "saveBtn" || t.id === "pubBtn"){
+    collect();
+    const publish = t.id === "pubBtn";
+    if (publish){
+      const owners = [...new Set(M.actions.filter(a => a.text.trim() && a.ownerEmail && a.status === "Open").map(a => a.ownerName))];
+      const noDate = M.actions.filter(a => a.text.trim() && !a.due).length;
+      if (!(await confirmBox(M.meeting.status === "published" ? "Save and notify?" : "Publish the minutes?",
+        `${owners.length ? `<b>${owners.map(esc).join(", ")}</b> will get a notification for each new task, with its deadline, and reminders the day before and when it's due.` : "No one has a task assigned yet."}${noDate ? `<br><br>${noDate} action${noDate === 1 ? " has" : "s have"} no completion date.` : ""}`, publish ? "Publish" : "Save"))) return;
+    }
+    t.disabled = true;
+    try {
+      const r = await api("ops/mom/save", { site: CTX.site, meeting: M.meeting, actions: M.actions, carried: M.carried.map(a => ({ id: a.id, status: a.status })),
+        publish: publish || M.meeting.status === "published", republish: M.meeting.status === "published" });
+      toast(publish ? `Published${r.notified ? ` — ${r.notified} task notification${r.notified === 1 ? "" : "s"} sent` : ""}` : "Draft saved");
+      await edit(r.id);
+    } catch (er){ toast(er.message, true); t.disabled = false; }
+  }
+});
+
+/* ---------------- print view (same layout as the Excel minutes) ---------------- */
+function printView(){
+  const m = M.meeting;
+  const att = m.participants.filter(p => p.attended).map(p => p.name).join(", ");
+  const acts = M.actions.filter(a => a.text.trim());
+  $("#print").innerHTML = `<h1>ABC ${esc(CTX.siteName)} — Minutes of the Meeting ${esc(CTX.siteName)} Operations</h1>
+  <table><tr><th style="width:18%">Title</th><td>${esc(m.title)}</td><th style="width:15%">Date</th><td style="width:17%">${esc(D.fmt(m.date, { year: "numeric" }))}</td></tr>
+    <tr><th>Participants</th><td>${esc(att)}</td><th>Week number</th><td>${esc(m.weekNo)}</td></tr>
+    <tr><th>Location</th><td>${esc(m.location)}</td><th>Last meeting</th><td>${esc(D.fmt(m.lastDate, { year: "numeric" }))}</td></tr>
+    <tr><th></th><td></td><th>Next meeting</th><td>${esc(D.fmt(m.nextDate, { year: "numeric" }))}</td></tr></table>
+  <table><tr><th colspan="2">Points discussed</th></tr>${m.points.filter(p => p.trim()).map((p, i) => `<tr><td style="width:5%">${i + 1}</td><td>${esc(p)}</td></tr>`).join("")}</table>
+  <table><tr><th style="width:5%"></th><th>Points agreed · actions needed</th><th style="width:22%">Responsible</th><th style="width:16%">Completion date</th></tr>
+    ${acts.map((a, i) => `<tr><td>${i + 1}</td><td>${esc(a.text)}</td><td>${esc(a.ownerName)}</td><td>${a.status === "Done" ? "Done" : esc(D.fmt(a.due, { year: "numeric" }))}</td></tr>`).join("")}
+    ${M.carried.map(a => `<tr><td>↺</td><td>${esc(a.text)}</td><td>${esc(a.ownerName)}</td><td>${a.status === "Done" ? "Done" : esc(D.fmt(a.due, { year: "numeric" }))}</td></tr>`).join("")}</table>
+  <table><tr><th style="width:18%">Prepared by</th><td>${esc(m.preparedBy)}</td></tr></table>`;
+}
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

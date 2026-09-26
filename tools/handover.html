@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handover · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+.list{display:grid;gap:10px;margin-top:14px}
+.hrow{display:flex;align-items:center;gap:14px;padding:14px 16px;text-align:left;width:100%}
+.hrow:hover{border-color:var(--brand-2)}
+.hrow .main{flex:1;min-width:0}
+.hrow .main small{color:var(--muted);font-size:.82rem}
+.newbox{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.doc{max-width:980px;margin:14px auto 0;background:var(--surface);border:1.5px solid #2F3B52;border-radius:4px}
+.hd{background:var(--blueHead);color:#10203F;font-weight:800;padding:8px 12px;display:flex;align-items:center;gap:10px;border-top:1.5px solid #2F3B52}
+:root[data-theme="dark"] .hd{color:#E6ECFA}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .hd{color:#E6ECFA} }
+.hd:first-child{border-top:0}
+.hd .sp{flex:1}
+.add{font-size:.78rem;font-weight:800;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.55);color:#10203F}
+.sub{background:var(--blueSoft);font-weight:800;padding:7px 12px;color:#1F3A73}
+:root[data-theme="dark"] .sub{color:#C9D6F5}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .sub{color:#C9D6F5} }
+.items{padding:6px 10px 10px}
+.it{display:grid;grid-template-columns:18px 1fr auto auto 30px;gap:8px;align-items:center;padding:3px 0}
+.it.dated{grid-template-columns:18px 150px 1fr auto 30px}
+.it .dot{width:7px;height:7px;background:#4472C4;border-radius:1px;justify-self:center}
+.it input[type=text],.it textarea{border:0;border-bottom:1px dashed transparent;background:transparent;padding:5px 2px;outline:none;width:100%;color:#2F5597;font-size:.92rem;resize:none;line-height:1.35;border-radius:0}
+:root[data-theme="dark"] .it input[type=text],:root[data-theme="dark"] .it textarea{color:#9DB8EE}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .it input[type=text], :root:not([data-theme="light"]) .it textarea{color:#9DB8EE} }
+.it input[type=text]:focus,.it textarea:focus{border-bottom-color:var(--brand-2)}
+.it.cctv textarea{font-weight:700}
+.it.done textarea{text-decoration:line-through;opacity:.6}
+.tg{font-size:.7rem;font-weight:800;padding:4px 8px;border-radius:7px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tg.on.c{background:#E5484D;border-color:#E5484D;color:#fff}
+.tg.on.d{background:var(--ok);border-color:var(--ok);color:#fff}
+.x{width:30px;height:30px;border-radius:8px;color:var(--muted);font-size:1.05rem}
+.x:hover{background:var(--paper);color:var(--alert)}
+.emptyrow{color:var(--muted);font-size:.85rem;padding:6px 4px}
+table.t{width:100%;border-collapse:collapse}
+.t th{background:var(--blueSoft);font-size:.82rem;padding:7px 8px;text-align:left;border:1px solid var(--line)}
+.t td{border:1px solid var(--line);padding:0}
+.t td input,.t td select{width:100%;border:0;background:transparent;padding:8px;outline:none;font-size:.88rem;min-width:0}
+.t td.xx{width:34px;text-align:center}
+.t .done{color:var(--ok);font-weight:800}.t .nd{color:var(--alert);font-weight:800}
+.notes{padding:10px}
+.notes textarea{min-height:110px;border:0;background:transparent}
+.meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.meta .sel,.meta .inp{height:36px}
+.banner{margin:12px auto 0;max-width:980px;padding:10px 14px;border-radius:12px;background:rgba(123,75,176,.1);color:var(--brand-2);font-size:.86rem;font-weight:600}
+.bar{max-width:980px;margin:14px auto 0;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.saved{font-size:.8rem;color:var(--muted);margin-right:auto;align-self:center}
+@media (max-width:700px){ .it{grid-template-columns:14px 1fr 30px} .it .tg{grid-column:2;justify-self:start} .it.dated{grid-template-columns:14px 1fr 30px} .it.dated input[type=date]{grid-column:2}
+  .t{display:block;overflow-x:auto} .t tr{min-width:620px} }
+@media print{ .doc{border:1.5px solid #000;max-width:none;margin:0} .x,.add,.tg:not(.on),.bar,.banner,#listView{display:none!important}
+  .hd,.sub,.t th,.tg.on{-webkit-print-color-adjust:exact;print-color-adjust:exact} .it input[type=text],.it textarea{color:#2F5597} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Handover <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+</div>
+<div class="wrap" id="app"></div>
+
+<script src="common.js"></script>
+<script>
+let CTX = null, H = null, timer = null, dirty = false;
+const app = $("#app");
+const SEC = [
+  ["ongoing", "Scheduled works", "Ongoing follow-up until solved"],
+  ["today", "Today", ""],
+  ["tomorrow", "Tomorrow", ""],
+  ["upcoming", "Coming up", "Dated items move into “Today” automatically on their day"]
+];
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  list();
+}
+async function list(){
+  H = null;
+  const d = await api(`ops/handover/list?site=${CTX.site}`);
+  const hr = new Date().getHours();
+  app.innerHTML = `<div id="listView">
+    ${CTX.can.handover ? `<div class="card" style="padding:16px"><span class="lbl">Start a handover</span>
+      <div class="newbox"><input class="inp" type="date" id="nDay" value="${CTX.today}">
+        <select class="sel" id="nShift"><option value="AM" ${hr < 14 ? "selected" : ""}>Morning shift</option><option value="PM" ${hr >= 14 ? "selected" : ""}>Evening shift</option></select>
+        <button class="btn gold" id="newBtn">+ New handover</button>
+        <small class="muted">Starts from the last handover — open follow-ups, tomorrow's items and events carry over.</small></div></div>` : ""}
+    <div class="list">${d.handovers.length ? d.handovers.map(h => `<button class="card hrow" data-id="${h.id}">
+        <span class="main"><b>${esc(D.long(h.day))} · ${h.shift === "AM" ? "Morning" : "Evening"}</b><br>
+        <small>by ${esc(h.created_name || "—")}${h.submitted_at ? ` · submitted ${new Date(h.submitted_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}${h.received_by ? ` · received by ${esc(h.received_by)}` : ""}</small></span>
+        ${h.received_by ? `<span class="pill ok">Received</span>` : h.status === "submitted" ? `<span class="pill warn">Awaiting receipt</span>` : `<span class="pill">Draft</span>`}</button>`).join("")
+      : `<div class="card empty">No handovers yet for ${esc(CTX.siteName)}.</div>`}</div></div>`;
+}
+app.addEventListener("click", async e => {
+  if (H) return;
+  if (e.target.id === "newBtn"){
+    const d = await api(`ops/handover/new?site=${CTX.site}&day=${$("#nDay").value}&shift=${$("#nShift").value}`);
+    H = d.handover; H.can = d.can; dirty = true; render(); return;
+  }
+  const r = e.target.closest(".hrow"); if (r) open(Number(r.dataset.id));
+});
+async function open(id){ const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; dirty = false; render(); }
+
+/* ---------------- document ---------------- */
+function itemRow(k, x, i, ro){
+  const dated = k === "upcoming";
+  return `<div class="it ${dated ? "dated" : ""} ${x.cctv ? "cctv" : ""} ${x.done ? "done" : ""}">
+    <span class="dot"></span>
+    ${dated ? `<input type="date" class="inp" data-k="${k}" data-i="${i}" data-f="date" value="${esc(x.date)}" ${ro}>` : ""}
+    <textarea rows="1" data-k="${k}" data-i="${i}" data-f="text" placeholder="Write the item…" ${ro}>${esc(x.text)}</textarea>
+    <button class="tg c ${x.cctv ? "on" : ""}" data-tg="cctv" data-k="${k}" data-i="${i}" ${ro}>ATT CCTV</button>
+    ${dated ? "" : `<button class="tg d ${x.done ? "on" : ""}" data-tg="done" data-k="${k}" data-i="${i}" ${ro}>Done</button>`}
+    ${ro ? "<span></span>" : `<button class="x" data-rm="${k}" data-i="${i}" title="Remove">×</button>`}</div>`;
+}
+function render(){
+  const d = H.doc, ro = H.can.handover ? "" : "disabled";
+  const submitted = H.status === "submitted";
+  app.innerHTML = `
+  <div class="meta" style="max-width:980px;margin:0 auto">
+    <button class="btn ghost small" id="back">‹ All handovers</button>
+    <input class="inp" type="date" id="hDay" value="${esc(H.day)}" ${ro}>
+    <select class="sel" id="hShift" ${ro}><option value="AM" ${H.shift === "AM" ? "selected" : ""}>Morning shift</option><option value="PM" ${H.shift === "PM" ? "selected" : ""}>Evening shift</option></select>
+    <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Submitted" : "Draft"}</span>
+    <span style="flex:1"></span>
+    <button class="btn ghost small" id="printBtn">Print / PDF</button>
+  </div>
+  ${!H.id && H.from ? `<div class="banner">Started from the ${H.from.shift === "AM" ? "morning" : "evening"} handover of ${esc(D.fmt(H.from.day, { weekday: "short" }))} — review, then save.</div>` : ""}
+  <div class="doc">
+    ${SEC.map(([k, title, subtitle], si) => `
+      ${si === 0 ? `<div class="hd">${esc(title)}<span class="sp"></span></div><div class="sub" style="display:flex;align-items:center">${esc(subtitle)}<span style="flex:1"></span>${ro ? "" : `<button class="add" data-add="${k}">+ Add row</button>`}</div>`
+        : `<div class="hd">${esc(title)}${subtitle ? `<small style="font-weight:600;opacity:.75">· ${esc(subtitle)}</small>` : ""}<span class="sp"></span>${ro ? "" : `<button class="add" data-add="${k}">+ Add row</button>`}</div>`}
+      <div class="items">${d[k].length ? d[k].map((x, i) => itemRow(k, x, i, ro)).join("") : `<div class="emptyrow">Nothing yet.</div>`}</div>`).join("")}
+
+    <div class="hd">Marketing events<span class="sp"></span>${ro ? "" : `<button class="add" data-add="events">+ Add row</button>`}</div>
+    <table class="t"><tr><th>From</th><th>To</th><th>Event / activation</th><th>Start</th><th>End</th><th></th></tr>
+      ${d.events.map((x, i) => `<tr><td><input type="date" data-k="events" data-i="${i}" data-f="from" value="${esc(x.from)}" ${ro}></td>
+        <td><input type="date" data-k="events" data-i="${i}" data-f="to" value="${esc(x.to)}" ${ro}></td>
+        <td><input type="text" data-k="events" data-i="${i}" data-f="name" value="${esc(x.name)}" placeholder="e.g. L'Oréal booth" ${ro}></td>
+        <td><input type="time" data-k="events" data-i="${i}" data-f="start" value="${esc(x.start)}" ${ro}></td>
+        <td><input type="time" data-k="events" data-i="${i}" data-f="end" value="${esc(x.end)}" ${ro}></td>
+        <td class="xx">${ro ? "" : `<button class="x" data-rm="events" data-i="${i}">×</button>`}</td></tr>`).join("") || `<tr><td colspan="6" class="emptyrow" style="padding:8px">No events.</td></tr>`}</table>
+
+    <div class="hd">Daily operations checklist tracker<span class="sp"></span>${ro ? "" : `<button class="add" data-add="checklists">+ Add row</button>`}</div>
+    <table class="t"><tr><th>Checklist name</th><th style="width:120px">AM</th><th style="width:120px">PM</th><th>Clarifications</th><th></th></tr>
+      ${d.checklists.map((x, i) => `<tr><td><input type="text" data-k="checklists" data-i="${i}" data-f="name" value="${esc(x.name)}" ${ro}></td>
+        ${["am", "pm"].map(f => `<td><select data-k="checklists" data-i="${i}" data-f="${f}" class="${x[f] === "Done" ? "done" : x[f] === "Not done" ? "nd" : ""}" ${ro}>${["", "Done", "Not done", "N/A"].map(o => `<option ${x[f] === o ? "selected" : ""} value="${o}">${o || "—"}</option>`).join("")}</select></td>`).join("")}
+        <td><input type="text" data-k="checklists" data-i="${i}" data-f="note" value="${esc(x.note)}" ${ro}></td>
+        <td class="xx">${ro ? "" : `<button class="x" data-rm="checklists" data-i="${i}">×</button>`}</td></tr>`).join("")}</table>
+
+    <div class="hd">Operations documentation tracker<span class="sp"></span>${ro ? "" : `<button class="add" data-add="docs">+ Add row</button>`}</div>
+    <table class="t"><tr><th>Document / link</th><th style="width:110px">Task</th><th style="width:150px">Last updated</th><th>Comments</th><th></th></tr>
+      ${d.docs.map((x, i) => `<tr><td><input type="text" data-k="docs" data-i="${i}" data-f="label" value="${esc(x.label)}" placeholder="Name" ${ro}>
+          <input type="text" data-k="docs" data-i="${i}" data-f="url" value="${esc(x.url)}" placeholder="Link or \\\\server\\folder path" style="font-size:.78rem;color:var(--muted);padding-top:0" ${ro}></td>
+        <td><input type="text" data-k="docs" data-i="${i}" data-f="task" value="${esc(x.task)}" ${ro}></td>
+        <td><input type="date" data-k="docs" data-i="${i}" data-f="updated" value="${esc(x.updated)}" ${ro}></td>
+        <td><input type="text" data-k="docs" data-i="${i}" data-f="comment" value="${esc(x.comment)}" ${ro}></td>
+        <td class="xx">${ro ? "" : `<button class="x" data-rm="docs" data-i="${i}">×</button>`}</td></tr>`).join("") || `<tr><td colspan="5" class="emptyrow" style="padding:8px">No documents.</td></tr>`}</table>
+
+    <div class="hd">Additional notes</div>
+    <div class="notes"><textarea id="notes" placeholder="Anything else the next shift should know" ${ro}>${esc(d.notes)}</textarea></div>
+  </div>
+  <div class="bar">
+    <span class="saved" id="savedMsg">${H.id ? `Prepared by ${esc(H.createdName || "")}` : "Not saved yet"}</span>
+    ${H.can.handover && H.id && H.status === "draft" ? `<button class="btn ghost danger" id="delBtn">Delete draft</button>` : ""}
+    ${H.can.handover ? `<button class="btn ghost" id="saveBtn">Save</button>` : ""}
+    ${H.can.handover && !submitted ? `<button class="btn gold" id="submitBtn">Submit handover</button>` : ""}
+    ${submitted && !H.receivedBy && H.createdBy !== CTX.me.email ? `<button class="btn gold" id="recvBtn">I have received this handover</button>` : ""}
+  </div>`;
+  app.querySelectorAll(".it textarea").forEach(grow);
+}
+function grow(t){ t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+
+/* ----- editing ----- */
+const blank = { ongoing: () => ({ text: "", cctv: false, done: false, date: "" }), today: () => ({ text: "", cctv: false, done: false, date: "" }),
+  tomorrow: () => ({ text: "", cctv: false, done: false, date: "" }), upcoming: () => ({ text: "", cctv: false, done: false, date: D.add(CTX.today, 2) }),
+  events: () => ({ from: CTX.today, to: CTX.today, name: "", start: "", end: "" }), checklists: () => ({ name: "", am: "", pm: "", note: "" }),
+  docs: () => ({ label: "", url: "", task: "", updated: CTX.today, comment: "" }) };
+function touch(){ dirty = true; clearTimeout(timer); if (H.id) timer = setTimeout(() => save(false, true), 2000); const m = $("#savedMsg"); if (m) m.textContent = "Unsaved changes…"; }
+app.addEventListener("input", e => {
+  if (!H) return;
+  const t = e.target, k = t.dataset.k;
+  if (t.id === "notes"){ H.doc.notes = t.value; return touch(); }
+  if (t.id === "hDay"){ H.day = t.value; return touch(); }
+  if (k){ H.doc[k][+t.dataset.i][t.dataset.f] = t.value; if (t.tagName === "TEXTAREA") grow(t); if (t.tagName === "SELECT") t.className = t.value === "Done" ? "done" : t.value === "Not done" ? "nd" : ""; touch(); }
+});
+app.addEventListener("change", e => { if (H && e.target.id === "hShift"){ H.shift = e.target.value; touch(); } });
+app.addEventListener("click", async e => {
+  if (!H) return;
+  const t = e.target;
+  if (t.id === "back"){ if (dirty && H.can.handover && !(await confirmBox("Leave without saving?", "Your latest changes to this handover are not saved yet.", "Leave"))) return; clearTimeout(timer); return list(); }
+  if (t.id === "printBtn") return print();
+  const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add; H.doc[k].push(blank[k]()); touch(); render();
+    const last = app.querySelectorAll(`[data-k="${k}"][data-i="${H.doc[k].length - 1}"]`); const f = [...last].find(x => x.tagName === "TEXTAREA" || x.type === "text"); f && f.focus(); return; }
+  const rm = t.closest("[data-rm]"); if (rm){ H.doc[rm.dataset.rm].splice(+rm.dataset.i, 1); touch(); return render(); }
+  const tg = t.closest("[data-tg]"); if (tg){ const x = H.doc[tg.dataset.k][+tg.dataset.i]; x[tg.dataset.tg] = !x[tg.dataset.tg]; touch(); return render(); }
+  if (t.id === "saveBtn") return save(false);
+  if (t.id === "submitBtn"){ if (!(await confirmBox("Submit this handover?", "Everyone at the flagship is notified that the handover is ready. You can still edit it afterwards.", "Submit"))) return; return save(true); }
+  if (t.id === "recvBtn"){ try { await api("ops/handover/receive", { site: CTX.site, id: H.id }); toast("Marked as received"); open(H.id); } catch (er){ toast(er.message, true); } return; }
+  if (t.id === "delBtn"){ if (!(await confirmBox("Delete this draft?", "The draft is removed permanently.", "Delete"))) return;
+    try { await api("ops/handover/delete", { site: CTX.site, id: H.id }); toast("Draft deleted"); list(); } catch (er){ toast(er.message, true); } }
+});
+async function save(submit, quiet){
+  clearTimeout(timer);
+  try {
+    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, shift: H.shift, doc: H.doc, submit });
+    const first = !H.id; H.id = r.id; dirty = false;
+    if (submit){ toast("Handover submitted — the team has been notified"); return open(H.id); }
+    if (!quiet) toast("Saved");
+    const m = $("#savedMsg"); if (m) m.textContent = `Saved ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+    if (first) open(H.id);
+  } catch (er){ toast(er.message, true); }
+}
+addEventListener("beforeunload", e => { if (H && dirty && H.can.handover){ e.preventDefault(); e.returnValue = ""; } });
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

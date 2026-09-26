@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Schedule · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+.weekbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.weekbar .range{font-weight:800;font-size:1rem;min-width:200px;text-align:center}
+.nav{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.nav:hover{border-color:var(--brand-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0 0 14px;font-size:.78rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
+.grid th,.grid td{border-bottom:1px solid var(--line);padding:0;text-align:center;vertical-align:middle}
+.grid thead th{background:var(--ink);color:#fff;font-size:.8rem;font-weight:700;padding:10px 6px;position:sticky;top:0}
+.grid thead th.today{background:var(--brand-2)}
+.grid thead th small{display:block;font-weight:500;opacity:.8;font-size:.72rem}
+.grid .name{position:sticky;left:0;background:var(--surface);text-align:left;padding:8px 12px;min-width:190px;z-index:2;border-right:1px solid var(--line)}
+.grid thead .name{background:var(--ink);z-index:3}
+.grid .name b{display:block;font-size:.88rem}
+.grid .name small{color:var(--muted);font-size:.72rem}
+.grid tr.me .name{box-shadow:inset 4px 0 0 var(--gold)}
+.grid tr.grp td{background:var(--paper);text-align:left;padding:7px 12px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.grid tr.grp td.name{background:var(--paper)}
+.grid tr.notes td{background:var(--blueSoft)}
+.grid tr.notes input{width:100%;border:0;background:transparent;padding:7px 6px;font-size:.74rem;text-align:center;color:var(--text);outline:none}
+.grid tr.notes .name{background:var(--blueSoft);font-size:.74rem;font-weight:700;color:var(--muted)}
+.cell{width:100%;min-height:48px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;font-size:.85rem;font-variant-numeric:tabular-nums;border-radius:0}
+.cell small{font-size:.66rem;font-weight:600;opacity:.8}
+.cell:hover{background:rgba(123,75,176,.08)}
+.cell.ro{cursor:default}.cell.ro:hover{background:none}
+.cell.dirty{box-shadow:inset 0 0 0 2px var(--gold)}
+.s-am{background:rgba(64,156,255,.12)} .s-mid{background:rgba(46,184,114,.12)} .s-pm{background:rgba(123,75,176,.14)}
+.c-OFF{background:#E5484D;color:#fff} .c-VAC,.c-SICK,.c-DEATH,.c-UL{background:#FFC000;color:#3B2A00}
+.c-HOLI{background:#8E6BD8;color:#fff} .c-TRAIN{background:#2F80ED;color:#fff} .c-OTH{background:#1F9E8F;color:#fff}
+.hrs{font-weight:800;font-variant-numeric:tabular-nums;padding:0 10px;min-width:64px}
+.hrs.under{color:var(--warn)} .hrs.over{color:var(--alert)} .hrs.ok{color:var(--ok)}
+.grid tfoot td{background:var(--paper);font-size:.74rem;color:var(--muted);padding:8px 4px;border-bottom:0}
+.grid tfoot .name{background:var(--paper);font-weight:800}
+.grid tfoot b{color:var(--text)}
+.cov-bad{color:var(--alert)!important}
+.savebar{position:sticky;bottom:12px;margin-top:14px;display:flex;justify-content:flex-end;gap:8px}
+.picker .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.picker .presets button{padding:10px 4px;border-radius:10px;border:1px solid var(--line);font-weight:800;font-variant-numeric:tabular-nums}
+.picker .presets button:hover{border-color:var(--brand-2)}
+.picker .codes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:14px}
+.picker .codes button{padding:9px 10px;border-radius:10px;font-weight:700;font-size:.82rem;text-align:left}
+.picker .custom{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.picker .custom .sel{flex:1}
+@media print{ .tbl-wrap{border:0;overflow:visible} table.grid{min-width:0;font-size:10px} .grid thead th{background:#2A0F45!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .c-OFF,.c-VAC,.c-SICK,.c-DEATH,.c-UL,.c-HOLI,.c-TRAIN,.c-OTH,.s-am,.s-mid,.s-pm{-webkit-print-color-adjust:exact;print-color-adjust:exact} .ptitle{display:block!important} }
+@media (max-width:640px){ .grid .name{min-width:118px;padding:8px} .grid .name small{display:none} .legend{font-size:.72rem;gap:4px 10px} .weekbar .range{min-width:0;font-size:.92rem} }
+.ptitle{display:none;font-weight:800;font-size:16px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Operations Schedule <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <button class="btn ghost small" id="printBtn">Print</button>
+</div>
+<div class="wrap">
+  <div class="weekbar">
+    <button class="nav" id="prev" aria-label="Previous week">‹</button>
+    <div class="range" id="range"></div>
+    <button class="nav" id="next" aria-label="Next week">›</button>
+    <button class="btn ghost small" id="todayBtn">This week</button>
+    <span style="flex:1"></span>
+    <span id="editTools" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost small" id="copyBtn">Copy last week</button>
+      <button class="btn ghost small danger" id="clearBtn">Clear week</button>
+    </span>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="ptitle" id="ptitle"></div>
+  <div id="board"></div>
+  <div class="savebar hidden" id="savebar">
+    <button class="btn ghost" id="discardBtn">Discard</button>
+    <button class="btn gold" id="saveBtn">Save changes</button>
+  </div>
+</div>
+<dialog id="pick" class="picker"></dialog>
+
+<script src="common.js"></script>
+<script>
+let CTX = null, WEEK = null, DATA = null, DIRTY = new Map(), DIRTY_NOTES = new Map();
+const PRESETS = ["08:00-16:00", "10:00-18:00", "11:00-19:00", "12:00-20:00", "14:00-22:00", "16:00-24:00", "07:00-15:00", "15:00-23:00", "23:00-07:00"];
+const TARGET = 48;
+const days = () => [...Array(7)].map((_, i) => D.add(WEEK, i));
+const key = (email, day) => `${email}|${day}`;
+const hm = t => { const [h, m] = t.split(":").map(Number); return h + m / 60; };
+function hoursOf(v){ if (!v || !v.includes("-")) return 0; const [a, b] = v.split("-").map(hm); let h = b - a; if (h <= 0) h += 24; return h; }
+const short = t => { const [h, m] = t.split(":"); return m === "00" ? h : `${h}:${m}`; };
+function shiftClass(v){ const s = hm(v.split("-")[0]); return s < 10 ? "s-am" : s < 14 ? "s-mid" : "s-pm"; }
+const valOf = (email, day) => DIRTY.has(key(email, day)) ? DIRTY.get(key(email, day)) : (DATA.map[key(email, day)] || "");
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#siteBox").innerHTML = siteSelect(CTX, s => { if (DIRTY.size && !confirm("Discard unsaved changes?")) return; DIRTY.clear(); boot(s); });
+  $("#legend").innerHTML = [["s-am","Morning start"],["s-mid","Midday start"],["s-pm","Evening start"]].map(([c, l]) => `<span><i class="${c}"></i>${l}</span>`).join("") +
+    Object.entries(CTX.codes).map(([c, o]) => `<span><i class="c-${c}"></i>${c} · ${esc(o.label)}</span>`).join("");
+  WEEK = WEEK || D.monday(CTX.today);
+  await load();
+}
+async function load(){
+  const d = days();
+  $("#range").textContent = `${D.fmt(d[0])} – ${D.fmt(d[6], { year: "numeric" })}`;
+  $("#sub").textContent = CTX.siteName;
+  $("#ptitle").textContent = `ABC ${CTX.siteName} — Mall Operations Schedule — ${D.fmt(d[0])} to ${D.fmt(d[6], { year: "numeric" })}`;
+  DATA = await api(`ops/schedule?site=${CTX.site}&from=${d[0]}&to=${d[6]}`);
+  DATA.map = Object.fromEntries(DATA.cells.map(c => [key(c.email, c.day), c.val]));
+  DATA.noteMap = Object.fromEntries(DATA.notes.map(n => [n.day, n.note]));
+  $("#editTools").classList.toggle("hidden", !DATA.can.schedule);
+  render();
+}
+function render(){
+  const d = days(), can = DATA.can.schedule;
+  if (!DATA.staff.length){
+    $("#board").innerHTML = `<div class="card empty">No operations staff at ${esc(CTX.siteName)} yet.<br>
+      Add people in <b>Hub administration → People &amp; roles</b> with a position — Senior Mall Supervisor, Mall Supervisor or Mall Officer — and they appear here automatically.</div>`;
+    return;
+  }
+  let groups = [], lastPos = null;
+  DATA.staff.forEach(s => { if (s.position !== lastPos){ groups.push({ label: s.positionLabel, people: [] }); lastPos = s.position; } groups[groups.length - 1].people.push(s); });
+  const head = `<thead><tr><th class="name">Location &amp; name</th>${d.map(x => `<th class="${x === CTX.today ? "today" : ""}">${D.dow(x)}<small>${D.fmt(x)}</small></th>`).join("")}<th>T.hrs</th></tr></thead>`;
+  const notes = `<tr class="notes"><td class="name">Notes</td>${d.map(x => {
+      const v = DIRTY_NOTES.has(x) ? DIRTY_NOTES.get(x) : (DATA.noteMap[x] || "");
+      return `<td>${can ? `<input data-note="${x}" value="${esc(v)}" placeholder="—" maxlength="120">` : `<small style="display:block;padding:7px 4px;font-size:.74rem">${esc(v)}</small>`}</td>`; }).join("")}<td></td></tr>`;
+  const body = groups.map(g => `<tr class="grp"><td class="name">${esc(g.label)}</td><td colspan="8"></td></tr>` + g.people.map(p => {
+      let total = 0;
+      const cells = d.map(x => {
+        const v = valOf(p.email, x); total += hoursOf(v);
+        const dirty = DIRTY.has(key(p.email, x)) ? "dirty" : "";
+        let inner = "", cls = "";
+        if (v.includes("-")){ const [a, b] = v.split("-"); inner = `${short(a)}–${short(b)}<small>${hoursOf(v)}h</small>`; cls = shiftClass(v); }
+        else if (v){ inner = `${esc(v)}<small>${esc((CTX.codes[v] || {}).label || "")}</small>`; cls = "c-" + v; }
+        else inner = can ? `<small class="muted">+</small>` : "";
+        return `<td class="${cls}"><button class="cell ${can ? "" : "ro"} ${dirty}" data-e="${esc(p.email)}" data-d="${x}" ${can ? "" : "tabindex=-1"}>${inner}</button></td>`;
+      }).join("");
+      const tcls = total === TARGET ? "ok" : total > TARGET ? "over" : total ? "under" : "";
+      return `<tr class="${p.email === CTX.me.email ? "me" : ""}"><td class="name"><b>${esc(p.name)}</b><small>${esc(p.positionLabel)}</small></td>${cells}<td class="hrs ${tcls}">${total || "—"}</td></tr>`;
+    }).join("")).join("");
+  /* coverage: how many on shift in the morning and the evening of each day */
+  const foot = `<tfoot><tr><td class="name">On duty</td>${d.map(x => {
+      let am = 0, pm = 0;
+      DATA.staff.forEach(p => { const v = valOf(p.email, x); if (!v.includes("-")) return; const [a, b] = v.split("-").map(hm); if (a < 12) am++; if (b >= 20 || b <= a) pm++; });
+      return `<td><b class="${am ? "" : "cov-bad"}">${am}</b> AM · <b class="${pm ? "" : "cov-bad"}">${pm}</b> PM</td>`; }).join("")}<td></td></tr></tfoot>`;
+  $("#board").innerHTML = `<div class="tbl-wrap"><table class="grid">${head}<tbody>${notes}${body}</tbody>${foot}</table></div>`;
+  $("#savebar").classList.toggle("hidden", !(DIRTY.size || DIRTY_NOTES.size));
+  $("#saveBtn").textContent = `Save changes (${DIRTY.size + DIRTY_NOTES.size})`;
+}
+
+/* ----- cell picker ----- */
+let target = null;
+const times = [...Array(37)].map((_, i) => { const m = 360 + i * 30; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${m % 60 ? "30" : "00"}`; }); // 06:00 → 24:00
+function openPicker(email, day){
+  target = { email, day };
+  const p = DATA.staff.find(s => s.email === email);
+  const cur = valOf(email, day);
+  const [cs, ce] = cur.includes("-") ? cur.split("-") : ["08:00", "16:00"];
+  const d = $("#pick");
+  d.innerHTML = `<div class="dlg-h"><b>${esc(p.name)}</b><small>${D.long(day)}</small></div>
+    <div class="dlg-b">
+      <span class="lbl">Shift</span>
+      <div class="presets">${PRESETS.map(v => `<button data-v="${v}" class="${shiftClass(v)}">${v.split("-").map(short).join("–")}</button>`).join("")}</div>
+      <span class="lbl">Custom hours</span>
+      <div class="custom"><select class="sel" id="cS">${times.slice(0, -1).map(t => `<option ${t === cs ? "selected" : ""}>${t}</option>`).join("")}</select>
+        <span class="muted">to</span><select class="sel" id="cE">${times.slice(1).concat(["00:30","01:00","02:00","07:00"]).map(t => `<option ${t === ce ? "selected" : ""}>${t}</option>`).join("")}</select>
+        <button class="btn small" id="cOk">Set</button></div>
+      <span class="lbl" style="margin-top:12px">Status</span>
+      <div class="codes">${Object.entries(CTX.codes).map(([c, o]) => `<button data-v="${c}" class="c-${c}">${c} · ${esc(o.label)}</button>`).join("")}</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:.86rem"><input type="checkbox" id="wholeWeek"> Apply to the rest of this week (until Sunday)</label>
+    </div>
+    <div class="dlg-f"><button class="btn ghost danger" data-v="">Clear</button><button class="btn ghost" id="pClose">Cancel</button></div>`;
+  d.onclick = e => {
+    if (e.target === d || e.target.id === "pClose") return d.close();
+    if (e.target.id === "cOk") return setVal(`${$("#cS").value}-${$("#cE").value}`);
+    const b = e.target.closest("[data-v]"); if (b) setVal(b.dataset.v);
+  };
+  d.showModal();
+}
+function setVal(v){
+  const { email, day } = target;
+  const list = $("#wholeWeek") && $("#wholeWeek").checked ? days().filter(x => x >= day) : [day];
+  list.forEach(x => { const k = key(email, x); (DATA.map[k] || "") === v ? DIRTY.delete(k) : DIRTY.set(k, v); });
+  $("#pick").close(); render();
+}
+
+/* ----- actions ----- */
+$("#board").addEventListener("click", e => { const c = e.target.closest(".cell"); if (c && DATA.can.schedule) openPicker(c.dataset.e, c.dataset.d); });
+$("#board").addEventListener("input", e => { const n = e.target.dataset.note; if (n === undefined) return;
+  (DATA.noteMap[n] || "") === e.target.value ? DIRTY_NOTES.delete(n) : DIRTY_NOTES.set(n, e.target.value);
+  $("#savebar").classList.toggle("hidden", !(DIRTY.size || DIRTY_NOTES.size)); $("#saveBtn").textContent = `Save changes (${DIRTY.size + DIRTY_NOTES.size})`; });
+const move = n => async () => { if ((DIRTY.size || DIRTY_NOTES.size) && !confirm("You have unsaved changes. Leave this week without saving?")) return; DIRTY.clear(); DIRTY_NOTES.clear(); WEEK = D.add(WEEK, n); await load(); };
+$("#prev").onclick = move(-7); $("#next").onclick = move(7);
+$("#todayBtn").onclick = async () => { WEEK = D.monday(CTX.today); DIRTY.clear(); DIRTY_NOTES.clear(); await load(); };
+$("#printBtn").onclick = () => print();
+$("#discardBtn").onclick = () => { DIRTY.clear(); DIRTY_NOTES.clear(); render(); };
+$("#copyBtn").onclick = async () => {
+  const d = days(), from = D.add(d[0], -7), to = D.add(d[6], -7);
+  const prev = await api(`ops/schedule?site=${CTX.site}&from=${from}&to=${to}`);
+  if (!prev.cells.length) return toast("Last week is empty — nothing to copy", true);
+  if (!(await confirmBox("Copy last week?", `Every shift from ${D.fmt(from)}–${D.fmt(to)} is copied onto this week. You can still adjust before saving.`, "Copy"))) return;
+  prev.cells.forEach(c => { const day = D.add(c.day, 7); const k = key(c.email, day); if (DATA.staff.some(s => s.email === c.email) && (DATA.map[k] || "") !== c.val) DIRTY.set(k, c.val); });
+  render(); toast("Copied — review, then Save changes");
+};
+$("#clearBtn").onclick = async () => {
+  if (!(await confirmBox("Clear this week?", "All shifts shown this week are removed when you save.", "Clear"))) return;
+  days().forEach(x => DATA.staff.forEach(p => { const k = key(p.email, x); if (DATA.map[k]) DIRTY.set(k, ""); }));
+  render();
+};
+$("#saveBtn").onclick = async () => {
+  const b = $("#saveBtn"); b.disabled = true;
+  try {
+    const cells = [...DIRTY].map(([k, val]) => { const [email, day] = k.split("|"); return { email, day, val }; });
+    const notes = [...DIRTY_NOTES].map(([day, note]) => ({ day, note }));
+    await api("ops/schedule", { site: CTX.site, cells, notes, announce: `Week of ${D.fmt(WEEK)}` });
+    DIRTY.clear(); DIRTY_NOTES.clear(); toast("Schedule saved"); await load();
+  } catch (e){ toast(e.message, true); }
+  b.disabled = false;
+};
+addEventListener("beforeunload", e => { if (DIRTY.size || DIRTY_NOTES.size){ e.preventDefault(); e.returnValue = ""; } });
+boot().catch(e => { $("#board").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
