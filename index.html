@@ -65,6 +65,8 @@ button{background:none;border:0;cursor:pointer}
 @keyframes pulse{50%{opacity:.45;transform:scale(.94)}}
 
 /* ---------- masthead ---------- */
+.masthead{background:var(--ink);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 20px) 28px 22px;position:relative;overflow:hidden}
+.masthead::after{content:"";position:absolute;right:-70px;top:-110px;width:340px;height:340px;border-radius:50%;border:52px solid rgba(123,75,176,.22);pointer-events:none}
 .mh-inner{max-width:1280px;margin:0 auto;position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .brandmark{display:flex;align-items:center;gap:14px;min-width:0}
 .brandmark img{width:46px;height:46px;object-fit:contain;flex:none}
@@ -114,6 +116,14 @@ button{background:none;border:0;cursor:pointer}
 main section{margin-top:28px}
 main section h2{font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:14px}
 
+/* ---------- health dots ---------- */
+async function loadHealth(){
+  try { HEALTH = await api("health"); } catch { return; }
+  renderHome();
+  if (BRIEF) renderBrief(false);
+}
+const downApps = () => HEALTH && HEALTH.systems ? APPS.filter(a => HEALTH.systems[a.id] && HEALTH.systems[a.id].state === "down") : [];
+
 /* ---------- daily brief ---------- */
 .brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
@@ -147,6 +157,12 @@ button.bcard:hover{border-color:var(--brand-2)}
 .ico svg{width:26px;height:26px}
 .bdg{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--alert);color:#fff;font-size:.72rem;font-weight:800;display:grid;place-items:center;border:2px solid var(--paper);animation:pop .35s cubic-bezier(.2,1.6,.4,1) both}
 .bdg.warn{background:var(--warn)}
+.hd{position:absolute;left:-4px;bottom:-4px;width:13px;height:13px;border-radius:50%;border:2.5px solid var(--paper);background:#9A91A6}
+.hd.up{background:#2EB872}.hd.down{background:#E5484D;animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{box-shadow:0 0 0 5px rgba(229,72,77,.25)}}
+.downline{margin-top:4px;font-size:.84rem;font-weight:700;color:var(--alert)}
+.chk{display:flex;align-items:center;gap:10px;font-size:.92rem;margin-bottom:14px;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--brand-2)}
 @keyframes pop{from{transform:scale(0)}}
 .tile b{display:block;font-weight:700;font-size:.98rem;line-height:1.25}
 .tile small{display:block;color:var(--muted);font-size:.82rem;line-height:1.35;margin-top:2px}
@@ -362,7 +378,7 @@ const store = {
   get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-let ME = null, SITES = {}, ROLES = {}, APPS = [], BRIEF = null;
+let ME = null, SITES = {}, ROLES = {}, APPS = [], BRIEF = null, HEALTH = null;
 
 /* ---------- api ---------- */
 async function api(path, body){
@@ -395,7 +411,9 @@ const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const badgeOf = a => BRIEF && BRIEF.systems && BRIEF.systems[a.id] && BRIEF.systems[a.id].ok ? BRIEF.systems[a.id].badge : null;
 const icoHTML = (a, withBadge) => {
   const b = withBadge ? badgeOf(a) : null;
-  return `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${svg(a.icon)}${b && b.count ? `<span class="bdg ${b.tone === "warn" ? "warn" : ""}">${b.count > 99 ? "99+" : b.count}</span>` : ""}</span>`;
+  const h = withBadge && HEALTH && HEALTH.systems ? HEALTH.systems[a.id] : null;
+  const hTip = !h ? "" : h.state === "up" ? `Up · responded in ${h.ms} ms` : h.state === "down" ? `Not responding${h.status ? " (HTTP " + h.status + ")" : ""}` : (h.note || "Not checked");
+  return `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${svg(a.icon)}${b && b.count ? `<span class="bdg ${b.tone === "warn" ? "warn" : ""}">${b.count > 99 ? "99+" : b.count}</span>` : ""}${h ? `<span class="hd ${h.state === "up" ? "up" : h.state === "down" ? "down" : ""}" title="${esc(hTip)}"></span>` : ""}</span>`;
 };
 
 /* ---------- helpers ---------- */
@@ -479,6 +497,8 @@ function startHub(){
   renderHome();
   loadAnnouncements();
   loadBrief();
+  loadHealth();
+  setInterval(() => { if (!document.hidden) loadHealth(); }, 60 * 1000);
   route();
   setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
 }
@@ -537,6 +557,14 @@ $("#anns").addEventListener("click", e => {
 });
 const fmtLocal = v => { const d = new Date(v); return isNaN(d) ? v : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
 
+/* ---------- health dots ---------- */
+async function loadHealth(){
+  try { HEALTH = await api("health"); } catch { return; }
+  renderHome();
+  if (BRIEF) renderBrief(false);
+}
+const downApps = () => HEALTH && HEALTH.systems ? APPS.filter(a => HEALTH.systems[a.id] && HEALTH.systems[a.id].state === "down") : [];
+
 /* ---------- daily brief ---------- */
 async function loadBrief(fresh){
   const btn = $("#briefRefresh");
@@ -566,7 +594,7 @@ function renderBrief(loading){
     return `<button class="bcard" data-id="${esc(id)}"><div class="bcard-h">${icoHTML(a)}<b>${esc(a.name)}</b></div>${body}</button>`;
   };
   box.innerHTML = `<section class="brief">
-    <div class="brief-h"><div><h2>${title}</h2><p>${esc(BRIEF && BRIEF.siteName || mySiteName() || "All flagships")}${when ? " · updated " + when : ""}</p></div>
+    <div class="brief-h"><div><h2>${title}</h2><p>${esc(BRIEF && BRIEF.siteName || mySiteName() || "All flagships")}${when ? " · updated " + when : ""}</p>${downApps().length ? `<div class="downline">● ${downApps().length === 1 ? "1 system not responding" : downApps().length + " systems not responding"}: ${downApps().map(a => esc(a.name)).join(", ")}</div>` : ""}</div>
       <button class="refresh" id="briefRefresh" aria-label="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button></div>
     <div class="brief-grid">${loading ? `<div class="sk"></div><div class="sk"></div>` : ids.map(card).join("")}</div></section>`;
   $("#briefRefresh").onclick = () => loadBrief(true);
@@ -897,13 +925,14 @@ async function adminAnnouncements(body, editing){
   };
 }
 async function adminUsers(body, editing){
-  const d = await api("admin/users");
+  const [d, ms] = await Promise.all([api("admin/users"), api("admin/morning-status").catch(() => null)]);
   const e = editing || {};
+  const last = ms && ms.last ? `Last sent ${esc(fmtLocal(ms.last.at))} to ${ms.last.sent} ${ms.last.sent === 1 ? "person" : "people"}${ms.last.failed ? ` · <span style="color:var(--alert)">${ms.last.failed} failed</span>` : ""}` : "Not sent yet";
   const roleOpts = sel => Object.entries(d.roles).map(([c, n]) => `<option value="${c}" ${sel === c ? "selected" : ""}>${esc(n)}</option>`).join("");
   body.innerHTML = `<div class="panel"><h3>People &amp; roles</h3><div class="rows">${d.users.map(u => `
       <div class="row-i"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(u.name))}</span>
         <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.roleLabel) : "Switched off"}</span></b>
-        <small>${esc(u.email)}${u.siteName ? " · " + esc(u.siteName) : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}</small></div>
+        <small>${esc(u.email)}${u.siteName ? " · " + esc(u.siteName) : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</small></div>
         <div class="acts"><button class="btn small ghost" data-edit="${esc(u.email)}">Edit</button>
           <button class="btn small ghost" data-reset="${esc(u.email)}">Reset</button>
           ${u.email !== ME.user.email ? `<button class="btn small ghost" data-act="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`).join("")}</div></div>
@@ -915,8 +944,14 @@ async function adminUsers(body, editing){
         <label class="field"><span>Flagship</span><select id="uSite">${siteOptions(e.site || "")}</select></label>
       </div>
       ${e.email ? "" : `<label class="field"><span>Temporary password (8+)</span><input id="uPass" type="text" autocomplete="off"></label>`}
+      <label class="chk"><input type="checkbox" id="uMorning" ${e.email ? (e.morningEmail ? "checked" : "") : "checked"}> Receive the 08:00 morning email <small style="color:var(--muted)">(Managers &amp; Admins)</small></label>
       <p class="brief-empty" style="font-size:.8rem;margin-bottom:12px">Admins may leave the flagship empty to see all flagships. Everyone else needs one.</p>
       <div style="display:flex;gap:8px">${e.email ? `<button class="btn ghost" id="uCancel">Cancel</button>` : ""}<button class="btn" id="uSave">${e.email ? "Save changes" : "Add person"}</button></div>
+    </div>
+    <div class="panel"><h3>Morning email · 08:00</h3>
+      <p class="brief-empty" style="font-size:.86rem;margin-bottom:12px">${ms && !ms.relay ? `<span style="color:var(--alert)">Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub.</span>` : last}</p>
+      <div id="mMsg"></div>
+      <button class="btn ghost" id="mTest">Send me a test now</button>
     </div>`;
   body.onclick = async ev => {
     const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
@@ -927,8 +962,14 @@ async function adminUsers(body, editing){
         await api("admin/users/reset", { email: rs.dataset.reset, password: p }); msg(`Password reset. They will be asked to change it at next sign-in.`, "okm"); return; }
       if (ac){ await api("admin/users/active", { email: ac.dataset.act, active: ac.dataset.on === "1" }); return adminUsers(body); }
       if (ev.target.id === "uCancel") return adminUsers(body);
+      if (ev.target.id === "mTest"){
+        ev.target.disabled = true; ev.target.textContent = "Sending…";
+        try { const r = await api("admin/morning-test", {}); $("#mMsg").innerHTML = `<div class="msg okm">Test sent to ${esc(r.to)} — check your inbox.</div>`; }
+        catch (er){ $("#mMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+        ev.target.disabled = false; ev.target.textContent = "Send me a test now"; return;
+      }
       if (ev.target.id === "uSave"){
-        await api("admin/users", { isNew: !e.email, name: $("#uName").value, email: $("#uEmail").value, role: $("#uRole").value, site: $("#uSite").value, password: $("#uPass") ? $("#uPass").value : "" });
+        await api("admin/users", { isNew: !e.email, name: $("#uName").value, email: $("#uEmail").value, role: $("#uRole").value, site: $("#uSite").value, password: $("#uPass") ? $("#uPass").value : "", morningEmail: $("#uMorning").checked });
         adminUsers(body);
       }
     } catch (er){ msg(er.message); }

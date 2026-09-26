@@ -8,6 +8,9 @@
   ],
   "services": [
     { "binding": "INCIDENTS", "service": "abc-incident-system" },
-    { "binding": "RESTROOM", "service": "abc-restroom-report" }
-  ]
+    { "binding": "RESTROOM", "service": "abc-restroom-report" },
+    { "binding": "CLEANER", "service": "abcv-admin-access" },
+    { "binding": "FOOTFALL", "service": "footfall-hub" }
+  ],
+  "triggers": { "crons": ["0 5 * * *", "0 6 * * *"] }
 }

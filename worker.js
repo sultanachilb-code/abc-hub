@@ -43,6 +43,27 @@ const CONNECTORS = {
   }
 };
 
+/* Systems the hub checks for the health dots (id = apps.js id).
+   internal: true → on the office network, which the cloud cannot reach,
+   so the hub reports "unknown" (grey) instead of a false "down". */
+const HEALTH = {
+  snaglist:       { name: "Snaglist Manager", url: "https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1" },
+  restroom:       { name: "Restroom Inspection Dashboard", url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/", binding: "RESTROOM" },
+  incidents:      { name: "Incident Report System", url: "https://abc-incident-system.sultanachi-lb-61f.workers.dev/", binding: "INCIDENTS" },
+  "cleaner-qr":   { name: "Cleaner QR Access", url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/", binding: "CLEANER" },
+  footfall:       { name: "Footfall Hub", url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/", binding: "FOOTFALL" },
+  "abc-connect":  { name: "ABC Connect", url: "https://abclebanon.my.site.com/abcemployee/s/" },
+  successfactors: { name: "SAP SuccessFactors", url: "https://performancemanager8.successfactors.com/login" },
+  jde:            { name: "JD Edwards", internal: true },
+  archibus:       { name: "Archibus", internal: true }
+};
+const HEALTH_CACHE_MS = 60 * 1000;
+
+/* Morning email */
+const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
+const MAIL_HOUR = 8;   // Beirut time
+const SYSTEM_NAMES = { snaglist: "Snaglist Manager", incidents: "Incident Report System", restroom: "Restroom Inspections" };
+
 /* ---------- helpers ---------- */
 const enc = new TextEncoder();
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
@@ -94,8 +115,13 @@ async function ensureSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS announcements (
       id INTEGER PRIMARY KEY AUTOINCREMENT, message TEXT NOT NULL, level TEXT NOT NULL DEFAULT 'info',
       site TEXT NOT NULL DEFAULT 'ALL', starts_at TEXT NOT NULL DEFAULT '', ends_at TEXT NOT NULL DEFAULT '',
-      created_by TEXT, created_at TEXT)`)
+      created_by TEXT, created_at TEXT)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`)
   ]);
+  const cols = await env.DB.prepare("PRAGMA table_info(users)").all();
+  if (!(cols.results || []).some(c => c.name === "morning_email")) {
+    await env.DB.prepare("ALTER TABLE users ADD COLUMN morning_email INTEGER NOT NULL DEFAULT 1").run();
+  }
   schemaReady = true;
 }
 
@@ -132,6 +158,16 @@ export default {
       catch (e) { return json({ ok: false, error: e.message || String(e), ...(e.extra || {}) }, e.status || 500); }
     }
     return env.ASSETS.fetch(request);
+  },
+  /* Cron runs at 05:00 and 06:00 UTC; only the run that lands on 08:00 Beirut
+     sends (this keeps 08:00 through summer and winter time). */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      if (!env.DB) return;
+      await ensureSchema(env);
+      if (beirutHour() !== MAIL_HOUR) return;
+      await morningRun(env, { force: false });
+    })());
   }
 };
 
@@ -164,6 +200,7 @@ async function route(request, env, ctx, url) {
   if (path === "announcements") return ok(await activeAnnouncements(env, me));
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
   if (path === "sso") return ok(await ssoLink(env, me, url.searchParams.get("app")));
+  if (path === "health") return ok(await health(env));
 
   /* ----- admin ----- */
   if (path.startsWith("admin/")) {
@@ -173,6 +210,8 @@ async function route(request, env, ctx, url) {
     if (a === "users" && method === "POST") return ok(await saveUser(env, me, body));
     if (a === "users/reset" && method === "POST") return ok(await resetUser(env, body));
     if (a === "users/active" && method === "POST") return ok(await setActive(env, me, body));
+    if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
+    if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     if (a === "announcements" && method === "GET") return ok(await listAnnouncements(env));
     if (a === "announcements" && method === "POST") return ok(await saveAnnouncement(env, me, body));
     if (a === "announcements/delete" && method === "POST") {
@@ -226,9 +265,10 @@ async function changePassword(env, me, b) {
 }
 async function listUsers(env) {
   const { results } = await env.DB.prepare(
-    "SELECT email, full_name, role, site_code, active, must_change, last_login_at FROM users ORDER BY role, full_name").all();
+    "SELECT email, full_name, role, site_code, active, must_change, last_login_at, morning_email FROM users ORDER BY role, full_name").all();
   return {
-    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "" })),
+    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "",
+      morningEmail: !!u.morning_email, morningEligible: u.role === "ADMIN" || u.role === "MANAGER" })),
     sites: SITES, roles: ROLES
   };
 }
@@ -246,14 +286,15 @@ async function saveUser(env, me, b) {
   if (exists) {
     if (b.isNew) throw fail("That email already has an account");
     if (email === me.email && role !== "ADMIN") throw fail("You cannot remove your own admin role");
-    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=? WHERE email=?").bind(name, role, site || null, email).run();
+    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, morning_email=? WHERE email=?")
+      .bind(name, role, site || null, b.morningEmail === false ? 0 : 1, email).run();
     return { email, created: false };
   }
   const password = String(b.password || "");
   if (password.length < 8) throw fail("Set a temporary password of at least 8 characters");
   const h = await hashFor(password);
-  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, salt, hash, iterations, must_change, active, created_at)
-    VALUES (?,?,?,?,?,?,?,1,1,?)`).bind(email, name, role, site || null, h.salt, h.hash, h.iterations, nowIso()).run();
+  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, salt, hash, iterations, must_change, active, created_at, morning_email)
+    VALUES (?,?,?,?,?,?,?,1,1,?,?)`).bind(email, name, role, site || null, h.salt, h.hash, h.iterations, nowIso(), b.morningEmail === false ? 0 : 1).run();
   return { email, created: true };
 }
 async function resetUser(env, b) {
@@ -330,9 +371,9 @@ async function brief(env, me, fresh) {
   briefCache.set(site, { at: Date.now(), data });
   return data;
 }
-async function pull(env, id, c, site) {
+async function pull(env, id, c, site, extra = "") {
   if (!env.HUB_KEY) return { ok: false, error: "HUB_KEY is not set on the hub" };
-  const target = c.base + c.stats.replace("{site}", encodeURIComponent(site));
+  const target = c.base + c.stats.replace("{site}", encodeURIComponent(site)) + extra;
   const init = { headers: { "x-hub-key": env.HUB_KEY }, signal: AbortSignal.timeout(6000) };
   try {
     const r = c.binding && env[c.binding] ? await env[c.binding].fetch(target, init) : await fetch(target, init);
@@ -354,4 +395,134 @@ async function ssoLink(env, me, appId) {
   const body = b64url(enc.encode(JSON.stringify(payload)));
   const token = `${body}.${await hmac(env.HUB_KEY, body)}`;
   return { url: c.base + c.sso.replace("{token}", encodeURIComponent(token)) };
+}
+
+/* ---------- health dots ---------- */
+let healthCache = null;
+async function health(env) {
+  if (healthCache && Date.now() - healthCache.at < HEALTH_CACHE_MS) return healthCache.data;
+  const ids = Object.keys(HEALTH);
+  const results = await Promise.all(ids.map(id => probe(env, HEALTH[id])));
+  const data = { checkedAt: nowIso(), systems: Object.fromEntries(ids.map((id, i) => [id, results[i]])) };
+  healthCache = { at: Date.now(), data };
+  return data;
+}
+async function probe(env, t) {
+  if (t.internal) return { state: "unknown", note: "Office network — not checked from the cloud" };
+  const started = Date.now();
+  try {
+    const init = { method: "GET", redirect: "manual", signal: AbortSignal.timeout(8000), headers: { "user-agent": "ABC-Operations-Hub-Health/1.0" } };
+    const r = t.binding && env[t.binding] ? await env[t.binding].fetch(t.url, init) : await fetch(t.url, init);
+    try { await r.body?.cancel(); } catch {}
+    const ms = Date.now() - started;
+    /* Anything below 500 means the system answered (a login page or redirect is "up") */
+    return r.status < 500 ? { state: "up", ms, status: r.status } : { state: "down", ms, status: r.status };
+  } catch (e) {
+    return { state: "down", ms: Date.now() - started, error: String(e && e.name === "TimeoutError" ? "No response in 8 seconds" : (e && e.message) || e) };
+  }
+}
+
+/* ---------- morning email ---------- */
+function beirutParts(d = new Date()) {
+  return Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Beirut", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false
+  }).formatToParts(d).map(p => [p.type, p.value]));
+}
+const beirutHour = () => Number(beirutParts().hour) % 24;
+const beirutDate = () => { const p = beirutParts(); return `${p.year}-${p.month}-${p.day}`; };
+
+async function morningStatus(env) {
+  const row = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind("mail:last").first();
+  return { last: row ? JSON.parse(row.v) : null, relay: !!(env.MAIL_RELAY_URL && env.MAIL_RELAY_KEY), hour: MAIL_HOUR };
+}
+async function morningTest(env, me) {
+  const res = await morningRun(env, { only: me });
+  if (!res.sent) throw fail(res.errors[0] || "The test email could not be sent", 502);
+  return { sent: res.sent, to: me.email };
+}
+
+async function morningRun(env, { only = null, force = false } = {}) {
+  if (!env.MAIL_RELAY_URL || !env.MAIL_RELAY_KEY) return { sent: 0, errors: ["MAIL_RELAY_URL / MAIL_RELAY_KEY are not set on the hub"] };
+  const today = beirutDate();
+  if (!only && !force) {
+    const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind("mail:" + today, nowIso()).run();
+    if (!claim.meta || claim.meta.changes !== 1) return { sent: 0, errors: ["Already sent today"] };
+  }
+  let people;
+  if (only) people = [only];
+  else {
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM users WHERE active = 1 AND morning_email = 1 AND role IN ('ADMIN','MANAGER')").all();
+    people = results || [];
+  }
+  const bySite = new Map();
+  for (const u of people) { const k = u.site_code || "ALL"; if (!bySite.has(k)) bySite.set(k, []); bySite.get(k).push(u); }
+
+  const hs = await health(env).catch(() => null);
+  const down = hs ? Object.entries(hs.systems).filter(([, v]) => v.state === "down").map(([id]) => (HEALTH[id] && HEALTH[id].name) || id) : [];
+  let sent = 0; const errors = [];
+  for (const [site, list] of bySite) {
+    const ids = Object.keys(CONNECTORS).filter(id => CONNECTORS[id].stats);
+    const figures = await Promise.all(ids.map(id => pull(env, id, CONNECTORS[id], site, "&day=yesterday")));
+    const anns = await activeAnnouncements(env, { role: site === "ALL" ? "ADMIN" : "MANAGER", site_code: site === "ALL" ? null : site });
+    for (const u of list) {
+      const html = morningHtml({ user: u, site, ids, figures, down, anns: anns.announcements });
+      const subject = `Morning brief — ${site === "ALL" ? "All flagships" : SITES[site] || site} — ${new Date().toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", weekday: "short", day: "numeric", month: "short" })}`;
+      const r = await relay(env, { to: [u.email], subject, html });
+      r.ok ? sent++ : errors.push(`${u.email}: ${r.error}`);
+    }
+  }
+  const summary = { date: today, at: nowIso(), sent, failed: errors.length, test: !!only, errors: errors.slice(0, 5) };
+  if (!only) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('mail:last', ?)").bind(JSON.stringify(summary)).run();
+  return { sent, errors };
+}
+async function relay(env, { to, subject, html }) {
+  try {
+    const r = await fetch(env.MAIL_RELAY_URL, {
+      method: "POST", redirect: "follow",
+      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc: [], subject, html, fromName: "ABC Operations Hub", attachment: null })
+    });
+    const text = await r.text();
+    let j = null; try { j = JSON.parse(text); } catch {}
+    return j && j.ok ? { ok: true } : { ok: false, error: (j && j.error) || text.slice(0, 200) };
+  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
+}
+const escH = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const TONE = { ok: "#1E7A4F", warn: "#B7791F", alert: "#C0392B" };
+function morningHtml({ user, site, ids, figures, down, anns }) {
+  const first = String(user.full_name || "").split(" ")[0];
+  const scope = site === "ALL" ? "All flagships" : SITES[site] || site;
+  const dateLabel = new Date().toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", weekday: "long", day: "numeric", month: "long" });
+  const block = (id, f) => {
+    const name = SYSTEM_NAMES[id] || id;
+    const body = f.ok
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${f.brief.map(x => `
+          <td style="padding:6px 8px 6px 0;vertical-align:top;width:${Math.floor(100 / Math.max(1, f.brief.length))}%">
+            <div style="font:700 22px Arial,sans-serif;color:${TONE[x.tone] || "#2A0F45"}">${escH(x.value)}</div>
+            <div style="font:12px Arial,sans-serif;color:#6D6479;margin-top:2px">${escH(x.label)}</div></td>`).join("")}</tr></table>`
+      : `<div style="font:13px Arial,sans-serif;color:#6D6479">Figures unavailable this morning.</div>`;
+    return `<tr><td style="padding:14px 16px;border:1px solid #E3DCEC;border-radius:12px;background:#FAF8FC">
+      <div style="font:700 14px Arial,sans-serif;color:#2A0F45;margin-bottom:8px">${escH(name)}</div>${body}</td></tr>
+      <tr><td style="height:10px"></td></tr>`;
+  };
+  const downHtml = down.length ? `<tr><td style="padding:12px 16px;border-radius:12px;background:#FDECEA;font:13px Arial,sans-serif;color:#C0392B">
+      <b>Not responding when this was sent:</b> ${down.map(escH).join(", ")}</td></tr><tr><td style="height:10px"></td></tr>` : "";
+  const annHtml = anns.length ? `<tr><td style="padding:12px 16px;border-radius:12px;background:#F1EAF8;font:13px Arial,sans-serif;color:#2A0F45">
+      <b>Announcements</b>${anns.map(a => `<div style="margin-top:6px">• ${escH(a.message)}</div>`).join("")}</td></tr><tr><td style="height:10px"></td></tr>` : "";
+  return `<!doctype html><html><body style="margin:0;background:#F6F4F9">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F4F9;padding:20px 0"><tr><td align="center">
+  <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="width:620px;max-width:94%;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3DCEC">
+    <tr><td style="background:#2A0F45;padding:22px 24px">
+      <div style="font:700 11px Arial,sans-serif;letter-spacing:2px;color:#C8A24A;text-transform:uppercase">ABC Operations Hub</div>
+      <div style="font:800 22px Arial,sans-serif;color:#fff;margin-top:6px">Good morning, ${escH(first)}</div>
+      <div style="font:13px Arial,sans-serif;color:#CDBFE0;margin-top:4px">${escH(dateLabel)} · ${escH(scope)}</div></td></tr>
+    <tr><td style="padding:20px 24px 6px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${downHtml}${annHtml}${ids.map((id, i) => block(id, figures[i])).join("")}
+      </table>
+      <div style="font:12px Arial,sans-serif;color:#6D6479;margin:4px 0 18px">Restroom figures are for yesterday's full day. Snaglist and Incident figures are as of 08:00.</div>
+      <a href="${HUB_URL}" style="display:inline-block;background:#4A1F73;color:#fff;text-decoration:none;font:700 14px Arial,sans-serif;padding:12px 20px;border-radius:10px">Open the hub</a>
+    </td></tr>
+    <tr><td style="padding:18px 24px;font:11px Arial,sans-serif;color:#6D6479">Automated morning brief · ABC Operations. Your administrator can switch this off in People &amp; roles.</td></tr>
+  </table></td></tr></table></body></html>`;
 }
