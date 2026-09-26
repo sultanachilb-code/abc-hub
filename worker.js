@@ -167,6 +167,15 @@ async function ensureSchema(env) {
       site TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, text TEXT NOT NULL, owner_email TEXT NOT NULL DEFAULT '',
       owner_name TEXT NOT NULL DEFAULT '', due TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Open',
       done_at TEXT NOT NULL DEFAULT '', notified_at TEXT NOT NULL DEFAULT '', created_at TEXT)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS gla_units (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, level TEXT NOT NULL,
+      code TEXT NOT NULL, brand TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Open', section TEXT NOT NULL DEFAULT 'Leasing',
+      dept TEXT NOT NULL DEFAULT '', area REAL NOT NULL DEFAULT 0, seq INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT, updated_by TEXT)`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS gla_units_site ON gla_units (site, active)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS gla_events (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, unit_id INTEGER NOT NULL,
+      kind TEXT NOT NULL, eff_date TEXT NOT NULL, before TEXT NOT NULL DEFAULT '{}', after TEXT NOT NULL DEFAULT '{}', note TEXT NOT NULL DEFAULT '',
+      by_name TEXT, by_email TEXT, created_at TEXT, date_edited_at TEXT NOT NULL DEFAULT '', date_edited_by TEXT NOT NULL DEFAULT '')`),
+    env.DB.prepare(`CREATE INDEX IF NOT EXISTS gla_events_site ON gla_events (site, eff_date)`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS tenant_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL,
       tenant TEXT NOT NULL, day TEXT NOT NULL, time TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
       action TEXT NOT NULL DEFAULT '', action_desc TEXT NOT NULL DEFAULT '', created_by TEXT, created_name TEXT, created_at TEXT, updated_at TEXT)`),
@@ -879,7 +888,8 @@ function rights(me, site) {
     mom: mine && (lead || me.role === "SUPERVISOR"),
     handover: mine && me.role !== "SECURITY",
     feedback: mine,                 // anyone at the flagship can log tenant feedback
-    feedbackAdmin: mine && lead     // edit anyone's entries, import history
+    feedbackAdmin: mine && lead,    // edit anyone's entries, import history
+    gla: mine && (lead || me.role === "SUPERVISOR")   // keep the GLA up to date
   };
 }
 
@@ -943,10 +953,91 @@ async function opsRoute(env, me, p, method, b, url) {
       positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])), codes: SHIFT_CODES, today: beirutToday() };
   }
 
-  /* ----- GLA & occupancy — built into the system (data/gla-data.js), one entry per flagship ----- */
+  /* ----- GLA & occupancy — live unit records, every change logged with an effective date ----- */
   if (p === "gla/get") {
-    const g = GLA[site];
-    return { site, report: g ? { ...g, siteName: siteName(site) } : null, available: Object.keys(GLA) };
+    await glaSeed(env, site);
+    const [units, last, count, base] = await Promise.all([
+      env.DB.prepare("SELECT * FROM gla_units WHERE site = ? AND active = 1 ORDER BY seq, id").bind(site).all(),
+      env.DB.prepare("SELECT MAX(eff_date) AS d FROM gla_events WHERE site = ?").bind(site).first(),
+      env.DB.prepare("SELECT COUNT(*) AS n FROM gla_events WHERE site = ?").bind(site).first(),
+      env.DB.prepare("SELECT v FROM ops_settings WHERE site = ? AND k = 'gla_baseline'").bind(site).first()
+    ]);
+    if (!units.results.length) return { site, can, report: null };
+    const baseline = base ? JSON.parse(base.v) : {};
+    return { site, can, statuses: GLA_STATUS, sections: GLA_SECTIONS, report: { siteName: siteName(site), baseline,
+      lastChange: last && last.d || "", changes: Number(count.n || 0), levels: glaLevels(units.results), units: units.results.map(glaUnitOut) } };
+  }
+  if (p === "gla/save" && method === "POST") {
+    if (!can.gla) throw fail("Only the flagship's Manager, Senior Mall Supervisor or Supervisors can update the GLA", 403);
+    await glaSeed(env, site);
+    const eff = isDay(b.effDate) ? b.effDate : beirutToday();
+    const note = s(b.note, 300);
+    const u = b.unit || {};
+    const next = { level: s(u.level, 20).trim(), code: s(u.code, 30).trim(), brand: s(u.brand, 120).trim(), status: GLA_STATUS.includes(u.status) ? u.status : "",
+      section: GLA_SECTIONS.includes(u.section) ? u.section : "Leasing", dept: s(u.dept, 60).trim(), area: Math.max(0, Math.round(Number(u.area) * 100) / 100 || 0) };
+    if (!next.level || !next.code) throw fail("Level and unit code are required");
+    if (!next.status) throw fail("Choose the status");
+    if (next.status === "Vacant") next.brand = next.brand && !/^vacant$/i.test(next.brand) ? next.brand : "";
+    else if (!next.brand) throw fail("Enter the brand for this unit");
+    const id = Number(u.id) || 0, at = nowIso();
+    if (id) {
+      const cur = await env.DB.prepare("SELECT * FROM gla_units WHERE id = ? AND site = ? AND active = 1").bind(id, site).first();
+      if (!cur) throw fail("Unit not found", 404);
+      const before = {}, after = {};
+      for (const k of ["level", "code", "brand", "status", "section", "dept", "area"]) if (String(cur[k] ?? "") !== String(next[k] ?? "")) { before[k] = cur[k]; after[k] = next[k]; }
+      if (!Object.keys(after).length) return { id, changed: false };
+      await env.DB.batch([
+        env.DB.prepare("UPDATE gla_units SET level=?, code=?, brand=?, status=?, section=?, dept=?, area=?, updated_at=?, updated_by=? WHERE id=?")
+          .bind(next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, at, me.full_name, id),
+        env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+          .bind(site, id, "update", eff, JSON.stringify(before), JSON.stringify(after), note, me.full_name, me.email, at)
+      ]);
+      if (after.status && ["Terminated", "Closed", "Open"].includes(after.status)) await raiseEvent(env, { site, app: "gla", tone: after.status === "Terminated" ? "warn" : "info",
+        title: `${next.brand || cur.brand || next.code} · ${after.status}`, body: `${siteName(site)} · ${next.level} ${next.code} · effective ${fmtDay(eff)} · by ${me.full_name}` });
+      return { id, changed: true };
+    }
+    const dup = await env.DB.prepare("SELECT id FROM gla_units WHERE site = ? AND level = ? AND code = ? AND active = 1").bind(site, next.level, next.code).first();
+    if (dup) throw fail(`Unit ${next.code} already exists on ${next.level}`);
+    const seq = await env.DB.prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM gla_units WHERE site = ?").bind(site).first();
+    const r = await env.DB.prepare(`INSERT INTO gla_units (site, level, code, brand, status, section, dept, area, seq, updated_at, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(site, next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, seq.n, at, me.full_name).run();
+    await env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .bind(site, r.meta.last_row_id, "add", eff, "{}", JSON.stringify(next), note, me.full_name, me.email, at).run();
+    return { id: r.meta.last_row_id, added: true };
+  }
+  if (p === "gla/remove" && method === "POST") {
+    if (!can.gla) throw fail("Not allowed", 403);
+    const cur = await env.DB.prepare("SELECT * FROM gla_units WHERE id = ? AND site = ? AND active = 1").bind(Number(b.id) || 0, site).first();
+    if (!cur) throw fail("Unit not found", 404);
+    const eff = isDay(b.effDate) ? b.effDate : beirutToday(), at = nowIso();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE gla_units SET active = 0, updated_at = ?, updated_by = ? WHERE id = ?").bind(at, me.full_name, cur.id),
+      env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+        .bind(site, cur.id, "remove", eff, JSON.stringify(glaUnitOut(cur)), "{}", s(b.note, 300), me.full_name, me.email, at)
+    ]);
+    return { removed: true };
+  }
+  if (p === "gla/history") {
+    const from = isDay(q("from")) ? q("from") : "0000-00-00", to = isDay(q("to")) ? q("to") : "9999-12-31";
+    const { results } = await env.DB.prepare(
+      `SELECT e.*, u.level AS u_level, u.code AS u_code, u.brand AS u_brand FROM gla_events e LEFT JOIN gla_units u ON u.id = e.unit_id
+        WHERE e.site = ? AND e.eff_date BETWEEN ? AND ? ORDER BY e.eff_date DESC, e.id DESC LIMIT 500`).bind(site, from, to).all();
+    return { can, events: (results || []).map(e => ({ id: e.id, unitId: e.unit_id, kind: e.kind, effDate: e.eff_date,
+      before: JSON.parse(e.before || "{}"), after: JSON.parse(e.after || "{}"), note: e.note, by: e.by_name, createdAt: e.created_at,
+      dateEditedAt: e.date_edited_at, dateEditedBy: e.date_edited_by, unit: { level: e.u_level, code: e.u_code, brand: e.u_brand } })) };
+  }
+  if (p === "gla/eventdate" && method === "POST") {
+    if (!can.gla) throw fail("Not allowed", 403);
+    if (!isDay(b.effDate)) throw fail("Choose a date");
+    const r = await env.DB.prepare("UPDATE gla_events SET eff_date = ?, date_edited_at = ?, date_edited_by = ? WHERE id = ? AND site = ?")
+      .bind(b.effDate, nowIso(), me.full_name, Number(b.id) || 0, site).run();
+    if (!r.meta.changes) throw fail("Change not found", 404);
+    return { saved: true };
+  }
+  /* The GLA as it stood on a given date — for the executive report */
+  if (p === "gla/asof") {
+    const day = isDay(q("date")) ? q("date") : beirutToday();
+    return { site, date: day, units: await glaAsOf(env, site, day) };
   }
 
   /* ----- tenant feedback ----- */
@@ -958,9 +1049,11 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p === "feedback/tenants") {
     const names = new Set();
-    if (GLA[site]) for (const u of GLA[site].units || []) {
+    await glaSeed(env, site);
+    const live = await env.DB.prepare("SELECT brand FROM gla_units WHERE site = ? AND active = 1 AND status IN ('Open','Closed','Fit-out') AND section != 'DS'").bind(site).all();
+    for (const u of live.results || []) {
       const b = String(u.brand || "").trim();
-      if (b && !/vacant|w\.?h\.?$|warehouse/i.test(b) && !/vacant/i.test(u.status || "") && u.type !== "DS") names.add(b.toUpperCase() === b ? b : b);
+      if (b && !/vacant|w\.?h\.?$|warehouse/i.test(b)) names.add(b);
     }
     const { results } = await env.DB.prepare("SELECT DISTINCT tenant FROM tenant_feedback WHERE site = ? ORDER BY tenant LIMIT 500").bind(site).all();
     (results || []).forEach(r => names.add(r.tenant));
@@ -1359,4 +1452,43 @@ async function usageReport(env, days) {
     },
     bySystem: bySys.results || [], bySite: bySite.results || [], byDay: byDay.results || [], people
   };
+}
+
+/* =====================================================================
+   GLA — statuses, seeding from the built-in workbook data, history
+   ===================================================================== */
+const GLA_STATUS = ["Open", "Closed", "Fit-out", "Terminated", "Vacant"];
+const GLA_SECTIONS = ["Leasing", "Pop-up", "Additional", "DS", "iPlay"];
+const glaUnitOut = u => ({ id: u.id, level: u.level, code: u.code, brand: u.brand, status: u.status, section: u.section, dept: u.dept,
+  area: u.area, updatedAt: u.updated_at, updatedBy: u.updated_by });
+function glaLevels(units) { const out = []; for (const u of units) if (!out.includes(u.level)) out.push(u.level); return out; }
+/* First use at a flagship: load its GLA from the built-in data (data/gla-data.js) as the starting point */
+async function glaSeed(env, site) {
+  const has = await env.DB.prepare("SELECT 1 AS x FROM gla_units WHERE site = ? LIMIT 1").bind(site).first();
+  if (has || !GLA[site]) return;
+  const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind("glaseed:" + site, nowIso()).run();
+  if (!claim.meta || claim.meta.changes !== 1) return;
+  const g = GLA[site], at = nowIso();
+  const status = u => /vacant/i.test(u.status) || /^vacant/i.test(u.brand) ? "Vacant" : /fit/i.test(u.status) ? "Fit-out" : /close/i.test(u.status) ? "Closed" : "Open";
+  const section = u => /^ds$/i.test(u.type) ? "DS" : /iplay/i.test(u.type) ? "iPlay" : /pop/i.test(u.type) ? "Pop-up" : u.level === "B6" ? "Additional" : "Leasing";
+  const ops = g.units.map((u, i) => env.DB.prepare(`INSERT INTO gla_units (site, level, code, brand, status, section, dept, area, seq, updated_at, updated_by)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(site, u.level, u.code, status(u) === "Vacant" ? "" : u.brand, status(u), section(u), u.dept || "", Number(u.area) || 0, i + 1, at, "GLA workbook"));
+  for (let i = 0; i < ops.length; i += 90) await env.DB.batch(ops.slice(i, i + 90));
+  await putSetting(env, site, "gla_baseline", { month: g.month, date: `${g.month}-01`, source: `GLA workbook ${g.month}`, official: g.official || {} });
+}
+/* Rebuild the GLA on any date: start from today and undo every change dated after it (latest first) */
+async function glaAsOf(env, site, day) {
+  await glaSeed(env, site);
+  const [units, evs] = await Promise.all([
+    env.DB.prepare("SELECT * FROM gla_units WHERE site = ?").bind(site).all(),
+    env.DB.prepare("SELECT * FROM gla_events WHERE site = ? AND eff_date > ? ORDER BY eff_date DESC, id DESC").bind(site, day).all()
+  ]);
+  const map = new Map((units.results || []).map(u => [u.id, { ...glaUnitOut(u), active: !!u.active }]));
+  for (const e of evs.results || []) {
+    const u = map.get(e.unit_id); if (!u) continue;
+    if (e.kind === "add") u.active = false;
+    else if (e.kind === "remove") u.active = true;
+    else Object.assign(u, JSON.parse(e.before || "{}"));
+  }
+  return [...map.values()].filter(u => u.active).map(({ active, ...u }) => u);
 }
