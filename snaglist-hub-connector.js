@@ -5,9 +5,10 @@
    STEP 1 — inside  async function handleApi(context) { ... }
    find this line:
        if (method === "GET" && photo && photo !== "upload") return servePhoto(context, photo);
-   and paste these TWO lines directly ABOVE it:
+   and make sure these THREE lines sit directly ABOVE it:
 
        if (method === "GET" && url.searchParams.get("hubstats") === "1") return hubStats(context, url);
+       if (method === "GET" && url.searchParams.get("hubnotify") === "1") return hubNotify(context, url);
        if (method === "GET" && url.searchParams.get("sso")) return hubSignIn(context, url);
 
    STEP 2 — paste everything below this comment block at the very END of
@@ -51,6 +52,25 @@ async function hubStats(context, url) {
       { label: "Snaglists in progress", value: Number(working.n || 0) }
     ]
   } });
+}
+
+/* Recent events for the hub's notification bell and push alerts.
+   Reads Snaglist's own notifications table (posted / moved / closed / reminders). */
+async function hubNotify(context, url) {
+  const { request, env } = context;
+  if (!env.HUB_KEY || request.headers.get("x-hub-key") !== env.HUB_KEY) throw fail("Not authorised", 403);
+  const site = String(url.searchParams.get("site") || "ALL").toUpperCase();
+  const since = String(url.searchParams.get("since") || new Date(Date.now() - 7 * 864e5).toISOString());
+  const scoped = site !== "ALL" && SITES[site];
+  const { results } = await env.DB.prepare(
+    `SELECT id, site, kind, list_id, title, body, created_at FROM notifications
+      WHERE created_at > ?${scoped ? " AND site = ?" : ""}
+      ORDER BY created_at DESC LIMIT 100`).bind(since, ...(scoped ? [site] : [])).all();
+  const TONE = { site_visit_posted: "warn", site_visit_reminder: "warn", site_visit_moved: "info", site_visit_closed: "ok" };
+  return json({ ok: true, data: { events: (results || []).map(r => ({
+    id: `n${r.id}`, at: r.created_at, site: r.site || "",
+    title: r.title, body: [r.body, r.list_id].filter(Boolean).join(" · "), tone: TONE[r.kind] || "info"
+  })) } });
 }
 
 /* Single sign-in: the hub sends a one-minute signed pass; Snaglist checks it,

@@ -1,3 +1,4 @@
+import { GLA } from "./data/gla-data.js";
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -166,8 +167,6 @@ async function ensureSchema(env) {
       site TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, text TEXT NOT NULL, owner_email TEXT NOT NULL DEFAULT '',
       owner_name TEXT NOT NULL DEFAULT '', due TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Open',
       done_at TEXT NOT NULL DEFAULT '', notified_at TEXT NOT NULL DEFAULT '', created_at TEXT)`),
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS gla_reports (site TEXT NOT NULL, month TEXT NOT NULL, data TEXT NOT NULL,
-      units INTEGER NOT NULL DEFAULT 0, file_name TEXT NOT NULL DEFAULT '', uploaded_by TEXT, uploaded_at TEXT, PRIMARY KEY (site, month))`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS tenant_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL,
       tenant TEXT NOT NULL, day TEXT NOT NULL, time TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
       action TEXT NOT NULL DEFAULT '', action_desc TEXT NOT NULL DEFAULT '', created_by TEXT, created_name TEXT, created_at TEXT, updated_at TEXT)`),
@@ -880,8 +879,7 @@ function rights(me, site) {
     mom: mine && (lead || me.role === "SUPERVISOR"),
     handover: mine && me.role !== "SECURITY",
     feedback: mine,                 // anyone at the flagship can log tenant feedback
-    feedbackAdmin: mine && lead,    // edit anyone's entries, import history
-    gla: mine && lead               // upload the monthly GLA
+    feedbackAdmin: mine && lead     // edit anyone's entries, import history
   };
 }
 
@@ -945,33 +943,10 @@ async function opsRoute(env, me, p, method, b, url) {
       positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])), codes: SHIFT_CODES, today: beirutToday() };
   }
 
-  /* ----- GLA & occupancy ----- */
-  if (p === "gla/list") {
-    const { results } = await env.DB.prepare("SELECT month, units, file_name, uploaded_by, uploaded_at FROM gla_reports WHERE site = ? ORDER BY month DESC").bind(site).all();
-    return { site, can, reports: results || [] };
-  }
+  /* ----- GLA & occupancy — built into the system (data/gla-data.js), one entry per flagship ----- */
   if (p === "gla/get") {
-    const m = /^\d{4}-\d{2}$/.test(q("month") || "") ? q("month") : null;
-    const r = await env.DB.prepare(m ? "SELECT * FROM gla_reports WHERE site = ? AND month = ?" : "SELECT * FROM gla_reports WHERE site = ? ORDER BY month DESC LIMIT 1")
-      .bind(...(m ? [site, m] : [site])).first();
-    return { site, can, report: r ? { month: r.month, fileName: r.file_name, uploadedBy: r.uploaded_by, uploadedAt: r.uploaded_at, ...JSON.parse(r.data) } : null };
-  }
-  if (p === "gla/save" && method === "POST") {
-    if (!can.gla) throw fail("Only the flagship's Manager or Senior Mall Supervisor can upload the GLA", 403);
-    const month = String(b.month || "");
-    if (!/^\d{4}-\d{2}$/.test(month)) throw fail("The report month is missing");
-    const units = (Array.isArray(b.units) ? b.units : []).slice(0, 3000).map(u => ({
-      level: s(u.level, 20), type: s(u.type, 30), code: s(u.code, 30), brand: s(u.brand, 120), status: s(u.status, 30),
-      dept: s(u.dept, 60), area: Math.max(0, Math.round(Number(u.area) * 100) / 100 || 0) })).filter(u => u.code || u.brand);
-    if (!units.length) throw fail("No units were found in this file");
-    const official = b.official && typeof b.official === "object" ? Object.fromEntries(Object.entries(b.official).slice(0, 20).map(([k, v]) => [s(k, 40), Number(v) || 0])) : {};
-    const data = JSON.stringify({ units, official, levels: (Array.isArray(b.levels) ? b.levels : []).map(x => s(x, 20)).slice(0, 30) });
-    if (data.length > 900000) throw fail("This file is too large");
-    await env.DB.prepare(`INSERT INTO gla_reports (site, month, data, units, file_name, uploaded_by, uploaded_at) VALUES (?,?,?,?,?,?,?)
-      ON CONFLICT(site, month) DO UPDATE SET data = excluded.data, units = excluded.units, file_name = excluded.file_name, uploaded_by = excluded.uploaded_by, uploaded_at = excluded.uploaded_at`)
-      .bind(site, month, data, units.length, s(b.fileName, 120), me.full_name, nowIso()).run();
-    await raiseEvent(env, { site, app: "gla", tone: "info", title: `GLA updated · ${siteName(site)}`, body: `${month} · ${units.length} units · by ${me.full_name}` });
-    return { saved: units.length, month };
+    const g = GLA[site];
+    return { site, report: g ? { ...g, siteName: siteName(site) } : null, available: Object.keys(GLA) };
   }
 
   /* ----- tenant feedback ----- */
@@ -982,9 +957,8 @@ async function opsRoute(env, me, p, method, b, url) {
     return { site, can, entries: (results || []).map(fbOut) };
   }
   if (p === "feedback/tenants") {
-    const gla = await env.DB.prepare("SELECT data FROM gla_reports WHERE site = ? ORDER BY month DESC LIMIT 1").bind(site).first();
     const names = new Set();
-    if (gla) for (const u of JSON.parse(gla.data).units || []) {
+    if (GLA[site]) for (const u of GLA[site].units || []) {
       const b = String(u.brand || "").trim();
       if (b && !/vacant|w\.?h\.?$|warehouse/i.test(b) && !/vacant/i.test(u.status || "") && u.type !== "DS") names.add(b.toUpperCase() === b ? b : b);
     }
