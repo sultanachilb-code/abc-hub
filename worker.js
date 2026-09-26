@@ -890,6 +890,17 @@ async function opsRoute(env, me, p, method, b, url) {
   const site = opsSite(me, method === "GET" ? q("site") : b.site);
   const can = rights(me, site);
 
+  if (p === "summary") {
+    const [tasks, handovers] = await Promise.all([
+      env.DB.prepare(`SELECT COUNT(*) AS n, SUM(CASE WHEN a.due != '' AND a.due < ? THEN 1 ELSE 0 END) AS late
+        FROM mom_actions a JOIN mom_meetings m ON m.id = a.meeting_id
+        WHERE m.status = 'published' AND a.status = 'Open' AND a.owner_email = ?`).bind(beirutToday(), me.email).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS n FROM handovers WHERE site = ? AND status = 'submitted' AND received_by = '' AND created_by != ? AND day >= ?`)
+        .bind(site, me.email, new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10)).first()
+    ]);
+    return { mom: { count: Number(tasks.n || 0), late: Number(tasks.late || 0), label: "open tasks" },
+             handover: { count: Number(handovers.n || 0), label: "to receive" } };
+  }
   if (p === "context") {
     return { me: { ...userOut(me) }, site, siteName: siteName(site), sites: SITES,
       canPickSite: me.role === "ADMIN", can, staff: await siteStaff(env, site),
