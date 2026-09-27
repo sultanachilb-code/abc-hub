@@ -8,7 +8,7 @@
      desc    one-line description
      group   section on the home screen (must match one of GROUPS)
      icon    clipboard | alert | qr | box | calendar | chart | bolt | truck
-             | camera | shield | users | footfall | bug | book
+             | camera | shield | users | footfall | bug | book | megaphone | alarm
      color   tile colour
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
@@ -74,6 +74,16 @@ window.HUB = {
       kind: "orbit",
       orbitGroup: "Operations Forms",
       url: "#forms"
+    },
+    /* Reminders feature — see docs/FEATURE-reminders.md */
+    {
+      id: "reminders",
+      name: "Reminders",
+      desc: "Pending tasks pushed to everyone at the flagship",
+      group: "Operations Tools",
+      icon: "alarm",
+      color: "#B0562A",
+      url: "/tools/reminders"
     },
     {
       id: "feedback",

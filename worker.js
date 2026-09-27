@@ -1,6 +1,7 @@
 import { GLA } from "./data/gla-data.js";
 import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js";   // Mall Layouts feature — see docs/FEATURE-layouts.md
 import { propertySchema, propertyRoute } from "./modules/property.js";   // Property Details feature — see docs/FEATURE-property-details.md
+import { remindersSchema, remindersRoute, remindersRun } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -156,6 +157,7 @@ async function ensureSchema(env) {
   if (!has("position")) await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT NOT NULL DEFAULT ''").run();
   await layoutsSchema(env);   // Mall Layouts feature
   await propertySchema(env);  // Property Details feature
+  await remindersSchema(env); // Reminders feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -242,6 +244,7 @@ export default {
       if (!env.DB) return;
       await ensureSchema(env);
       await taskReminders(env).catch(e => console.error("tasks", e && e.message));
+      await remindersRun(env, { raiseEvent, pullDay, now: nowIso }).catch(e => console.error("reminders", e && e.message));   // Reminders feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
     })());
@@ -835,7 +838,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -902,7 +905,8 @@ function rights(me, site) {
     feedbackAdmin: mine && lead,    // edit anyone's entries, import history
     gla: mine && (lead || me.role === "SUPERVISOR"),  // keep the GLA up to date
     layouts: mine && lead,                             // Mall Layouts feature: upload plans, adjust pins
-    property: mine && lead                             // Property Details feature: update the values
+    property: mine && lead,                            // Property Details feature: update the values
+    reminders: mine && lead                            // Reminders feature: choose which reminders run
   };
 }
 
@@ -1063,6 +1067,9 @@ async function opsRoute(env, me, p, method, b, url) {
 
   /* ----- Property Details feature (modules/property.js) ----- */
   if (p.startsWith("property/")) return propertyRoute(env, p, method, b, url, { site, can, me, now: nowIso, isAdmin: me.role === "ADMIN" });
+
+  /* ----- Reminders feature (modules/reminders.js) ----- */
+  if (p.startsWith("reminders/")) return remindersRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, pullDay });
 
   /* ----- tenant feedback ----- */
   if (p === "feedback/list") {
@@ -1537,8 +1544,7 @@ async function cleanerDay(env, site, day) {
   if (!env.CLEANER_SHEET_URL) return { error: "Not connected yet" };
   try {
     const u = new URL(env.CLEANER_SHEET_URL);
-    u.searchParams.set("action", "hubDay");
-    u.searchParams.set("key", env.CLEANER_SHEET_KEY || ""); u.searchParams.set("site", site); u.searchParams.set("date", day);
+    u.searchParams.set("action", "hubDay"); u.searchParams.set("key", env.CLEANER_SHEET_KEY || ""); u.searchParams.set("site", site); u.searchParams.set("date", day);
     const r = await fetch(u.toString(), { redirect: "follow", signal: AbortSignal.timeout(10000) });
     const j = await r.json().catch(() => null);
     if (!j || !j.ok) return { error: (j && j.error) || `HTTP ${r.status}` };

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ABC Operations Hub</title>
 <meta name="theme-color" content="#2A0F45">
-<script>try{var t=localStorage.getItem("hub.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<script>/* theme before first paint — Light unless the person chose Dark or Automatic */try{var t=localStorage.getItem("hub.theme");try{t=JSON.parse(t)}catch(e){}if(!t)t="light";if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}</script>
 <meta name="description" content="ABC Operations — all operational systems in one app">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/abc-48.png">
@@ -596,7 +596,8 @@ const P = {
   footfall:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>',
   bug:'<rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 11v9M3 13h4M17 13h4M4 7l3 2M20 7l-3 2M4 20l3-2M20 20l-3-2M9 5l1 2M15 5l-1 2"/>',
   book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
-  megaphone:'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 8a5 5 0 0 1 0 8M18 5a9 9 0 0 1 0 14"/>'
+  megaphone:'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 8a5 5 0 0 1 0 8M18 5a9 9 0 0 1 0 14"/>',
+  alarm:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/>'
 };
 const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.clipboard}</svg>`;
 const badgeOf = a => BRIEF && BRIEF.systems && BRIEF.systems[a.id] && BRIEF.systems[a.id].ok ? BRIEF.systems[a.id].badge : null;
@@ -728,7 +729,7 @@ function applyTheme(t){
   else document.documentElement.removeAttribute("data-theme");
 }
 function settingsDialog(){
-  const theme = store.get("hub.theme", "system");
+  const theme = store.get("hub.theme", "light");
   const collapsed = store.get("hub.briefCollapsed", false);
   sheet.innerHTML = `<div class="sheet-h"><div><b>Settings</b><small>Saved on this device</small></div></div>
     <div class="sheet-body">
