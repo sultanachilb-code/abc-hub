@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Budget · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md -->
+<style>
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 12px}
+.kpi{padding:12px 14px}.kpi strong{display:block;font-size:1.35rem;font-weight:800;font-variant-numeric:tabular-nums}.kpi span{font-size:.76rem;color:var(--muted)}
+.info{padding:10px 14px;margin-bottom:12px;font-size:.85rem;display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.filters .inp{flex:1;min-width:200px}
+.tg{display:flex;gap:6px;align-items:center;font-size:.85rem;font-weight:600;color:var(--muted)}
+.tg input{accent-color:var(--brand);width:16px;height:16px}
+.tbl{overflow-x:auto}
+table.b{width:100%;border-collapse:collapse;font-size:.85rem}
+.b th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+.b td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.b td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.b th.n{text-align:right}
+.b td.c{font-variant-numeric:tabular-nums;white-space:nowrap}
+.b tr.ln{cursor:pointer}
+.b tr.ln:hover td{background:rgba(123,75,176,.05)}
+.b tr.ln.sel td{background:rgba(123,75,176,.14)}
+.b tr.ln.zero td{color:var(--muted)}
+.b .t{font-weight:700}
+.b .sm{display:block;font-size:.75rem;color:var(--muted);font-weight:500}
+.neg{color:var(--alert)!important;font-weight:700}
+.usebar{position:sticky;bottom:12px;margin-top:12px;display:none;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;border-radius:14px;background:var(--ink);color:#fff;box-shadow:0 10px 26px rgba(20,8,34,.3)}
+.usebar.on{display:flex}
+.usebar b{font-size:.95rem}.usebar small{display:block;opacity:.75;font-size:.78rem}
+.usebar .btn{background:var(--gold);color:var(--ink)}
+dialog.jde{width:min(860px,calc(100% - 20px))}
+table.j{width:100%;border-collapse:collapse;font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:.95rem}
+.j td{border:1px solid #7F7F7F;padding:6px 9px;vertical-align:top}
+.j td:first-child{font-weight:700;width:34%;white-space:nowrap}
+.j td.v{position:relative;padding-right:38px}
+.j textarea,.j input{width:100%;border:0;background:rgba(123,75,176,.06);border-radius:6px;padding:4px 6px;font:inherit;resize:vertical;min-height:30px;color:inherit}
+.cp{position:absolute;right:6px;top:5px;width:26px;height:26px;border-radius:7px;color:var(--muted);display:grid;place-items:center}
+.cp:hover{background:var(--paper);color:var(--brand-2)}
+.cp svg{width:15px;height:15px}
+.hint{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:8px}
+.uses td{font-size:.84rem}
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .b .hm{display:none}
+  .j td:first-child{white-space:normal;width:40%}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Budget <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+  <div class="tabs" id="tabs"><button class="on" data-k="capex">CAPEX</button><button data-k="opex">OPEX</button></div>
+  <select class="sel" id="yearSel" aria-label="Year"></select>
+  <button class="btn ghost hidden" id="bUp">Upload Excel</button>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<input type="file" id="xfile" accept=".xlsx,.xls,.xlsm,.csv" class="hidden">
+<dialog id="dJ" class="jde"></dialog>
+<dialog id="dUp"></dialog>
+
+<script src="common.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", kind = UP.get("k") === "opex" ? "opex" : "capex", year = new Date().getFullYear(), data = null, sel = null, q = "", onlyBudget = true;
+const fmt = v => v == null || v === "" ? "" : Number(v).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+
+/* remaining: CAPEX = the sheet's Landing (Budget − FCT); OPEX = Budget − requests prepared in the hub this year */
+function remaining(l){
+  if (l.budget == null) return null;
+  if (kind === "capex") return l.landing != null ? l.landing : l.budget - (l.fct || 0);
+  return l.budget - (l.used || 0);
+}
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site; $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${v}&k=${kind}`); boot(); });
+    $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === kind));
+    await load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){
+  data = await api(`ops/budget/get?site=${site}&kind=${kind}&year=${year}`);
+  const ys = [...new Set([...data.years, year, new Date().getFullYear(), new Date().getFullYear() + 1])].sort((a, b) => b - a);
+  $("#yearSel").innerHTML = ys.map(y => `<option ${y === year ? "selected" : ""}>${y}</option>`).join("");
+  $("#bUp").classList.toggle("hidden", !data.can.upload);
+  sel = null; render();
+}
+$("#tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; kind = b.dataset.k; history.replaceState(null, "", `?site=${site}&k=${kind}`);
+  $("#tabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); load().catch(x => toast(x.message, true)); };
+$("#yearSel").onchange = e => { year = Number(e.target.value); load().catch(x => toast(x.message, true)); };
+
+function render(){
+  const L = data.lines, K = kind.toUpperCase();
+  const sum = f => L.reduce((s, l) => s + (Number(f(l)) || 0), 0);
+  let h = "";
+  if (!L.length){
+    $("#app").innerHTML = `<div class="card empty">No ${K} budget for ${year} at ${esc(ctx.siteName)} yet.${data.can.upload ? `<br><button class="btn" style="margin-top:12px" onclick="$('#xfile').click()">Upload the ${K} Excel</button>` : "<br>A manager or the senior mall supervisor uploads it."}</div>`;
+    return;
+  }
+  const rem = L.reduce((s, l) => s + (Number(remaining(l)) || 0), 0);
+  h += `<div class="kpis"><div class="card kpi"><strong>${fmt(sum(l => l.budget))}</strong><span>${K} budget ${year}</span></div>
+    ${kind === "capex" ? `<div class="card kpi"><strong>${fmt(sum(l => l.fct))}</strong><span>FCT</span></div>` : `<div class="card kpi"><strong>${fmt(sum(l => l.used))}</strong><span>Requested in the hub</span></div>`}
+    <div class="card kpi"><strong class="${rem < 0 ? "neg" : ""}">${fmt(rem)}</strong><span>Remaining</span></div>
+    <div class="card kpi"><strong>${L.filter(l => l.budget).length}</strong><span>Lines with a budget</span></div></div>`;
+  if (data.upload) h += `<div class="card info"><span>Uploaded ${esc(new Date(data.upload.at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))} by ${esc(data.upload.by)}${data.upload.fileName ? ` · ${esc(data.upload.fileName)}` : ""} · ${data.upload.count} lines</span>
+    <button class="btn ghost small" id="bUses">Requests prepared</button></div>`;
+  h += `<div class="filters"><input class="inp" id="q" placeholder="Search ${K === "CAPEX" ? "projects" : "accounts, cost objects"}, codes…" value="${esc(q)}">
+    <label class="tg"><input type="checkbox" id="only" ${onlyBudget ? "checked" : ""}> Only lines with a budget</label></div>`;
+  h += `<div class="card tbl"><table class="b"><thead><tr>${kind === "capex"
+    ? `<th>Project description</th><th>Obj Acct</th><th>CO3</th><th class="n">Annual BGT</th><th class="n hm">FCT</th><th class="n">Landing</th><th class="hm">Notes</th>`
+    : `<th>Account</th><th class="hm">BU</th><th>Obj Acct</th><th class="hm">CO1</th><th class="hm">Sub</th><th class="hm">CO3</th><th class="n">Annual BGT</th><th class="n hm">Requested</th><th class="n">Remaining</th>`}</tr></thead><tbody id="rows"></tbody></table></div>
+    <div class="usebar" id="usebar"><span><b id="ubT"></b><small id="ubS"></small></span><button class="btn" id="bUse">Use →</button></div>`;
+  $("#app").innerHTML = h;
+  drawRows();
+  $("#q").oninput = e => { q = e.target.value; drawRows(); };
+  $("#only").onchange = e => { onlyBudget = e.target.checked; drawRows(); };
+  $("#bUse").onclick = () => sel && openUse(sel);
+  const bu = $("#bUses"); if (bu) bu.onclick = showUses;
+}
+function drawRows(){
+  const s = q.trim().toLowerCase();
+  const L = data.lines.filter(l => (!onlyBudget || l.budget) && (!s || [l.title, l.obj, l.sub, l.co1, l.co3, l.co3Desc, l.bu, l.notes].join(" ").toLowerCase().includes(s)));
+  $("#rows").innerHTML = L.map(l => { const r = remaining(l);
+    return kind === "capex"
+      ? `<tr class="ln ${l.budget ? "" : "zero"} ${sel && sel.id === l.id ? "sel" : ""}" data-id="${l.id}"><td class="t">${esc(l.title)}</td><td class="c">${esc(l.obj)}</td><td class="c">${esc(l.co3)}</td>
+        <td class="n">${fmt(l.budget)}</td><td class="n hm">${fmt(l.fct)}</td><td class="n ${r < 0 ? "neg" : ""}">${fmt(r)}</td><td class="hm">${esc(l.notes)}</td></tr>`
+      : `<tr class="ln ${l.budget ? "" : "zero"} ${sel && sel.id === l.id ? "sel" : ""}" data-id="${l.id}"><td><span class="t">${esc(l.title)}</span>${l.co3Desc ? `<span class="sm">${esc(l.co3Desc)}</span>` : ""}</td>
+        <td class="c hm">${esc(l.bu)}</td><td class="c">${esc(l.obj)}</td><td class="c hm">${esc(l.co1)}</td><td class="c hm">${esc(l.sub)}</td><td class="c hm">${esc(l.co3)}</td>
+        <td class="n">${fmt(l.budget)}</td><td class="n hm">${l.used ? fmt(l.used) : ""}</td><td class="n ${r < 0 ? "neg" : ""}">${fmt(r)}</td></tr>`; }).join("")
+    || `<tr><td colspan="9" class="muted" style="text-align:center;padding:24px">No line matches.</td></tr>`;
+  $("#rows").onclick = e => { const tr = e.target.closest("tr.ln"); if (!tr) return;
+    sel = data.lines.find(l => l.id === Number(tr.dataset.id));
+    $("#rows").querySelectorAll("tr.ln").forEach(x => x.classList.toggle("sel", x === tr));
+    $("#ubT").textContent = sel.title + (sel.co3Desc ? ` · ${sel.co3Desc}` : "");
+    $("#ubS").textContent = `Obj ${sel.obj}${sel.sub ? ` · Sub ${sel.sub}` : ""}${sel.co3 ? ` · CO3 ${sel.co3}` : ""} · remaining ${fmt(remaining(sel)) || "—"}`;
+    $("#usebar").classList.add("on"); };
+  $("#rows").ondblclick = e => { const tr = e.target.closest("tr.ln"); if (tr) openUse(data.lines.find(l => l.id === Number(tr.dataset.id))); };
+}
+
+/* ---------- the JDE table ---------- */
+function allocation(l){
+  if (kind === "capex") return "CAPEX";
+  return `OPEX – ${l.title}${l.co3Desc ? ` - ${l.co3Desc}` : ""}`;
+}
+function fields(l, f){
+  return [
+    ["Topic/Title", f.topic, "topic"],
+    ["Description (specs, quantities, etc)", f.description, "description"],
+    ["Cost allocation", f.allocation, "allocation"],
+    ["Object Account Number", l.obj],
+    ["Subsidiary Account Number", l.sub],
+    ["Budget", fmt(l.budget)],
+    ["Remaining Budget", fmt(remaining(l))],
+    ["CO1 (Cost Object 1)", l.co1],
+    ["CO3 (Cost Object 3)", l.co3]
+  ];
+}
+let cur = null;
+function openUse(l){
+  cur = { l, topic: kind === "capex" ? l.title : "", description: "", allocation: allocation(l), amount: "" };
+  drawUse(); $("#dJ").showModal(); setTimeout(() => { const t = $("#dJ").querySelector(kind === "capex" ? "[data-f=description]" : "[data-f=topic]"); t && t.focus(); }, 50);
+}
+function drawUse(){
+  const l = cur.l, F = fields(l, cur);
+  const d = $("#dJ");
+  d.innerHTML = `<div class="dlg-h"><b>JDE request · ${kind.toUpperCase()}</b><small>${esc(l.title)}${l.co3Desc ? ` · ${esc(l.co3Desc)}` : ""} · ${esc(ctx.siteName)} ${year}</small></div>
+    <div class="dlg-b"><table class="j">${F.map(([k, v, edit], i) => `<tr><td>${esc(k)}</td><td class="v">${edit
+      ? (edit === "description" ? `<textarea data-f="${edit}" rows="3" placeholder="QTY, specs, any other preferences">${esc(v)}</textarea>`
+        : `<input data-f="${edit}" value="${esc(v)}" placeholder="${edit === "topic" ? "Clear job title" : ""}">`)
+      : esc(v || "")}<button class="cp" data-cp="${i}" title="Copy this value">${COPY}</button></td></tr>`).join("")}</table>
+    <label class="lbl" style="margin-top:14px">Estimated amount (optional)</label>
+    <input class="inp" id="jAmt" type="number" min="0" step="0.01" value="${esc(cur.amount)}" placeholder="${kind === "opex" ? "Deducted from the remaining OPEX in the hub" : "For the record"}" style="width:220px">
+    <p class="hint">${kind === "capex" ? "Remaining = the Landing column of the uploaded CAPEX sheet (Budget − FCT)." : "Remaining = Annual budget − requests prepared in the hub this year (with an amount)."} Copy the whole table, or one value at a time, into JDE.</p></div>
+    <div class="dlg-f"><button class="btn ghost" id="jClose">Close</button><button class="btn ghost" id="jCopy">Copy table</button><button class="btn" id="jSave">Save & copy</button></div>`;
+  d.oninput = e => { const f = e.target.dataset.f; if (f) cur[f] = e.target.value; if (e.target.id === "jAmt") cur.amount = e.target.value; };
+  d.querySelectorAll("[data-cp]").forEach(b => b.onclick = () => { const [, v] = fields(cur.l, cur)[Number(b.dataset.cp)]; copyText(String(v || "")); });
+  d.querySelector("#jClose").onclick = () => d.close();
+  d.querySelector("#jCopy").onclick = () => copyTable();
+  d.querySelector("#jSave").onclick = async () => {
+    if (!cur.topic.trim()) { toast("Write the topic / title", true); d.querySelector("[data-f=topic]").focus(); return; }
+    try { await api("ops/budget/use", { site, kind, year, id: cur.l.id, topic: cur.topic, description: cur.description, amount: cur.amount });
+      await copyTable(); d.close(); load(); } catch (e){ toast(e.message, true); }
+  };
+}
+async function copyTable(){
+  const F = fields(cur.l, cur);
+  const td = "border:1px solid #7F7F7F;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt;vertical-align:top";
+  const html = `<table style="border-collapse:collapse">${F.map(([k, v]) => `<tr><td style="${td};font-weight:bold">${esc(k)}</td><td style="${td}">${esc(v || "").replace(/\n/g, "<br>")}</td></tr>`).join("")}</table>`;
+  const text = F.map(([k, v]) => `${k}\t${String(v || "").replace(/\n/g, " ")}`).join("\n");
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
+    toast("Table copied — paste it into JDE or an email");
+  } catch { copyText(text, "Table copied"); }
+}
+async function copyText(t, msg){
+  try { await navigator.clipboard.writeText(t); }
+  catch { const a = document.createElement("textarea"); a.value = t; document.body.append(a); a.select(); document.execCommand("copy"); a.remove(); }
+  toast(msg || (t ? `Copied: ${t.length > 40 ? t.slice(0, 40) + "…" : t}` : "Nothing to copy"));
+}
+
+/* ---------- requests prepared ---------- */
+async function showUses(){
+  try {
+    const { uses } = await api(`ops/budget/uses?site=${site}&kind=${kind}&year=${year}`);
+    const byKey = new Map(data.lines.map(l => [l.key, l]));
+    const d = $("#dUp");
+    d.style.width = "min(820px,calc(100% - 20px))";
+    d.innerHTML = `<div class="dlg-h"><b>Requests prepared · ${kind.toUpperCase()} ${year}</b><small>${esc(ctx.siteName)}</small></div>
+      <div class="dlg-b"><div class="tbl" style="max-height:60dvh;overflow:auto">${uses.length ? `<table class="b uses"><thead><tr><th>Date</th><th>Topic</th><th>Budget line</th><th class="n">Amount</th><th>By</th><th></th></tr></thead><tbody>
+      ${uses.map(u => { const l = byKey.get(u.key); return `<tr><td class="c">${esc(new Date(u.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</td><td><b>${esc(u.topic)}</b>${u.description ? `<span class="sm">${esc(u.description)}</span>` : ""}</td>
+        <td>${l ? esc(l.title + (l.co3Desc ? ` · ${l.co3Desc}` : "")) : "<span class='muted'>line not in the current sheet</span>"}</td><td class="n">${fmt(u.amount)}</td><td>${esc(u.by)}</td>
+        <td><button class="btn ghost small danger" data-rm="${u.id}">Remove</button></td></tr>`; }).join("")}</tbody></table>` : `<div class="empty">No requests prepared yet.</div>`}</div></div>
+      <div class="dlg-f"><button class="btn" data-x>Close</button></div>`;
+    d.querySelector("[data-x]").onclick = () => d.close();
+    d.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { try { await api("ops/budget/uses/remove", { site, id: Number(b.dataset.rm) }); d.close(); await load(); showUses(); } catch (e){ toast(e.message, true); } });
+    d.showModal();
+  } catch (e){ toast(e.message, true); }
+}
+
+/* ---------- upload: keep only the known columns, whatever else the JDE export has ---------- */
+const COLS = {
+  capex: { title: [/project\s*desc/, /^project$/, /^description$/], obj: [/^obj/, /object\s*acc/], co3: [/cost\s*object\s*3(?!.*desc)/, /^co\s*3$/, /^co3$/],
+           budget: [/annual\s*b/, /^budget/, /^bgt/], fct: [/^fct/, /forecast/], landing: [/landing/, /remaining/], notes: [/^notes?$/, /comment/] },
+  opex:  { bu: [/business\s*unit/, /^bu$/], obj: [/^obj/, /object\s*acc/], co1: [/cost\s*object\s*1/, /^co\s*1$/], sub: [/^sub/], co3: [/cost\s*object\s*3(?!.*desc)/, /^co\s*3$/],
+           co3Desc: [/cost\s*object\s*3.*desc/, /co\s*3\s*desc/], title: [/detailed\s*account/, /account\s*desc/, /^description$/], budget: [/annual\s*b/, /^budget/, /^bgt/] }
+};
+$("#bUp").onclick = () => $("#xfile").click();
+$("#xfile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+    let best = null;
+    for (const name of wb.SheetNames){
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", raw: true });
+      for (let hi = 0; hi < Math.min(rows.length, 30); hi++){
+        const H = rows[hi].map(c => String(c).replace(/\s+/g, " ").trim().toLowerCase());
+        const map = {}, spec = COLS[kind];
+        for (const [k, res] of Object.entries(spec)){ const i = H.findIndex((h, j) => h && res.some(re => re.test(h)) && !Object.values(map).includes(j)); if (i >= 0) map[k] = i; }
+        const need = kind === "capex" ? ["title", "obj", "budget"] : ["obj", "title", "budget"];
+        if (need.every(k => map[k] !== undefined) && (!best || Object.keys(map).length > Object.keys(best.map).length)) best = { name, hi, map, rows };
+      }
+    }
+    if (!best) return toast(`This doesn't look like a ${kind.toUpperCase()} sheet — ${kind === "capex" ? "Project Description, Obj Acct and Annual BGT" : "Obj Acct, Detailed Account Description and Annual BGT"} columns are needed`, true);
+    const cell = (r, k) => best.map[k] === undefined ? "" : r[best.map[k]];
+    const lines = best.rows.slice(best.hi + 1).map(r => ({ title: String(cell(r, "title")).trim(), bu: String(cell(r, "bu")).trim(), obj: String(cell(r, "obj")).trim(),
+      sub: String(cell(r, "sub")).trim(), co1: String(cell(r, "co1")).trim(), co3: String(cell(r, "co3")).trim(), co3Desc: String(cell(r, "co3Desc")).trim(),
+      budget: cell(r, "budget"), fct: cell(r, "fct"), landing: cell(r, "landing"), notes: String(cell(r, "notes")).trim() }))
+      .filter(l => kind === "capex" ? l.title : l.obj);
+    const found = Object.keys(best.map), total = lines.reduce((s, l) => s + (Number(l.budget) || 0), 0);
+    const d = $("#dUp"); d.style.width = "";
+    d.innerHTML = `<div class="dlg-h"><b>Upload ${kind.toUpperCase()} ${year}</b><small>${esc(f.name)} · sheet “${esc(best.name)}”</small></div>
+      <div class="dlg-b"><p style="line-height:1.6;font-size:.9rem"><b>${lines.length}</b> lines · total budget <b>${fmt(total)}</b><br>
+      Columns kept: ${found.map(k => `<span class="pill brand">${esc(best.rows[best.hi][best.map[k]])}</span>`).join(" ")}<br>
+      This replaces the ${kind.toUpperCase()} ${year} budget of ${esc(ctx.siteName)}. Other columns in the file are ignored.</p></div>
+      <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok>Upload</button></div>`;
+    d.querySelector("[data-x]").onclick = () => d.close();
+    d.querySelector("[data-ok]").onclick = async () => { try { const r = await api("ops/budget/upload", { site, kind, year, fileName: f.name, lines }); d.close(); toast(`${r.count} lines uploaded`); load(); } catch (x){ toast(x.message, true); } };
+    d.showModal();
+  } catch (x){ toast("This file could not be read: " + x.message, true); }
+};
+boot();
+</script>
+</body>
+</html>
