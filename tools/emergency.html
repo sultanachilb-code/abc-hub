@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emergency Alert · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Emergency Alert feature — see docs/FEATURE-emergency.md -->
+<style>
+.col{max-width:760px;margin:0 auto}
+.red{--r:#C62828}
+.types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.types button{border:1.5px solid var(--line);border-radius:12px;padding:12px 8px;font-weight:800;font-size:.9rem;background:var(--surface);color:var(--text)}
+.types button.on{background:#C62828;border-color:#C62828;color:#fff}
+.box{padding:16px;margin-bottom:12px}
+.inp.big{width:100%;height:46px;font-size:1rem}
+.sw{display:flex;gap:10px;align-items:center;font-weight:600;font-size:.9rem;margin-top:12px}
+.sw input{width:18px;height:18px;accent-color:#C62828}
+.who{display:grid;gap:6px;margin-top:8px}
+.who div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:.88rem}
+.who small{color:var(--muted);display:block}
+.send{width:100%;height:64px;border-radius:16px;background:#C62828;color:#fff;font-size:1.15rem;font-weight:900;letter-spacing:.04em;margin-top:14px;box-shadow:0 8px 22px rgba(198,40,40,.35)}
+.send:hover{background:#B71C1C}
+.send[disabled]{opacity:.5}
+.hero{background:#C62828;color:#fff;border-radius:18px;padding:18px 20px;margin-bottom:12px}
+.hero.closed{background:#2E7D32}
+.hero small{opacity:.85;font-weight:600}
+.hero h2{font-size:1.5rem;margin:4px 0 2px}
+.hero .loc{font-size:1.15rem;font-weight:700}
+.hero .note{margin-top:6px;opacity:.95}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.stat{padding:12px 14px}.stat b{display:block;font-size:1.5rem;font-variant-numeric:tabular-nums}.stat span{font-size:.78rem;color:var(--muted)}
+.rows{display:grid;gap:6px}
+.r{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px}
+.r b{font-size:.95rem}.r small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.ack{width:100%;height:70px;border-radius:18px;background:#2E7D32;color:#fff;font-size:1.25rem;font-weight:900;margin:6px 0 12px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.pulse{animation:pl 1.2s infinite}@keyframes pl{50%{box-shadow:0 0 0 10px rgba(198,40,40,0)}0%{box-shadow:0 0 0 0 rgba(198,40,40,.5)}}
+table.h{width:100%;border-collapse:collapse;font-size:.86rem}
+.h td,.h th{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
+.h th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.h tr.row{cursor:pointer}.h tr.row:hover td{background:rgba(198,40,40,.05)}
+.sec{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+@media (max-width:560px){ .types{grid-template-columns:repeat(2,minmax(0,1fr))} .stats{grid-template-columns:repeat(3,minmax(0,1fr))} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🚨 Emergency Alert <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap"><div class="col" id="app"><div class="empty">Loading…</div></div></div>
+
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, meta = null, site = UP.get("site") || "", state = { type: "", location: "", note: "", managers: true }, poll = 0;
+const t = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "";
+const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`; };
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site;
+    $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${v}`); clearInterval(poll); boot(); });
+    meta = await api(`ops/emergency/meta?site=${site}`);
+    const id = Number(UP.get("id"));
+    if (id) return openBoard(id);
+    home();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ---------- send ---------- */
+async function home(){
+  clearInterval(poll);
+  const { list } = await api(`ops/emergency/list?site=${site}`);
+  const active = list.filter(e => e.status === "active");
+  let h = "";
+  if (active.length) h += `<div class="sec">Open now</div>${active.map(e => `<div class="card r pulse" style="border-color:#C62828;cursor:pointer" data-open="${e.id}"><div><b>${esc(e.type)} · ${esc(e.location)}</b><small>${esc(e.createdName)} · ${ago(e.createdAt)} · ${e.acked}/${e.recipients} acknowledged</small></div><span class="pill alert">Open</span></div>`).join("")}`;
+  if (meta.can.send) h += `
+    <div class="sec">New alert</div>
+    <div class="card box"><label class="lbl">What is happening</label><div class="types" id="types">${meta.types.map(x => `<button data-t="${esc(x)}" class="${state.type === x ? "on" : ""}">${esc(x)}</button>`).join("")}</div></div>
+    <div class="card box"><label class="lbl">Location</label><input class="inp big" id="loc" maxlength="160" placeholder="e.g. Level 2 · near Zara · east escalator" value="${esc(state.location)}">
+      <label class="lbl" style="margin-top:12px">Instructions (optional)</label><input class="inp big" id="note" maxlength="300" placeholder="e.g. Security to the scene, evacuate L2 east" value="${esc(state.note)}">
+      <label class="sw"><input type="checkbox" id="mgr" ${state.managers ? "checked" : ""}> Also alert the flagship managers who are on call (not on the schedule today)</label></div>
+    <div class="card box"><label class="lbl" id="whoT">Who will receive it</label><div class="who" id="who"><div class="muted">Checking the schedule…</div></div>
+      <p class="muted" style="font-size:.8rem;margin-top:8px;line-height:1.5">Only people whose shift covers this minute. OFF, leave, or a shift that has not started or has ended — not alerted. Someone whose shift starts while the alert is open is added automatically.</p>
+      <button class="send" id="bSend">SEND EMERGENCY ALERT</button></div>`;
+  else if (!active.length) h += `<div class="card empty">No open emergency at ${esc(ctx.siteName)}.<br>Managers, the senior mall supervisor and administrators can send alerts.</div>`;
+  if (list.length) h += `<div class="sec">History</div><div class="card" style="overflow-x:auto"><table class="h"><thead><tr><th>When</th><th>Type</th><th>Location</th><th>Acknowledged</th><th></th></tr></thead><tbody>
+    ${list.map(e => `<tr class="row" data-open="${e.id}"><td>${esc(new Date(e.createdAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</td><td>${esc(e.type)}</td><td>${esc(e.location)}</td><td>${e.acked} / ${e.recipients}</td><td><span class="pill ${e.status === "active" ? "alert" : "ok"}">${e.status === "active" ? "Open" : "All clear"}</span></td></tr>`).join("")}</tbody></table></div>`;
+  $("#app").innerHTML = h;
+  $("#app").querySelectorAll("[data-open]").forEach(x => x.onclick = () => openBoard(Number(x.dataset.open)));
+  if (!meta.can.send) return;
+  $("#types").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; state.type = b.dataset.t; $("#types").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
+  $("#loc").oninput = e => state.location = e.target.value;
+  $("#note").oninput = e => state.note = e.target.value;
+  $("#mgr").onchange = e => { state.managers = e.target.checked; preview(); };
+  $("#bSend").onclick = send;
+  preview();
+}
+async function preview(){
+  try {
+    const r = await api(`ops/emergency/preview?site=${site}&managers=${state.managers ? 1 : 0}`);
+    $("#whoT").textContent = `Who will receive it — ${r.recipients.length} ${r.recipients.length === 1 ? "person" : "people"} on shift at ${r.at}`;
+    $("#who").innerHTML = r.recipients.length ? r.recipients.map(p => `<div><span><b>${esc(p.name)}</b><small>${esc(p.why)}</small></span>
+      ${p.devices ? `<span class="pill ok">${p.devices} device${p.devices === 1 ? "" : "s"}</span>` : `<span class="pill warn">No notifications — call</span>`}</div>`).join("")
+      : `<div class="muted">Nobody is on shift right now according to the Operations Schedule.</div>`;
+  } catch (e){ $("#who").innerHTML = `<div class="muted">${esc(e.message)}</div>`; }
+}
+async function send(){
+  if (!state.type) return toast("Choose what is happening", true);
+  if (!state.location.trim()) { $("#loc").focus(); return toast("Write the location", true); }
+  if (!await confirmBox("Send the emergency alert?", `<b>${esc(state.type)}</b> · ${esc(state.location)}<br>Everyone on shift at ${esc(ctx.siteName)} will be alerted until they acknowledge.`, "Send alert")) return;
+  const b = $("#bSend"); b.disabled = true; b.textContent = "SENDING…";
+  try {
+    const r = await api("ops/emergency/send", { site, ...state });
+    state = { type: "", location: "", note: "", managers: true };
+    history.replaceState(null, "", `?site=${site}&id=${r.emergency.id}`);
+    showBoard(r); startPoll(r.emergency.id);
+  } catch (e){ toast(e.message, true); b.disabled = false; b.textContent = "SEND EMERGENCY ALERT"; }
+}
+
+/* ---------- live board ---------- */
+async function openBoard(id){
+  try { const r = await api(`ops/emergency/get?id=${id}&site=${site}`); history.replaceState(null, "", `?site=${site}&id=${id}`); showBoard(r);
+    if (r.emergency.status === "active") startPoll(id); }
+  catch (e){ toast(e.message, true); home(); }
+}
+function startPoll(id){ clearInterval(poll); poll = setInterval(async () => { if (document.hidden) return;
+  try { const r = await api("ops/emergency/tick", { site, id }); showBoard(r); if (r.emergency.status !== "active") clearInterval(poll); } catch {} }, 20000); }
+function showBoard(r){
+  const e = r.emergency, R = r.recipients, acked = R.filter(x => x.ackAt).length, me = R.find(x => x.email === ctx.me.email);
+  const open = e.status === "active";
+  let h = `<button class="btn ghost small" id="back" style="margin-bottom:10px">← All alerts</button>
+    <div class="hero ${open ? "pulse" : "closed"}"><small>${open ? "EMERGENCY · OPEN" : `ALL CLEAR · ${esc(t(e.closedAt))} · ${esc(e.closedName)}`}</small>
+      <h2>${esc(e.type)}</h2><div class="loc">📍 ${esc(e.location)}</div>${e.note ? `<div class="note">${esc(e.note)}</div>` : ""}
+      <div class="note" style="font-size:.85rem">Sent by ${esc(e.createdName)} at ${esc(t(e.createdAt))} · ${ago(e.createdAt)}</div>
+      ${e.closeNote ? `<div class="note">${esc(e.closeNote)}</div>` : ""}</div>`;
+  if (open && me && !me.ackAt) h += `<button class="ack" id="bAck">I'M ON IT</button>`;
+  h += `<div class="stats"><div class="card stat"><b style="color:var(--ok)">${acked}</b><span>Acknowledged</span></div>
+    <div class="card stat"><b style="color:var(--alert)">${R.length - acked}</b><span>Not yet</span></div>
+    <div class="card stat"><b>${R.filter(x => !x.devices && !x.ackAt).length}</b><span>No device — call</span></div></div>`;
+  if (open && meta.can.send) h += `<div class="acts" style="margin-bottom:12px"><button class="btn ghost" id="bRe">Re-alert everyone not acknowledged</button><button class="btn" id="bClear" style="background:#2E7D32">All clear</button></div>`;
+  h += `<div class="rows">${R.map(x => `<div class="card r"><div><b>${esc(x.name)}</b><small>${esc(x.why)}</small>
+      <small>${x.ackAt ? `Acknowledged at ${esc(t(x.ackAt))}` : `Alerted ${x.sends}× · last ${esc(t(x.lastAt))}${x.devices ? ` · ${x.delivered} delivered` : ""}`}</small></div>
+      ${x.ackAt ? `<span class="pill ok">On it</span>` : x.devices ? `<span class="pill alert">Waiting</span>` : `<span class="pill warn">No device — call</span>`}</div>`).join("")
+      || `<div class="card empty">Nobody was on shift when the alert was sent.</div>`}</div>
+    ${open ? `<p class="muted" style="font-size:.8rem;margin-top:10px;line-height:1.5">This page re-alerts people who have not acknowledged about every 45 seconds while it is open (and every 2 minutes from the server when it is closed), for up to 45 minutes.</p>` : ""}`;
+  $("#app").innerHTML = h;
+  $("#back").onclick = () => { history.replaceState(null, "", `?site=${site}`); home(); };
+  const a = $("#bAck"); if (a) a.onclick = async () => { try { await api("ops/emergency/ack", { site, id: e.id }); toast("Acknowledged — the manager can see you are on it"); openBoard(e.id);
+    try { parent.postMessage({ type: "emergency-ack", id: e.id }, location.origin); } catch {} } catch (x){ toast(x.message, true); } };
+  const re = $("#bRe"); if (re) re.onclick = async () => { re.disabled = true; try { showBoard(await api("ops/emergency/realert", { site, id: e.id })); toast("Alert sent again"); } catch (x){ toast(x.message, true); re.disabled = false; } };
+  const cl = $("#bClear"); if (cl) cl.onclick = allClear.bind(null, e);
+}
+async function allClear(e){
+  let d = $("#dClr"); if (!d){ d = document.createElement("dialog"); d.id = "dClr"; document.body.append(d); }
+  d.innerHTML = `<div class="dlg-h"><b>All clear?</b><small>${esc(e.type)} · ${esc(e.location)}</small></div>
+    <div class="dlg-b"><label class="lbl">Note (optional)</label><input class="inp" id="clrNote" style="width:100%" maxlength="300" placeholder="e.g. False alarm — detector in L2 kitchen"></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok style="background:#2E7D32">Send all clear</button></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  d.querySelector("[data-ok]").onclick = async () => { try { const r = await api("ops/emergency/close", { site, id: e.id, note: $("#clrNote").value }); d.close(); clearInterval(poll); showBoard(r); toast("All clear sent"); } catch (x){ toast(x.message, true); } };
+  d.showModal();
+}
+boot();
+</script>
+</body>
+</html>
