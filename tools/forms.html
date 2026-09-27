@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checklist · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Operations Forms feature — see docs/FEATURE-forms.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.status{font-size:.8rem;color:var(--muted);font-weight:600}
+.sheet{background:#fff;color:#1d1726;max-width:210mm;margin:0 auto;padding:12mm 11mm;box-shadow:0 6px 24px rgba(40,10,70,.14);font-size:12.5px}
+:root[data-theme="dark"] .sheet{box-shadow:none}
+.hd{display:flex;align-items:center;gap:10px;border-bottom:2.5px solid var(--brand);padding-bottom:8px;margin-bottom:8px}
+.hd img{width:34px;height:34px}
+.hd b{font-size:1.35rem;color:var(--ink);display:block;line-height:1.15}.hd small{color:#6D6479}
+.hd .ref{margin-left:auto;text-align:right;color:#6D6479;font-size:.78rem;line-height:1.35}
+.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:6px}
+.meta label{display:block;border:1px solid #D4CCE0;border-radius:5px;padding:3px 7px;min-height:40px}
+.meta span{display:block;font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#6D6479}
+.meta input{width:100%;border:0;background:transparent;font:inherit;font-weight:600;padding:1px 0;outline:none;color:#1d1726}
+.meta input:focus{background:#F6F2FB}
+.meta .ro{font-weight:600;padding-top:1px}
+.flags{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:8px}
+.flag{border:1px dashed #C8A24A;background:#FFF7E3;border-radius:5px;padding:4px 7px;display:flex;align-items:center;justify-content:space-between;gap:4px 6px;font-weight:700;font-size:.8rem;flex-wrap:wrap}
+.yn{display:inline-flex;border:1px solid #D4CCE0;border-radius:6px;overflow:hidden;background:#fff}
+.yn button{padding:3px 8px;font-weight:800;font-size:.75rem;color:#6D6479}
+.yn button.on{background:var(--brand);color:#fff}
+.flag.unset{border-style:solid;border-color:var(--alert)}
+table.ck{width:100%;border-collapse:collapse;table-layout:fixed}
+.ck th{background:var(--brand);color:#fff;text-align:left;padding:5px 6px;font-size:.78rem}
+.ck td{border:1px solid #D4CCE0;padding:4px 6px;vertical-align:middle;line-height:1.35}
+.ck col.area{width:15%}.ck col.mk{width:6.5%}.ck col.rem{width:21%}
+.ck tr.sec td{background:#F1ECF7;font-weight:800;color:var(--ink);letter-spacing:.04em;text-transform:uppercase;font-size:.78rem}
+.ck td.area{font-weight:700;color:var(--brand-2);font-size:.85rem}
+.ck td.mk{text-align:center;padding:2px;cursor:pointer;user-select:none}
+.ck td.mk span{display:inline-grid;place-items:center;width:22px;height:22px;border:1.5px solid #9C93A8;border-radius:4px;font-weight:900;font-size:.95rem;color:transparent}
+.ck td.mk:hover span{border-color:var(--brand-2)}
+.ck td.mk.on.y span{border-color:var(--ok);background:var(--ok);color:#fff}
+.ck td.mk.on.n span{border-color:var(--alert);background:var(--alert);color:#fff}
+.ck td.mk.on.na span{border-color:#8A8494;background:#8A8494;color:#fff}
+.ck tr.off td{color:#A39CAD;background:#FAFAFA}
+.ck tr.off td.mk{cursor:default}
+.ck tr.miss td{background:#FFF1EF}
+.ck td.rem input,.ck td.rem select{width:100%;border:0;border-bottom:1px dashed #D4CCE0;background:transparent;font:inherit;font-size:.82rem;padding:2px 0;outline:none;color:inherit}
+.ck td.rem select{margin-bottom:2px}
+.ck tr.bad td.rem input{border-bottom-color:var(--alert)}
+.ifc{display:inline-block;font-size:.66rem;font-weight:800;color:#8A5A00;background:#FCE9BD;border-radius:3px;padding:0 4px;margin-right:4px;vertical-align:1px}
+.fld{display:inline-flex;align-items:center;gap:4px;margin:3px 10px 0 0;font-size:.78rem;color:#6D6479}
+.fld input{border:0;border-bottom:1px solid #A9A1B5;width:9em;font:inherit;background:transparent;outline:none;color:#1d1726}
+.ids{display:block;font-size:.74rem;color:#6D6479;font-variant-numeric:tabular-nums}
+.tr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tr input[type=date]{border:1px solid #D4CCE0;border-radius:5px;padding:2px 6px;font:inherit;font-size:.8rem}
+.glalink{font-size:.76rem;font-weight:800;color:var(--brand-2);margin-left:6px;white-space:nowrap}
+.ar{display:none}
+.foot{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;margin-top:8px}
+.foot label{border:1px solid #D4CCE0;border-radius:5px;padding:4px 7px;display:block;min-height:64px}
+.foot span{display:block;font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#6D6479}
+.foot textarea{border:0;padding:2px 0;min-height:48px;background:transparent;color:#1d1726}
+.foot .sig{font-weight:700;padding-top:6px}
+.prog{height:6px;border-radius:9px;background:#EEE9F4;overflow:hidden;margin:0 0 8px}.prog i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.actions{max-width:210mm;margin:14px auto 0;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.lock{max-width:210mm;margin:0 auto 10px;padding:10px 14px;font-size:.86rem;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;max-width:210mm;margin:0 auto 10px}
+.chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);font-size:.78rem;font-weight:700;background:var(--surface);color:var(--muted)}
+.info{max-width:210mm;margin:0 auto 10px;padding:10px 14px;font-size:.85rem;line-height:1.5;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+table.rec{width:100%;border-collapse:collapse;font-size:.86rem}
+.rec th{text-align:left;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line)}
+.rec td{padding:10px;border-bottom:1px solid var(--line)}
+.rec tr.row{cursor:pointer}.rec tr.row:hover td{background:rgba(123,75,176,.06)}
+.rec .n{white-space:nowrap;font-variant-numeric:tabular-nums}
+/* list editor */
+dialog.ed{width:min(980px,calc(100% - 20px))}
+.edl{max-height:60dvh;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.edr{display:grid;grid-template-columns:30px 1.1fr .9fr 3fr 1fr 1fr 74px;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line)}
+.edr.h{position:sticky;top:0;background:var(--surface);font-size:.7rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);z-index:1}
+.edr input,.edr select{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 7px;width:100%;background:var(--surface);font-size:.82rem}
+.edr .n{font-size:.75rem;color:var(--muted);text-align:right}
+.edr .mv{display:flex;gap:2px}.edr .mv button{width:22px;height:28px;border-radius:6px;color:var(--muted);font-weight:800}.edr .mv button:hover{background:var(--paper)}
+.edr .mv .del{color:var(--alert)}
+@media screen and (max-width:760px){
+  .wrap{padding:10px 8px 60px}
+  .sheet{padding:14px 12px;font-size:14px;box-shadow:none;border-radius:12px}
+  .meta,.flags{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hd .ref{display:none}
+  table.ck,.ck tbody{display:block}
+  .ck colgroup,.ck thead{display:none}
+  .ck tr.sec{display:block}.ck tr.sec td{display:block;border:0;border-radius:6px;margin:12px 0 4px}
+  .ck tr.it{display:grid;grid-template-columns:1fr 44px 44px 44px;align-items:center;border-bottom:1px solid #E4DDEC;padding:6px 0}
+  .ck tr.it td{border:0;padding:4px 2px}
+  .ck td.area{display:none}
+  .ck td.trc{grid-column:1/-1;padding-left:2px}
+  .ck td.rem{display:none;grid-column:1/-1}
+  .ck tr.bad td.rem,.ck tr.hasrem td.rem{display:block}
+  .ck tr.it td.rem input,.ck tr.it td.rem select{border:1px solid #D4CCE0;border-radius:8px;padding:7px 9px;background:#fff}
+  .ck tr.off td.rem{display:none}
+  .ar{display:block;font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--brand-2);margin-bottom:2px}
+  .ck td.mk span{width:32px;height:32px;font-size:1.05rem}
+  .ck td.mk.y span{border-color:#8BC5A3}.ck td.mk.n span{border-color:#E3A59D}
+  .ck tr.miss{background:#FFF1EF}
+  .mklegend{display:grid!important}
+  .foot{grid-template-columns:1fr 1fr}.foot label:first-child{grid-column:1/-1}
+  .edr{grid-template-columns:1fr 1fr;row-gap:4px}.edr.h{display:none}.edr .n{display:none}
+  .edr input.t{grid-column:1/-1}
+}
+.pv{display:none}
+.mklegend{display:none;grid-template-columns:1fr 44px 44px 44px;font-size:.7rem;font-weight:800;color:#6D6479;text-align:center;margin-top:4px}
+@page{size:A4 portrait;margin:9mm}
+@media print{
+  body{background:#fff}
+  .top,.actions,.lock,.chips,.info,.noprint,.toast{display:none!important}
+  .wrap{padding:0;max-width:none}
+  .sheet{box-shadow:none;max-width:none;width:192mm;padding:0;margin:0;font-size:9.4px;border-radius:0}
+  .ck col.area{width:12%}.ck col.mk{width:5%}.ck col.rem{width:19%}
+  .ck td{padding:1.5px 4px;line-height:1.25}.ck th{padding:2.5px 4px;font-size:.8rem}
+  .ck td.mk span{width:13px;height:13px;font-size:.78rem;border-width:1.2px}
+  .ck tr.sec td{padding:2px 4px;font-size:.74rem}
+  .ck td.area{font-size:.82rem}
+  .ck tr.miss td{background:none}
+  .ck tr{break-inside:avoid}.ck thead{display:table-header-group}
+  .hd{padding-bottom:4px;margin-bottom:5px}.hd img{width:26px;height:26px}.hd b{font-size:1.15rem}
+  .meta{margin-bottom:4px;gap:3px}.meta label{min-height:0;padding:2px 6px}
+  .flags{margin-bottom:4px}
+  .foot label{min-height:40px}.foot textarea{min-height:26px}
+  .fld input{width:7em}
+  .ck td.rem input,.ck td.rem select{font-size:.78rem;padding:0}
+  .ck td.mk.on span,.ck tr.sec td,.ck th,.flag,.ifc{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sheet{zoom:var(--pz,1)}
+  .ck td.rem input,.ck td.rem select{display:none}.pv{display:block;font-size:.78rem}
+  .fld input{border:0}
+}
+/* same sizes on screen for a moment, to measure how much to shrink so it fits one A4 page */
+html.pm .sheet{box-shadow:none;max-width:none;width:192mm;padding:0;margin:0;font-size:9.4px;border-radius:0}
+html.pm .ck col.area{width:12%}
+html.pm .ck col.mk{width:5%}
+html.pm .ck col.rem{width:19%}
+html.pm .ck td{padding:1.5px 4px;line-height:1.25}
+html.pm .ck th{padding:2.5px 4px;font-size:.8rem}
+html.pm .ck td.mk span{width:13px;height:13px;font-size:.78rem;border-width:1.2px}
+html.pm .ck tr.sec td{padding:2px 4px;font-size:.74rem}
+html.pm .ck td.area{font-size:.82rem}
+html.pm .ck tr.miss td{background:none}
+html.pm .ck tr{break-inside:avoid}
+html.pm .hd{padding-bottom:4px;margin-bottom:5px}
+html.pm .hd img{width:26px;height:26px}
+html.pm .hd b{font-size:1.15rem}
+html.pm .meta{margin-bottom:4px;gap:3px}
+html.pm .meta label{min-height:0;padding:2px 6px}
+html.pm .flags{margin-bottom:4px}
+html.pm .foot label{min-height:40px}
+html.pm .foot textarea{min-height:26px}
+html.pm .fld input{width:7em}
+html.pm .ck td.rem input,html.pm .ck td.rem select{font-size:.78rem;padding:0}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1 id="ttl">Checklist <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+  <div class="tabs" id="tabs"><button class="on" data-t="sheet">Checklist</button><button data-t="records">Records</button></div>
+  <button class="btn ghost hidden" id="bUpload" title="Upload the Areeba machines Excel sheet">Upload Excel</button>
+  <button class="btn ghost hidden" id="bEdit" title="Edit this checklist (Administrators)">✎ Edit list</button>
+  <button class="btn ghost" id="bPrint">Print</button>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<input type="file" id="xfile" accept=".xlsx,.xls,.xlsm,.csv" class="hidden">
+<dialog id="dEd" class="ed"></dialog>
+<dialog id="dUp"></dialog>
+
+<script src="common.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+const FORM = ["am", "pm", "dbank", "open", "close"].includes(UP.get("f")) ? UP.get("f") : "am";
+let site = UP.get("site") || "", ctx = null, M = null, run = null, tab = "sheet", dirty = false, saving = false, saveT = 0, units = null;
+const CONDS = { fnb: "F&B", backdoor: "Back door", crm: "CRM", dbank: "Direct banking" };
+const hm = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" });
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; setUrl({ id: null }); run = null; boot(); });
+    M = await api(`ops/forms/meta?form=${FORM}&site=${site}`);
+    document.title = `${M.meta.name} · ABC`;
+    $("#ttl").innerHTML = `${esc(M.meta.name)} <small id="sub">${esc(ctx.siteName)}</small>`;
+    $("#bEdit").classList.toggle("hidden", !M.can.admin);
+    $("#bUpload").classList.toggle("hidden", !(FORM === "dbank" && M.can.lead));
+    const id = Number(UP.get("id"));
+    if (id) return openRun(id);
+    if (M.meta.kind === "tenant") return showTab("records");
+    if (FORM === "dbank"){
+      const { runs } = await api(`ops/forms/list?form=dbank&site=${site}`);
+      const draft = runs.find(r => r.status === "draft");
+      if (draft) return openRun(draft.id);
+      return showTab("records");
+    }
+    await openNew();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function setUrl(o){ const u = new URL(location.href); u.searchParams.set("f", FORM); if (site) u.searchParams.set("site", site);
+  for (const [k, v] of Object.entries(o)) v ? u.searchParams.set(k, v) : u.searchParams.delete(k); history.replaceState(null, "", u); }
+function showTab(t){ tab = t; $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  if (t === "records") renderRecords(); else if (run) renderSheet(); else openNew(); }
+$("#tabs").onclick = async e => { const b = e.target.closest("button"); if (!b) return; await flush(); showTab(b.dataset.t); };
+$("#bPrint").onclick = () => { if (tab !== "sheet" || !run) return toast("Open a checklist to print it", true); window.print(); };
+/* one A4 portrait page: measure the sheet at print size and shrink it to fit (277mm printable height) */
+addEventListener("beforeprint", () => {
+  const sh = $("#sheet"); if (!sh) return;
+  document.documentElement.classList.add("pm");
+  const pageH = 277 * 96 / 25.4, h = sh.scrollHeight;
+  document.documentElement.classList.remove("pm");
+  /* the Direct Banking list (90+ tenants) runs over several A4 pages instead of shrinking to an unreadable size */
+  sh.style.setProperty("--pz", Math.max(FORM === "dbank" ? 0.8 : 0.55, Math.min(1, (pageH - 6) / h)).toFixed(3));
+});
+
+async function openNew(){
+  try {
+    if (M.meta.kind === "tenant" || FORM === "dbank"){ const r = await api(`ops/forms/new?form=${FORM}&site=${site}`); run = r.run;
+      if (M.meta.kind === "tenant") run.header = { date: ctx.today, flags: {} }; }
+    else run = (await api(`ops/forms/new?form=${FORM}&site=${site}`)).run;
+    if (FORM === "dbank" && !run.id) run.header = { from: hm(), to: "" };
+    setUrl({ id: run.id || null }); tab = "sheet"; $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === "sheet"));
+    renderSheet();
+  } catch (e){ $("#app").innerHTML = `<div class="card empty">${esc(e.message)}${FORM === "dbank" && M.can.lead ? `<br><button class="btn" style="margin-top:12px" onclick="$('#xfile').click()">Upload the Areeba machines Excel</button>` : ""}</div>`; }
+}
+async function openRun(id){
+  try { run = (await api(`ops/forms/get?id=${id}&site=${site}`)).run; setUrl({ id }); tab = "sheet";
+    $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === "sheet")); renderSheet(); }
+  catch (e){ toast(e.message, true); showTab("records"); }
+}
+
+/* ---------- records ---------- */
+async function renderRecords(){
+  $("#app").innerHTML = `<div class="empty">Loading…</div>`;
+  try {
+    const { runs } = await api(`ops/forms/list?form=${FORM}&site=${site}`);
+    const tenant = M.meta.kind === "tenant";
+    let top = "";
+    if (FORM === "dbank") top = `<div class="card info"><span>Areeba machines list: <b>${M.machines.count}</b> machines${M.machines.at ? ` · uploaded ${esc(new Date(M.machines.at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))} by ${esc(M.machines.by)}${M.machines.fileName ? ` · ${esc(M.machines.fileName)}` : ""}` : " · not uploaded yet"}</span>
+      <span class="bar">${M.can.lead ? `<button class="btn ghost small" onclick="$('#xfile').click()">Upload Excel</button>` : ""}${M.can.fill && M.machines.count ? `<button class="btn small" id="bNew">New inspection</button>` : ""}</span></div>`;
+    else if (tenant) top = `<div class="card info"><span>One checklist per tenant. Pick the tenant from the GLA or type a new name.</span>${M.can.fill ? `<button class="btn small" id="bNew">New ${esc(M.meta.short.toLowerCase())} checklist</button>` : ""}</div>`;
+    else top = `<div class="card info"><span>One ${esc(M.meta.short)} checklist per day.</span><button class="btn small" id="bNew">Today's checklist</button></div>`;
+    const rows = runs.map(r => `<tr class="row" data-id="${r.id}"><td class="n">${esc(D.fmt(r.day, { weekday: "short", year: "numeric" }))}</td>
+      ${tenant ? `<td><b>${esc(r.title)}</b></td>` : ""}<td>${esc(r.createdName)}</td>
+      <td><span class="pill ${r.status === "submitted" ? "ok" : "brand"}">${r.status === "submitted" ? "Submitted" : "In progress"}</span></td>
+      <td class="n">${r.done} / ${r.total}</td><td class="n">${r.issues ? `<span class="pill alert">${r.issues}</span>` : "—"}</td></tr>`).join("");
+    $("#app").innerHTML = top + (runs.length ? `<div class="card" style="overflow-x:auto;max-width:210mm;margin:0 auto"><table class="rec"><thead><tr><th>Date</th>${tenant ? "<th>Tenant</th>" : ""}<th>Filled by</th><th>Status</th><th>Done</th><th>✗</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div class="card empty" style="max-width:210mm;margin:0 auto">No records yet.</div>`);
+    const nb = $("#bNew"); if (nb) nb.onclick = () => { run = null; openNew(); };
+    $("#app").querySelectorAll("tr.row").forEach(tr => tr.onclick = () => openRun(Number(tr.dataset.id)));
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ---------- the sheet ---------- */
+const locked = () => run.status === "submitted" || !M.can.fill;
+const flagsOf = () => (run.header && run.header.flags) || {};
+const offItem = it => it.c && flagsOf()[it.c] === false;
+function tally(){
+  let done = 0, total = 0, issues = 0;
+  for (const it of run.items){ if (offItem(it)) continue; total++; const a = run.answers[it.id] || {};
+    if (it.k === "training"){ if (a.tr === "yes" || (a.tr === "no" && a.day)) done++; continue; }
+    if (a.v) done++; if (a.v === "n") issues++; }
+  return { done, total, issues };
+}
+function metaHTML(){
+  const h = run.header || {}, L = locked();
+  const inp = (k, ph, type) => `<input data-h="${k}" ${type ? `type="${type}"` : ""} value="${esc(h[k] || "")}" placeholder="${ph || ""}" ${L ? "readonly" : ""}>`;
+  const by = run.createdName || ctx.me.name;
+  if (M.meta.kind === "tenant") return `<div class="meta">
+    <label><span>Tenant</span><input data-h="tenant" list="glaList" value="${esc(h.tenant || "")}" placeholder="Pick or type" ${L ? "readonly" : ""}></label>
+    <label><span>Unit · Level</span><input data-h="unitlevel" value="${esc([h.unit, h.level].filter(Boolean).join(" · "))}" ${L ? "readonly" : ""}></label>
+    <label><span>Category</span>${inp("category")}</label>
+    <label><span>${FORM === "open" ? "Opening" : "Closing"} date</span>${inp("date", "", "date")}</label>
+    <label><span>Branch manager</span>${inp("manager")}</label>
+    <label><span>Phone / email</span>${inp("contact")}</label>
+    <label><span>Ops representative</span><div class="ro">${esc(by)}</div></label>
+    <label><span>Status</span><div class="ro" id="stTxt"></div></label></div>
+    <datalist id="glaList">${(units || []).map(u => `<option value="${esc(u.brand)}">${esc(u.code)} · ${esc(u.status)}</option>`).join("")}</datalist>
+    <div class="flags">${Object.entries(M.flags).map(([k, l]) => { const v = (h.flags || {})[k];
+      return `<div class="flag ${v === undefined ? "unset" : ""}">${esc(l)}?<span class="yn"><button data-flag="${k}" data-v="1" class="${v === true ? "on" : ""}" ${L ? "disabled" : ""}>Yes</button><button data-flag="${k}" data-v="0" class="${v === false ? "on" : ""}" ${L ? "disabled" : ""}>No</button></span></div>`; }).join("")}</div>`;
+  if (FORM === "dbank") return `<div class="meta">
+    <label><span>Date</span><input data-day type="date" value="${esc(run.day)}" ${L ? "readonly" : ""}></label>
+    <label><span>Inspected by</span><div class="ro">${esc(by)}</div></label>
+    <label><span>Time</span><div class="ro" style="display:flex;gap:2px;align-items:center;flex-wrap:wrap"><input data-h="from" type="time" value="${esc(h.from || "")}" ${L ? "readonly" : ""} style="width:6.6em">–<input data-h="to" type="time" value="${esc(h.to || "")}" ${L ? "readonly" : ""} style="width:6.6em"></div></label>
+    <label><span>Status</span><div class="ro" id="stTxt"></div></label></div>`;
+  return `<div class="meta">
+    <label><span>Date</span><div class="ro">${esc(D.long(run.day))}</div></label>
+    <label><span>Supervisor</span><div class="ro">${esc(by)}</div></label>
+    <label><span>Started</span><div class="ro">${run.createdAt ? esc(new Date(run.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" })) : "—"}</div></label>
+    <label><span>Status</span><div class="ro" id="stTxt"></div></label></div>`;
+}
+function rowsHTML(){
+  const L = locked(), out = [];
+  let sec = null, i = 0;
+  const items = run.items;
+  while (i < items.length){
+    const it = items[i];
+    if (it.s !== sec){ sec = it.s; if (sec) out.push(`<tr class="sec"><td colspan="6">${esc(sec)}</td></tr>`); }
+    let j = i; while (j + 1 < items.length && items[j + 1].s === it.s && items[j + 1].a === it.a) j++;
+    for (let k = i; k <= j; k++){
+      const x = items[k], a = run.answers[x.id] || {}, off = offItem(x);
+      const cond = x.c ? `<span class="ifc">IF ${esc(CONDS[x.c])}</span>` : "";
+      let task = `${k === i ? `<span class="ar">${esc(x.a)}</span>` : ""}${cond}${esc(x.t)}`;
+      if (x.ids) task += `<span class="ids">${esc(x.ids)}</span>`;
+      if (x.f && !off) task += `<div>${x.f.map(n => `<label class="fld">${esc(n)}<input data-f="${esc(x.id)}" data-n="${esc(n)}" value="${esc((a.f || {})[n] || "")}" ${L ? "readonly" : ""}></label>`).join("")}</div>`;
+      if (x.k === "gla" && run.header && run.header.unitId) task += `<a class="glalink noprint" href="/tools/gla?unit=${run.header.unitId}&back=${encodeURIComponent(`/tools/forms?f=${FORM}&site=${site}${run.id ? `&id=${run.id}` : ""}`)}">Open in GLA ↗</a>`;
+      const cls = ["it", off ? "off" : "", a.v === "n" ? "bad" : "", a.r ? "hasrem" : ""].join(" ");
+      let marks;
+      if (x.k === "training" && !off){
+        marks = `<td colspan="3" class="trc"><div class="tr"><span class="yn"><button data-tr="${x.id}" data-v="yes" class="${a.tr === "yes" ? "on" : ""}" ${L ? "disabled" : ""}>Yes</button><button data-tr="${x.id}" data-v="no" class="${a.tr === "no" ? "on" : ""}" ${L ? "disabled" : ""}>No</button></span>
+          ${a.tr === "no" ? `<label class="fld" style="margin:0">Training day <input type="date" data-trday="${x.id}" value="${esc(a.day || "")}" ${L ? "readonly" : ""} style="width:auto"></label>` : ""}</div></td>`;
+      } else {
+        const mk = (v, sym) => `<td class="mk ${v} ${(off ? v === "na" : a.v === v) ? "on" : ""}" ${off || L ? "" : `data-mk="${x.id}" data-v="${v}"`}><span>${sym}</span></td>`;
+        marks = mk("y", "✓") + mk("n", "✗") + mk("na", "–");
+      }
+      let rem;
+      if (off) rem = `<td class="rem">Not applicable</td>`;
+      else if (FORM === "dbank" && a.v === "n") rem = `<td class="rem"><select data-rs="${x.id}" ${L ? "disabled" : ""}><option value="">Choose a reason…</option>${M.reasons.map(r => `<option ${a.r === r ? "selected" : ""}>${esc(r)}</option>`).join("")}<option value="__other" ${a.r && !M.reasons.includes(a.r) ? "selected" : ""}>Other…</option></select><span class="pv">${esc(a.r || "")}</span>${a.r && !M.reasons.includes(a.r) || a._other ? `<input data-r="${x.id}" value="${esc(M.reasons.includes(a.r) ? "" : a.r || "")}" placeholder="Describe" ${L ? "readonly" : ""}>` : ""}</td>`;
+      else rem = `<td class="rem"><input data-r="${x.id}" value="${esc(a.r || "")}" placeholder="${a.v === "n" ? "What is wrong?" : ""}" ${L ? "readonly" : ""}><span class="pv">${esc(a.r || "")}</span></td>`;
+      out.push(`<tr class="${cls}" data-id="${x.id}">${k === i ? `<td class="area" rowspan="${j - i + 1}">${esc(x.a)}</td>` : ""}<td class="task">${task}</td>${marks}${rem}</tr>`);
+    }
+    i = j + 1;
+  }
+  return out.join("");
+}
+function renderSheet(){
+  const L = locked(), t = tally();
+  const ref = M.meta.ref ? `${esc(M.meta.ref)}<br>` : "";
+  const lock = run.status === "submitted"
+    ? `<div class="card lock"><span>Submitted by <b>${esc(run.submittedName)}</b> on ${esc(new Date(run.submittedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}.</span>${M.can.lead ? `<button class="btn ghost small" id="bReopen">Reopen</button>` : ""}</div>` : "";
+  $("#app").innerHTML = `${lock}${FORM === "dbank" && !L ? `<div class="chips noprint">${[...new Set(run.items.map(i => i.a))].map(f => `<button class="chip" data-jump="${esc(f)}">${esc(f)}</button>`).join("")}<button class="chip" id="allOk">Mark the rest ✓</button></div>` : ""}
+  <div class="sheet" id="sheet">
+    <div class="hd"><img src="/icons/abc-48.png" alt=""><div><b>${esc(M.meta.name)}</b><small>${esc(ctx.siteName)} · Operations</small></div><div class="ref">${ref}${esc(D.fmt(run.day, { year: "numeric" }))}</div></div>
+    ${metaHTML()}
+    <div class="prog noprint"><i id="progBar" style="width:0"></i></div>
+    <div class="mklegend noprint"><span></span><span>✓ OK</span><span>✗ Issue</span><span>N/A</span></div>
+    <table class="ck"><colgroup><col class="area"><col><col class="mk"><col class="mk"><col class="mk"><col class="rem"></colgroup>
+      <thead><tr><th class="area">${FORM === "dbank" ? "Floor" : "Area"}</th><th>${FORM === "dbank" ? "Tenant · Terminal ID" : "Task"}</th><th style="text-align:center">✓</th><th style="text-align:center">✗</th><th style="text-align:center">N/A</th><th class="rem">${FORM === "dbank" ? "Reason / remark" : "Remark"}</th></tr></thead>
+      <tbody id="rows">${rowsHTML()}</tbody></table>
+    <div class="foot"><label><span>${esc(M.meta.commentsLabel)}</span><textarea id="cmt" ${L ? "readonly" : ""}>${esc(run.comments || "")}</textarea></label>
+      <label><span>Filled by</span><div class="sig">${esc(run.createdName || ctx.me.name)}</div></label>
+      <label><span>${M.meta.kind === "tenant" ? "Branch manager signature" : "Submitted by"}</span><div class="sig">${M.meta.kind === "tenant" ? esc((run.header || {}).manager || "") : esc(run.submittedName || "")}</div></label></div>
+  </div>
+  ${L ? "" : `<div class="actions noprint"><span class="status" id="saveTxt">${run.id ? "Saved" : "Not saved yet"}</span>
+    ${run.id ? `<button class="btn ghost danger" id="bDel">Delete</button>` : ""}<button class="btn" id="bSubmit">Submit</button></div>`}`;
+  paintStatus(t);
+  wire();
+}
+function paintStatus(t){
+  t = t || tally();
+  const s = $("#stTxt"); if (s) s.innerHTML = `${t.done} / ${t.total}${t.issues ? ` · <b style="color:var(--alert)">${t.issues} ✗</b>` : ""}`;
+  const b = $("#progBar"); if (b) b.style.width = `${t.total ? Math.round(t.done / t.total * 100) : 0}%`;
+}
+function redrawRows(){ $("#rows").innerHTML = rowsHTML(); paintStatus(); }
+function wire(){
+  const sh = $("#sheet"), ans = id => (run.answers[id] = run.answers[id] || {});
+  sh.onclick = e => {
+    if (locked()) return;
+    const m = e.target.closest("[data-mk]");
+    if (m){ const a = ans(m.dataset.mk); a.v = a.v === m.dataset.v ? undefined : m.dataset.v; if (!a.v) delete a.v;
+      redrawRows(); changed(); if (a.v === "n"){ const i = sh.querySelector(`tr[data-id="${m.dataset.mk}"] td.rem input, tr[data-id="${m.dataset.mk}"] td.rem select`); i && i.focus(); } return; }
+    const f = e.target.closest("[data-flag]");
+    if (f){ run.header.flags = run.header.flags || {}; run.header.flags[f.dataset.flag] = f.dataset.v === "1";
+      $("#sheet").querySelectorAll(`[data-flag="${f.dataset.flag}"]`).forEach(b => b.classList.toggle("on", b === f)); f.closest(".flag").classList.remove("unset");
+      redrawRows(); changed(); return; }
+    const tr = e.target.closest("[data-tr]");
+    if (tr){ const a = ans(tr.dataset.tr); a.tr = tr.dataset.v; if (a.tr === "yes") delete a.day; redrawRows(); changed(); }
+  };
+  sh.oninput = e => {
+    const x = e.target;
+    if (x.dataset.r !== undefined){ const a = ans(x.dataset.r); a.r = x.value; x.closest("tr").classList.toggle("hasrem", !!x.value); changed(); }
+    else if (x.dataset.f){ const a = ans(x.dataset.f); a.f = a.f || {}; a.f[x.dataset.n] = x.value; changed(); }
+    else if (x.dataset.h){ run.header = run.header || {};
+      if (x.dataset.h === "unitlevel"){ const [u, l] = x.value.split("·").map(s => s.trim()); run.header.unit = u || ""; run.header.level = l || ""; }
+      else run.header[x.dataset.h] = x.value;
+      if (x.dataset.h === "tenant") pickTenant(x.value); changed(); }
+    else if (x.id === "cmt"){ run.comments = x.value; changed(); }
+  };
+  sh.onchange = e => {
+    const x = e.target;
+    if (x.dataset.rs){ const a = ans(x.dataset.rs); if (x.value === "__other"){ a.r = ""; a._other = true; } else { a.r = x.value; delete a._other; } redrawRows(); changed();
+      if (a._other){ const i = sh.querySelector(`input[data-r="${x.dataset.rs}"]`); i && i.focus(); } }
+    if (x.dataset.trday){ ans(x.dataset.trday).day = x.value; paintStatus(); changed(); }
+    if (x.dataset.day !== undefined){ run.day = x.value; changed(); }
+  };
+  const del = $("#bDel"); if (del) del.onclick = async () => {
+    if (!await confirmBox("Delete this checklist?", "The record and its answers will be removed.", "Delete")) return;
+    try { await api("ops/forms/remove", { site, id: run.id }); run = null; setUrl({ id: null }); toast("Deleted"); showTab("records"); } catch (e){ toast(e.message, true); }
+  };
+  const sb = $("#bSubmit"); if (sb) sb.onclick = submit;
+  const ro = $("#bReopen"); if (ro) ro.onclick = async () => { try { await api("ops/forms/reopen", { site, id: run.id }); openRun(run.id); } catch (e){ toast(e.message, true); } };
+  document.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => { const it = run.items.find(i => i.a === b.dataset.jump);
+    const tr = it && sh.querySelector(`tr[data-id="${it.id}"]`); tr && tr.scrollIntoView({ behavior: "smooth", block: "center" }); });
+  const all = $("#allOk"); if (all) all.onclick = async () => {
+    const left = run.items.filter(i => !(run.answers[i.id] || {}).v).length;
+    if (!left) return toast("Every tenant is already marked");
+    if (!await confirmBox("Mark the rest ✓?", `${left} tenant${left === 1 ? "" : "s"} without an answer will be marked ✓.`, "Mark ✓")) return;
+    run.items.forEach(i => { const a = ans(i.id); if (!a.v) a.v = "y"; }); redrawRows(); changed();
+  };
+  if (M.meta.kind === "tenant" && !units && !locked()) api(`ops/forms/tenants?site=${site}`).then(r => { units = r.units; const dl = $("#glaList");
+    if (dl) dl.innerHTML = units.map(u => `<option value="${esc(u.brand)}">${esc(u.code)} · ${esc(u.status)}</option>`).join(""); }).catch(() => {});
+}
+function pickTenant(name){
+  const u = (units || []).find(x => x.brand.toLowerCase() === String(name).trim().toLowerCase());
+  if (!u){ run.header.unitId = 0; return; }
+  Object.assign(run.header, { unitId: u.id, unit: u.code, level: u.level, category: u.category || run.header.category || "" });
+  const fnb = /restaurant|food|f&b|cafe|café/i.test(u.category || "");
+  run.header.flags = run.header.flags || {};
+  if (run.header.flags.fnb === undefined) run.header.flags.fnb = fnb;
+  const sh = $("#sheet");
+  sh.querySelector('[data-h="unitlevel"]').value = `${u.code} · ${u.level}`;
+  sh.querySelector('[data-h="category"]').value = run.header.category;
+  sh.querySelectorAll('[data-flag="fnb"]').forEach(b => b.classList.toggle("on", (b.dataset.v === "1") === run.header.flags.fnb));
+  sh.querySelector('[data-flag="fnb"]').closest(".flag").classList.remove("unset");
+  redrawRows();
+}
+
+/* ---------- saving ---------- */
+function changed(){ dirty = true; const s = $("#saveTxt"); if (s) s.textContent = "Saving…"; clearTimeout(saveT); saveT = setTimeout(() => save(false), 1200); }
+async function flush(){ clearTimeout(saveT); if (dirty && run && !locked()) await save(false); }
+async function save(submit){
+  if (saving){ clearTimeout(saveT); saveT = setTimeout(() => save(submit), 400); return; }
+  if (M.meta.kind === "tenant" && !String((run.header || {}).tenant || "").trim()){ const s = $("#saveTxt"); if (s) s.textContent = "Enter the tenant to save"; return; }
+  saving = true;
+  try {
+    const answers = JSON.parse(JSON.stringify(run.answers)); Object.values(answers).forEach(a => delete a._other);
+    const r = await api("ops/forms/save", { site, form: FORM, id: run.id || 0, day: run.day, header: run.header || {}, answers, comments: run.comments || "",
+      itemIds: FORM === "dbank" ? run.items.map(i => i.id) : undefined, submit });
+    const first = !run.id; run.id = r.id; dirty = false;
+    if (first) setUrl({ id: r.id });
+    if (submit){ run = (await api(`ops/forms/get?id=${r.id}&site=${site}`)).run; renderSheet(); toast("Checklist submitted"); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    else { const s = $("#saveTxt"); if (s) s.textContent = `Saved ${hm()}`; if (first && !$("#bDel")) renderSheet(); }
+  } catch (e){ const s = $("#saveTxt"); if (s) s.textContent = "Not saved"; toast(e.message, true); }
+  finally { saving = false; }
+}
+async function submit(){
+  const t = tally();
+  if (M.meta.kind === "tenant"){
+    if (!String(run.header.tenant || "").trim()) return toast("Enter the tenant", true);
+    const unset = Object.keys(M.flags).filter(k => (run.header.flags || {})[k] === undefined);
+    if (unset.length) return toast(`Answer the yellow questions: ${unset.map(k => M.flags[k]).join(", ")}`, true);
+  }
+  if (t.done < t.total){
+    const miss = run.items.filter(i => !offItem(i) && !(i.k === "training" ? ((run.answers[i.id] || {}).tr === "yes" || ((run.answers[i.id] || {}).tr === "no" && (run.answers[i.id] || {}).day)) : (run.answers[i.id] || {}).v));
+    document.querySelectorAll("tr.miss").forEach(r => r.classList.remove("miss"));
+    miss.forEach(i => { const tr = document.querySelector(`tr[data-id="${i.id}"]`); tr && tr.classList.add("miss"); });
+    const tr = miss[0] && document.querySelector(`tr[data-id="${miss[0].id}"]`); tr && tr.scrollIntoView({ behavior: "smooth", block: "center" });
+    return toast(`${t.total - t.done} item${t.total - t.done === 1 ? "" : "s"} still to tick`, true);
+  }
+  const noReason = run.items.filter(i => (run.answers[i.id] || {}).v === "n" && !String((run.answers[i.id] || {}).r || "").trim());
+  if (noReason.length){ const tr = document.querySelector(`tr[data-id="${noReason[0].id}"]`); tr && tr.scrollIntoView({ behavior: "smooth", block: "center" });
+    return toast(`Add a remark to every ✗ (${noReason.length} missing)`, true); }
+  if (FORM === "dbank" && !run.header.to) run.header.to = hm();
+  if (!await confirmBox("Submit the checklist?", `${t.done} / ${t.total} done${t.issues ? ` · <b>${t.issues} ✗</b>` : ""}. After submitting it can no longer be changed (a manager can reopen it).`, "Submit")) return;
+  clearTimeout(saveT); await save(true);
+}
+addEventListener("beforeunload", e => { if (dirty) { save(false); e.preventDefault(); } });
+
+/* ---------- ✎ edit the list (Administrators) ---------- */
+let ed = null;
+$("#bEdit").onclick = async () => {
+  try { ed = await api(`ops/forms/template?form=${FORM}&site=${site}`); ed.items = ed.items.map(x => ({ ...x })); drawEd(); $("#dEd").showModal(); } catch (e){ toast(e.message, true); }
+};
+function drawEd(){
+  const d = $("#dEd");
+  const body = FORM === "dbank"
+    ? `<p class="hint muted" style="font-size:.84rem;line-height:1.5;margin-bottom:10px">The tenants come from the Areeba Excel upload. Here you set the ready-made reasons offered when a tenant is marked ✗ (one per line).</p>
+       <textarea id="edReasons" rows="12">${esc(ed.reasons.join("\n"))}</textarea>`
+    : `<div class="edl"><div class="edr h"><span></span><span>Section</span><span>Area</span><span>Task</span><span>Only if</span><span>Fields (comma)</span><span></span></div>
+       ${ed.items.map((x, i) => `<div class="edr" data-i="${i}"><span class="n">${i + 1}</span>
+         <input data-k="s" value="${esc(x.s)}" list="edSecs"><input data-k="a" value="${esc(x.a)}"><input class="t" data-k="t" value="${esc(x.t)}">
+         <select data-k="c"><option value="">Always</option>${Object.entries(CONDS).map(([k, l]) => `<option value="${k}" ${x.c === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+         <input data-k="f" value="${esc((x.f || []).join(", "))}" placeholder="e.g. Serial no.">
+         <span class="mv"><button data-mv="-1" title="Move up">↑</button><button data-mv="1" title="Move down">↓</button><button class="del" data-del title="Remove">✕</button></span></div>`).join("")}</div>
+       <datalist id="edSecs">${[...new Set(ed.items.map(x => x.s))].map(s => `<option value="${esc(s)}">`).join("")}</datalist>
+       <button class="btn ghost small" id="edAdd" style="margin-top:10px">+ Add item</button>`;
+  d.innerHTML = `<div class="dlg-h"><b>✎ Edit list · ${esc(M.meta.name)}</b><small>${esc(ctx.siteName)} · changes apply to new checklists; submitted records keep their list</small></div>
+    <div class="dlg-b">${body}<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:600;font-size:.88rem"><input type="checkbox" id="edAll"> Apply to all 5 flagships</label><div class="err" id="edErr" style="color:var(--alert);font-size:.84rem;margin-top:6px"></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="edCancel">Cancel</button><button class="btn" id="edSave">Save list</button></div>`;
+  d.querySelector("#edCancel").onclick = () => d.close();
+  d.querySelector("#edSave").onclick = saveEd;
+  if (FORM === "dbank") return;
+  d.querySelector(".edl").oninput = e => { const r = e.target.closest("[data-i]"); if (!r) return; const x = ed.items[Number(r.dataset.i)], k = e.target.dataset.k;
+    if (k === "f") x.f = e.target.value.split(",").map(s => s.trim()).filter(Boolean); else if (k === "c") { if (e.target.value) x.c = e.target.value; else delete x.c; } else x[k] = e.target.value; };
+  d.querySelector(".edl").onchange = d.querySelector(".edl").oninput;
+  d.querySelector(".edl").onclick = e => { const r = e.target.closest("[data-i]"); if (!r) return; const i = Number(r.dataset.i);
+    if (e.target.dataset.mv){ const j = i + Number(e.target.dataset.mv); if (j < 0 || j >= ed.items.length) return; [ed.items[i], ed.items[j]] = [ed.items[j], ed.items[i]]; keepScroll(drawEd); }
+    if (e.target.dataset.del !== undefined){ ed.items.splice(i, 1); keepScroll(drawEd); } };
+  d.querySelector("#edAdd").onclick = () => { const last = ed.items[ed.items.length - 1] || {}; ed.items.push({ id: "n" + Date.now().toString(36), s: last.s || "", a: last.a || "", t: "" });
+    drawEd(); const l = $("#dEd .edl"); l.scrollTop = l.scrollHeight; const ins = $("#dEd").querySelectorAll("input.t"); ins[ins.length - 1].focus(); };
+}
+function keepScroll(fn){ const l = $("#dEd .edl"), y = l ? l.scrollTop : 0; fn(); const l2 = $("#dEd .edl"); if (l2) l2.scrollTop = y; }
+async function saveEd(){
+  const all = $("#edAll").checked;
+  if (all && !await confirmBox("Apply to all flagships?", "The same list will replace this checklist at all 5 flagships.", "Apply to all")) return;
+  try {
+    const body = FORM === "dbank" ? { reasons: $("#edReasons").value.split("\n").map(s => s.trim()).filter(Boolean) } : { items: ed.items.filter(x => String(x.t || "").trim()) };
+    const r = await api("ops/forms/template/save", { site, form: FORM, allSites: all, ...body });
+    $("#dEd").close(); toast(`List saved${r.sites > 1 ? ` for ${r.sites} flagships` : ""}`);
+    M = await api(`ops/forms/meta?form=${FORM}&site=${site}`);
+    if (run && !run.id){ run = null; openNew(); } else if (run) renderSheet();
+  } catch (e){ $("#edErr").textContent = e.message; }
+}
+
+/* ---------- Direct Banking: upload the Areeba machines Excel ---------- */
+$("#bUpload").onclick = () => $("#xfile").click();
+$("#xfile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+    let found = null;
+    for (const name of wb.SheetNames){
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", raw: false });
+      const hi = rows.findIndex(r => r.some(c => /^tenant/i.test(String(c).trim())) && r.some(c => /terminal|floor/i.test(String(c))));
+      if (hi < 0) continue;
+      const H = rows[hi].map(c => String(c).trim().toLowerCase());
+      const col = re => H.findIndex(h => re.test(h));
+      const c = { tenant: col(/^tenant/), old: col(/old/), neu: col(/new/) >= 0 ? col(/new/) : H.findIndex(h => /terminal/.test(h) && !/old/.test(h)), floor: col(/floor|level/) };
+      const list = rows.slice(hi + 1).map(r => ({ tenant: String(r[c.tenant] || "").trim(), oldId: c.old >= 0 ? String(r[c.old] || "").trim() : "",
+        newId: c.neu >= 0 ? String(r[c.neu] || "").trim() : "", floor: c.floor >= 0 ? String(r[c.floor] || "").trim() : "" })).filter(m => m.tenant);
+      if (list.length){ found = { name, list }; break; }
+    }
+    if (!found) return toast("No sheet with a Tenant and Terminal ID / Floor header was found", true);
+    const floors = [...new Set(found.list.map(m => m.floor || "—"))];
+    const d = $("#dUp");
+    d.innerHTML = `<div class="dlg-h"><b>Upload the Areeba machines list</b><small>${esc(f.name)} · sheet “${esc(found.name)}”</small></div>
+      <div class="dlg-b"><p style="line-height:1.55;font-size:.9rem"><b>${found.list.length}</b> machines on ${floors.length} floor${floors.length === 1 ? "" : "s"} (${floors.map(esc).join(", ")}).<br>
+      This replaces the current list of <b>${M.machines.count}</b> for ${esc(ctx.siteName)}. Inspections already started keep their own list.</p></div>
+      <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok>Upload</button></div>`;
+    d.querySelector("[data-x]").onclick = () => d.close();
+    d.querySelector("[data-ok]").onclick = async () => {
+      try { const r = await api("ops/forms/dbank/upload", { site, fileName: f.name, machines: found.list }); d.close(); toast(`${r.count} machines uploaded`);
+        M = await api(`ops/forms/meta?form=${FORM}&site=${site}`); if (tab === "records" || !run) showTab("records"); }
+      catch (err){ toast(err.message, true); }
+    };
+    d.showModal();
+  } catch (err){ toast("This file could not be read: " + err.message, true); }
+};
+
+boot();
+</script>
+</body>
+</html>

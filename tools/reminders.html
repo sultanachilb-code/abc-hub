@@ -113,6 +113,7 @@ function describe(r){
   if (r.kind === "restroom") return `${data.windows[p.window] ? data.windows[p.window].label + " (" + data.windows[p.window].from + "–" + data.windows[p.window].to + ")" : ""} · ${data.teams[p.team] || ""}`;
   if (r.kind === "handover") return `${p.shift === "PM" ? "Evening" : "Morning"} shift · ${p.stage === "received" ? "received by the next shift" : "submitted"}`;
   if (r.kind === "pir") return p.overdueOnly ? "Overdue reports only" : "Every report waiting";
+  if (r.kind === "form") return `${({ am: "AM Checklist", pm: "PM Checklist", dbank: "Direct Banking" })[p.form] || ""} · ${p.period === "week" ? "this week" : "today"}`;
   if (r.kind === "sitevisit") return `Open ${p.days} day${p.days === 1 ? "" : "s"} or more`;
   return K.source || "";
 }
@@ -216,6 +217,9 @@ function paramFields(){
     <div><label class="lbl">Done when</label><select class="sel" id="pStage"><option value="submitted" ${p.stage !== "received" ? "selected" : ""}>It is submitted</option><option value="received" ${p.stage === "received" ? "selected" : ""}>The next shift received it</option></select></div>`;
   if (edit.kind === "pir") return `
     <div class="full"><label class="lbl">Count</label><select class="sel" id="pOver"><option value="1" ${p.overdueOnly !== false ? "selected" : ""}>Overdue reports only</option><option value="0" ${p.overdueOnly === false ? "selected" : ""}>Every report still waiting</option></select></div>`;
+  if (edit.kind === "form") return `
+    <div><label class="lbl">Checklist</label><select class="sel" id="pForm">${[["am","AM Checklist"],["pm","PM Checklist"],["dbank","Direct Banking Checklist"]].map(([k, l]) => `<option value="${k}" ${(p.form || "am") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div><label class="lbl">Done when submitted</label><select class="sel" id="pPeriod"><option value="day" ${p.period !== "week" ? "selected" : ""}>Today</option><option value="week" ${p.period === "week" ? "selected" : ""}>Any day this week (from Monday)</option></select></div>`;
   if (edit.kind === "sitevisit") return `
     <div class="full"><label class="lbl">Pending when a visit is open for at least (days)</label><input class="inp" id="pDays" type="number" min="0" max="60" value="${p.days ?? 2}"></div>`;
   return "";
@@ -256,6 +260,7 @@ function grab(){
   if (edit.kind === "restroom"){ p.window = v("#pWin"); p.team = v("#pTeam"); }
   if (edit.kind === "handover"){ p.shift = v("#pShift"); p.stage = v("#pStage"); }
   if (edit.kind === "pir") p.overdueOnly = v("#pOver") === "1";
+  if (edit.kind === "form"){ p.form = v("#pForm"); p.period = v("#pPeriod"); }
   if (edit.kind === "sitevisit") p.days = Number(v("#pDays"));
   edit.params = p;
 }
@@ -277,7 +282,7 @@ function openPick(){
     <div class="dlg-b"><div class="pk">${data.presets.map(x => {
       const has = have.has(x.key), K = data.kinds[x.kind];
       return `<label class="${has ? "has" : ""}"><input type="checkbox" value="${x.key}" ${has ? "checked disabled" : ""}>
-        <span><b>${esc(x.title)}</b><small>${esc(K.source)}${x.every ? ` · repeats every ${x.every} min until ${x.until}` : ""}${has ? " · already added" : ""}</small></span>
+        <span><b>${esc(x.title)}</b><small>${esc(K.source)}${x.every ? ` · repeats every ${x.every} min until ${x.until}` : ""}${x.days && x.days !== "1234567" ? ` · ${daysLabel(x.days)}` : ""}${has ? " · already added" : ""}</small></span>
         <span class="t">${esc(x.at)}</span></label>`; }).join("")}</div></div>
     <div class="dlg-f"><button class="btn ghost" id="pAll" style="margin-right:auto">Tick all</button><button class="btn ghost" id="pCancel">Cancel</button><button class="btn" id="pAdd">Add selected</button></div>`;
   d.querySelector("#pAll").onclick = () => d.querySelectorAll("input:not([disabled])").forEach(i => i.checked = true);
