@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property Details · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Property Details feature — see docs/FEATURE-property-details.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar .inp{width:230px}
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.hero div{padding:14px 16px}
+.hero strong{display:block;font-size:1.3rem;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;word-break:break-word}
+.hero span{font-size:.74rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.occ{display:flex;align-items:flex-end;gap:10px;height:110px;padding:6px 4px 0}
+.occ div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:.74rem;color:var(--muted);font-weight:700}
+.occ i{display:block;width:100%;max-width:46px;border-radius:8px 8px 3px 3px;background:var(--brand-2);flex:none}
+.occ .col{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;min-height:0}
+.occ b{color:var(--text);font-size:.8rem}
+.toc{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.toc a{font-size:.8rem;font-weight:800;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none}
+.toc a:hover{border-color:var(--brand-2)}
+.cat{margin-top:16px;overflow:hidden}
+.cat > h2{background:var(--ink);color:#fff;font-size:1rem;font-weight:800;padding:11px 16px;display:flex;align-items:center;gap:8px}
+.grp{padding:4px 16px 12px}
+.grp h3{font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-2);margin:12px 0 4px;display:flex;align-items:center;gap:8px}
+.grp h3 .add{margin-left:auto;font-size:.72rem;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:700}
+.r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:12px;padding:8px 0;border-top:1px solid var(--line);align-items:start}
+.r .k{font-size:.9rem;display:flex;gap:6px;align-items:flex-start}
+.r .k .ed{opacity:0}.r:hover .k .ed{opacity:1}
+@media (hover:none){ .r .k .ed{opacity:1} }
+.r .v{font-weight:700;font-size:.92rem;white-space:pre-line;display:flex;gap:6px;align-items:flex-start}
+.r .v .t{flex:1;min-width:0}
+.r .v .t.empty{color:var(--muted);font-weight:500;font-style:italic}
+.r.total{background:var(--paper);margin:0 -16px;padding:8px 16px}
+.r.total .k,.r.total .v{font-weight:900}
+.r .who{display:block;font-size:.7rem;color:var(--muted);font-weight:600;margin-top:2px}
+.r .note{grid-column:1/-1;font-size:.8rem;background:rgba(200,162,74,.14);color:#6B5314;border-radius:8px;padding:6px 10px;margin-top:-2px}
+:root[data-theme="dark"] .r .note{color:#E6C877}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .r .note{color:#E6C877} }
+.ed{width:26px;height:26px;border-radius:7px;color:var(--muted);flex:none;display:grid;place-items:center}
+.ed:hover{background:var(--paper);color:var(--brand-2)}
+.ed svg{width:15px;height:15px}
+.r textarea{min-height:38px;font-weight:600}
+.minibar{display:block;height:6px;border-radius:99px;background:var(--brand-2);margin-top:4px;opacity:.75}
+.r.hide{display:none}
+.cmp{overflow:auto;max-height:calc(100vh - 170px)}
+.cmp table{border-collapse:collapse;width:100%;min-width:900px;font-size:.84rem}
+.cmp th{position:sticky;top:0;background:var(--ink);color:#fff;padding:9px 10px;text-align:left;z-index:2}
+.cmp td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;white-space:pre-line}
+.cmp tr.cg td{background:var(--paper);font-weight:900;font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-2)}
+.cmp tr.tot td{font-weight:800}
+.cmp td.miss{background:rgba(229,72,77,.07)}
+.cmp td.n{font-size:.76rem;color:#6B5314;max-width:260px}
+.banner{padding:12px 16px;border-radius:12px;background:rgba(123,75,176,.1);color:var(--brand-2);font-weight:600;font-size:.88rem;margin-top:12px}
+.hist{display:grid;gap:6px;max-height:60vh;overflow:auto}
+.hist div{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:.84rem}
+.hist small{color:var(--muted);display:block;margin-top:2px}
+.hist .old{color:var(--muted);text-decoration:line-through}
+@media (max-width:640px){ .r{grid-template-columns:1fr;gap:2px} .bar .inp{width:100%} }
+@media print{ .bar,.toc,.ed,.add{display:none!important} .cat > h2,.r.total{-webkit-print-color-adjust:exact;print-color-adjust:exact} .cat{break-inside:auto} .grp{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Property Details <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <div class="bar">
+    <input class="inp" id="q" placeholder="Find an item, e.g. escalators">
+    <button class="btn ghost small hidden" id="cmpBtn">Compare flagships</button>
+    <button class="btn ghost small" id="histBtn">History</button>
+    <button class="btn ghost small" id="xlsBtn">Export Excel</button>
+    <button class="btn ghost small" id="printBtn">Print</button>
+  </div>
+</div>
+<div class="wrap" id="app"><div class="card empty">Loading…</div></div>
+<dialog id="dlg" style="width:min(640px,calc(100% - 24px))"></dialog>
+
+<script src="xlsx.full.min.js"></script>
+<script src="common.js"></script>
+<script>
+let CTX = null, D0 = null, CMP = false;
+const app = $("#app");
+const PEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg>`;
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const find = re => D0.rows.find(r => re.test(r.item) && r.value);
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => { CMP = false; boot(s); });
+  D0 = await api(`ops/property/get?site=${CTX.site}`);
+  $("#cmpBtn").classList.toggle("hidden", !D0.can.admin);
+  CMP ? compare() : render();
+}
+function render(){
+  const rows = D0.rows, filled = rows.filter(r => r.value).length;
+  const cats = []; rows.forEach(r => { if (!cats.includes(r.category)) cats.push(r.category); });
+  const hero = [[/^mall gla$/i, "Mall GLA"], [/^occupancy % \d{4}$/i, null], [/^total units$/i, "Total units"], [/^yearly footfall$/i, "Yearly footfall"],
+    [/^parking spaces$/i, "Parking spaces"], [/^total mall employees/i, "Mall employees"], [/^opening date$/i, "Opening date"]];
+  const occ = rows.filter(r => /^occupancy % (\d{4})$/i.test(r.item)).map(r => ({ y: r.item.match(/\d{4}/)[0], v: r.value, n: parseFloat(r.value) })).sort((a, b) => a.y - b.y);
+  const latestOcc = occ.filter(o => o.v).slice(-1)[0];
+  const maxTenant = Math.max(1, ...rows.filter(r => /tenant category/i.test(r.sub)).map(r => parseFloat(r.value) || 0));
+  app.innerHTML = `
+    ${filled < 10 ? `<div class="banner">${esc(CTX.siteName)}'s details haven't been filled in yet — every item is listed; ${D0.can.edit ? "tap ✎ next to an item to enter its value." : "the flagship Manager can enter the values."}</div>` : ""}
+    <div class="hero">${hero.map(([re, label]) => { const r = label ? find(re) : null;
+        if (!label) return latestOcc ? `<div class="card"><strong style="color:var(--brand-2)">${esc(latestOcc.v)}</strong><span>Occupancy ${esc(latestOcc.y)}</span></div>` : "";
+        return r ? `<div class="card"><strong>${esc(r.value.split("\n")[0])}</strong><span>${label}</span></div>` : ""; }).join("")}</div>
+    ${occ.filter(o => o.n).length > 1 ? `<div class="card" style="padding:14px 16px;margin-bottom:12px"><span class="lbl">Occupancy by year</span><div class="occ">${(() => { const ns = occ.filter(o => o.n).map(o => o.n), lo = Math.min(...ns), hi = Math.max(...ns);
+      return occ.map(o => `<div><b>${esc(o.v || "—")}</b><span class="col"><i style="height:${o.n ? Math.round(25 + (hi > lo ? (o.n - lo) / (hi - lo) : 1) * 75) : 4}%"></i></span>${esc(o.y)}</div>`).join(""); })()}</div></div>` : ""}
+    <div class="toc">${cats.map(c => `<a href="#${slug(c)}">${esc(c)}</a>`).join("")}</div>
+    ${cats.map(c => { const cr = rows.filter(r => r.category === c); const subs = []; cr.forEach(r => { if (!subs.includes(r.sub)) subs.push(r.sub); });
+      return `<section class="card cat" id="${slug(c)}"><h2>${esc(c)}</h2>${subs.map(sb => `<div class="grp"><h3>${esc(sb || "General")}${D0.can.admin ? `<button class="add" data-add="${esc(c)}|${esc(sb)}">+ Add item</button>` : ""}</h3>
+        ${cr.filter(r => r.sub === sb).map(r => rowHtml(r, /tenant category/i.test(sb) ? maxTenant : 0)).join("")}</div>`).join("")}</section>`; }).join("")}
+    <p class="muted" style="font-size:.78rem;margin-top:14px">Started from ${esc(D0.source)}${D0.lastChange ? ` · last updated ${esc(new Date(D0.lastChange).toLocaleDateString("en-GB"))}` : ""}</p>`;
+  filter();
+}
+function rowHtml(r, barMax){
+  const edited = r.updatedBy && r.updatedBy !== "Comparison snapshot";
+  const n = parseFloat(r.value);
+  return `<div class="r ${r.total ? "total" : ""}" data-id="${r.id}" data-s="${esc((r.item + " " + r.value + " " + r.sub).toLowerCase())}">
+    <div class="k">${esc(r.item)}${D0.can.admin ? ` <button class="ed" data-ren="${r.id}" title="Rename item">${PEN}</button>` : ""}</div>
+    <div class="v"><span class="t ${r.value ? "" : "empty"}">${r.value ? esc(r.value) : "Not filled in"}${barMax && n ? `<span class="minibar" style="width:${n / barMax * 100}%"></span>` : ""}${edited ? `<span class="who">updated by ${esc(r.updatedBy)} · ${esc(new Date(r.updatedAt).toLocaleDateString("en-GB"))}</span>` : ""}</span>
+      ${D0.can.edit ? `<button class="ed" data-edit="${r.id}" title="Update value">${PEN}</button>` : ""}</div>
+    ${D0.can.admin && r.note ? `<div class="note" data-note="${r.id}" title="Management note — visible to administrators only">${esc(r.note)}</div>` : ""}
+  </div>`;
+}
+function filter(){
+  const q = $("#q").value.trim().toLowerCase();
+  app.querySelectorAll(".r").forEach(el => el.classList.toggle("hide", !!q && !el.dataset.s.includes(q)));
+  app.querySelectorAll(".grp").forEach(g => g.style.display = q && !g.querySelector(".r:not(.hide)") ? "none" : "");
+  app.querySelectorAll(".cat").forEach(c => c.style.display = q && !c.querySelector(".r:not(.hide)") ? "none" : "");
+}
+
+/* ---------- editing ---------- */
+function inlineEdit(id, field){
+  const r = D0.rows.find(x => x.id === id), el = app.querySelector(`.r[data-id="${id}"]`);
+  const slot = field === "item" ? el.querySelector(".k") : el.querySelector(".v");
+  const cur = r[field] || "";
+  slot.innerHTML = `<textarea class="inp" rows="${Math.max(1, cur.split("\n").length)}" style="width:100%">${esc(cur)}</textarea>
+    <span style="display:flex;flex-direction:column;gap:4px"><button class="btn small" data-ok>Save</button><button class="btn ghost small" data-no>Cancel</button></span>`;
+  slot.style.display = "flex"; slot.style.gap = "6px";
+  const ta = slot.querySelector("textarea"); ta.focus(); ta.select();
+  const done = async save => {
+    if (save){ try { const res = await api("ops/property/save", { site: CTX.site, id, field, [field]: ta.value }); if (res.changed){ r[field] = ta.value.trim(); r.updatedBy = CTX.me.name; r.updatedAt = new Date().toISOString(); toast("Saved"); } }
+      catch (er){ return toast(er.message, true); } }
+    render();
+  };
+  slot.querySelector("[data-ok]").onclick = () => done(true);
+  slot.querySelector("[data-no]").onclick = () => done(false);
+  ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); done(true); } if (e.key === "Escape") done(false); };
+}
+app.addEventListener("click", async e => {
+  const t = e.target.closest("button,[data-note]"); if (!t) return;
+  if (t.dataset.edit) return inlineEdit(Number(t.dataset.edit), "value");
+  if (t.dataset.ren) return inlineEdit(Number(t.dataset.ren), "item");
+  if (t.dataset.note && D0.can.admin){ const r = D0.rows.find(x => x.id === Number(t.dataset.note)); const n = prompt("Management note (administrators only) — leave empty to remove", r.note); if (n === null) return;
+    try { await api("ops/property/save", { site: CTX.site, id: r.id, field: "note", note: n }); r.note = n.trim(); render(); } catch (er){ toast(er.message, true); } return; }
+  if (t.dataset.add) return addItem(...t.dataset.add.split("|"));
+});
+function addItem(category, sub){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Add an item</b><small>${esc(category)} · ${esc(sub || "General")}</small></div>
+    <div class="dlg-b"><label class="lbl">Item</label><input class="inp" id="aI" style="width:100%" placeholder="e.g. Number of CCTV cameras">
+      <label class="lbl" style="margin-top:10px">Value for ${esc(CTX.siteName)}</label><input class="inp" id="aV" style="width:100%">
+      <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.88rem"><input type="checkbox" id="aAll" checked> Add this item to all five flagships (empty for the others)</label></div>
+    <div class="dlg-f"><button class="btn ghost" id="aC">Cancel</button><button class="btn gold" id="aOk">Add</button></div>`;
+  d.onclick = async e => { if (e.target === d || e.target.id === "aC") return d.close();
+    if (e.target.id === "aOk"){ const item = $("#aI").value.trim(); if (!item) return toast("Enter the item", true);
+      try { await api("ops/property/add", { site: CTX.site, category, sub, item, value: $("#aV").value, allFlagships: $("#aAll").checked }); d.close(); toast("Item added"); boot(CTX.site); } catch (er){ toast(er.message, true); } } };
+  d.showModal(); setTimeout(() => $("#aI").focus(), 50);
+}
+
+/* ---------- administrators: all five flagships side by side ---------- */
+async function compare(){
+  CMP = true; $("#cmpBtn").textContent = "Back to " + CTX.siteName;
+  const d = await api("ops/property/compare");
+  const key = r => `${r.category}|${r.sub}|${r.item}`;
+  const order = [], by = {};
+  d.rows.forEach(r => { const k = key(r); if (!by[k]){ by[k] = { r, v: {}, note: "" }; order.push(k); } by[k].v[r.site] = r.value; if (r.note && !by[k].note) by[k].note = r.note; });
+  let lastCat = "", lastSub = "";
+  app.innerHTML = `<div class="card cmp"><table><tr><th>Item</th>${d.sites.map(s => `<th>${esc(CTX.sites[s] || s)}</th>`).join("")}<th>Notes</th></tr>
+    ${order.map(k => { const x = by[k], r = x.r; let head = "";
+      if (r.category !== lastCat){ head += `<tr class="cg"><td colspan="${d.sites.length + 2}">${esc(r.category)}</td></tr>`; lastCat = r.category; lastSub = ""; }
+      if (r.sub !== lastSub){ head += `<tr><td colspan="${d.sites.length + 2}" style="font-weight:800;color:var(--muted);font-size:.78rem">${esc(r.sub)}</td></tr>`; lastSub = r.sub; }
+      return head + `<tr class="${r.total ? "tot" : ""}"><td>${esc(r.item)}</td>${d.sites.map(s => `<td class="${x.v[s] ? "" : "miss"}">${esc(x.v[s] || "")}</td>`).join("")}<td class="n">${esc(x.note)}</td></tr>`; }).join("")}
+  </table></div><p class="muted" style="font-size:.78rem;margin-top:8px">Red cells are not filled in yet. Notes are visible to administrators only.</p>`;
+}
+$("#cmpBtn").onclick = () => { if (CMP){ CMP = false; $("#cmpBtn").textContent = "Compare flagships"; render(); } else compare(); };
+
+/* ---------- history, export, print ---------- */
+$("#histBtn").onclick = async () => {
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Changes · ${esc(CTX.siteName)}</b></div><div class="dlg-b"><div class="hist" id="hl">Loading…</div></div><div class="dlg-f"><button class="btn ghost" id="hC">Close</button></div>`;
+  d.onclick = e => { if (e.target === d || e.target.id === "hC") d.close(); };
+  d.showModal();
+  const r = await api(`ops/property/log?site=${CTX.site}`);
+  $("#hl").innerHTML = r.log.length ? r.log.map(l => `<div><b>${esc(l.item)}</b>${l.field === "removed" ? " — removed" : l.field !== "value" ? ` — ${esc(l.field)}` : ""}<br>
+      <span class="old">${esc(l.before || "—")}</span> → <b>${esc(l.after || "—")}</b><small>${esc(l.by)} · ${esc(new Date(l.at).toLocaleString("en-GB"))}</small></div>`).join("")
+    : `<p class="muted">No changes yet — values are as in ${esc(D0.source)}.</p>`;
+};
+$("#xlsBtn").onclick = () => {
+  const ws = XLSX.utils.json_to_sheet(D0.rows.map(r => ({ Category: r.category, Sub: r.sub, Item: r.item, [`ABC ${CTX.siteName}`]: r.value })));
+  ws["!cols"] = [{ wch: 30 }, { wch: 32 }, { wch: 40 }, { wch: 40 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Property Details");
+  XLSX.writeFile(wb, `Property-Details-${CTX.site}.xlsx`);
+};
+$("#printBtn").onclick = () => print();
+$("#q").addEventListener("input", () => CMP || filter());
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
