@@ -231,6 +231,28 @@ button.bcard:hover{border-color:var(--brand-2)}
 @media (max-width:600px){ .tfab-btn{width:44px;height:44px} .tfab-btn svg{width:21px;height:21px} .tfab-it .lb small{display:none} }
 @media (prefers-reduced-motion:reduce){ .tfab-it,.tfab-btn svg{transition:none} .tfab.open .tfab-curve path{animation:none} }
 
+/* operations forms: orbit ring of checklists */
+.orbit{position:fixed;inset:0;z-index:70;pointer-events:none}
+.orbit.on{pointer-events:auto}
+.orbit-veil{position:absolute;inset:0;background:rgba(12,4,24,.8);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;transition:opacity .3s}
+.orbit.on .orbit-veil{opacity:1}
+.orbit-ring{position:absolute;border-radius:50%;border:2px dashed rgba(200,162,74,.55);transform:translate(-50%,-50%) scale(.2);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.3,1.2),opacity .3s}
+.orbit.on .orbit-ring{transform:translate(-50%,-50%) scale(1);opacity:1}
+.orbit-core{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:22px;display:grid;place-items:center;color:#fff;box-shadow:0 0 0 4px rgba(200,162,74,.8),0 18px 40px rgba(0,0,0,.4);transition:transform .45s cubic-bezier(.2,.9,.3,1.3)}
+.orbit-core svg{width:32px;height:32px}
+.orbit.on .orbit-core{transform:rotate(-8deg)}
+.orbit-cap{position:absolute;transform:translateX(-50%);color:#fff;text-align:center;font-weight:800;white-space:nowrap}
+.orbit-cap small{display:block;font-weight:600;opacity:.75;font-size:.8rem;margin-top:2px}
+.orbit-it{position:absolute;width:62px;margin-left:-31px;margin-top:-31px;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0;
+  transform:translate(var(--x0),var(--y0)) rotate(-180deg) scale(.2);transition:transform .6s cubic-bezier(.2,.9,.3,1.2),opacity .3s}
+.orbit.on .orbit-it{opacity:1;transform:translate(var(--x),var(--y)) rotate(0) scale(1)}
+.orbit-it .ico{width:62px;height:62px;border-radius:18px;box-shadow:0 0 0 3px rgba(255,255,255,.85),0 10px 24px rgba(0,0,0,.35)}
+.orbit-it .ico svg{width:26px;height:26px}
+.orbit-it b{color:#fff;font-size:.8rem;text-align:center;line-height:1.2;max-width:120px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.orbit-it.ph .ico{background:transparent!important;border:2px dashed rgba(255,255,255,.45);box-shadow:none}
+.orbit-it.ph b{opacity:.55;font-weight:600}
+@media (prefers-reduced-motion:reduce){ .orbit-it,.orbit-ring,.orbit-core{transition:none} }
+
 /* AI quick access */
 .aimenu{position:relative}
 .ai-btn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;font-size:.85rem;font-weight:700;color:#fff;
@@ -469,6 +491,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
     </div>
   </header>
   <div class="tfab-veil" id="tfabVeil"></div>
+  <div class="orbit" id="orbit" aria-hidden="true"></div>
   <div class="ann-wrap" id="anns"></div>
   <div class="shell">
     <main>
@@ -955,9 +978,33 @@ async function loadToolSummary(){
 }
 $("#tfabBtn").addEventListener("click", e => { e.stopPropagation(); setToolsOpen(!$("#tfab").classList.contains("open")); });
 $("#tfabVeil").addEventListener("click", () => setToolsOpen(false));
-$("#tfabItems").addEventListener("click", e => { const it = e.target.closest(".tfab-it"); if (!it) return; e.stopPropagation(); setToolsOpen(false); launch(byId(it.dataset.id)); });
+$("#tfabItems").addEventListener("click", e => { const it = e.target.closest(".tfab-it"); if (!it) return; e.stopPropagation();
+  const a = byId(it.dataset.id), r = it.querySelector(".ico").getBoundingClientRect();
+  setToolsOpen(false); launch(a, undefined, a && a.kind === "orbit" ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : undefined); });
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#tfab").classList.contains("open")){ setToolsOpen(false); $("#tfabBtn").focus(); } });
 addEventListener("resize", () => { setToolsOpen(false); buildToolsMenu(); });
+
+/* ---------- orbit ring (Operations Forms) ---------- */
+function openOrbit(a, from){
+  const o = $("#orbit"), items = APPS.filter(x => x.group === a.orbitGroup);
+  const W = innerWidth, H = innerHeight;
+  const cx = W / 2, cy = Math.min(H / 2, H - 200), R = Math.max(110, Math.min(190, W * .34, (H - 160) / 2));
+  const fx = from ? from.x - cx : 0, fy = from ? from.y - cy : 0;
+  const list = items.length ? items : [1, 2, 3, 4, 5, 6].map(i => ({ ph: true, name: i === 1 ? "Checklists coming soon" : "" }));
+  o.innerHTML = `<div class="orbit-veil"></div><div class="orbit-ring" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px"></div>
+    <button class="orbit-core" style="left:${cx}px;top:${cy}px;background:${esc(a.color)}" aria-label="Close ${esc(a.name)}">${svg(a.icon)}</button>
+    <div class="orbit-cap" style="left:${cx}px;top:${cy + 48}px">${esc(a.name)}<small>${items.length ? `${items.length} checklist${items.length === 1 ? "" : "s"}` : "No checklists yet"}</small></div>
+    ${list.map((x, k) => { const ang = -Math.PI / 2 + k * 2 * Math.PI / list.length, dx = Math.cos(ang) * R, dy = Math.sin(ang) * R;
+      return `<button class="orbit-it ${x.ph ? "ph" : ""}" ${x.ph ? "disabled" : `data-id="${esc(x.id)}"`} style="left:${cx}px;top:${cy}px;--x0:${fx}px;--y0:${fy}px;--x:${dx}px;--y:${dy}px;transition-delay:${k * 60}ms">
+        <span class="ico" style="background:${esc(x.color || "#555")}">${x.ph ? "" : svg(x.icon)}</span><b>${esc(x.name || "")}</b></button>`; }).join("")}`;
+  o.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => requestAnimationFrame(() => o.classList.add("on")));
+  const close = () => { o.classList.remove("on"); o.setAttribute("aria-hidden", "true"); setTimeout(() => { if (!o.classList.contains("on")) o.innerHTML = ""; }, 450); };
+  o.onclick = e => { const it = e.target.closest(".orbit-it[data-id]"); close(); if (it) setTimeout(() => launch(byId(it.dataset.id)), 200); };
+  o.onkeydown = e => { if (e.key === "Escape") close(); };
+  setTimeout(() => { const f = o.querySelector(".orbit-it[data-id]") || o.querySelector(".orbit-core"); f && f.focus(); }, 300);
+}
+addEventListener("keydown", e => { if (e.key === "Escape" && $("#orbit").classList.contains("on")) $("#orbit").click(); });
 
 /* ---------- health dots ---------- */
 async function loadHealth(){
@@ -1055,7 +1102,8 @@ function renderHome(){
   const match = a => !q || [a.name, a.desc, a.group, ...(a.sites ? Object.keys(a.sites) : [])].join(" ").toLowerCase().includes(q);
   let html = "";
   const groups = [...H.GROUPS, ...new Set(APPS.map(a => a.group).filter(g => !H.GROUPS.includes(g)))]
-    .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => a.group === TOOLS_GROUP));
+    .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => a.group === TOOLS_GROUP))
+    .filter(g => q || !APPS.some(a => a.kind === "orbit" && a.orbitGroup === g));
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a));
     if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(tile).join("")}</div></section>`;
@@ -1198,8 +1246,9 @@ new ResizeObserver(() => { G = geometry(); drawArc(); target = off = clamp(off, 
 /* =====================================================================
    LAUNCHING & APP VIEW
    ===================================================================== */
-function launch(a, site){
+function launch(a, site, from){
   if (!a) return;
+  if (a.kind === "orbit") return openOrbit(a, from);
   if (a.sites && !site){
     const mine = mySiteName();
     if (mine && isSet(a.sites[mine])) site = mine; else return pickSite(a);

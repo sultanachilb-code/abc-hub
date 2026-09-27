@@ -55,6 +55,27 @@ window.HUB = {
       url: "/tools/handover"
     },
     {
+      id: "eod",
+      name: "End of Day Report",
+      desc: "Everything that happened at the flagship today — live",
+      group: "Operations Tools",
+      icon: "chart",
+      color: "#1F5F8B",
+      url: "/tools/eod"
+    },
+    /* Opens an orbit ring of checklists. Add each checklist below with group "Operations Forms". */
+    {
+      id: "forms",
+      name: "Operations Forms",
+      desc: "Operational checklists",
+      group: "Operations Tools",
+      icon: "clipboard",
+      color: "#8A2F6B",
+      kind: "orbit",
+      orbitGroup: "Operations Forms",
+      url: "#forms"
+    },
+    {
       id: "feedback",
       name: "Tenant Feedback",
       desc: "Violations, customer feedback and actions by tenant",
@@ -72,6 +93,16 @@ window.HUB = {
       icon: "chart",
       color: "#3E5C8A",
       url: "/tools/gla"
+    },
+    /* Property Details feature — see docs/FEATURE-property-details.md */
+    {
+      id: "property",
+      name: "Property Details",
+      desc: "Areas, occupancy, teams, parking, technical assets and more",
+      group: "Property Overview & Info",
+      icon: "book",
+      color: "#6B3F8F",
+      url: "/tools/property"
     },
     /* Mall Layouts feature — see docs/FEATURE-layouts.md */
     {

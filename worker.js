@@ -1,5 +1,6 @@
 import { GLA } from "./data/gla-data.js";
 import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js";   // Mall Layouts feature — see docs/FEATURE-layouts.md
+import { propertySchema, propertyRoute } from "./modules/property.js";   // Property Details feature — see docs/FEATURE-property-details.md
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -37,6 +38,7 @@ const CONNECTORS = {
     base: "https://abc-snaglist.sultanalachi-work.workers.dev",
     stats: "/api?hubstats=1&site={site}",
     notify: "/api?hubnotify=1&site={site}&since={since}",
+    day: "/api?hubsv=1&site={site}&date={date}",
     sso: "/api?sso={token}"
   },
   incidents: {
@@ -44,13 +46,15 @@ const CONNECTORS = {
     binding: "INCIDENTS",
     stats: "/api/hubstats?site={site}",
     notify: "/api/hubnotify?site={site}&since={since}",
+    day: "/api/hubday?site={site}&date={date}",
     sso: "/api/sso?token={token}"
   },
   restroom: {
     base: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev",
     binding: "RESTROOM",
     stats: "/api/hubstats?site={site}",
-    notify: "/api/hubnotify?site={site}&since={since}"
+    notify: "/api/hubnotify?site={site}&since={since}",
+    day: "/api/hubday?site={site}&date={date}"
   }
 };
 
@@ -151,6 +155,7 @@ async function ensureSchema(env) {
   if (!has("notif_read_at")) await env.DB.prepare("ALTER TABLE users ADD COLUMN notif_read_at TEXT NOT NULL DEFAULT ''").run();
   if (!has("position")) await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT NOT NULL DEFAULT ''").run();
   await layoutsSchema(env);   // Mall Layouts feature
+  await propertySchema(env);  // Property Details feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -188,6 +193,9 @@ async function ensureSchema(env) {
       created_by TEXT, created_name TEXT, created_at TEXT, updated_at TEXT,
       submitted_at TEXT NOT NULL DEFAULT '', received_by TEXT NOT NULL DEFAULT '', received_at TEXT NOT NULL DEFAULT '')`)
   ]);
+  const gcols = await env.DB.prepare("PRAGMA table_info(gla_units)").all();
+  if ((gcols.results || []).length && !(gcols.results || []).some(c => c.name === "contract_start"))
+    await env.DB.prepare("ALTER TABLE gla_units ADD COLUMN contract_start TEXT NOT NULL DEFAULT ''").run();
   schemaReady = true;
 }
 
@@ -893,7 +901,8 @@ function rights(me, site) {
     feedback: mine,                 // anyone at the flagship can log tenant feedback
     feedbackAdmin: mine && lead,    // edit anyone's entries, import history
     gla: mine && (lead || me.role === "SUPERVISOR"),  // keep the GLA up to date
-    layouts: mine && lead                              // Mall Layouts feature: upload plans, adjust pins
+    layouts: mine && lead,                             // Mall Layouts feature: upload plans, adjust pins
+    property: mine && lead                             // Property Details feature: update the values
   };
 }
 
@@ -978,7 +987,9 @@ async function opsRoute(env, me, p, method, b, url) {
     const note = s(b.note, 300);
     const u = b.unit || {};
     const next = { level: s(u.level, 20).trim(), code: s(u.code, 30).trim(), brand: s(u.brand, 120).trim(), status: GLA_STATUS.includes(u.status) ? u.status : "",
-      section: GLA_SECTIONS.includes(u.section) ? u.section : "Leasing", dept: s(u.dept, 60).trim(), area: Math.max(0, Math.round(Number(u.area) * 100) / 100 || 0) };
+      section: GLA_SECTIONS.includes(u.section) ? u.section : "Leasing", dept: s(u.dept, 60).trim(), area: Math.max(0, Math.round(Number(u.area) * 100) / 100 || 0),
+      contract_start: isDay(u.contractStart) ? u.contractStart : "" };
+    if (next.status === "Reserved" && !next.contract_start) throw fail("Enter the contract start date for a reserved unit");
     if (!next.level || !next.code) throw fail("Level and unit code are required");
     if (!next.status) throw fail("Choose the status");
     if (next.status === "Vacant") next.brand = next.brand && !/^vacant$/i.test(next.brand) ? next.brand : "";
@@ -988,23 +999,23 @@ async function opsRoute(env, me, p, method, b, url) {
       const cur = await env.DB.prepare("SELECT * FROM gla_units WHERE id = ? AND site = ? AND active = 1").bind(id, site).first();
       if (!cur) throw fail("Unit not found", 404);
       const before = {}, after = {};
-      for (const k of ["level", "code", "brand", "status", "section", "dept", "area"]) if (String(cur[k] ?? "") !== String(next[k] ?? "")) { before[k] = cur[k]; after[k] = next[k]; }
+      for (const k of ["level", "code", "brand", "status", "section", "dept", "area", "contract_start"]) if (String(cur[k] ?? "") !== String(next[k] ?? "")) { before[k] = cur[k]; after[k] = next[k]; }
       if (!Object.keys(after).length) return { id, changed: false };
       await env.DB.batch([
-        env.DB.prepare("UPDATE gla_units SET level=?, code=?, brand=?, status=?, section=?, dept=?, area=?, updated_at=?, updated_by=? WHERE id=?")
-          .bind(next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, at, me.full_name, id),
+        env.DB.prepare("UPDATE gla_units SET level=?, code=?, brand=?, status=?, section=?, dept=?, area=?, contract_start=?, updated_at=?, updated_by=? WHERE id=?")
+          .bind(next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, next.contract_start, at, me.full_name, id),
         env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
           .bind(site, id, "update", eff, JSON.stringify(before), JSON.stringify(after), note, me.full_name, me.email, at)
       ]);
-      if (after.status && ["Terminated", "Closed", "Open"].includes(after.status)) await raiseEvent(env, { site, app: "gla", tone: after.status === "Terminated" ? "warn" : "info",
+      if (after.status && ["Terminated", "Closed", "Open", "Reserved"].includes(after.status)) await raiseEvent(env, { site, app: "gla", tone: after.status === "Terminated" ? "warn" : "info",
         title: `${next.brand || cur.brand || next.code} · ${after.status}`, body: `${siteName(site)} · ${next.level} ${next.code} · effective ${fmtDay(eff)} · by ${me.full_name}` });
       return { id, changed: true };
     }
     const dup = await env.DB.prepare("SELECT id FROM gla_units WHERE site = ? AND level = ? AND code = ? AND active = 1").bind(site, next.level, next.code).first();
     if (dup) throw fail(`Unit ${next.code} already exists on ${next.level}`);
     const seq = await env.DB.prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM gla_units WHERE site = ?").bind(site).first();
-    const r = await env.DB.prepare(`INSERT INTO gla_units (site, level, code, brand, status, section, dept, area, seq, updated_at, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(site, next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, seq.n, at, me.full_name).run();
+    const r = await env.DB.prepare(`INSERT INTO gla_units (site, level, code, brand, status, section, dept, area, contract_start, seq, updated_at, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(site, next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, next.contract_start, seq.n, at, me.full_name).run();
     await env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
       .bind(site, r.meta.last_row_id, "add", eff, "{}", JSON.stringify(next), note, me.full_name, me.email, at).run();
     return { id: r.meta.last_row_id, added: true };
@@ -1044,8 +1055,14 @@ async function opsRoute(env, me, p, method, b, url) {
     return { site, date: day, units: await glaAsOf(env, site, day) };
   }
 
+  /* ----- End of Day report ----- */
+  if (p === "eod") return eodReport(env, me, site, isDay(q("date")) ? q("date") : beirutToday());
+
   /* ----- Mall Layouts feature (modules/layouts.js) ----- */
   if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso });
+
+  /* ----- Property Details feature (modules/property.js) ----- */
+  if (p.startsWith("property/")) return propertyRoute(env, p, method, b, url, { site, can, me, now: nowIso, isAdmin: me.role === "ADMIN" });
 
   /* ----- tenant feedback ----- */
   if (p === "feedback/list") {
@@ -1464,10 +1481,10 @@ async function usageReport(env, days) {
 /* =====================================================================
    GLA — statuses, seeding from the built-in workbook data, history
    ===================================================================== */
-const GLA_STATUS = ["Open", "Closed", "Fit-out", "Terminated", "Vacant"];
+const GLA_STATUS = ["Open", "Closed", "Fit-out", "Reserved", "Terminated", "Vacant"];
 const GLA_SECTIONS = ["Leasing", "Pop-up", "Additional", "DS", "iPlay"];
 const glaUnitOut = u => ({ id: u.id, level: u.level, code: u.code, brand: u.brand, status: u.status, section: u.section, dept: u.dept,
-  area: u.area, updatedAt: u.updated_at, updatedBy: u.updated_by });
+  area: u.area, contractStart: u.contract_start || "", updatedAt: u.updated_at, updatedBy: u.updated_by });
 function glaLevels(units) { const out = []; for (const u of units) if (!out.includes(u.level)) out.push(u.level); return out; }
 /* First use at a flagship: load its GLA from the built-in data (data/gla-data.js) as the starting point */
 async function glaSeed(env, site) {
@@ -1498,4 +1515,96 @@ async function glaAsOf(env, site, day) {
     else Object.assign(u, JSON.parse(e.before || "{}"));
   }
   return [...map.values()].filter(u => u.active).map(({ active, ...u }) => u);
+}
+
+/* =====================================================================
+   END OF DAY REPORT — everything that happened at one flagship on one day
+   ===================================================================== */
+async function pullDay(env, id, site, day) {
+  const c = CONNECTORS[id];
+  if (!c || !c.day || !env.HUB_KEY) return { error: "Not connected" };
+  const target = c.base + c.day.replace("{site}", encodeURIComponent(site)).replace("{date}", day);
+  const init = { headers: { "x-hub-key": env.HUB_KEY }, signal: AbortSignal.timeout(8000) };
+  try {
+    const r = c.binding && env[c.binding] ? await env[c.binding].fetch(target, init) : await fetch(target, init);
+    const j = await r.json().catch(() => null);
+    if (!j || !j.ok) return { error: (j && j.error) || `HTTP ${r.status}` };
+    return j.data;
+  } catch (e) { return { error: "Not reachable" }; }
+}
+/* Cleaner QR access lives in a Google Sheet: an Apps Script web app returns the day's entries */
+async function cleanerDay(env, site, day) {
+  if (!env.CLEANER_SHEET_URL) return { error: "Not connected yet" };
+  try {
+    const u = new URL(env.CLEANER_SHEET_URL);
+    u.searchParams.set("key", env.CLEANER_SHEET_KEY || ""); u.searchParams.set("site", site); u.searchParams.set("date", day);
+    const r = await fetch(u.toString(), { redirect: "follow", signal: AbortSignal.timeout(10000) });
+    const j = await r.json().catch(() => null);
+    if (!j || !j.ok) return { error: (j && j.error) || `HTTP ${r.status}` };
+    return j.data;
+  } catch (e) { return { error: "Not reachable" }; }
+}
+async function eodReport(env, me, site, day) {
+  const sensitive = me.role === "ADMIN" || me.role === "MANAGER" || me.role === "SECURITY" || me.position === "SMS";
+  await glaSeed(env, site);
+  const [restroom, incidents, snag, cleaner, moms, fb, hos, sched, notes, units, staff] = await Promise.all([
+    pullDay(env, "restroom", site, day), pullDay(env, "incidents", site, day), pullDay(env, "snaglist", site, day), cleanerDay(env, site, day),
+    env.DB.prepare(`SELECT m.*, (SELECT COUNT(*) FROM mom_actions a WHERE a.meeting_id = m.id) AS n_actions FROM mom_meetings m
+      WHERE m.site = ? AND (m.meet_date = ? OR substr(m.published_at, 1, 10) = ?) ORDER BY m.id`).bind(site, day, day).all(),
+    env.DB.prepare("SELECT * FROM tenant_feedback WHERE site = ? AND day = ? ORDER BY time, id").bind(site, day).all(),
+    env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY shift, id").bind(site, day).all(),
+    env.DB.prepare("SELECT email, val FROM sched_cells WHERE site = ? AND day = ?").bind(site, day).all(),
+    env.DB.prepare("SELECT note FROM sched_notes WHERE site = ? AND day = ?").bind(site, day).first(),
+    env.DB.prepare("SELECT * FROM gla_units WHERE site = ? AND active = 1").bind(site).all(),
+    siteStaff(env, site)
+  ]);
+
+  /* minutes of meeting */
+  const momOut = [];
+  for (const m of moms.results || []) {
+    const acts = await env.DB.prepare("SELECT text, owner_name, due, status FROM mom_actions WHERE meeting_id = ? ORDER BY seq").bind(m.id).all();
+    momOut.push({ id: m.id, title: m.title, date: m.meet_date, status: m.status, preparedBy: m.prepared_by,
+      attended: JSON.parse(m.participants || "[]").filter(x => x.attended).map(x => x.name), actions: acts.results || [] });
+  }
+  /* handovers: the items written for the day */
+  const hoOut = (hos.results || []).map(h => { const d = cleanHandover(JSON.parse(h.doc));
+    return { id: h.id, shift: h.shift, status: h.status, by: h.created_name, receivedBy: h.received_by, submittedAt: h.submitted_at,
+      today: d.today, tomorrow: d.tomorrow, ongoing: d.ongoing.filter(x => !x.done), upcoming: d.upcoming, events: d.events.filter(e => (!e.from || e.from <= day) && (!e.to || e.to >= day)),
+      checklists: d.checklists, notes: d.notes }; });
+  /* schedule: who is on today */
+  const who = Object.fromEntries(staff.map(s => [s.email, s]));
+  const hm = t => { const [a, b] = t.split(":").map(Number); return a + b / 60; };
+  const shifts = [], away = [];
+  for (const c of sched.results || []) {
+    const p = who[c.email]; if (!p) continue;
+    if (c.val.includes("-")) { const [a, b] = c.val.split("-"); shifts.push({ name: p.name, position: p.positionLabel, start: a, end: b, hours: ((hm(b) - hm(a)) + 24) % 24 || 24 }); }
+    else away.push({ name: p.name, position: p.positionLabel, code: c.val, label: (SHIFT_CODES[c.val] || {}).label || c.val });
+  }
+  shifts.sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
+  /* GLA */
+  const U = units.results || [];
+  const sum = f => U.filter(f).reduce((a, u) => a + (u.area || 0), 0);
+  const base = sum(u => u.section === "Leasing"), vacant = sum(u => u.section === "Leasing" && (u.status === "Vacant" || u.status === "Terminated"));
+  const unitRow = u => ({ level: u.level, code: u.code, brand: u.brand, area: u.area, dept: u.dept, contractStart: u.contract_start || "", updatedAt: u.updated_at });
+  const gla = { occupancy: base ? 1 - vacant / base : 0, leasingArea: base, vacantArea: vacant,
+    active: U.filter(u => u.status === "Open" && u.section !== "DS").length,
+    closed: U.filter(u => u.status === "Closed").map(unitRow),
+    fitout: U.filter(u => u.status === "Fit-out").map(unitRow),
+    reserved: U.filter(u => u.status === "Reserved").map(unitRow).sort((a, b) => a.contractStart.localeCompare(b.contractStart)),
+    vacantUnits: U.filter(u => u.section === "Leasing" && (u.status === "Vacant" || u.status === "Terminated")).length };
+
+  /* incidents — case details and names only for those who handle them */
+  let inc = incidents;
+  if (!inc.error && !sensitive) inc = { date: inc.date, restricted: true,
+    incidents: inc.incidents.map(i => ({ ref: i.ref, time: i.time, type: i.type, severity: i.severity, status: i.status })),
+    pirs: inc.pirs.map(p => ({ ref: p.ref, severity: p.severity, hoursWaiting: p.hoursWaiting, overdue: p.overdue })),
+    blacklist: [], blacklistCount: inc.blacklist.length };
+
+  return { site, siteName: siteName(site), date: day, today: beirutToday(), generatedAt: nowIso(), sensitive,
+    restroom, incidents: inc, snaglist: snag, cleaner,
+    mom: momOut,
+    feedback: (fb.results || []).map(fbOut),
+    handovers: hoOut,
+    schedule: { shifts, away, note: notes ? notes.note : "", headcount: shifts.length },
+    gla };
 }
