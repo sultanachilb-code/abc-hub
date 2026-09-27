@@ -32,6 +32,7 @@ const WINDOWS = {
 };
 const TEAMS = { both: "Operations & Soft services", ops: "Operations", usm: "Soft services" };
 const SHIFTS = { AM: "Morning", PM: "Evening" };
+const FORM_NAMES = { am: "AM Checklist", pm: "PM Checklist", dbank: "Direct Banking Checklist", open: "Tenant Opening Checklist", close: "Tenant Closing Checklist" };
 
 /* The checks the hub knows how to verify. `source` says where the answer comes from. */
 export const KINDS = {
@@ -40,6 +41,7 @@ export const KINDS = {
   mom:       { label: "Overdue MOM tasks", source: "Minutes of Meeting", hint: "Pending while any published meeting task at the flagship is past its deadline." },
   pir:       { label: "Post-incident reports", source: "Incident Report System", hint: "Pending while any Level 2/3 incident is waiting for its report (overdue only, or all)." },
   sitevisit: { label: "Site visit points", source: "Snaglist Manager", hint: "Pending while a site visit has open points for longer than the days you set." },
+  form:      { label: "Checklist submitted", source: "Operations Forms", hint: "Pending until the checklist is submitted — today (AM / PM) or since Monday (weekly Direct Banking)." },
   custom:    { label: "Custom task", source: "Marked done in the hub", hint: "Anyone at the flagship taps Done in Reminders. Until then it counts as pending." }
 };
 
@@ -53,6 +55,9 @@ export const PRESETS = [
   { key: "mom", kind: "mom", title: "Overdue meeting tasks", params: {}, at: "10:00", every: 0, until: "" },
   { key: "pir", kind: "pir", title: "Post-incident reports overdue", params: { overdueOnly: true }, at: "11:00", every: 0, until: "" },
   { key: "sv", kind: "sitevisit", title: "Site visit points open over 2 days", params: { days: 2 }, at: "12:00", every: 0, until: "" },
+  { key: "f-am", kind: "form", title: "AM Checklist submitted", params: { form: "am", period: "day" }, at: "11:30", every: 15, until: "12:30" },
+  { key: "f-pm", kind: "form", title: "PM Checklist submitted", params: { form: "pm", period: "day" }, at: "23:00", every: 15, until: "23:45" },
+  { key: "f-db", kind: "form", title: "Weekly Direct Banking inspection", params: { form: "dbank", period: "week" }, at: "18:00", every: 60, until: "21:00", days: "6" },
   { key: "open-round", kind: "custom", title: "Opening round — tenants open on time", params: {}, at: "10:15", every: 15, until: "11:00" },
   { key: "close-round", kind: "custom", title: "Closing round — tenants closed on time", params: {}, at: "22:15", every: 15, until: "23:00" }
 ];
@@ -95,6 +100,7 @@ function cleanParams(kind, p = {}) {
   }
   if (kind === "handover") return { shift: p.shift === "PM" ? "PM" : "AM", stage: p.stage === "received" ? "received" : "submitted" };
   if (kind === "pir") return { overdueOnly: p.overdueOnly !== false };
+  if (kind === "form") return { form: ["am", "pm", "dbank"].includes(p.form) ? p.form : "am", period: p.period === "week" ? "week" : "day" };
   if (kind === "sitevisit") return { days: Math.max(0, Math.min(60, Math.round(Number(p.days) || 0))) };
   return {};
 }
@@ -151,6 +157,17 @@ async function evaluate(env, r, day, deps, cache) {
       if (p.stage === "submitted") return { state: "done", detail: `Submitted by ${sub[0].created_name || "—"}` };
       const got = sub.find(h => h.received_by);
       return got ? { state: "done", detail: `Received by ${got.received_by}` } : { state: "pending", detail: `${name} submitted but not received yet` };
+    }
+    if (r.kind === "form") {
+      let since = day;
+      if (p.period === "week") { const d = new Date(day + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); since = d.toISOString().slice(0, 10); }
+      const f = await env.DB.prepare(`SELECT submitted_name, issues FROM form_runs WHERE site = ? AND form = ? AND status = 'submitted' AND day >= ? AND day <= ?
+        ORDER BY submitted_at DESC LIMIT 1`).bind(r.site, p.form, since, day).first();
+      const name = FORM_NAMES[p.form] || "Checklist";
+      if (f) return { state: "done", detail: `${name} submitted by ${f.submitted_name}${f.issues ? ` · ${f.issues} issue${f.issues === 1 ? "" : "s"}` : ""}` };
+      const draft = await env.DB.prepare("SELECT done, total FROM form_runs WHERE site = ? AND form = ? AND day >= ? AND day <= ? ORDER BY id DESC LIMIT 1")
+        .bind(r.site, p.form, since, day).first();
+      return { state: "pending", detail: draft ? `${name} started, not submitted (${draft.done}/${draft.total})` : `${name} not started${p.period === "week" ? " this week" : ""}` };
     }
     if (r.kind === "mom") {
       const { results } = await env.DB.prepare(`SELECT a.text, a.owner_name, a.due FROM mom_actions a JOIN mom_meetings m ON m.id = a.meeting_id
@@ -274,7 +291,7 @@ export async function remindersRoute(env, p, method, b, url, ctx) {
     const have = new Set(((await env.DB.prepare("SELECT preset FROM reminders WHERE site = ? AND preset != ''").bind(site).all()).results || []).map(x => x.preset));
     const pick = PRESETS.filter(x => keys.has(x.key) && !have.has(x.key));
     const ops = pick.map(x => env.DB.prepare(`INSERT INTO reminders (site, kind, title, note, at_time, every_min, until_time, days, params, preset, active, created_by, created_name, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).bind(site, x.kind, x.title, "", x.at, x.every, x.until, "1234567", JSON.stringify(x.params), x.key,
+      VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).bind(site, x.kind, x.title, "", x.at, x.every, x.until, x.days || "1234567", JSON.stringify(x.params), x.key,
       me.email, me.full_name, now(), now()));
     if (ops.length) await env.DB.batch(ops);
     return { added: ops.length };
