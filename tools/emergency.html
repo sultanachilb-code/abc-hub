@@ -148,7 +148,7 @@ function showBoard(r){
       <small>${x.ackAt ? `Acknowledged at ${esc(t(x.ackAt))}` : `Alerted ${x.sends}× · last ${esc(t(x.lastAt))}${x.devices ? ` · ${x.delivered} delivered` : ""}`}</small></div>
       ${x.ackAt ? `<span class="pill ok">On it</span>` : x.devices ? `<span class="pill alert">Waiting</span>` : `<span class="pill warn">No device — call</span>`}</div>`).join("")
       || `<div class="card empty">Nobody was on shift when the alert was sent.</div>`}</div>
-    ${open ? `<p class="muted" style="font-size:.8rem;margin-top:10px;line-height:1.5">This page re-alerts people who have not acknowledged about every 45 seconds while it is open (and every 2 minutes from the server when it is closed), for up to 45 minutes.</p>` : ""}`;
+    ${open ? `<p class="muted" style="font-size:.8rem;margin-top:10px;line-height:1.5">Everyone who has not acknowledged gets a fresh alarm every 10 seconds — sound and vibration each time — until they tap it, for up to 60 minutes. It keeps going even if this page is closed.</p>` : ""}`;
   $("#app").innerHTML = h;
   $("#back").onclick = () => { history.replaceState(null, "", `?site=${site}`); home(); };
   const a = $("#bAck"); if (a) a.onclick = async () => { try { await api("ops/emergency/ack", { site, id: e.id }); toast("Acknowledged — the manager can see you are on it"); openBoard(e.id);
