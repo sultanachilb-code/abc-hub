@@ -87,6 +87,7 @@ window.HUB = {
       name: "Emergency Alert",
       desc: "Alert everyone on shift — type and location",
       group: "Operations Tools",
+      hidden: true,          /* opened from the floating red button, not listed in the menus */
       icon: "siren",
       color: "#C62828",
       url: "/tools/emergency"

@@ -937,7 +937,7 @@ async function pushOff(){
 /* ---------- operations tools: cascade from the header button ---------- */
 const TOOLS_GROUP = "Operations Tools";
 let TOOL_SUM = {};
-const toolApps = () => APPS.filter(a => a.group === TOOLS_GROUP);
+const toolApps = () => APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden);
 function buildToolsMenu(){
   const tools = toolApps();
   $("#tfab").classList.toggle("hidden", !tools.length);
@@ -1112,7 +1112,7 @@ function renderHome(){
     .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => a.group === TOOLS_GROUP))
     .filter(g => q || !APPS.some(a => a.kind === "orbit" && a.orbitGroup === g));
   for (const g of groups){
-    const list = APPS.filter(a => a.group === g && match(a));
+    const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
     if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(tile).join("")}</div></section>`;
   }
   $("#list").innerHTML = html || `<p class="empty">No system matches “${esc(q)}”.</p>`;
@@ -1609,6 +1609,9 @@ $("#installBtn").onclick = async () => {
 };
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
+/* a small bridge for add-on blocks below this script (Emergency Alert feature) */
+window.HUBX = { api, me: () => ME, open: id => { const a = byId(id); if (a) launch(a); }, onHome: () => !/^#\/app\//.test(location.hash) };
+
 boot();
 })();
 </script>
@@ -1677,21 +1680,21 @@ boot();
     box.classList.add("on");
     box.onpointerdown = () => { if (!muted.has(e.id)) { sirenOn(); const s = document.getElementById("emgSnd"); if (s) s.textContent = ""; } };
     document.getElementById("emgOk").onclick = async ev => { ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true; b.textContent = "SENDING…";
-      try { await api("ops/emergency/ack", { id: e.id }); hide(); if (typeof toast === "function") toast("Acknowledged — the manager can see you are on it"); check(); }
+      try { await HUBX.api("ops/emergency/ack", { id: e.id }); hide(); check(); }
       catch (x){ b.disabled = false; b.textContent = "I'M ON IT"; } };
     document.getElementById("emgMute").onclick = ev => { ev.stopPropagation(); muted.add(e.id); sirenOff(); ev.currentTarget.textContent = "Siren silenced"; };
     if (!muted.has(e.id)) sirenOn();
   }
   function hide(){ sirenOff(); cur = null; document.getElementById("emg").classList.remove("on"); }
   async function check(){
-    if (typeof ME === "undefined" || !ME) return;
-    let r; try { r = await api("ops/emergency/active"); } catch { return; }
+    if (!window.HUBX || !HUBX.me()) return;
+    let r; try { r = await HUBX.api("ops/emergency/active"); } catch { return; }
     const a = r.alerts[0];
     if (a && (!cur || cur.id !== a.id)) show(a);
     if (!a && cur) hide();
     const bar = document.getElementById("emgBar"), o = r.open[0];
     if (o && !a){ bar.textContent = `🚨 ${o.type} · ${o.location} — open board`; bar.classList.add("on");
-      bar.onclick = () => { const app = typeof byId === "function" && byId("emergency"); if (app) launch(app); }; }
+      bar.onclick = () => HUBX.open("emergency"); }
     else bar.classList.remove("on");
   }
   window.emergencyCheck = check;
@@ -1699,11 +1702,14 @@ boot();
   let canSend = false;
   const fab = document.getElementById("emgFab");
   const fabPaint = () => fab.classList.toggle("on", canSend && !/^#\/app\//.test(location.hash));
-  fab.onclick = () => { const app = typeof byId === "function" && byId("emergency"); if (app) launch(app); };
+  fab.onclick = () => HUBX.open("emergency");
   addEventListener("hashchange", fabPaint);
   (async function fabInit(tries){
-    if (typeof ME === "undefined" || !ME){ if (tries < 40) setTimeout(() => fabInit(tries + 1), 500); return; }
-    try { canSend = !!(await api("ops/emergency/meta")).can.send; } catch {}
+    if (!window.HUBX || !HUBX.me()){ if (tries < 240) setTimeout(() => fabInit(tries + 1), 500); return; }
+    const u = HUBX.me().user || {};
+    canSend = u.role === "ADMIN" || u.role === "MANAGER";      /* show at once for these; the server confirms (and adds the SMS) */
+    fabPaint();
+    try { canSend = !!(await HUBX.api("ops/emergency/meta")).can.send; } catch {}
     fabPaint();
   })(0);
   setTimeout(check, 1500);
