@@ -3,13 +3,16 @@ import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js"
 import { propertySchema, propertyRoute } from "./modules/property.js";   // Property Details feature — see docs/FEATURE-property-details.md
 import { remindersSchema, remindersRoute, remindersRun } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
 import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Forms feature — see docs/FEATURE-forms.md
-import { emergencySchema, emergencyRoute, emergencyRun } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
+import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
+export { EmergencyPager } from "./modules/emergency.js";   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
    live tile badges, and single sign-in into connected systems.
    Static files (index.html, apps.js, icons…) are served as assets.
    ===================================================================== */
+
+emergencyDeps({ raiseEvent: (...a) => raiseEvent(...a), sendPush: (...a) => sendPush(...a), now: () => new Date().toISOString() });   // Emergency Alert feature
 
 const SITES = {
   VRM: "Verdun Mall",

@@ -12,5 +12,7 @@
     { "binding": "CLEANER", "service": "abcv-admin-access" },
     { "binding": "FOOTFALL", "service": "footfall-hub" }
   ],
-  "triggers": { "crons": ["*/2 * * * *"] }
+  "triggers": { "crons": ["*/2 * * * *"] },
+  "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" } ] },
+  "migrations": [ { "tag": "v1-emergency-pager", "new_sqlite_classes": ["EmergencyPager"] } ]
 }

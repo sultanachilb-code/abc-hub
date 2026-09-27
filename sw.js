@@ -1,7 +1,7 @@
 /* ABC Operations Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v7";
+const CACHE = "abc-hub-v8";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
   "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png"];
 
@@ -43,6 +43,11 @@ self.addEventListener("push", e => {
     data: { url: d.url || "/", emergency: d.emergency.id }
   });
   e.waitUntil((async () => {
+    /* emergency repeats: remove the previous alarm notification so only the newest one shows (and sounds) */
+    if (d.emergency || d.allClear) {
+      const id = (d.emergency || d.allClear).id;
+      (await self.registration.getNotifications()).forEach(n => { if (n.tag && n.tag.startsWith(`emg-${id}-`) && n.tag !== d.tag) n.close(); });
+    }
     await self.registration.showNotification(d.title || "ABC Operations Hub", opts);
     if (d.emergency || d.allClear) {
       const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -53,14 +58,16 @@ self.addEventListener("push", e => {
 self.addEventListener("notificationclick", e => {
   e.notification.close();
   const data = e.notification.data || {};
-  if (e.action === "ack" && data.emergency) {
+  /* any tap on an emergency alarm (the button or the notification itself) acknowledges it and stops the repeats */
+  if (data.emergency && e.action !== "open") {
+    e.waitUntil(self.registration.getNotifications().then(ns => ns.forEach(n => n.tag && n.tag.startsWith(`emg-${data.emergency}-`) && n.close())));
     e.waitUntil(fetch("/api/ops/emergency/ack", { method: "POST", credentials: "include", headers: { "content-type": "application/json" },
       body: JSON.stringify({ id: data.emergency }) })
       .then(r => self.registration.showNotification(r.ok ? "Acknowledged — thank you" : "Could not acknowledge — open the hub",
         { body: r.ok ? "The manager can see you are on it." : "Tap to open the alert.", icon: "/icons/abc-192.png", badge: "/icons/abc-48.png",
           tag: "emg-ack", data: { url: data.url } }))
       .catch(() => {}));
-    return;
+    if (e.action === "ack") return;
   }
   const target = new URL(data.url || "/", self.location.origin).href;
   e.waitUntil((async () => {
