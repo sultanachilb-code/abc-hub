@@ -209,9 +209,12 @@ function glaSec(){
 }
 function cleaner(d){
   if (!d || d.error) return sec("cleaner", "Cleaner QR access", null, d && d.error === "Not connected yet" ? `<p class="none">The Cleaner QR sheet isn't connected to the hub yet.</p>` : failed(d));
-  return sec("cleaner", "Cleaner QR access", d.count, `<p><b>${d.count}</b> cleaner${d.count === 1 ? "" : "s"} accessed the mall on this day.</p>
-    ${d.byCompany ? `<p class="muted" style="margin-top:6px">${Object.entries(d.byCompany).map(([k, v]) => `${esc(k)}: ${v}`).join(" · ")}</p>` : ""}
-    ${d.names && d.names.length ? `<p style="margin-top:6px;font-size:.84rem">${d.names.map(esc).join(" · ")}</p>` : ""}`);
+  const pairs = o => o ? Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${esc(k)}: <b>${v}</b>`).join(" · ") : "";
+  return sec("cleaner", "Cleaner QR access", d.count, `<p><b>${d.count}</b> cleaner${d.count === 1 ? "" : "s"} accessed the mall on this day${d.entries && d.entries !== d.count ? ` (${d.entries} check-ins)` : ""}.</p>
+    ${d.byTenant ? `<p style="margin-top:6px;font-size:.86rem"><span class="muted">By tenant:</span> ${pairs(d.byTenant)}</p>` : ""}
+    ${d.byCompany ? `<p style="margin-top:4px;font-size:.86rem"><span class="muted">By company:</span> ${pairs(d.byCompany)}</p>` : ""}
+    ${d.list && d.list.length ? `<div class="scroll" style="margin-top:10px"><table class="t"><tr><th>Time</th><th>Cleaner</th><th>Company</th><th>Tenant</th><th>Agent</th></tr>
+      ${d.list.map(x => `<tr><td>${esc(x.time)}</td><td><b>${esc(x.name)}</b></td><td>${esc(x.company)}</td><td>${esc(x.tenant)}</td><td class="muted">${esc(x.agent)}</td></tr>`).join("")}</table></div>` : ""}`);
 }
 function blacklist(d){
   if (!d || d.error) return sec("blacklist", "Blacklist", null, failed(d));
