@@ -23,6 +23,7 @@ Added: September 2026 · Status: live · Owner: Sultan Al Achi
 | Overdue MOM tasks | no published task at the flagship is past its deadline | hub `mom_actions` |
 | Post-incident reports | no Level 2/3 report is overdue (or waiting at all) | Incident system `/api/hubday` |
 | Site visit points | no site visit has open points longer than N days | Snaglist `hubsv=1` |
+| Checklist submitted | the AM / PM checklist is submitted today, or the Direct Banking checklist this week (needs the Operations Forms feature) | hub `form_runs` |
 | Custom task | someone at the flagship taps **Mark done** in Reminders | hub `reminder_done` |
 
 ## Everything it adds (to remove the feature, undo exactly these)
