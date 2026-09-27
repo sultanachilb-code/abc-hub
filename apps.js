@@ -8,7 +8,7 @@
      desc    one-line description
      group   section on the home screen (must match one of GROUPS)
      icon    clipboard | alert | qr | box | calendar | chart | bolt | truck
-             | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut
+             | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut | siren
      color   tile colour
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
@@ -81,6 +81,16 @@ window.HUB = {
     { id: "form-dbank", name: "Direct Banking", desc: "Weekly Areeba machine inspection", group: "Operations Forms", icon: "card", color: "#2E6B4F", url: "/tools/forms?f=dbank" },
     { id: "form-open", name: "Tenant Opening", desc: "New tenant opening checklist", group: "Operations Forms", icon: "storeIn", color: "#2F6F73", url: "/tools/forms?f=open" },
     { id: "form-close", name: "Tenant Closing", desc: "Tenant closure checklist", group: "Operations Forms", icon: "storeOut", color: "#A33B3B", url: "/tools/forms?f=close" },
+    /* Emergency Alert feature — see docs/FEATURE-emergency.md */
+    {
+      id: "emergency",
+      name: "Emergency Alert",
+      desc: "Alert everyone on shift — type and location",
+      group: "Operations Tools",
+      icon: "siren",
+      color: "#C62828",
+      url: "/tools/emergency"
+    },
     /* Reminders feature — see docs/FEATURE-reminders.md */
     {
       id: "reminders",

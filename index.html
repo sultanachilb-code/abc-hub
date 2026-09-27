@@ -602,7 +602,8 @@ const P = {
   moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
   storeIn:'<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="m9 15 2 2 4-4"/>',
-  storeOut:'<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="m10 13 4 4M14 13l-4 4"/>'
+  storeOut:'<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="m10 13 4 4M14 13l-4 4"/>',
+  siren:'<path d="M7 18v-6a5 5 0 0 1 10 0v6"/><path d="M5 21h14v-3H5z"/><path d="M12 3v2M4.2 6.2l1.4 1.4M19.8 6.2l-1.4 1.4M2 12h2M20 12h2"/>'
 };
 const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.clipboard}</svg>`;
 const badgeOf = a => BRIEF && BRIEF.systems && BRIEF.systems[a.id] && BRIEF.systems[a.id].ok ? BRIEF.systems[a.id].badge : null;
@@ -1609,6 +1610,79 @@ $("#installBtn").onclick = async () => {
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
 boot();
+})();
+</script>
+<!-- ===================== Emergency Alert feature (see docs/FEATURE-emergency.md) ===================== -->
+<style>
+#emg{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:#B71C1C;color:#fff;text-align:center;animation:emgflash 1s infinite}
+#emg.on{display:flex}
+@keyframes emgflash{50%{background:#7F0000}}
+#emg .in{max-width:520px;width:100%}
+#emg .ic{font-size:64px;line-height:1}
+#emg h2{font-size:2rem;margin:10px 0 4px;letter-spacing:.02em}
+#emg .loc{font-size:1.35rem;font-weight:800;margin:6px 0}
+#emg .nt{font-size:1.05rem;opacity:.95;margin-bottom:6px}
+#emg .by{font-size:.9rem;opacity:.85}
+#emg .ok{display:block;width:100%;height:78px;border-radius:20px;background:#fff;color:#B71C1C;font-size:1.5rem;font-weight:900;margin-top:22px;border:0;cursor:pointer}
+#emg .row{display:flex;gap:10px;margin-top:12px}
+#emg .row button{flex:1;height:48px;border-radius:14px;background:rgba(255,255,255,.16);color:#fff;font-weight:800;border:1px solid rgba(255,255,255,.4);cursor:pointer}
+#emg .snd{margin-top:10px;font-size:.85rem;opacity:.9}
+#emgBar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);z-index:9000;display:none;background:#C62828;color:#fff;border-radius:999px;padding:10px 16px;font-weight:800;box-shadow:0 8px 24px rgba(198,40,40,.4);cursor:pointer;max-width:calc(100% - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#emgBar.on{display:block}
+</style>
+<div id="emg" role="alertdialog" aria-modal="true" aria-labelledby="emgT"></div>
+<button id="emgBar" type="button"></button>
+<script>
+(function(){
+  let cur = null, audio = null, osc = null, timer = 0, muted = new Set();
+  const esc2 = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  /* the siren: two-tone sweep made in the browser, no sound file needed */
+  function unlock(){ try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === "suspended") audio.resume(); } catch {} }
+  addEventListener("pointerdown", unlock, { passive: true }); addEventListener("keydown", unlock);
+  function sirenOn(){
+    unlock(); if (!audio || osc) return;
+    osc = audio.createOscillator(); const g = audio.createGain(); osc.type = "sawtooth"; g.gain.value = .5;
+    osc.connect(g); g.connect(audio.destination); osc.start();
+    const sweep = () => { if (!osc) return; const t0 = audio.currentTime; osc.frequency.cancelScheduledValues(t0);
+      osc.frequency.setValueAtTime(700, t0); osc.frequency.linearRampToValueAtTime(1350, t0 + .45); osc.frequency.linearRampToValueAtTime(700, t0 + .9); };
+    sweep(); timer = setInterval(sweep, 900);
+    if (navigator.vibrate) navigator.vibrate([300,120,300,120,300,360,700,160,700,160,700,360,300,120,300,120,300]);
+  }
+  function sirenOff(){ clearInterval(timer); try { osc && osc.stop(); } catch {} osc = null; if (navigator.vibrate) navigator.vibrate(0); }
+  function show(e){
+    cur = e; const box = document.getElementById("emg");
+    box.innerHTML = `<div class="in"><div class="ic">🚨</div><h2 id="emgT">EMERGENCY · ${esc2(e.type)}</h2>
+      <div class="loc">📍 ${esc2(e.location)}</div>${e.note ? `<div class="nt">${esc2(e.note)}</div>` : ""}
+      <div class="by">Sent by ${esc2(e.createdName)} · ${new Date(e.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" })}</div>
+      <button class="ok" id="emgOk">I'M ON IT</button>
+      <div class="row"><button id="emgMute">Silence siren</button></div>
+      <div class="snd" id="emgSnd">${audio && audio.state === "running" ? "" : "Tap anywhere to sound the siren"}</div></div>`;
+    box.classList.add("on");
+    box.onpointerdown = () => { if (!muted.has(e.id)) { sirenOn(); const s = document.getElementById("emgSnd"); if (s) s.textContent = ""; } };
+    document.getElementById("emgOk").onclick = async ev => { ev.stopPropagation(); const b = ev.currentTarget; b.disabled = true; b.textContent = "SENDING…";
+      try { await api("ops/emergency/ack", { id: e.id }); hide(); if (typeof toast === "function") toast("Acknowledged — the manager can see you are on it"); check(); }
+      catch (x){ b.disabled = false; b.textContent = "I'M ON IT"; } };
+    document.getElementById("emgMute").onclick = ev => { ev.stopPropagation(); muted.add(e.id); sirenOff(); ev.currentTarget.textContent = "Siren silenced"; };
+    if (!muted.has(e.id)) sirenOn();
+  }
+  function hide(){ sirenOff(); cur = null; document.getElementById("emg").classList.remove("on"); }
+  async function check(){
+    if (typeof ME === "undefined" || !ME) return;
+    let r; try { r = await api("ops/emergency/active"); } catch { return; }
+    const a = r.alerts[0];
+    if (a && (!cur || cur.id !== a.id)) show(a);
+    if (!a && cur) hide();
+    const bar = document.getElementById("emgBar"), o = r.open[0];
+    if (o && !a){ bar.textContent = `🚨 ${o.type} · ${o.location} — open board`; bar.classList.add("on");
+      bar.onclick = () => { const app = typeof byId === "function" && byId("emergency"); if (app) launch(app); }; }
+    else bar.classList.remove("on");
+  }
+  window.emergencyCheck = check;
+  setTimeout(check, 1500);
+  setInterval(() => { if (!document.hidden) check(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", ev => { if (ev.data && (ev.data.type === "emergency" || ev.data.type === "allclear")) check(); });
+  addEventListener("message", ev => { if (ev.origin === location.origin && ev.data && ev.data.type === "emergency-ack") check(); });
 })();
 </script>
 </body>

@@ -3,6 +3,7 @@ import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js"
 import { propertySchema, propertyRoute } from "./modules/property.js";   // Property Details feature — see docs/FEATURE-property-details.md
 import { remindersSchema, remindersRoute, remindersRun } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
 import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Forms feature — see docs/FEATURE-forms.md
+import { emergencySchema, emergencyRoute, emergencyRun } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -160,6 +161,7 @@ async function ensureSchema(env) {
   await propertySchema(env);  // Property Details feature
   await remindersSchema(env); // Reminders feature
   await formsSchema(env);     // Operations Forms feature
+  await emergencySchema(env); // Emergency Alert feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -247,6 +249,7 @@ export default {
       await ensureSchema(env);
       await taskReminders(env).catch(e => console.error("tasks", e && e.message));
       await remindersRun(env, { raiseEvent, pullDay, now: nowIso }).catch(e => console.error("reminders", e && e.message));   // Reminders feature
+      await emergencyRun(env, { raiseEvent, sendPush, now: nowIso }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
     })());
@@ -783,7 +786,7 @@ async function sendPush(env, sub, msg) {
       headers: {
         Authorization: await vapidHeader(env, sub.endpoint),
         "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream",
-        TTL: "3600", Urgency: msg.tone === "alert" ? "high" : "normal"
+        TTL: String(msg.ttl || 3600), Urgency: msg.tone === "alert" ? "high" : "normal"
       },
       body: await encryptPush(sub, JSON.stringify(msg))
     });
@@ -840,12 +843,12 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
       (e.to === sub.email || !sub.site_code || !e.site || e.site === sub.site_code) &&
-      roleAllows(sub.role, e.app) &&
+      roleAllows(sub.role, e.app) && e.app !== "emergency" &&   /* Emergency Alert feature pushes its own alerts */
       (sub.level === "all" || e.tone === "alert" || e.tone === "warn"));
     if (!mine.length) continue;
     if (mine.length <= 3) {
@@ -910,7 +913,8 @@ function rights(me, site) {
     property: mine && lead,                            // Property Details feature: update the values
     reminders: mine && lead,                           // Reminders feature: choose which reminders run
     formsFill: mine && me.role !== "SECURITY",         // Operations Forms feature: fill the checklists
-    formsLead: mine && lead                            // Operations Forms feature: reopen, delete, upload the Areeba list
+    formsLead: mine && lead,                           // Operations Forms feature: reopen, delete, upload the Areeba list
+    emergency: mine && lead                            // Emergency Alert feature: send an alert, end it with All clear
   };
 }
 
@@ -1074,6 +1078,9 @@ async function opsRoute(env, me, p, method, b, url) {
 
   /* ----- Reminders feature (modules/reminders.js) ----- */
   if (p.startsWith("reminders/")) return remindersRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, pullDay });
+
+  /* ----- Emergency Alert feature (modules/emergency.js) ----- */
+  if (p.startsWith("emergency/")) return emergencyRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, sendPush });
 
   /* ----- Operations Forms feature (modules/forms.js) ----- */
   if (p.startsWith("forms/")) return formsRoute(env, p, method, b, url, { site, can, me, now: nowIso, today: beirutToday, raiseEvent });
