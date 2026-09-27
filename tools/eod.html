@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>End of Day Report · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:800;color:var(--ok)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:14px 0 6px}
+.chip{padding:12px 14px;text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.chip:hover{border-color:var(--brand-2)}
+.chip strong{display:block;font-size:1.35rem;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.chip span{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.chip.alert strong{color:var(--alert)} .chip.warn strong{color:var(--warn)} .chip.ok strong{color:var(--ok)}
+.sec{margin-top:16px;overflow:hidden}
+.sec > h2{display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:1rem;font-weight:800;border-bottom:1px solid var(--line)}
+.sec > h2 .n{margin-left:auto}
+.sec .in{padding:14px 16px}
+.none{color:var(--muted);font-size:.88rem}
+.err{color:var(--warn);font-size:.86rem}
+table.t{width:100%;border-collapse:collapse;font-size:.85rem}
+.t th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.t td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.scroll{overflow-x:auto}
+/* restroom grid — same layout as the emailed daily report */
+.rg{border-collapse:separate;border-spacing:0;min-width:900px;width:100%;font-size:.78rem}
+.rg th{background:#6D28B0;color:#fff;padding:8px 6px;text-align:center;font-weight:800}
+.rg tr.sub th{background:#4C1D7F;font-size:.7rem}
+.rg th.wopen{background:#8B45D6}
+.rg td{text-align:center;padding:8px 4px;border-bottom:1px solid var(--line);background:var(--surface)}
+.rg td.rm{text-align:left;font-weight:800;padding-left:12px;white-space:nowrap}
+.rg .ok{color:#1E8E4E;font-weight:800}.rg .ms{color:#D23B3B;font-weight:800}.rg .up{color:var(--muted)}.rg .pr{color:var(--warn);font-weight:700}
+.rg small{display:block;color:var(--muted);font-size:.7rem;line-height:1.25}
+.rg .iss{color:var(--warn);font-weight:800}
+.card2{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.card2 h4{font-size:.92rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card2 p{font-size:.86rem;line-height:1.5;margin-top:6px}
+.card2 small{color:var(--muted)}
+.sev3{color:var(--alert)}.sev2{color:var(--warn)}
+ul.li{margin:6px 0 0 18px;font-size:.86rem;line-height:1.55}
+.cctv{color:var(--alert);font-weight:800;font-size:.72rem}
+.shift{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:.88rem}
+.shift b{font-variant-numeric:tabular-nums}
+.gl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.gl div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.gl strong{display:block;font-size:1.25rem;font-weight:900}
+.gl span{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+.visit{border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.visit > button{display:flex;width:100%;gap:10px;align-items:center;padding:10px 12px;text-align:left}
+.visit > button b{flex:1}
+.visit .items{display:none;padding:0 12px 10px}
+.visit.open .items{display:block}
+.restricted{font-size:.8rem;color:var(--muted);margin-top:8px}
+@media print{ .bar,.live{display:none!important} .sec{break-inside:avoid-page} .visit .items{display:block} .rg th{-webkit-print-color-adjust:exact;print-color-adjust:exact} .chip{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>End of Day Report <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <div class="bar">
+    <span class="live hidden" id="live"><i></i>Live</span>
+    <input class="inp" type="date" id="day" aria-label="Day">
+    <button class="btn ghost small" id="refresh">Refresh</button>
+    <button class="btn ghost small" id="printBtn">Print</button>
+  </div>
+</div>
+<div class="wrap" id="app"><div class="card empty">Gathering the day…</div></div>
+
+<script src="common.js"></script>
+<script>
+let CTX = null, R = null, timer = null;
+const app = $("#app");
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const pct = x => (Math.round(x * 1000) / 10).toFixed(1) + "%";
+const tm = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+const sevCls = s => /level 3/i.test(s) ? "sev3" : /level 2/i.test(s) ? "sev2" : "";
+const age = h => h < 24 ? `${h} h` : `${Math.floor(h / 24)} d ${h % 24} h`;
+const sec = (id, title, count, body, tone) => `<section class="card sec" id="${id}"><h2>${title}${count !== null && count !== undefined ? `<span class="pill ${tone || ""} n">${count}</span>` : ""}</h2><div class="in">${body}</div></section>`;
+const failed = d => d && d.error ? `<p class="err">Not available right now — ${esc(d.error)}.</p>` : "";
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  if (!$("#day").value) $("#day").value = CTX.today;
+  $("#day").max = CTX.today;
+  await load();
+}
+async function load(){
+  const day = $("#day").value;
+  try { R = await api(`ops/eod?site=${CTX.site}&date=${day}`); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  render();
+  const live = day === R.today;
+  $("#live").classList.toggle("hidden", !live);
+  clearInterval(timer); if (live) timer = setInterval(() => { if (!document.hidden) load(); }, 120000);
+}
+function render(){
+  const rr = R.restroom, inc = R.incidents, g = R.gla, sn = R.snaglist, cl = R.cleaner;
+  const rt = rr && !rr.error ? rr.totals : null;
+  const chips = [
+    ["restroom", rt ? `${rt.done}` : "—", "Restroom checks done", "ok"],
+    ["restroom", rt ? `${rt.missed}` : "—", "Restroom checks missed", rt && rt.missed ? "alert" : "ok"],
+    ["incidents", inc && !inc.error ? inc.incidents.length : "—", "Incidents logged", inc && !inc.error && inc.incidents.length ? "warn" : ""],
+    ["pir", inc && !inc.error ? inc.pirs.length : "—", "PIRs pending", inc && !inc.error && inc.pirs.some(p => p.overdue) ? "alert" : ""],
+    ["mom", R.mom.length, "Minutes posted", ""],
+    ["feedback", R.feedback.length, "Tenant feedback", R.feedback.length ? "warn" : ""],
+    ["handover", R.handovers.length, "Handovers", ""],
+    ["schedule", R.schedule.headcount, "Staff on shift", ""],
+    ["gla", pct(g.occupancy), "Occupancy", "ok"],
+    ["gla", g.active, "Active tenants", ""],
+    ["fitout", g.fitout.length, "In fit-out", ""],
+    ["reserved", g.reserved.length, "Signed, not in fit-out", g.reserved.length ? "warn" : ""],
+    ["cleaner", cl && !cl.error ? cl.count : "—", "Cleaners accessed", ""],
+    ["blacklist", inc && !inc.error ? (inc.restricted ? inc.blacklistCount : inc.blacklist.length) : "—", "Blacklisted", ""],
+    ["snag", sn && !sn.error ? sn.total : "—", "Site-visit points open", sn && !sn.error && sn.total ? "warn" : ""]
+  ];
+  const long = D.long(R.date);
+  app.innerHTML = `<p class="muted" style="font-size:.84rem">${esc(long)} · ${esc(R.siteName)} · updated ${tm(R.generatedAt)}</p>
+    <div class="chips">${chips.map(([id, v, l, t]) => `<button class="chip ${t}" data-go="${id}"><strong>${esc(v)}</strong><span>${esc(l)}</span></button>`).join("")}</div>
+    ${restroom(rr)}
+    ${incidents(inc)}
+    ${mom()}
+    ${feedback()}
+    ${handover()}
+    ${schedule()}
+    ${glaSec()}
+    ${cleaner(cl)}
+    ${blacklist(inc)}
+    ${pirs(inc)}
+    ${reserved()}
+    ${snag(sn)}`;
+}
+
+function restroom(d){
+  if (!d || d.error) return sec("restroom", "Restroom inspections", null, failed(d));
+  const W = d.windows, cell = (r, w, role) => {
+    const c = (d.grid[`${r.id}|${w.id}`] || {})[role];
+    if (c) return `<td><span class="ok">✓ Done</span><small>${esc(c.time)}</small><small>${esc(c.by)}</small>${c.issues ? `<small class="iss">issue reported</small>` : ""}</td>`;
+    return w.state === "closed" ? `<td><span class="ms">✗ Missed</span></td>` : w.state === "open" ? `<td><span class="pr">In progress</span></td>` : `<td><span class="up">—</span></td>`;
+  };
+  const t = d.totals;
+  return sec("restroom", "Restroom inspections", `${t.done} done · ${t.missed} missed`, `
+    <div class="scroll"><table class="rg"><tr><th rowspan="2" style="text-align:left;padding-left:12px">Restroom</th>${W.map(w => `<th colspan="2" class="${w.state === "open" ? "wopen" : ""}">${esc(w.label)}<small style="color:#E9DDFB">${esc(w.display)}</small></th>`).join("")}</tr>
+      <tr class="sub">${W.map(() => `<th>OPS</th><th>USM</th>`).join("")}</tr>
+      ${d.rooms.map(r => `<tr><td class="rm">${esc(r.name)}</td>${W.map(w => cell(r, w, "ops") + cell(r, w, "usm")).join("")}</tr>`).join("")}</table></div>
+    <p class="muted" style="font-size:.78rem;margin-top:8px">${t.issues} issue${t.issues === 1 ? "" : "s"} reported · ${t.done} of ${t.expectedDay} checks for the whole day</p>`, t.missed ? "alert" : "ok");
+}
+function incidents(d){
+  if (!d || d.error) return sec("incidents", "Incidents logged", null, failed(d));
+  const L = d.incidents;
+  return sec("incidents", "Incidents logged", L.length, L.length ? L.map(i => `<div class="card2"><h4><span class="${sevCls(i.severity)}">${esc(i.severity)}</span> · ${esc(i.type)}<span class="pill">${esc(i.status)}</span><small>${esc(i.ref)}${i.time ? " · " + esc(i.time) : ""}</small></h4>
+      ${d.restricted ? "" : `${i.person ? `<p><b>Person:</b> ${esc(i.person)}${i.personType ? " (" + esc(i.personType) + ")" : ""}</p>` : ""}
+      ${i.details ? `<p>${esc(i.details)}</p>` : ""}${i.action ? `<p><b>Action taken:</b> ${esc(i.action)}</p>` : ""}
+      <p><small>Reported by ${esc(i.reportedBy || "—")}${i.owner ? " · owner " + esc(i.owner) : ""}${i.escalated ? " · escalated" : ""}</small></p>`}</div>`).join("")
+    + (d.restricted ? `<p class="restricted">Case details are shown to Managers, Senior Mall Supervisors, Security and Admins.</p>` : "")
+    : `<p class="none">No incidents logged on this day.</p>`, L.length ? "warn" : "ok");
+}
+function mom(){
+  const L = R.mom;
+  return sec("mom", "Minutes of meeting", L.length, L.length ? L.map(m => `<div class="card2"><h4>${esc(m.title)}<span class="pill ${m.status === "published" ? "brand" : ""}">${m.status === "published" ? "Published" : "Draft"}</span></h4>
+      <p><small>${m.attended.length} attended: ${esc(m.attended.join(", ") || "—")} · prepared by ${esc(m.preparedBy)}</small></p>
+      ${m.actions.length ? `<ul class="li">${m.actions.map(a => `<li>${esc(a.text)} — <b>${esc(a.owner_name || "unassigned")}</b>${a.due ? `, due ${esc(D.fmt(a.due))}` : ""}${a.status === "Done" ? " ✓" : ""}</li>`).join("")}</ul>` : ""}</div>`).join("")
+    : `<p class="none">No minutes posted on this day.</p>`);
+}
+function feedback(){
+  const L = R.feedback;
+  return sec("feedback", "Tenant feedback", L.length, L.length ? `<div class="scroll"><table class="t"><tr><th>Time</th><th>Tenant</th><th>Feedback</th><th>Description</th><th>Action</th><th>By</th></tr>
+    ${L.map(e => `<tr><td>${esc(e.time)}</td><td><b>${esc(e.tenant)}</b></td><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${esc(e.action)}${e.actionDesc ? `<br><small class="muted">${esc(e.actionDesc)}</small>` : ""}</td><td class="muted">${esc(e.createdName)}</td></tr>`).join("")}</table></div>`
+    : `<p class="none">No tenant feedback logged on this day.</p>`, L.length ? "warn" : "");
+}
+function handover(){
+  const L = R.handovers, items = (arr, dated) => arr.length ? `<ul class="li">${arr.map(x => `<li>${dated && x.date ? `<b>${esc(D.fmt(x.date))}:</b> ` : ""}${esc(x.text)}${x.cctv ? ` <span class="cctv">ATT CCTV</span>` : ""}${x.done ? " ✓" : ""}</li>`).join("")}</ul>` : `<p class="none">—</p>`;
+  return sec("handover", "Handover", L.length, L.length ? L.map(h => `<div class="card2"><h4>${h.shift === "AM" ? "Morning" : "Evening"} shift · ${esc(h.by)}<span class="pill ${h.receivedBy ? "ok" : h.status === "submitted" ? "warn" : ""}">${h.receivedBy ? "Received by " + esc(h.receivedBy) : h.status === "submitted" ? "Awaiting receipt" : "Draft"}</span></h4>
+      <p><b>Today</b></p>${items(h.today)}<p><b>Tomorrow</b></p>${items(h.tomorrow)}<p><b>Ongoing follow-ups</b></p>${items(h.ongoing)}
+      ${h.upcoming.length ? `<p><b>Coming up</b></p>${items(h.upcoming, true)}` : ""}
+      ${h.events.length ? `<p><b>Events</b></p><ul class="li">${h.events.map(e => `<li>${esc(e.name)}${e.start ? ` · ${esc(e.start)}–${esc(e.end)}` : ""}</li>`).join("")}</ul>` : ""}
+      <p><small>Checklists: ${h.checklists.map(c => `${esc(c.name)} — AM ${esc(c.am || "—")}, PM ${esc(c.pm || "—")}`).join(" · ")}</small></p>
+      ${h.notes ? `<p><b>Notes:</b> ${esc(h.notes)}</p>` : ""}</div>`).join("")
+    : `<p class="none">No handover written for this day.</p>`);
+}
+function schedule(){
+  const s = R.schedule;
+  return sec("schedule", "Operations schedule", `${s.headcount} on shift`, `${s.note ? `<p style="margin-bottom:10px"><b>Note:</b> ${esc(s.note)}</p>` : ""}
+    ${s.shifts.length ? `<div class="shift">${s.shifts.map(x => `<b>${esc(x.start)}–${esc(x.end)}</b><span>${esc(x.name)} <small class="muted">· ${esc(x.position)}</small></span>`).join("")}</div>` : `<p class="none">No shifts scheduled for this day.</p>`}
+    ${s.away.length ? `<p style="margin-top:10px"><b>Not on shift:</b> ${s.away.map(a => `${esc(a.name)} (${esc(a.label)})`).join(" · ")}</p>` : ""}`);
+}
+function unitTable(L, extra){
+  return `<div class="scroll"><table class="t"><tr><th>Unit</th><th>Brand</th><th>Level</th><th>Area</th><th>Category</th>${extra ? `<th>${extra}</th>` : ""}</tr>
+    ${L.map(u => `<tr><td>${esc(u.code)}</td><td><b>${esc(u.brand)}</b></td><td>${esc(u.level)}</td><td>${fmt(u.area)} m²</td><td class="muted">${esc(u.dept)}</td>${extra ? `<td><b>${esc(u.contractStart ? D.fmt(u.contractStart, { year: "numeric" }) : "—")}</b></td>` : ""}</tr>`).join("")}</table></div>`;
+}
+function glaSec(){
+  const g = R.gla;
+  return sec("gla", "Occupancy &amp; tenants (GLA)", pct(g.occupancy), `<div class="gl">
+      <div><strong style="color:var(--brand-2)">${pct(g.occupancy)}</strong><span>Occupancy</span></div>
+      <div><strong>${g.active}</strong><span>Active tenants</span></div>
+      <div><strong>${g.fitout.length}</strong><span>In fit-out</span></div>
+      <div><strong>${g.reserved.length}</strong><span>Reserved</span></div>
+      <div><strong>${g.closed.length}</strong><span>Closed</span></div>
+      <div><strong style="color:var(--alert)">${g.vacantUnits}</strong><span>Vacant units · ${fmt(g.vacantArea)} m²</span></div></div>
+    <h3 id="fitout" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0">Tenants in fit-out</h3>
+    ${g.fitout.length ? unitTable(g.fitout) : `<p class="none">No units in fit-out.</p>`}
+    ${g.closed.length ? `<h3 style="font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 6px">Closed tenants</h3>${unitTable(g.closed)}` : ""}`, "ok");
+}
+function cleaner(d){
+  if (!d || d.error) return sec("cleaner", "Cleaner QR access", null, d && d.error === "Not connected yet" ? `<p class="none">The Cleaner QR sheet isn't connected to the hub yet.</p>` : failed(d));
+  return sec("cleaner", "Cleaner QR access", d.count, `<p><b>${d.count}</b> cleaner${d.count === 1 ? "" : "s"} accessed the mall on this day.</p>
+    ${d.byCompany ? `<p class="muted" style="margin-top:6px">${Object.entries(d.byCompany).map(([k, v]) => `${esc(k)}: ${v}`).join(" · ")}</p>` : ""}
+    ${d.names && d.names.length ? `<p style="margin-top:6px;font-size:.84rem">${d.names.map(esc).join(" · ")}</p>` : ""}`);
+}
+function blacklist(d){
+  if (!d || d.error) return sec("blacklist", "Blacklist", null, failed(d));
+  if (d.restricted) return sec("blacklist", "Blacklist", d.blacklistCount, `<p class="restricted">Names are shown to Managers, Senior Mall Supervisors, Security and Admins.</p>`);
+  const L = d.blacklist;
+  return sec("blacklist", "Blacklist", L.length, L.length ? `<div class="scroll"><table class="t"><tr><th>Name</th><th>Type</th><th>Status</th><th>Reason</th><th>Added</th><th>Until</th></tr>
+    ${L.map(b => `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.personType)}</td><td><span class="pill ${/pending/i.test(b.status) ? "warn" : ""}">${esc(b.status)}</span></td><td>${esc(b.reason)}</td><td class="muted">${esc(String(b.added).slice(0, 10))}</td><td class="muted">${esc(b.to || "—")}</td></tr>`).join("")}</table></div>`
+    : `<p class="none">Nobody is on the blacklist.</p>`);
+}
+function pirs(d){
+  if (!d || d.error) return sec("pir", "Post-incident reports pending", null, failed(d));
+  const L = d.pirs;
+  return sec("pir", "Post-incident reports pending", L.length, L.length ? `<div class="scroll"><table class="t"><tr><th>Incident</th><th>Level</th>${d.restricted ? "" : "<th>Type</th><th>Owner</th>"}<th>Waiting with no report</th><th></th></tr>
+    ${L.map(p => `<tr><td>${esc(p.ref)}</td><td class="${sevCls(p.severity)}"><b>${esc(p.severity)}</b></td>${d.restricted ? "" : `<td>${esc(p.type)}</td><td><b>${esc(p.owner || "—")}</b></td>`}<td><b>${age(p.hoursWaiting)}</b></td><td>${p.overdue ? `<span class="pill alert">Overdue</span>` : `<span class="pill">Due ${esc(p.dueAt ? new Date(p.dueAt).toLocaleDateString("en-GB") : "")}</span>`}</td></tr>`).join("")}</table></div>`
+    : `<p class="none">No post-incident reports pending.</p>`, L.some(p => p.overdue) ? "alert" : "");
+}
+function reserved(){
+  const L = R.gla.reserved;
+  return sec("reserved", "Signed contracts not yet in fit-out", L.length, L.length ? unitTable(L, "Contract start") + `<p class="muted" style="font-size:.78rem;margin-top:8px">Units marked <b>Reserved</b> in the GLA. They count as leased for occupancy.</p>`
+    : `<p class="none">No reserved units. Mark a unit as <b>Reserved</b> with its contract start date in GLA &amp; Occupancy.</p>`, L.length ? "warn" : "");
+}
+function snag(d){
+  if (!d || d.error) return sec("snag", "Snaglist · pending site-visit points", null, failed(d));
+  return sec("snag", "Snaglist · pending site-visit points", d.total, (d.visits.length ? `<p style="margin-bottom:10px"><b>${d.pending}</b> still pending · <b>${d.inProgress}</b> in progress, across ${d.visits.length} site visit${d.visits.length === 1 ? "" : "s"}. Tap a visit to see its points.</p>
+    ${d.visits.map(v => `<div class="visit"><button><b>${esc(v.name)}</b><small class="muted">${esc(v.listId)} · by ${esc(v.by)} · ${v.closedAt ? "closed" : `open ${v.daysOpen} d`}</small><span class="pill warn">${v.items.length}</span></button>
+      <div class="items"><table class="t"><tr><th>#</th><th>Location</th><th>Issue</th><th>Status</th></tr>${v.items.map(i => `<tr><td>${i.seq}${i.flagged ? " ⚑" : ""}</td><td>${esc(i.location)}</td><td>${esc(i.issue)}${i.comment ? `<br><small class="muted">${esc(i.comment)}</small>` : ""}</td><td><span class="pill ${i.status === "Pending" ? "alert" : "warn"}">${esc(i.status)}</span></td></tr>`).join("")}</table></div></div>`).join("")}`
+    : `<p class="none">Every site-visit point at ${esc(R.siteName)} is solved.</p>`) + `<button class="btn small" id="openSnag" style="margin-top:6px">Open Snaglist</button>`, d.total ? "warn" : "ok");
+}
+
+app.addEventListener("click", e => {
+  const c = e.target.closest("[data-go]"); if (c){ const el = document.getElementById(c.dataset.go); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  const v = e.target.closest(".visit > button"); if (v){ v.parentElement.classList.toggle("open"); return; }
+  if (e.target.id === "openSnag"){ try { top.location.hash = "#/app/snaglist"; } catch { location.href = "/"; } }
+});
+$("#day").addEventListener("change", load);
+$("#refresh").onclick = load;
+$("#printBtn").onclick = () => { document.querySelectorAll(".visit").forEach(v => v.classList.add("open")); print(); };
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
