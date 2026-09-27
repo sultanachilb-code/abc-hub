@@ -1537,6 +1537,7 @@ async function cleanerDay(env, site, day) {
   if (!env.CLEANER_SHEET_URL) return { error: "Not connected yet" };
   try {
     const u = new URL(env.CLEANER_SHEET_URL);
+    u.searchParams.set("action", "hubDay");
     u.searchParams.set("key", env.CLEANER_SHEET_KEY || ""); u.searchParams.set("site", site); u.searchParams.set("date", day);
     const r = await fetch(u.toString(), { redirect: "follow", signal: AbortSignal.timeout(10000) });
     const j = await r.json().catch(() => null);
