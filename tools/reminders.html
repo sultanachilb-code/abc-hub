@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reminders · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Reminders feature — see docs/FEATURE-reminders.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reach{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;margin:14px 0;line-height:1.5;font-size:.88rem}
+.reach svg{flex:none;width:22px;height:22px;color:var(--brand-2);margin-top:2px}
+.reach b{color:var(--text)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.kpi{padding:12px 14px}
+.kpi strong{display:block;font-size:1.45rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.76rem;color:var(--muted)}
+.kpi.ok strong{color:var(--ok)} .kpi.warn strong{color:var(--warn)} .kpi.alert strong{color:var(--alert)}
+.list{display:grid;gap:10px}
+.rm{display:grid;grid-template-columns:78px 1fr auto;gap:14px;align-items:start;padding:14px 16px;border-left:4px solid var(--line)}
+.rm.done{border-left-color:var(--ok)} .rm.pending{border-left-color:var(--alert)} .rm.error{border-left-color:var(--warn)} .rm.upcoming{border-left-color:var(--brand-2)} .rm.off{opacity:.55}
+.rm .time{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.rm .time small{display:block;font-size:.7rem;font-weight:700;color:var(--muted);margin-top:4px;line-height:1.3}
+.rm h3{font-size:.98rem;font-weight:800;line-height:1.3;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rm .meta{font-size:.78rem;color:var(--muted);margin-top:4px;line-height:1.45}
+.rm .det{font-size:.84rem;margin-top:8px;line-height:1.45;padding:8px 10px;border-radius:10px;background:var(--paper)}
+.rm .acts{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.rm .acts .row{display:flex;gap:6px}
+.sw{position:relative;width:42px;height:24px;border-radius:999px;background:var(--line);flex:none;transition:.2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.on{background:var(--ok)} .sw.on::after{left:21px}
+.sec{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.form .inp,.form .sel{width:100%}
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days button{width:40px;height:34px;border-radius:9px;border:1px solid var(--line);font-weight:800;font-size:.78rem;color:var(--muted);background:var(--surface)}
+.days button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.hint{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:6px}
+.err{color:var(--alert);font-size:.84rem;margin-top:8px}
+.pk{display:grid;gap:6px;max-height:52dvh;overflow:auto;padding-right:4px}
+.pk label{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.pk label.has{opacity:.5;cursor:default}
+.pk input{width:18px;height:18px;accent-color:var(--brand)}
+.pk b{font-size:.88rem;display:block} .pk small{color:var(--muted);font-size:.76rem}
+.pk .t{font-weight:800;font-variant-numeric:tabular-nums;font-size:.86rem}
+dialog.wide{width:min(620px,calc(100% - 24px))}
+table.h{width:100%;border-collapse:collapse;font-size:.84rem}
+.h th{text-align:left;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--line)}
+.h td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.h td.n{white-space:nowrap;font-variant-numeric:tabular-nums}
+@media (max-width:700px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rm{grid-template-columns:62px 1fr;gap:10px;padding:12px}
+  .rm .acts{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}
+  .form{grid-template-columns:1fr}
+  .h .hide-m{display:none}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Reminders <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+  <div class="tabs" id="tabs"><button class="on" data-t="today">Today</button><button data-t="history">History</button></div>
+  <button class="btn ghost hidden" id="bPick">Recommended</button>
+  <button class="btn hidden" id="bAdd">Add reminder</button>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+
+<dialog id="dEdit" class="wide"></dialog>
+<dialog id="dPick" class="wide"></dialog>
+
+<script src="common.js"></script>
+<script>
+const DAYS = [["1","Mon"],["2","Tue"],["3","Wed"],["4","Thu"],["5","Fri"],["6","Sat"],["7","Sun"]];
+const EVERY = [[0,"Once"],[5,"Every 5 min"],[10,"Every 10 min"],[15,"Every 15 min"],[20,"Every 20 min"],[30,"Every 30 min"],[45,"Every 45 min"],[60,"Every hour"],[90,"Every 90 min"],[120,"Every 2 hours"]];
+const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+let ctx = null, data = null, tab = "today", site = new URLSearchParams(location.search).get("site") || "";
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${v}`); boot(); });
+    await load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){
+  data = await api(`ops/reminders/get?site=${site}`);
+  $("#sub").textContent = `${ctx.siteName} · ${D.long(data.day)}`;
+  $("#bAdd").classList.toggle("hidden", !data.can.manage);
+  $("#bPick").classList.toggle("hidden", !data.can.manage);
+  render();
+}
+$("#tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.t;
+  $("#tabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); render(); };
+
+/* ---------- today ---------- */
+function statusOf(r){
+  if (!r.active) return { k: "off", label: "Off", tone: "" };
+  if (!r.today) return { k: "off", label: "Not today", tone: "" };
+  if (r.kind === "custom" && r.done) return { k: "done", label: "Done", tone: "ok" };
+  const s = r.last && r.last.state;
+  if (s === "done") return { k: "done", label: "Done", tone: "ok" };
+  if (s === "pending") return { k: "pending", label: r.next ? "Pending — reminding" : "Pending", tone: "alert" };
+  if (s === "error") return { k: "error", label: "Couldn't check", tone: "warn" };
+  return { k: "upcoming", label: "Upcoming", tone: "brand" };
+}
+function describe(r){
+  const p = r.params || {}, K = data.kinds[r.kind] || {};
+  if (r.kind === "restroom") return `${data.windows[p.window] ? data.windows[p.window].label + " (" + data.windows[p.window].from + "–" + data.windows[p.window].to + ")" : ""} · ${data.teams[p.team] || ""}`;
+  if (r.kind === "handover") return `${p.shift === "PM" ? "Evening" : "Morning"} shift · ${p.stage === "received" ? "received by the next shift" : "submitted"}`;
+  if (r.kind === "pir") return p.overdueOnly ? "Overdue reports only" : "Every report waiting";
+  if (r.kind === "sitevisit") return `Open ${p.days} day${p.days === 1 ? "" : "s"} or more`;
+  return K.source || "";
+}
+const daysLabel = d => d === "1234567" ? "Every day" : d === "123456" ? "Mon–Sat" : d === "12345" ? "Mon–Fri" : DAYS.filter(x => d.includes(x[0])).map(x => x[1]).join(" ");
+function render(){
+  if (tab === "history") return renderHistory();
+  const L = data.reminders;
+  const st = L.map(statusOf);
+  const count = k => st.filter(s => s.k === k).length;
+  const reach = data.reach;
+  let h = `<div class="card reach">${ICON}<div>A reminder that is still <b>pending</b> at its time goes to <b>everyone at ${esc(ctx.siteName)}</b> — the bell for all
+    <b>${reach.people}</b> people, and a push to the <b>${reach.devices}</b> with notifications turned on — whether they are on shift or not.
+    A task that is <b>done</b> sends nothing, and the repeats stop.</div></div>`;
+  if (!L.length){
+    h += `<div class="card empty">No reminders yet for ${esc(ctx.siteName)}.<br>${data.can.manage
+      ? `<button class="btn" style="margin-top:12px" onclick="openPick()">Choose from the recommended list</button>`
+      : "A manager or the senior mall supervisor sets them up."}</div>`;
+    $("#app").innerHTML = h; return;
+  }
+  h += `<div class="kpis">
+    <div class="card kpi alert"><strong>${count("pending")}</strong><span>Pending now</span></div>
+    <div class="card kpi warn"><strong>${count("error")}</strong><span>Couldn't check</span></div>
+    <div class="card kpi ok"><strong>${count("done")}</strong><span>Done today</span></div>
+    <div class="card kpi"><strong>${count("upcoming")}</strong><span>Still to come</span></div></div>`;
+  const today = L.filter(r => r.active && r.today), rest = L.filter(r => !(r.active && r.today));
+  h += `<div class="sec">Today · now ${esc(data.now)}</div><div class="list">${today.map(card).join("") || `<div class="card empty">Nothing scheduled for today.</div>`}</div>`;
+  if (rest.length) h += `<div class="sec">Off or not running today</div><div class="list">${rest.map(card).join("")}</div>`;
+  $("#app").innerHTML = h;
+}
+function card(r){
+  const s = statusOf(r), K = data.kinds[r.kind] || {};
+  const rep = r.every ? `${EVERY.find(e => e[0] === r.every)[1].toLowerCase()} until ${r.until}` : "once";
+  let det = "";
+  if (r.kind === "custom" && r.done) det = `Marked done by ${esc(r.done.by)} at ${esc(new Date(r.done.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }))}`;
+  else if (r.last) det = `${esc(r.last.slot)} · ${esc(r.last.detail)}`;
+  const pushes = r.pushes ? ` · pushed ${r.pushes}×` : "";
+  return `<div class="card rm ${s.k}" data-id="${r.id}">
+    <div class="time">${esc(r.at)}<small>${esc(rep)}</small></div>
+    <div><h3>${esc(r.title)} <span class="pill ${s.tone}">${esc(s.label)}</span></h3>
+      <div class="meta">${esc(K.label || r.kind)} · ${esc(describe(r))} · ${esc(daysLabel(r.days))}${r.next ? ` · next ${esc(r.next)}` : ""}${pushes}</div>
+      ${r.note ? `<div class="meta">${esc(r.note)}</div>` : ""}
+      ${det ? `<div class="det">${det}</div>` : ""}</div>
+    <div class="acts">
+      <div class="row">
+        ${r.kind === "custom" && r.active && r.today ? (r.done
+          ? `<button class="btn ghost small" data-a="undo">Undo</button>`
+          : `<button class="btn small" data-a="done">Mark done</button>`)
+          : `<button class="btn ghost small" data-a="check">Check now</button>`}
+        ${data.can.manage ? `<button class="btn ghost small" data-a="edit">Edit</button>` : ""}
+      </div>
+      ${data.can.manage ? `<button class="sw ${r.active ? "on" : ""}" data-a="toggle" aria-label="Reminder on or off" title="${r.active ? "On" : "Off"}"></button>` : ""}
+    </div></div>`;
+}
+$("#app").addEventListener("click", async e => {
+  const b = e.target.closest("[data-a]"); if (!b) return;
+  const id = Number(b.closest("[data-id]").dataset.id), r = data.reminders.find(x => x.id === id);
+  try {
+    if (b.dataset.a === "edit") return openEdit(r);
+    b.disabled = true;
+    if (b.dataset.a === "check"){
+      const res = await api("ops/reminders/check", { site, id });
+      toast(`${res.state === "done" ? "Done" : res.state === "pending" ? "Pending" : "Couldn't check"} — ${res.detail}`, res.state !== "done");
+      b.disabled = false; return;
+    }
+    if (b.dataset.a === "done"){ await api("ops/reminders/done", { site, id }); toast("Marked done — no more reminders today"); }
+    if (b.dataset.a === "undo"){ await api("ops/reminders/done", { site, id, undo: true }); toast("Back to pending"); }
+    if (b.dataset.a === "toggle"){ await api("ops/reminders/active", { site, id, active: !r.active }); toast(r.active ? "Reminder switched off" : "Reminder switched on"); }
+    await load();
+  } catch (err){ toast(err.message, true); b.disabled = false; }
+});
+
+/* ---------- history ---------- */
+async function renderHistory(){
+  $("#app").innerHTML = `<div class="empty">Loading…</div>`;
+  try {
+    const { runs } = await api(`ops/reminders/history?site=${site}`);
+    if (!runs.length){ $("#app").innerHTML = `<div class="card empty">No reminder has run yet at ${esc(ctx.siteName)}.</div>`; return; }
+    const lab = { done: ["Done — nothing sent", "ok"], pending: ["Pending", "alert"], error: ["Couldn't check", "warn"], checking: ["Checking", ""] };
+    $("#app").innerHTML = `<div class="card" style="overflow-x:auto"><table class="h"><thead><tr><th>Date</th><th>Time</th><th>Reminder</th><th>Result</th><th class="hide-m">Details</th></tr></thead><tbody>
+      ${runs.map(x => `<tr><td class="n">${esc(D.fmt(x.day, { weekday: "short" }))}</td><td class="n">${esc(x.slot)}</td><td>${esc(x.title)}</td>
+        <td><span class="pill ${(lab[x.state] || ["", ""])[1]}">${esc((lab[x.state] || [x.state])[0])}</span>${x.pushed ? ` <span class="pill brand">Pushed</span>` : ""}</td>
+        <td class="hide-m muted">${esc(x.detail)}</td></tr>`).join("")}</tbody></table></div>
+      <p class="hint" style="margin-top:10px">The last 14 days. Each line is one check; a pushed line went to everyone at the flagship.</p>`;
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ---------- add / edit ---------- */
+let edit = null;
+$("#bAdd").onclick = () => openEdit(null);
+function openEdit(r){
+  edit = r ? JSON.parse(JSON.stringify(r)) : { kind: "custom", title: "", note: "", at: "10:00", every: 0, until: "", days: "1234567", params: {} };
+  drawEdit(); $("#dEdit").showModal();
+}
+function paramFields(){
+  const p = edit.params || {};
+  if (edit.kind === "restroom") return `
+    <div><label class="lbl">Window</label><select class="sel" id="pWin">${Object.entries(data.windows).map(([k, w]) => `<option value="${k}" ${p.window === k ? "selected" : ""}>${w.label} · ${w.from}–${w.to}</option>`).join("")}</select></div>
+    <div><label class="lbl">Who inspects</label><select class="sel" id="pTeam">${Object.entries(data.teams).map(([k, v]) => `<option value="${k}" ${(p.team || "both") === k ? "selected" : ""}>${v}</option>`).join("")}</select></div>`;
+  if (edit.kind === "handover") return `
+    <div><label class="lbl">Shift</label><select class="sel" id="pShift"><option value="AM" ${p.shift !== "PM" ? "selected" : ""}>Morning</option><option value="PM" ${p.shift === "PM" ? "selected" : ""}>Evening</option></select></div>
+    <div><label class="lbl">Done when</label><select class="sel" id="pStage"><option value="submitted" ${p.stage !== "received" ? "selected" : ""}>It is submitted</option><option value="received" ${p.stage === "received" ? "selected" : ""}>The next shift received it</option></select></div>`;
+  if (edit.kind === "pir") return `
+    <div class="full"><label class="lbl">Count</label><select class="sel" id="pOver"><option value="1" ${p.overdueOnly !== false ? "selected" : ""}>Overdue reports only</option><option value="0" ${p.overdueOnly === false ? "selected" : ""}>Every report still waiting</option></select></div>`;
+  if (edit.kind === "sitevisit") return `
+    <div class="full"><label class="lbl">Pending when a visit is open for at least (days)</label><input class="inp" id="pDays" type="number" min="0" max="60" value="${p.days ?? 2}"></div>`;
+  return "";
+}
+function drawEdit(){
+  const K = data.kinds[edit.kind] || {};
+  $("#dEdit").innerHTML = `<div class="dlg-h"><b>${edit.id ? "Edit reminder" : "New reminder"}</b><small>${esc(ctx.siteName)}</small></div>
+  <div class="dlg-b"><div class="form">
+    <div class="full"><label class="lbl">What it checks</label><select class="sel" id="fKind">${Object.entries(data.kinds).map(([k, v]) => `<option value="${k}" ${edit.kind === k ? "selected" : ""}>${esc(v.label)} — ${esc(v.source)}</option>`).join("")}</select>
+      <p class="hint">${esc(K.hint || "")}</p></div>
+    <div class="full"><label class="lbl">Name (shown in the notification)</label><input class="inp" id="fTitle" maxlength="120" value="${esc(edit.title)}" placeholder="e.g. Fire alarm panel check"></div>
+    ${paramFields()}
+    <div><label class="lbl">First reminder</label><input class="inp" id="fAt" type="time" value="${esc(edit.at)}"></div>
+    <div><label class="lbl">If still pending</label><select class="sel" id="fEvery">${EVERY.map(([v, l]) => `<option value="${v}" ${Number(edit.every) === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div class="full ${Number(edit.every) ? "" : "hidden"}" id="untilBox"><label class="lbl">Stop repeating at</label><input class="inp" id="fUntil" type="time" value="${esc(edit.until)}"></div>
+    <div class="full"><label class="lbl">Days</label><div class="days" id="fDays">${DAYS.map(([k, l]) => `<button type="button" data-d="${k}" class="${edit.days.includes(k) ? "on" : ""}">${l}</button>`).join("")}</div></div>
+    <div class="full"><label class="lbl">Note (optional)</label><input class="inp" id="fNote" maxlength="300" value="${esc(edit.note)}"></div>
+  </div><div class="err" id="fErr"></div></div>
+  <div class="dlg-f">${edit.id ? `<button class="btn ghost danger" id="fDel" style="margin-right:auto">Delete</button>` : ""}
+    <button class="btn ghost" id="fCancel">Cancel</button><button class="btn" id="fSave">Save</button></div>`;
+  const d = $("#dEdit");
+  d.querySelector("#fKind").onchange = e => { grab(); const was = edit.kind; edit.kind = e.target.value; edit.params = {};
+    if (!edit.title || edit.title === (data.kinds[was] || {}).label) edit.title = data.kinds[edit.kind].label; drawEdit(); };
+  d.querySelector("#fEvery").onchange = e => { d.querySelector("#untilBox").classList.toggle("hidden", !Number(e.target.value)); };
+  d.querySelector("#fDays").onclick = e => { const b = e.target.closest("[data-d]"); if (b) b.classList.toggle("on"); };
+  d.querySelector("#fCancel").onclick = () => d.close();
+  d.querySelector("#fSave").onclick = save;
+  if (edit.id) d.querySelector("#fDel").onclick = async () => {
+    if (!await confirmBox("Delete this reminder?", `“${esc(edit.title)}” and its history will be removed.`, "Delete")) return;
+    try { await api("ops/reminders/remove", { site, id: edit.id }); d.close(); toast("Reminder deleted"); load(); } catch (e){ toast(e.message, true); }
+  };
+}
+function grab(){
+  const d = $("#dEdit"), v = s => { const x = d.querySelector(s); return x ? x.value : undefined; };
+  edit.title = v("#fTitle"); edit.at = v("#fAt"); edit.every = Number(v("#fEvery")); edit.until = v("#fUntil") || ""; edit.note = v("#fNote");
+  edit.days = [...d.querySelectorAll("#fDays .on")].map(b => b.dataset.d).join("");
+  const p = {};
+  if (edit.kind === "restroom"){ p.window = v("#pWin"); p.team = v("#pTeam"); }
+  if (edit.kind === "handover"){ p.shift = v("#pShift"); p.stage = v("#pStage"); }
+  if (edit.kind === "pir") p.overdueOnly = v("#pOver") === "1";
+  if (edit.kind === "sitevisit") p.days = Number(v("#pDays"));
+  edit.params = p;
+}
+async function save(){
+  grab();
+  const b = $("#fSave"); b.disabled = true;
+  try {
+    await api("ops/reminders/save", { site, ...edit });
+    $("#dEdit").close(); toast("Reminder saved"); load();
+  } catch (e){ $("#fErr").textContent = e.message; b.disabled = false; }
+}
+
+/* ---------- recommended list ---------- */
+$("#bPick").onclick = openPick;
+function openPick(){
+  const have = new Set(data.reminders.map(r => r.preset).filter(Boolean));
+  const d = $("#dPick");
+  d.innerHTML = `<div class="dlg-h"><b>Recommended reminders</b><small>Tick the ones ${esc(ctx.siteName)} needs — you can change times after adding them.</small></div>
+    <div class="dlg-b"><div class="pk">${data.presets.map(x => {
+      const has = have.has(x.key), K = data.kinds[x.kind];
+      return `<label class="${has ? "has" : ""}"><input type="checkbox" value="${x.key}" ${has ? "checked disabled" : ""}>
+        <span><b>${esc(x.title)}</b><small>${esc(K.source)}${x.every ? ` · repeats every ${x.every} min until ${x.until}` : ""}${has ? " · already added" : ""}</small></span>
+        <span class="t">${esc(x.at)}</span></label>`; }).join("")}</div></div>
+    <div class="dlg-f"><button class="btn ghost" id="pAll" style="margin-right:auto">Tick all</button><button class="btn ghost" id="pCancel">Cancel</button><button class="btn" id="pAdd">Add selected</button></div>`;
+  d.querySelector("#pAll").onclick = () => d.querySelectorAll("input:not([disabled])").forEach(i => i.checked = true);
+  d.querySelector("#pCancel").onclick = () => d.close();
+  d.querySelector("#pAdd").onclick = async () => {
+    const keys = [...d.querySelectorAll("input:checked:not([disabled])")].map(i => i.value);
+    if (!keys.length) return d.close();
+    try { const r = await api("ops/reminders/presets", { site, keys }); d.close(); toast(`${r.added} reminder${r.added === 1 ? "" : "s"} added`); load(); }
+    catch (e){ toast(e.message, true); }
+  };
+  d.showModal();
+}
+
+boot();
+setInterval(() => { if (tab === "today" && !document.querySelector("dialog[open]")) load().catch(() => {}); }, 60000);
+</script>
+</body>
+</html>
