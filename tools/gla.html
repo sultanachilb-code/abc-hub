@@ -40,6 +40,7 @@
 .u.pop .b::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#2E8B7A;margin-right:4px;vertical-align:1px}
 .u.ds{background:rgba(74,111,165,.14)} .u.ds .b{color:#3A5A8C}
 .u.closed .b{color:var(--muted);font-style:italic}
+.u.res{background:rgba(47,128,237,.13)} .u.res .b{color:#2361B8}
 .u.term{background:rgba(229,72,77,.14)} .u.term .b{color:var(--alert);text-decoration:line-through}
 .u.edit{cursor:pointer} .u.edit:hover{outline:1.5px solid var(--brand-2);outline-offset:-1.5px}
 .u.dim{opacity:.18}
@@ -102,7 +103,7 @@ let CTX = null, G = null, FIT = innerWidth > 900, CAN = {}, STATUSES = [], SECTI
 const fmt = n => Math.round(n).toLocaleString("en-US");
 const pct = (x, d = 1) => (Math.round(x * Math.pow(10, d + 2)) / Math.pow(10, d)).toFixed(d) + "%";
 /* live statuses: Open · Closed · Fit-out · Terminated · Vacant  (Terminated and Vacant count as empty space) */
-const st = u => u.status === "Vacant" ? "vac" : u.status === "Terminated" ? "term" : u.status === "Fit-out" ? "fit" : u.status === "Closed" ? "closed" : "ok";
+const st = u => u.status === "Vacant" ? "vac" : u.status === "Terminated" ? "term" : u.status === "Fit-out" ? "fit" : u.status === "Closed" ? "closed" : u.status === "Reserved" ? "res" : "ok";
 const empty = u => u.status === "Vacant" || u.status === "Terminated";
 const kind = u => u.section === "DS" || u.section === "iPlay" ? "ds" : u.section === "Pop-up" ? "pop" : "lease";
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Beirut" });
@@ -169,7 +170,7 @@ function render(){
         ${LT.length ? `<h3>Level totals (sqm)</h3><table class="lt"><tr><th></th>${keys.map(([, h]) => `<th>${h}</th>`).join("")}</tr>
           ${LT.map(r => `<tr class="${/^total/i.test(r.level) ? "tot" : ""}"><td>${esc(r.level.replace(/^Add\. Spaces$/, "Add."))}</td>${keys.map(([k]) => `<td>${r[k] ? fmt(r[k]) : "–"}</td>`).join("")}</tr>`).join("")}</table>` : ""}
         <h3>Largest categories (sqm)</h3><div class="dp">${topC.map(([k, v]) => `<span>${esc(k)}</span><b>${fmt(v)}</b>`).join("")}</div>
-        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:var(--line)"></i>Closed (grey italic)</span><span><i style="background:rgba(229,72,77,.5)"></i>Terminated (struck through)</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>Department store / iPlay</span></div>
+        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:rgba(47,128,237,.45)"></i>Reserved (signed, not in fit-out yet)</span><span><i style="background:var(--line)"></i>Closed (grey italic)</span><span><i style="background:rgba(229,72,77,.5)"></i>Terminated (struck through)</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>Department store / iPlay</span></div>
       </div>
     </div>
     <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA · ${G.changes} change${G.changes === 1 ? "" : "s"} since ${esc((G.baseline && G.baseline.source) || "the workbook")}</span><span>${U.length} units · figures in square metres</span></div>
@@ -221,6 +222,7 @@ function editUnit(u){
       <label><span class="lbl">Area (sqm)</span><input class="inp" id="eArea" type="number" min="0" step="0.01" value="${esc(u.area)}"></label>
       <label><span class="lbl">Category</span><input class="inp" id="eDept" list="deptList" value="${esc(u.dept)}"></label>
       <label><span class="lbl">Space type</span><select class="sel" id="eSec">${SECTIONS.map(x => `<option ${x === u.section ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+      <label class="full" id="eCsWrap"><span class="lbl">Contract start date</span><input class="inp" type="date" id="eCs" value="${esc(u.contractStart || "")}"></label>
     </div>
     <div class="effbox"><label><span class="lbl">Effective date</span><input class="inp" type="date" id="eDate" value="${today()}" max="${today()}"></label>
       <label><span class="lbl">Note (optional)</span><input class="inp" id="eNote" placeholder="e.g. lease signed, handover of keys"></label></div>
@@ -228,6 +230,7 @@ function editUnit(u){
     <div class="err hidden" id="eErr"></div></div>
     <div class="dlg-f">${isNew ? "" : `<button class="btn ghost danger" id="eDel" style="margin-right:auto">Remove unit</button>`}<button class="btn ghost" id="eClose">Cancel</button><button class="btn gold" id="eSave">${isNew ? "Add unit" : "Save change"}</button></div>`;
   const syncBrand = () => { const v = $("#eStatus").value === "Vacant"; $("#eBrand").placeholder = v ? "Vacant — no brand" : "Brand name";
+    $("#eCsWrap").style.display = ["Reserved", "Fit-out"].includes($("#eStatus").value) || $("#eCs").value ? "" : "none";
     if (!v && /^vacant/i.test($("#eDept").value)){ $("#eDept").value = ""; $("#eDept").placeholder = "e.g. RESTAURANTS"; } };
   syncBrand();
   d.oninput = e => { if (e.target.id === "eStatus") syncBrand(); $("#eErr").classList.add("hidden"); };
@@ -241,8 +244,8 @@ function editUnit(u){
     }
     if (t.id === "eSave"){
       const unit = { id: u.id, level: $("#eLevel").value.trim(), code: $("#eCode").value.trim(), brand: $("#eBrand").value.trim(), status: $("#eStatus").value,
-        area: $("#eArea").value, dept: $("#eDept").value.trim(), section: $("#eSec").value };
-      const err = !unit.level || !unit.code ? "Level and unit code are required" : unit.status !== "Vacant" && !unit.brand ? "Enter the brand" : !effDate ? "Choose the effective date" : "";
+        area: $("#eArea").value, dept: $("#eDept").value.trim(), section: $("#eSec").value, contractStart: $("#eCs").value };
+      const err = !unit.level || !unit.code ? "Level and unit code are required" : unit.status !== "Vacant" && !unit.brand ? "Enter the brand" : unit.status === "Reserved" && !unit.contractStart ? "Enter the contract start date" : !effDate ? "Choose the effective date" : "";
       if (err){ $("#eErr").textContent = err; $("#eErr").classList.remove("hidden"); return; }
       t.disabled = true;
       try { const r = await api("ops/gla/save", { site: CTX.site, unit, effDate, note }); d.close(); toast(r.changed === false ? "Nothing changed" : isNew ? "Unit added" : "GLA updated");
@@ -259,7 +262,7 @@ async function history(){
   d.onclick = e => { if (e.target === d || e.target.id === "hClose") d.close(); };
   d.showModal();
   const r = await api(`ops/gla/history?site=${CTX.site}`);
-  const label = { level: "Level", code: "Unit", brand: "Brand", status: "Status", section: "Type", dept: "Category", area: "Area" };
+  const label = { level: "Level", code: "Unit", brand: "Brand", status: "Status", section: "Type", dept: "Category", area: "Area", contract_start: "Contract start" };
   $("#hList").innerHTML = r.events.length ? r.events.map(e => {
     const unit = e.unit.code ? `${esc(e.unit.level)} · ${esc(e.unit.code)} · ${esc(e.unit.brand || "Vacant")}` : "Unit";
     const what = e.kind === "add" ? `<span>Added: <b style="display:inline">${esc(e.after.brand || "Vacant")}</b> · ${esc(e.after.status)} · ${fmt(e.after.area)} sqm</span>`

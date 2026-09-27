@@ -33,7 +33,7 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .pins{position:absolute;inset:0}
 .pin{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);
   transform:scale(var(--inv,1));cursor:pointer;padding:0;background:#7B4BB0}
-.pin.s-fit{background:#C8A24A}.pin.s-vac,.pin.s-term{background:#E5484D}.pin.s-closed{background:#8A8494}.pin.s-place{background:#1F9E8F;border-radius:5px}
+.pin.s-fit{background:#C8A24A}.pin.s-res{background:#2F80ED}.pin.s-vac,.pin.s-term{background:#E5484D}.pin.s-closed{background:#8A8494}.pin.s-place{background:#1F9E8F;border-radius:5px}
 .pin.s-none{background:#fff;border-color:#8A8494;border-style:dashed}
 .pin.sel{outline:3px solid var(--gold);outline-offset:2px}
 .pin.dim{opacity:.15}
@@ -106,7 +106,7 @@ let CTX = null, L = null, UNITS = [], CAN = {}, LEVEL = null, ADJUST = false, PE
 const V = { s: 1, x: 0, y: 0, w: 0, h: 0 };
 const norm = c => String(c || "").replace(/^VM[\s-]*/i, "").trim().toUpperCase();
 const byCode = () => { const m = new Map(); UNITS.forEach(u => m.set(norm(u.code), u)); return m; };
-const stCls = u => !u ? "s-none" : u.status === "Fit-out" ? "s-fit" : u.status === "Vacant" ? "s-vac" : u.status === "Terminated" ? "s-term" : u.status === "Closed" ? "s-closed" : "s-open";
+const stCls = u => !u ? "s-none" : u.status === "Fit-out" ? "s-fit" : u.status === "Reserved" ? "s-res" : u.status === "Vacant" ? "s-vac" : u.status === "Terminated" ? "s-term" : u.status === "Closed" ? "s-closed" : "s-open";
 const fmt = n => Math.round(n).toLocaleString("en-US");
 const params = new URLSearchParams(location.search);
 
@@ -165,7 +165,7 @@ function renderSide(){
     <h3>Level ${esc(LEVEL)} · from the plan</h3>
     <div class="fg">${Object.keys(label).filter(k => f[k]).map(k => `<span>${label[k]}</span><b>${fmt(f[k])} m²</b>`).join("") || `<span class="muted">No figures on this plan</span>`}</div>
     ${us.length ? `<h3>Live from the GLA</h3><div class="fg"><span>Units</span><b>${live.units}</b><span>Vacant / terminated</span><b style="color:var(--alert)">${live.vac}</b><span>Fit-out</span><b>${live.fit}</b>${live.closed ? `<span>Closed</span><b>${live.closed}</b>` : ""}</div>` : ""}
-    <h3>Key</h3><div class="leg"><span><i style="background:#7B4BB0"></i>Open</span><span><i style="background:#C8A24A"></i>Fit-out</span><span><i style="background:#E5484D"></i>Vacant / terminated</span><span><i style="background:#8A8494"></i>Closed</span><span><i style="background:#1F9E8F;border-radius:3px"></i>Place (ATM, room, office…)</span><span><i style="background:#fff;border:2px dashed #8A8494"></i>On the plan, not in the GLA</span></div>
+    <h3>Key</h3><div class="leg"><span><i style="background:#7B4BB0"></i>Open</span><span><i style="background:#C8A24A"></i>Fit-out</span><span><i style="background:#2F80ED"></i>Reserved</span><span><i style="background:#E5484D"></i>Vacant / terminated</span><span><i style="background:#8A8494"></i>Closed</span><span><i style="background:#1F9E8F;border-radius:3px"></i>Place (ATM, room, office…)</span><span><i style="background:#fff;border:2px dashed #8A8494"></i>On the plan, not in the GLA</span></div>
     ${notInGla.length ? `<h3>On the plan, not in the GLA · ${notInGla.length}</h3><div class="mm">${notInGla.map(p => `<button data-focus="${p.id}">${esc(p.code)}</button>`).join("")}</div>` : ""}
     ${missingOnPlan.length ? `<h3>In the GLA, not on the plan · ${missingOnPlan.length}</h3><div class="mm">${missingOnPlan.map(u => `<button data-place="${u.id}">${esc(u.code)} · ${esc(u.brand || "Vacant")}${CAN.layouts ? " — place it" : ""}</button>`).join("")}</div>` : ""}
     <p class="muted" style="font-size:.74rem;margin-top:14px">${esc(meta.source || "")}${meta.uploadedBy ? ` · uploaded by ${esc(meta.uploadedBy)}` : ""}</p>
@@ -225,7 +225,7 @@ function openCard(p){
   const c = $("#card");
   c.innerHTML = `<button class="x" id="cx">×</button>
     ${p.kind === "place" ? `<h4>${esc(p.label)}</h4><p class="muted" style="font-size:.8rem;margin-top:4px">Place · level ${esc(p.level)}</p>`
-      : u ? `<h4>${esc(u.brand || "Vacant")}</h4><div style="margin:6px 0 8px"><span class="pill ${u.status === "Open" ? "brand" : u.status === "Fit-out" ? "warn" : u.status === "Closed" ? "" : "alert"}">${esc(u.status)}</span></div>
+      : u ? `<h4>${esc(u.brand || "Vacant")}</h4><div style="margin:6px 0 8px"><span class="pill ${u.status === "Open" ? "brand" : u.status === "Fit-out" ? "warn" : u.status === "Closed" || u.status === "Reserved" ? "" : "alert"}">${esc(u.status)}</span>${u.contractStart ? ` <small class="muted">· contract starts ${esc(D.fmt(u.contractStart, { year: "numeric" }))}</small>` : ""}</div>
         <div class="row"><span>Unit</span><b>${esc(u.level)} · ${esc(u.code)}</b></div><div class="row"><span>Area</span><b>${fmt(u.area)} m²</b></div>
         <div class="row"><span>Category</span><b>${esc(u.dept || "—")}</b></div><div class="row"><span>Space</span><b>${esc(u.section)}</b></div>
         ${u.updatedBy ? `<p class="muted" style="font-size:.74rem;margin-top:6px">Last updated by ${esc(u.updatedBy)}</p>` : ""}`
