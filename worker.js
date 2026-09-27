@@ -2,6 +2,7 @@ import { GLA } from "./data/gla-data.js";
 import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js";   // Mall Layouts feature — see docs/FEATURE-layouts.md
 import { propertySchema, propertyRoute } from "./modules/property.js";   // Property Details feature — see docs/FEATURE-property-details.md
 import { remindersSchema, remindersRoute, remindersRun } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
+import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Forms feature — see docs/FEATURE-forms.md
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -158,6 +159,7 @@ async function ensureSchema(env) {
   await layoutsSchema(env);   // Mall Layouts feature
   await propertySchema(env);  // Property Details feature
   await remindersSchema(env); // Reminders feature
+  await formsSchema(env);     // Operations Forms feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -838,7 +840,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -906,7 +908,9 @@ function rights(me, site) {
     gla: mine && (lead || me.role === "SUPERVISOR"),  // keep the GLA up to date
     layouts: mine && lead,                             // Mall Layouts feature: upload plans, adjust pins
     property: mine && lead,                            // Property Details feature: update the values
-    reminders: mine && lead                            // Reminders feature: choose which reminders run
+    reminders: mine && lead,                           // Reminders feature: choose which reminders run
+    formsFill: mine && me.role !== "SECURITY",         // Operations Forms feature: fill the checklists
+    formsLead: mine && lead                            // Operations Forms feature: reopen, delete, upload the Areeba list
   };
 }
 
@@ -1070,6 +1074,9 @@ async function opsRoute(env, me, p, method, b, url) {
 
   /* ----- Reminders feature (modules/reminders.js) ----- */
   if (p.startsWith("reminders/")) return remindersRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, pullDay });
+
+  /* ----- Operations Forms feature (modules/forms.js) ----- */
+  if (p.startsWith("forms/")) return formsRoute(env, p, method, b, url, { site, can, me, now: nowIso, today: beirutToday, raiseEvent });
 
   /* ----- tenant feedback ----- */
   if (p === "feedback/list") {

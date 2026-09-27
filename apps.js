@@ -8,7 +8,7 @@
      desc    one-line description
      group   section on the home screen (must match one of GROUPS)
      icon    clipboard | alert | qr | box | calendar | chart | bolt | truck
-             | camera | shield | users | footfall | bug | book | megaphone | alarm
+             | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut
      color   tile colour
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
@@ -23,7 +23,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Operations Tools", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting"],
+  GROUPS: ["Operations Tools", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Operations Forms"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -75,6 +75,12 @@ window.HUB = {
       orbitGroup: "Operations Forms",
       url: "#forms"
     },
+    /* Operations Forms feature — the checklists shown in the orbit ring (see docs/FEATURE-forms.md) */
+    { id: "form-am", name: "AM Checklist", desc: "Pre-opening and morning shift checks", group: "Operations Forms", icon: "sun", color: "#C8892A", url: "/tools/forms?f=am" },
+    { id: "form-pm", name: "PM Checklist", desc: "Evening shift and closing checks", group: "Operations Forms", icon: "moon", color: "#3C4F8A", url: "/tools/forms?f=pm" },
+    { id: "form-dbank", name: "Direct Banking", desc: "Weekly Areeba machine inspection", group: "Operations Forms", icon: "card", color: "#2E6B4F", url: "/tools/forms?f=dbank" },
+    { id: "form-open", name: "Tenant Opening", desc: "New tenant opening checklist", group: "Operations Forms", icon: "storeIn", color: "#2F6F73", url: "/tools/forms?f=open" },
+    { id: "form-close", name: "Tenant Closing", desc: "Tenant closure checklist", group: "Operations Forms", icon: "storeOut", color: "#A33B3B", url: "/tools/forms?f=close" },
     /* Reminders feature — see docs/FEATURE-reminders.md */
     {
       id: "reminders",
