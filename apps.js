@@ -131,6 +131,17 @@ window.HUB = {
       color: "#6B3F8F",
       url: "/tools/property"
     },
+    /* Executive Report feature — see docs/FEATURE-exec-report.md */
+    {
+      id: "exec",
+      name: "Executive Report",
+      desc: "Monthly executive summary — occupancy, leasing, CAPEX, QC",
+      group: "Property Overview & Info",
+      icon: "chart",
+      color: "#0F5C7A",
+      url: "/tools/exec",
+      roles: ["MANAGER", "SUPERVISOR"]
+    },
     /* Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md */
     {
       id: "budget",
