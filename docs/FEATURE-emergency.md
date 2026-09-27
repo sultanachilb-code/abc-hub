@@ -14,7 +14,9 @@ Added: September 2026 · Status: live · Owner: Sultan Al Achi · Cost: none (no
   - The sender sees the exact list before sending, with a warning for anyone who has no device with notifications on ("call them").
 - **How it reaches them**
   - Urgent push to every device of each recipient: stays on screen, vibrates SOS (Android), buttons **I'm on it** / Open.
-  - Re-sent about every 45 s to anyone who has not acknowledged (board open) and every 2 minutes from the server (cron), for up to 45 minutes.
+  - **Rings until tapped:** a fresh notification every 10 s (new sound + vibration each time; the previous one is removed) to anyone who has not acknowledged, for up to 60 minutes.
+    Driven by the **pager** — a free SQLite-backed Durable Object (`EmergencyPager`) whose alarm wakes every 10 s while an alert is open, so it keeps going with the hub closed. The 2-minute cron restarts it if needed.
+  - Tapping the notification (or its I'm on it button) acknowledges and stops it. Swiping it away does not.
   - Anyone with the hub open gets a **full-screen red alert with a siren** (generated in the browser) until they tap I'm on it.
   - A bell entry for each recipient.
 - **Live board** for the sender: acknowledged / waiting / no device, re-alert button, and **All clear** (with a note), which notifies everyone who was alerted.
@@ -30,8 +32,9 @@ Added: September 2026 · Status: live · Owner: Sultan Al Achi · Cost: none (no
 | `modules/emergency.js` | **New file.** Tables, on-shift targeting, sending, repeats, routes. |
 | `tools/emergency.html` | **New file.** Send form, live board, history. |
 | `docs/FEATURE-emergency.md` | **New file.** This record. |
-| `worker.js` | 5 lines marked `Emergency Alert feature`: the `import`, `await emergencySchema(env)`, `emergencyRun(...)` in `scheduled()`, the `emergency:` permission in `rights()`, the `emergency/` route in `opsRoute`; plus in `pushRun` the `e.app !== "emergency"` filter and `emergency: "Emergency"` in the names list. `sendPush` now honours `msg.ttl` (harmless to keep). |
+| `worker.js` | 5 lines marked `Emergency Alert feature`: the `import`, `await emergencySchema(env)`, `emergencyRun(...)` in `scheduled()`, the `emergency:` permission in `rights()`, the `emergency/` route in `opsRoute`, the `emergencyDeps(...)` line and `export { EmergencyPager }`; plus in `pushRun` the `e.app !== "emergency"` filter and `emergency: "Emergency"` in the names list. `sendPush` now honours `msg.ttl` (harmless to keep). |
 | `index.html` | The block marked `Emergency Alert feature` just before `</body>` (overlay, siren, red banner) and the `siren` icon. |
+| `wrangler.jsonc` | The `durable_objects` binding `PAGER` → `EmergencyPager` and the `migrations` entry `v1-emergency-pager` (to remove: replace with a `deleted_classes` migration). |
 | `sw.js` | The `d.emergency` / `allClear` handling in `push` and the `ack` action in `notificationclick`. |
 | `apps.js` | The `emergency` tile (marked with a comment). |
 
