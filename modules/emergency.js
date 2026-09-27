@@ -25,9 +25,33 @@ const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 export const TYPES = ["Fire", "Evacuation", "Medical", "Security threat", "Fight / violence", "Lift entrapment", "Flood / water leak",
   "Power outage", "Gas leak", "Suspicious object", "Lost child", "Other"];
-const REPEAT_S = 45;          // re-alert people who have not acknowledged
-const REPEAT_FOR_MIN = 45;    // stop repeating after 45 minutes (the alert stays open until All clear)
-const MAX_SENDS = 40;
+const REPEAT_S = 10;          // re-alert people who have not acknowledged — every 10 seconds
+const REPEAT_FOR_MIN = 60;    // stop repeating after 60 minutes (the alert stays open until All clear)
+const MAX_SENDS = 360;
+const LOOP_MS = 10000;        // the pager (a Durable Object alarm) wakes every 10 s while an alert is open
+
+/* worker.js hands over its push + bell helpers once, so the pager can use them */
+let DEPS = null;
+export function emergencyDeps(d) { DEPS = d; }
+
+/* The pager: one Durable Object that keeps re-alerting every 10 s while any alert is open,
+   even when nobody has the hub open. Free on Workers Free (SQLite-backed Durable Object). */
+export class EmergencyPager {
+  constructor(ctx, env) { this.ctx = ctx; this.env = env; }
+  async fetch() {
+    const at = await this.ctx.storage.getAlarm();
+    if (!at) await this.ctx.storage.setAlarm(Date.now() + 1000);
+    return new Response("ok");
+  }
+  async alarm() {
+    const open = DEPS ? await emergencyRun(this.env, DEPS, true).catch(() => 1) : 0;
+    if (open) await this.ctx.storage.setAlarm(Date.now() + LOOP_MS);
+  }
+}
+export async function startPager(env) {
+  if (!env.PAGER) return false;
+  try { await env.PAGER.get(env.PAGER.idFromName("pager")).fetch("https://pager/start"); return true; } catch { return false; }
+}
 
 export async function emergencySchema(env) {
   await env.DB.batch([
@@ -83,8 +107,9 @@ export async function onShiftNow(env, site, withManagers) {
 /* ---------- sending ---------- */
 const SOS = [300, 120, 300, 120, 300, 360, 700, 160, 700, 160, 700, 360, 300, 120, 300, 120, 300];
 function payload(e, repeat) {
-  return { title: `🚨 EMERGENCY · ${e.type}${repeat ? ` (${repeat + 1})` : ""}`, body: `${e.location}${e.note ? ` — ${e.note}` : ""}\nTap “I'm on it” to acknowledge.`,
-    tone: "alert", tag: `emg-${e.id}`, url: `/tools/emergency?id=${e.id}`, ttl: 600, emergency: { id: e.id, type: e.type, location: e.location, vibrate: SOS } };
+  /* a new tag each time = a brand-new notification, so the phone sounds and vibrates again (the old one is replaced by the service worker) */
+  return { title: `🚨 EMERGENCY · ${e.type}${repeat ? ` · ${repeat + 1}` : ""}`, body: `${e.location}${e.note ? ` — ${e.note}` : ""}\nTap “I'm on it” to stop the alarm.`,
+    tone: "alert", tag: `emg-${e.id}-${repeat}`, url: `/tools/emergency?id=${e.id}`, ttl: 60, emergency: { id: e.id, type: e.type, location: e.location, vibrate: SOS, seq: repeat } };
 }
 async function pushTo(env, deps, email, msg) {
   const { results } = await env.DB.prepare("SELECT * FROM push_subs WHERE email = ?").bind(email).all();
@@ -124,9 +149,11 @@ async function alertRound(env, deps, e, force) {
 }
 
 /* cron (every 2 minutes) — keeps repeating even if the sender closed the board */
-export async function emergencyRun(env, deps) {
+export async function emergencyRun(env, deps, fromPager) {
   const { results } = await env.DB.prepare("SELECT * FROM emergencies WHERE status = 'active'").all();
   for (const e of results || []) await alertRound(env, deps, e, false);
+  if ((results || []).length && !fromPager) await startPager(env);   // the cron also restarts the pager if it ever stopped
+  return (results || []).length;
 }
 
 async function board(env, e) {
@@ -184,6 +211,7 @@ export async function emergencyRoute(env, p, method, b, url, ctx) {
       VALUES (?,?,?,?, 'active', ?,?,?,?)`).bind(site, type, location, clip(String(b.note || "").trim(), 300), b.managers === false ? 0 : 1, me.email, me.full_name, now()).run();
     const e = await env.DB.prepare("SELECT * FROM emergencies WHERE id = ?").bind(r.meta.last_row_id).first();
     await alertRound(env, deps, e, false);
+    await startPager(env);
     return board(env, e);
   }
   if (p === "emergency/get") return board(env, await byId(q("id")));
@@ -223,7 +251,7 @@ export async function emergencyRoute(env, p, method, b, url, ctx) {
     await env.DB.prepare("UPDATE emergencies SET status = 'closed', closed_at = ?, closed_name = ?, close_note = ? WHERE id = ?").bind(now(), me.full_name, note, e.id).run();
     const { results } = await env.DB.prepare("SELECT email FROM emergency_recips WHERE emergency_id = ?").bind(e.id).all();
     for (const r of results || []) {
-      await pushTo(env, deps, r.email, { title: `✅ ALL CLEAR · ${e.type}`, body: `${e.location}${note ? ` — ${note}` : ""} · ${me.full_name}`, tone: "ok", tag: `emg-${e.id}`, url: `/tools/emergency?id=${e.id}`, ttl: 3600, allClear: { id: e.id } });
+      await pushTo(env, deps, r.email, { title: `✅ ALL CLEAR · ${e.type}`, body: `${e.location}${note ? ` — ${note}` : ""} · ${me.full_name}`, tone: "ok", tag: `emg-${e.id}-clear`, url: `/tools/emergency?id=${e.id}`, ttl: 3600, allClear: { id: e.id } });
       await deps.raiseEvent(env, { site: e.site, app: "emergency", email: r.email, tone: "ok", title: `All clear · ${e.type}`, body: `${e.location} · ${me.full_name}` });
     }
     return board(env, await env.DB.prepare("SELECT * FROM emergencies WHERE id = ?").bind(e.id).first());
