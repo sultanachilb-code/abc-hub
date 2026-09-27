@@ -8,7 +8,7 @@
      desc    one-line description
      group   section on the home screen (must match one of GROUPS)
      icon    clipboard | alert | qr | box | calendar | chart | bolt | truck
-             | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut | siren
+             | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut | siren | wallet
      color   tile colour
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
@@ -130,6 +130,17 @@ window.HUB = {
       icon: "book",
       color: "#6B3F8F",
       url: "/tools/property"
+    },
+    /* Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md */
+    {
+      id: "budget",
+      name: "Budget · CAPEX & OPEX",
+      desc: "Budget lines by flagship — prepare the JDE request",
+      group: "Property Overview & Info",
+      icon: "wallet",
+      color: "#8A6D1F",
+      url: "/tools/budget",
+      roles: ["MANAGER", "SUPERVISOR"]
     },
     /* Mall Layouts feature — see docs/FEATURE-layouts.md */
     {

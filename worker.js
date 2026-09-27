@@ -4,7 +4,8 @@ import { propertySchema, propertyRoute } from "./modules/property.js";   // Prop
 import { remindersSchema, remindersRoute, remindersRun } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
 import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Forms feature — see docs/FEATURE-forms.md
 import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
-export { EmergencyPager } from "./modules/emergency.js";   // Emergency Alert feature: the 10-second pager (Durable Object)
+export { EmergencyPager } from "./modules/emergency.js";
+import { budgetSchema, budgetRoute } from "./modules/budget.js";   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
@@ -165,6 +166,7 @@ async function ensureSchema(env) {
   await remindersSchema(env); // Reminders feature
   await formsSchema(env);     // Operations Forms feature
   await emergencySchema(env); // Emergency Alert feature
+  await budgetSchema(env);    // Budget (CAPEX / OPEX) feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -917,7 +919,9 @@ function rights(me, site) {
     reminders: mine && lead,                           // Reminders feature: choose which reminders run
     formsFill: mine && me.role !== "SECURITY",         // Operations Forms feature: fill the checklists
     formsLead: mine && lead,                           // Operations Forms feature: reopen, delete, upload the Areeba list
-    emergency: mine && lead                            // Emergency Alert feature: send an alert, end it with All clear
+    emergency: mine && lead,                           // Emergency Alert feature: send an alert, end it with All clear
+    budget: mine && (lead || me.role === "SUPERVISOR"), // Budget feature: see the CAPEX / OPEX lines and prepare JDE requests
+    budgetLead: mine && lead                           // Budget feature: upload the sheets
   };
 }
 
@@ -1081,6 +1085,9 @@ async function opsRoute(env, me, p, method, b, url) {
 
   /* ----- Reminders feature (modules/reminders.js) ----- */
   if (p.startsWith("reminders/")) return remindersRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, pullDay });
+
+  /* ----- Budget (CAPEX / OPEX) feature (modules/budget.js) ----- */
+  if (p.startsWith("budget/")) return budgetRoute(env, p, method, b, url, { site, can, me, now: nowIso });
 
   /* ----- Emergency Alert feature (modules/emergency.js) ----- */
   if (p.startsWith("emergency/")) return emergencyRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, sendPush });
