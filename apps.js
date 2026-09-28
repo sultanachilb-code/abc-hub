@@ -234,7 +234,7 @@ window.HUB = {
       color: "#B4471F",
       url: "https://jdesrvweb.abc.com.lb:8882/jde/E1Menu.maf",
       embed: false,
-      roles: ["MANAGER"]
+      roles: ["MANAGER", "SUPERVISOR"]   /* operations team uses it for the budget requests */
     },
     {
       id: "archibus",
