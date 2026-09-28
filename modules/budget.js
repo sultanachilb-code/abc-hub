@@ -61,7 +61,7 @@ export async function budgetRoute(env, p, method, b, url, ctx) {
       years: (years.results || []).map(y => y.year), lines: (lines.results || []).map(l => { const o = lineOut(l); o.used = used.get(o.key) || 0; return o; }) };
   }
   if (p === "budget/upload" && method === "POST") {
-    if (!can.budgetLead) throw err("Only managers, the senior mall supervisor and administrators can upload the budget", 403);
+    if (!can.budgetLead) throw err("Only flagship management and leadership can upload the budget", 403);
     const kind = kindOf(b.kind), year = yearOf(b.year);
     const rows = (Array.isArray(b.lines) ? b.lines : []).map(r => cleanLine(kind, r)).filter(Boolean);
     if (!rows.length) throw err("No budget lines were found in the sheet");

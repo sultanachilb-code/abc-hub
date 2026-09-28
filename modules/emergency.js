@@ -172,7 +172,7 @@ export async function emergencyRoute(env, p, method, b, url, ctx) {
   const byId = async id => {
     const e = await env.DB.prepare("SELECT * FROM emergencies WHERE id = ?").bind(Number(id)).first();
     if (!e) throw err("This alert no longer exists", 404);
-    if (me.role !== "ADMIN" && me.site_code !== e.site) {
+    if (!(ctx.canSite ? ctx.canSite(e.site) : me.role === "ADMIN" || me.site_code === e.site)) {
       const mine = await env.DB.prepare("SELECT 1 AS x FROM emergency_recips WHERE emergency_id = ? AND email = ?").bind(e.id, me.email).first();
       if (!mine) throw err("This alert is for another flagship", 403);
     }
@@ -184,8 +184,8 @@ export async function emergencyRoute(env, p, method, b, url, ctx) {
     const [mine, open] = await Promise.all([
       env.DB.prepare(`SELECT e.* FROM emergencies e JOIN emergency_recips r ON r.emergency_id = e.id
         WHERE e.status = 'active' AND r.email = ? AND r.ack_at = '' ORDER BY e.id DESC LIMIT 3`).bind(me.email).all(),
-      can.emergency ? env.DB.prepare(`SELECT * FROM emergencies WHERE status = 'active' AND (? = 1 OR site = ?) ORDER BY id DESC LIMIT 5`)
-        .bind(me.role === "ADMIN" && !me.site_code ? 1 : 0, me.site_code || "").all() : { results: [] }
+      can.emergency && (ctx.sites || []).length ? env.DB.prepare(`SELECT * FROM emergencies WHERE status = 'active' AND site IN (${ctx.sites.map(() => "?").join(",")}) ORDER BY id DESC LIMIT 5`)
+        .bind(...ctx.sites).all() : { results: [] }
     ]);
     return { alerts: (mine.results || []).map(out), open: (open.results || []).map(out) };
   }

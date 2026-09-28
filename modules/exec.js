@@ -102,7 +102,7 @@ function rollForward(prev, period) {
 /* ctx = { site, can, me, now, siteName, sites, glaAsOf } — can.exec: see & edit */
 export async function execRoute(env, p, method, b, url, ctx) {
   const { can, me, now } = ctx;
-  if (!can.exec) throw err("The executive report is for managers, the senior mall supervisor and administrators", 403);
+  if (!can.exec) throw err("The executive report is for flagship management and leadership", 403);
   const q = k => url.searchParams.get(k);
 
   if (p === "exec/get") {
@@ -122,7 +122,7 @@ export async function execRoute(env, p, method, b, url, ctx) {
     const auto = await autoPart(env, site, period, { glaAsOf: ctx.glaAsOf });
     const periods = ((await env.DB.prepare("SELECT period, updated_by, updated_at FROM exec_reports WHERE site = ? ORDER BY period DESC").bind(site).all()).results || []);
     return { site, siteName: ctx.siteName(site), period, periodLabel: label(period), data, source, savedAt: row ? row.updated_at : "", savedBy: row ? row.updated_by : "",
-      auto, periods, sites: ctx.sites, can: { edit: true, all: me.role === "ADMIN" } };
+      auto, periods, sites: ctx.sites, can: { edit: true, all: Object.keys(ctx.sites || {}).length > 1 } };
   }
   if (p === "exec/save" && method === "POST") {
     if (!isPeriod(b.period)) throw err("Choose the month");
