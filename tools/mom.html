@@ -57,6 +57,9 @@
   #print table{width:100%;border-collapse:collapse;margin-bottom:10px} #print td,#print th{border:1px solid #777;padding:5px 7px;text-align:left;vertical-align:top}
   #print th{background:#D9E2F3!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #print h1{font-size:15px;margin:0 0 8px;color:#2A0F45} }
+.tsum{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 14px;font-size:.84rem}.tsum b{margin-right:6px}
+.mt{font-weight:700;color:var(--brand-2)}
+.tpick{display:grid;gap:8px}.tpick .btn{justify-content:flex-start}
 </style>
 </head>
 <body>
@@ -92,12 +95,16 @@ async function home(){
   const list = app.querySelector(".list");
   if (VIEW === "meetings"){
     const d = await api(`ops/mom/list?site=${CTX.site}`);
-    list.innerHTML = d.meetings.length ? d.meetings.map(m => `<button class="card mrow" data-id="${m.id}">
+    TYPES = d.types || TYPES;
+    const yr = CTX.today.slice(0, 4), counts = {};
+    d.meetings.filter(m => m.date.startsWith(yr)).forEach(m => { const k = m.type || "Not set"; counts[k] = (counts[k] || 0) + 1; });
+    const sum = Object.keys(counts).length ? `<div class="card tsum"><b>${yr} by type</b>${Object.entries(counts).map(([k, n]) => `<span class="pill">${esc(k)} · ${n}</span>`).join("")}</div>` : "";
+    list.innerHTML = sum + (d.meetings.length ? d.meetings.map(m => `<button class="card mrow" data-id="${m.id}">
         <span class="date"><b>${D.parse(m.date).getUTCDate()}</b><small>${D.fmt(m.date, { day: undefined, month: "short" })}</small></span>
-        <span class="main"><b>${esc(m.title)}</b><small>${D.long(m.date)} · ${m.attended} attended · ${m.actions} action${m.actions === 1 ? "" : "s"}</small></span>
+        <span class="main"><b>${esc(m.title)}</b><small>${m.type ? `<span class="mt">${esc(m.type)}</span> · ` : ""}${D.long(m.date)} · ${m.attended} attended · ${m.actions} action${m.actions === 1 ? "" : "s"}</small></span>
         ${m.open ? `<span class="pill warn">${m.open} open</span>` : m.actions ? `<span class="pill ok">All done</span>` : ""}
         <span class="pill ${m.status === "published" ? "brand" : ""}">${m.status === "published" ? "Published" : "Draft"}</span></button>`).join("")
-      : `<div class="card empty">No minutes yet for ${esc(CTX.siteName)}.${CTX.can.mom ? "<br>Start with <b>+ New meeting</b>." : ""}</div>`;
+      : `<div class="card empty">No minutes yet for ${esc(CTX.siteName)}.${CTX.can.mom ? "<br>Start with <b>+ New meeting</b>." : ""}</div>`);
   } else {
     const d = await api(`ops/tasks?site=${CTX.site}${VIEW === "mine" ? "&mine=1" : ""}`);
     const tasks = VIEW === "all" ? d.tasks.filter(t => t.status === "Open") : d.tasks;
@@ -115,7 +122,7 @@ function taskCard(t){
 }
 app.addEventListener("click", async e => {
   const tb = e.target.closest("[data-tab]"); if (tb){ VIEW = tb.dataset.tab; return home(); }
-  if (e.target.id === "newBtn") return edit(0);
+  if (e.target.id === "newBtn"){ const t = await pickType(); if (t) return edit(0, t); return; }
   const row = e.target.closest(".mrow"); if (row) return edit(Number(row.dataset.id));
   const op = e.target.closest("[data-open]"); if (op){ e.preventDefault(); return edit(Number(op.dataset.open)); }
   const tk = e.target.closest("[data-task]");
@@ -123,8 +130,21 @@ app.addEventListener("click", async e => {
 });
 
 /* ---------------- editor ---------------- */
-async function edit(id){
-  const d = id ? await api(`ops/mom/get?id=${id}`) : await api(`ops/mom/new?site=${CTX.site}`);
+/* + New meeting asks the meeting type first (kept for reports) */
+let TYPES = ["Internal ABC Department", "Internal Operations Meeting", "Tenant Meeting", "Soft Services Meeting", "External Meeting"];
+function pickType(){
+  return new Promise(res => {
+    let d = $("#dType"); if (!d){ d = document.createElement("dialog"); d.id = "dType"; document.body.append(d); }
+    d.innerHTML = `<div class="dlg-h"><b>What kind of meeting is it?</b><small>Used to group minutes in reports.</small></div>
+      <div class="dlg-b"><div class="tpick">${TYPES.map(t => `<button class="btn ghost" data-t="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>
+      <div class="dlg-f"><button class="btn ghost" data-t="">Cancel</button></div>`;
+    d.onclick = e => { const b = e.target.closest("[data-t]"); if (b || e.target === d){ d.close(); res(b ? b.dataset.t : ""); } };
+    d.showModal();
+  });
+}
+async function edit(id, type){
+  const d = id ? await api(`ops/mom/get?id=${id}`) : await api(`ops/mom/new?site=${CTX.site}&type=${encodeURIComponent(type || "")}`);
+  if (d.types) TYPES = d.types;
   M = { ...d, meeting: { ...d.meeting }, actions: d.actions.map(a => ({ ...a })), carried: d.carried.map(a => ({ ...a })), guests: "" };
   /* make sure everyone at the flagship is offered as a card, even if added after the meeting */
   const have = new Set(M.meeting.participants.map(p => p.email).filter(Boolean));
@@ -152,6 +172,7 @@ function renderEditor(){
   <div class="card sec"><h2>Meeting</h2>
     <div class="fields">
       <label><span class="lbl">Title</span><input class="inp" id="fTitle" value="${esc(m.title)}" ${dis}></label>
+      <label><span class="lbl">Meeting type</span><select class="inp" id="fType" ${dis}><option value="">— Choose —</option>${TYPES.map(t => `<option ${m.type === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
       <label><span class="lbl">Date</span><input class="inp" type="date" id="fDate" value="${esc(m.date)}" ${dis}></label>
       <label><span class="lbl">Week number</span><input class="inp" id="fWeek" value="${esc(m.weekNo)}" ${dis}></label>
       <label><span class="lbl">Location</span><input class="inp" id="fLoc" value="${esc(m.location)}" ${dis}></label>
@@ -198,7 +219,7 @@ function collect(){
   const m = M.meeting;
   if (!M.can.mom) return;
   m.title = $("#fTitle").value; m.date = $("#fDate").value; m.weekNo = $("#fWeek").value; m.location = $("#fLoc").value;
-  m.lastDate = $("#fLast").value; m.nextDate = $("#fNext").value;
+  m.lastDate = $("#fLast").value; m.nextDate = $("#fNext").value; m.type = $("#fType").value;
   app.querySelectorAll("[data-pt]").forEach(i => m.points[+i.dataset.pt] = i.value);
   app.querySelectorAll("[data-at]").forEach(i => M.actions[+i.dataset.at].text = i.value);
   app.querySelectorAll("[data-ad]").forEach(i => M.actions[+i.dataset.ad].due = i.value);

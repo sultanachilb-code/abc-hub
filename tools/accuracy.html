@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Accuracy Score · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Data Accuracy Score feature — see docs/FEATURE-accuracy.md -->
+<style>
+.hero{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;padding:20px 22px;margin-bottom:14px}
+.ring{--p:0;--c:var(--ok);width:132px;height:132px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--paper) 0);display:grid;place-items:center}
+.ring>div{width:104px;height:104px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center}
+.ring strong{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.ring small{display:block;font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.hero h2{font-size:1.15rem;font-weight:800;margin-bottom:6px}
+.hero p{color:var(--muted);font-size:.9rem;line-height:1.5;max-width:62ch}
+.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.it{padding:16px 18px;display:flex;flex-direction:column;gap:8px;border-left:5px solid var(--line)}
+.it.fresh{border-left-color:var(--ok)}.it.due{border-left-color:var(--warn)}.it.stale,.it.never{border-left-color:var(--alert)}
+.it h3{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.it .when{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+.it .by{font-size:.84rem;color:var(--muted)}
+.it .rule{font-size:.8rem;color:var(--muted);line-height:1.45}
+.it .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
+.it .age{font-size:.8rem;font-weight:700}
+.cmp{margin-top:18px;overflow-x:auto}
+.cmp table{width:100%;border-collapse:collapse;font-size:.86rem}
+.cmp th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.cmp td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cmp td b{font-size:1rem}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--line)}
+.dot.fresh{background:var(--ok)}.dot.due{background:var(--warn)}.dot.stale,.dot.never{background:var(--alert)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:10px}
+@media (max-width:760px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}.items{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Data Accuracy Score <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <button class="btn ghost" id="refresh">Refresh</button>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<script src="common.js"></script>
+<script>
+const app = $("#app");
+let CTX, R;
+const STATE = { fresh: ["Up to date", "ok"], due: ["Update due", "warn"], stale: ["Out of date", "alert"], never: ["Never updated", "alert"] };
+const when = iso => iso ? new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No update recorded";
+const ago = iso => { if (!iso) return ""; const d = Math.floor((Date.now() - Date.parse(iso)) / 864e5); return d <= 0 ? "Today" : d === 1 ? "Yesterday" : `${d} days ago`; };
+const color = s => s >= 80 ? "var(--ok)" : s >= 50 ? "var(--warn)" : "var(--alert)";
+const OPEN = { gla: "gla", property: "property", exec: "exec", budget: "budget" };
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  await load();
+}
+async function load(){
+  try { R = await api("ops/accuracy?site=" + CTX.site); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  const F = R.flagships.find(f => f.site === CTX.site) || R.flagships[0];
+  const late = F.items.filter(i => i.state !== "fresh");
+  app.innerHTML = `<section class="card hero">
+      <div class="ring" style="--p:${F.score};--c:${color(F.score)}"><div><div><strong>${F.score}</strong><small>of 100</small></div></div></div>
+      <div><h2>${esc(F.siteName)}</h2><p>${late.length ? `${late.map(i => esc(i.name)).join(", ")} ${late.length === 1 ? "needs" : "need"} updating. The score rises as soon as the data is refreshed.` : "Every property reference is up to date."}</p>
+        <div class="legend"><span><i class="dot fresh"></i>Up to date · 100</span><span><i class="dot due"></i>Update due · 60</span><span><i class="dot stale"></i>Out of date · 20</span><span><i class="dot never"></i>Never updated · 0</span></div></div>
+    </section>
+    <div class="items">${F.items.map(i => { const [lab, tone] = STATE[i.state]; const can = i.key !== "exec" || (R.can && R.can.exec);
+      return `<article class="card it ${i.state}"><h3>${esc(i.name)}<span class="pill ${tone}">${lab}</span></h3>
+        <div><div class="when">${esc(when(i.at))}</div><div class="by">${i.by ? "by " + esc(i.by) : "&nbsp;"}${i.note ? " · " + esc(i.note) : ""}</div></div>
+        <p class="rule">${esc(i.rule)}</p>
+        <div class="foot"><span class="age">${esc(ago(i.at))}</span>${can ? `<button class="btn small ghost" data-open="${OPEN[i.key]}">Open ${esc(i.name.split(" ")[0] === "Budget" ? "Budget" : i.name)}</button>` : ""}</div></article>`; }).join("")}</div>
+    ${R.flagships.length > 1 ? `<section class="card cmp"><table><tr><th>Flagship</th><th>Score</th>${F.items.map(i => `<th>${esc(i.name)}</th>`).join("")}</tr>
+      ${R.flagships.map(f => `<tr><td><b>${esc(f.siteName)}</b></td><td><b style="color:${color(f.score)}">${f.score}</b></td>${f.items.map(i => `<td><i class="dot ${i.state}"></i>${esc(i.at ? when(i.at) : "—")}</td>`).join("")}</tr>`).join("")}</table></section>` : ""}
+    <p class="muted" style="font-size:.78rem;margin-top:12px">Checked ${esc(when(R.generatedAt))}.</p>`;
+}
+app.addEventListener("click", e => { const b = e.target.closest("[data-open]"); if (!b) return; try { top.location.hash = "#/app/" + b.dataset.open; } catch { location.href = "/"; } });
+$("#refresh").onclick = load;
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Policies &amp; Procedures · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Policies & Procedures — placeholder for the three systems (Owner, Assist, ABC General Policies) -->
+<style>
+.pp{max-width:720px;margin:30px auto;padding:30px 28px;display:grid;gap:14px}
+.pp .k{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-2)}
+.pp h2{font-size:1.5rem;font-weight:800;text-wrap:balance}
+.pp p{color:var(--muted);line-height:1.6}
+.pp ul{display:grid;gap:8px;margin-top:4px;padding-left:18px;color:var(--text);font-size:.92rem;line-height:1.5}
+.sys{display:flex;gap:8px;flex-wrap:wrap}
+.sys a{padding:8px 14px;border-radius:999px;border:1px solid var(--line);font-weight:700;font-size:.85rem;color:var(--text);text-decoration:none;background:var(--surface)}
+.sys a.on{background:var(--brand);border-color:var(--brand);color:#fff}
+</style>
+</head>
+<body>
+<div class="top"><h1>Policies &amp; Procedures <small id="sub"></small></h1></div>
+<div class="wrap"><section class="card pp" id="app"></section></div>
+<script src="common.js"></script>
+<script>
+const SYS = {
+  owner:   { name: "Owner", desc: "Owner policies and procedures." },
+  assist:  { name: "Assist", desc: "Assist policies and procedures." },
+  general: { name: "ABC General Policies", desc: "Company-wide ABC policies." }
+};
+const k = SYS[new URLSearchParams(location.search).get("s")] ? new URLSearchParams(location.search).get("s") : "owner";
+$("#sub").textContent = SYS[k].name;
+$("#app").innerHTML = `<div class="sys">${Object.entries(SYS).map(([c, v]) => `<a href="?s=${c}" class="${c === k ? "on" : ""}">${esc(v.name)}</a>`).join("")}</div>
+  <div class="k">Coming soon</div>
+  <h2>${esc(SYS[k].name)}</h2>
+  <p>${esc(SYS[k].desc)} This space is ready in the hub. The documents, search and sign-off will be added here next.</p>
+  <ul><li>Documents by chapter, always the latest approved version</li><li>Search across every policy and procedure</li><li>Read-and-acknowledge for the team, with a record of who has read what</li></ul>`;
+</script>
+</body>
+</html>

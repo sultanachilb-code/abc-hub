@@ -57,6 +57,8 @@ ul.li{margin:6px 0 0 18px;font-size:.86rem;line-height:1.55}
 .visit.open .items{display:block}
 .restricted{font-size:.8rem;color:var(--muted);margin-top:8px}
 @media print{ .bar,.live{display:none!important} .sec{break-inside:avoid-page} .visit .items{display:block} .rg th{-webkit-print-color-adjust:exact;print-color-adjust:exact} .chip{break-inside:avoid} }
+.sh{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 6px}
+.cm{white-space:pre-wrap;background:var(--paper);border-radius:10px;padding:8px 10px;font-size:.88rem}
 </style>
 </head>
 <body>
@@ -111,14 +113,20 @@ function render(){
     ["mom", R.mom.length, "Minutes posted", ""],
     ["feedback", R.feedback.length, "Tenant feedback", R.feedback.length ? "warn" : ""],
     ["handover", R.handovers.length, "Handovers", ""],
+    ["hotasks", R.handoverTasks.length ? `${R.handoverTasks.filter(t => t.done).length}/${R.handoverTasks.length}` : "0", "Handover tasks done", R.handoverTasks.some(t => !t.done) ? "warn" : ""],
+    ["checklists", ckState(R.checklists.am), "AM checklist", ckTone(R.checklists.am)],
+    ["checklists", ckState(R.checklists.pm), "PM checklist", ckTone(R.checklists.pm)],
+    ["tenants", R.tenants.opened.length + R.tenants.opening.length, "Tenant openings", ""],
+    ["tenants", R.tenants.closed.length + R.tenants.closing.length, "Tenant closures", ""],
+    ["dbank", R.dbank.today.length ? (R.dbank.today.some(r => r.status === "submitted") ? "Done" : "Started") : "—", "Direct banking tour", R.dbank.today.some(r => r.issues) ? "warn" : ""],
     ["schedule", R.schedule.headcount, "Staff on shift", ""],
     ["gla", pct(g.occupancy), "Occupancy", "ok"],
     ["gla", g.active, "Active tenants", ""],
     ["fitout", g.fitout.length, "In fit-out", ""],
     ["reserved", g.reserved.length, "Signed, not in fit-out", g.reserved.length ? "warn" : ""],
-    ["cleaner", cl && !cl.error ? cl.count : "—", "Cleaners accessed", ""],
     ["blacklist", inc && !inc.error ? (inc.restricted ? inc.blacklistCount : inc.blacklist.length) : "—", "Blacklisted", ""],
-    ["snag", sn && !sn.error ? sn.total : "—", "Site-visit points open", sn && !sn.error && sn.total ? "warn" : ""]
+    ["snag", sn && !sn.error ? sn.total : "—", "Site-visit points open", sn && !sn.error && sn.total ? "warn" : ""],
+    ["cleaner", cl && !cl.error ? cl.count : "—", "Cleaners accessed", ""]
   ];
   const long = D.long(R.date);
   app.innerHTML = `<p class="muted" style="font-size:.84rem">${esc(long)} · ${esc(R.siteName)} · updated ${tm(R.generatedAt)}</p>
@@ -128,13 +136,17 @@ function render(){
     ${mom()}
     ${feedback()}
     ${handover()}
+    ${hoTasks()}
+    ${checklistsSec()}
+    ${tenantsSec()}
+    ${dbankSec()}
     ${schedule()}
     ${glaSec()}
-    ${cleaner(cl)}
     ${blacklist(inc)}
     ${pirs(inc)}
     ${reserved()}
-    ${snag(sn)}`;
+    ${snag(sn)}
+    ${cleaner(cl)}`;
 }
 
 function restroom(d){
@@ -147,7 +159,7 @@ function restroom(d){
   const t = d.totals;
   return sec("restroom", "Restroom inspections", `${t.done} done · ${t.missed} missed`, `
     <div class="scroll"><table class="rg"><tr><th rowspan="2" style="text-align:left;padding-left:12px">Restroom</th>${W.map(w => `<th colspan="2" class="${w.state === "open" ? "wopen" : ""}">${esc(w.label)}<small style="color:#E9DDFB">${esc(w.display)}</small></th>`).join("")}</tr>
-      <tr class="sub">${W.map(() => `<th>OPS</th><th>USM</th>`).join("")}</tr>
+      <tr class="sub">${W.map(() => `<th>OPS</th><th>S.S</th>`).join("")}</tr>
       ${d.rooms.map(r => `<tr><td class="rm">${esc(r.name)}</td>${W.map(w => cell(r, w, "ops") + cell(r, w, "usm")).join("")}</tr>`).join("")}</table></div>
     <p class="muted" style="font-size:.78rem;margin-top:8px">${t.issues} issue${t.issues === 1 ? "" : "s"} reported · ${t.done} of ${t.expectedDay} checks for the whole day</p>`, t.missed ? "alert" : "ok");
 }
@@ -163,7 +175,7 @@ function incidents(d){
 }
 function mom(){
   const L = R.mom;
-  return sec("mom", "Minutes of meeting", L.length, L.length ? L.map(m => `<div class="card2"><h4>${esc(m.title)}<span class="pill ${m.status === "published" ? "brand" : ""}">${m.status === "published" ? "Published" : "Draft"}</span></h4>
+  return sec("mom", "Minutes of meeting", L.length, L.length ? L.map(m => `<div class="card2"><h4>${esc(m.title)}${m.type ? ` <small>${esc(m.type)}</small>` : ""}<span class="pill ${m.status === "published" ? "brand" : ""}">${m.status === "published" ? "Published" : "Draft"}</span></h4>
       <p><small>${m.attended.length} attended: ${esc(m.attended.join(", ") || "—")} · prepared by ${esc(m.preparedBy)}</small></p>
       ${m.actions.length ? `<ul class="li">${m.actions.map(a => `<li>${esc(a.text)} — <b>${esc(a.owner_name || "unassigned")}</b>${a.due ? `, due ${esc(D.fmt(a.due))}` : ""}${a.status === "Done" ? " ✓" : ""}</li>`).join("")}</ul>` : ""}</div>`).join("")
     : `<p class="none">No minutes posted on this day.</p>`);
@@ -183,6 +195,42 @@ function handover(){
       <p><small>Checklists: ${h.checklists.map(c => `${esc(c.name)} — AM ${esc(c.am || "—")}, PM ${esc(c.pm || "—")}`).join(" · ")}</small></p>
       ${h.notes ? `<p><b>Notes:</b> ${esc(h.notes)}</p>` : ""}</div>`).join("")
     : `<p class="none">No handover written for this day.</p>`);
+}
+/* ----- Operations Forms, tenants and handover tasks ----- */
+function ckState(r){ return !r ? "Not done" : r.status === "submitted" ? "Done" : `${r.done}/${r.total}`; }
+function ckTone(r){ return !r ? "alert" : r.status === "submitted" ? (r.issues ? "warn" : "ok") : "warn"; }
+function findingsList(L, withIds){
+  return L.length ? `<ul class="li">${L.map(f => `<li><b>✗ ${esc(f.area)}</b>${f.task ? " · " + esc(f.task) : ""}${withIds && f.ids ? ` <small class="muted">${esc(f.ids)}</small>` : ""}${f.training ? ` · <b>${esc(f.training)}</b>` : ""}${f.remark ? `<br><small>Reason / remark: ${esc(f.remark)}</small>` : ""}</li>`).join("")}</ul>` : `<p class="none">No ✗ findings.</p>`;
+}
+function runHead(r){
+  return `<span class="pill ${r.status === "submitted" ? (r.issues ? "warn" : "ok") : "warn"}">${r.status === "submitted" ? `Submitted ${tm(r.submittedAt)}` : `In progress · ${r.done}/${r.total}`}</span><small>${esc(r.by || "")}${r.issues ? ` · ${r.issues} ✗` : ""}</small>`;
+}
+function checklistsSec(){
+  const one = (label, r) => `<div class="card2"><h4>${label}${r ? runHead(r) : `<span class="pill alert">Not done</span>`}</h4>
+    ${r ? `${findingsList(r.findings)}
+      ${r.remarks.length ? `<p><b>Remarks</b></p><ul class="li">${r.remarks.map(x => `<li>${esc(x.area)}${x.task ? " · " + esc(x.task) : ""}: ${esc(x.remark)}</li>`).join("")}</ul>` : ""}
+      <p><b>Team comments</b></p>${r.comments ? `<p class="cm">${esc(r.comments)}</p>` : `<p class="none">No comments.</p>`}` : `<p class="none">Nobody started the ${label} on this day.</p>`}</div>`;
+  const a = R.checklists.am, p = R.checklists.pm;
+  return sec("checklists", "AM &amp; PM checklists", `${a && a.status === "submitted" ? "AM ✓" : "AM ✗"} · ${p && p.status === "submitted" ? "PM ✓" : "PM ✗"}`, one("AM checklist", a) + one("PM checklist", p), (a && a.status === "submitted" && p && p.status === "submitted") ? "ok" : "warn");
+}
+function tenantsSec(){
+  const T = R.tenants, n = T.opened.length + T.closed.length + T.opening.length + T.closing.length;
+  const gl = (L, word) => L.length ? `<div class="scroll"><table class="t"><tr><th>Brand</th><th>Unit</th><th>Level</th><th>Change</th><th>By</th></tr>${L.map(u => `<tr><td><b>${esc(u.brand)}</b></td><td>${esc(u.code)}</td><td>${esc(u.level)}</td><td>${esc(u.how)}${u.note ? `<br><small class="muted">${esc(u.note)}</small>` : ""}</td><td class="muted">${esc(u.by)}</td></tr>`).join("")}</table></div>` : `<p class="none">No tenant ${word} in the GLA on this day.</p>`;
+  const forms = (L, label) => L.length ? L.map(r => `<div class="card2"><h4>${label} · ${esc(r.title || "Tenant")}${runHead(r)}</h4>${findingsList(r.findings)}${r.comments ? `<p><b>Comments:</b> ${esc(r.comments)}</p>` : ""}</div>`).join("") : "";
+  return sec("tenants", "Tenant openings &amp; closures", n, `<h3 class="sh">Opened</h3>${gl(T.opened, "opened")}${forms(T.opening, "Opening checklist")}
+    <h3 class="sh">Closed</h3>${gl(T.closed, "closed")}${forms(T.closing, "Closing checklist")}`, n ? "warn" : "");
+}
+function dbankSec(){
+  const D2 = R.dbank;
+  if (!D2.today.length) return sec("dbank", "Direct banking tour", "Not done", `<p class="none">No direct banking tour on this day.${D2.last ? ` Last tour: <b>${esc(D.fmt(D2.last.day))}</b> by ${esc(D2.last.by || "—")}${D2.last.issues ? ` · ${D2.last.issues} finding${D2.last.issues === 1 ? "" : "s"}` : ""}.` : " No tour recorded yet."}</p>`);
+  return sec("dbank", "Direct banking tour", (n => `${n} finding${n === 1 ? "" : "s"}`)(D2.today.reduce((a, r) => a + r.issues, 0)), D2.today.map(r => `<div class="card2"><h4>Tour${runHead(r)}</h4>
+    <p><small>${r.total} machine${r.total === 1 ? "" : "s"} checked</small></p>${findingsList(r.findings, true)}${r.comments ? `<p><b>Comments:</b> ${esc(r.comments)}</p>` : ""}</div>`).join(""), D2.today.some(r => r.issues) ? "warn" : "ok");
+}
+function hoTasks(){
+  const L = R.handoverTasks;
+  return sec("hotasks", "Shift handover tasks for this date", L.length ? `${L.filter(t => t.done).length} of ${L.length} done` : 0,
+    L.length ? `<ul class="li">${L.map(t => `<li>${t.done ? "✓" : "○"} ${esc(t.text)}${t.cctv ? ` <span class="cctv">ATT CCTV</span>` : ""}<br><small class="muted">${esc(t.from)}</small></li>`).join("")}</ul>`
+    : `<p class="none">No handover tasks were set for this date.</p>`, L.some(t => !t.done) ? "warn" : L.length ? "ok" : "");
 }
 function schedule(){
   const s = R.schedule;
