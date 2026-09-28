@@ -56,6 +56,8 @@ table.t{width:100%;border-collapse:collapse}
   .t{display:block;overflow-x:auto} .t tr{min-width:620px} }
 @media print{ .doc{border:1.5px solid #000;max-width:none;margin:0} .x,.add,.tg:not(.on),.bar,.banner,#listView{display:none!important}
   .hd,.sub,.t th,.tg.on{-webkit-print-color-adjust:exact;print-color-adjust:exact} .it input[type=text],.it textarea{color:#2F5597} }
+dialog.wide{width:min(760px,calc(100% - 20px))}
+.impl{display:grid;gap:4px;padding-left:18px;font-size:.86rem;color:#2F5597}
 </style>
 </head>
 <body>
@@ -64,6 +66,9 @@ table.t{width:100%;border-collapse:collapse}
   <span id="siteBox"></span>
 </div>
 <div class="wrap" id="app"></div>
+<input type="file" id="impFile" accept=".xlsx,.xls,.xlsm,.csv" class="hidden">
+<dialog id="dImp" class="wide"></dialog>
+<dialog id="dMail"></dialog>
 
 <script src="common.js"></script>
 <script>
@@ -129,6 +134,8 @@ function render(){
     <select class="sel" id="hShift" ${ro}><option value="AM" ${H.shift === "AM" ? "selected" : ""}>Morning shift</option><option value="PM" ${H.shift === "PM" ? "selected" : ""}>Evening shift</option></select>
     <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Submitted" : "Draft"}</span>
     <span style="flex:1"></span>
+    ${ro ? "" : `<button class="btn ghost small" id="impBtn" title="Salesforce Handover Report (.xlsx)">⤓ Import tenant requests</button>`}
+    <button class="btn ghost small" id="mailBtn">✉ Email in Outlook</button>
     <button class="btn ghost small" id="printBtn">Print / PDF</button>
   </div>
   ${!H.id && H.from ? `<div class="banner">Started from the ${H.from.shift === "AM" ? "morning" : "evening"} handover of ${esc(D.fmt(H.from.day, { weekday: "short" }))} — review, then save.</div>` : ""}
@@ -196,6 +203,8 @@ app.addEventListener("click", async e => {
   const t = e.target;
   if (t.id === "back"){ if (dirty && H.can.handover && !(await confirmBox("Leave without saving?", "Your latest changes to this handover are not saved yet.", "Leave"))) return; clearTimeout(timer); return list(); }
   if (t.id === "printBtn") return print();
+  if (t.id === "impBtn") return $("#impFile").click();
+  if (t.id === "mailBtn") return mailDialog();
   const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add; H.doc[k].push(blank[k]()); touch(); render();
     const last = app.querySelectorAll(`[data-k="${k}"][data-i="${H.doc[k].length - 1}"]`); const f = [...last].find(x => x.tagName === "TEXTAREA" || x.type === "text"); f && f.focus(); return; }
   const rm = t.closest("[data-rm]"); if (rm){ H.doc[rm.dataset.rm].splice(+rm.dataset.i, 1); touch(); return render(); }
@@ -216,6 +225,177 @@ async function save(submit, quiet){
     const m = $("#savedMsg"); if (m) m.textContent = `Saved ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
     if (first) open(H.id);
   } catch (er){ toast(er.message, true); }
+}
+
+/* =====================================================================
+   IMPORT TENANT REQUESTS — the Salesforce "Handover Report" Excel (ABC Tenant Connect requests)
+   Columns: Status · Valid From · Request Name · Tenant Name · Valid To · Sub Maintenance · Contractor · Description
+   Blank Status / Valid From cells repeat the row above (grouped report).
+   Each request lands in this handover by its date: this day → Today, next day → Tomorrow,
+   later → Coming up (dated, moves into Today on its day). Requests already in the handover (same REQ number) are skipped.
+   ===================================================================== */
+let IMP = null;
+function loadXlsx(){
+  return window.XLSX ? Promise.resolve() : new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "xlsx.full.min.js"; sc.onload = res; sc.onerror = () => rej(new Error("Could not load the Excel reader")); document.head.append(sc); });
+}
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function parseWhen(v){
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v)) return { day: `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`, time: `${String(v.getHours()).padStart(2, "0")}:${String(v.getMinutes()).padStart(2, "0")}` };
+  if (typeof v === "number"){ const d = XLSX.SSF.parse_date_code(v); if (d) return { day: `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`, time: `${String(d.H).padStart(2, "0")}:${String(d.M).padStart(2, "0")}` }; return null; }
+  const m = String(v).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:[,\sT]+(\d{1,2}):(\d{2}))?/);
+  if (!m) return null;
+  const y = m[3].length === 2 ? "20" + m[3] : m[3];
+  return { day: `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`, time: m[4] ? `${m[4].padStart(2, "0")}:${m[5]}` : "" };
+}
+function cleanTenant(n){
+  let t = String(n || "").trim();
+  const names = [CTX.siteName, ...Object.values(CTX.sites || {})].filter(Boolean).sort((a, b) => b.length - a.length);
+  for (const s of names){ const re = new RegExp("\\s*(ABC\\s+)?" + s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$", "i"); if (re.test(t)){ t = t.replace(re, ""); break; } }
+  return t.replace(/\s+(Verdun|Achrafieh|Dbayeh)(\s+(Mall|Department Store|DS))?$/i, "").trim();
+}
+function readRequests(rows){
+  const hi = rows.findIndex(r => r.some(c => /request name/i.test(String(c || ""))));
+  if (hi < 0) throw new Error("This is not the Handover Report — the “Request Name” column is missing.");
+  const H0 = rows[hi].map(c => String(c || "").toLowerCase());
+  const col = re => H0.findIndex(h => re.test(h));
+  const C = { status: col(/^status/), from: col(/valid from/), req: col(/request name/), tenant: col(/tenant/), to: col(/valid to/), sub: col(/sub maint|category|type/), contr: col(/contractor|supplier/), desc: col(/description/) };
+  if (C.from < 0 || C.tenant < 0) throw new Error("The “Valid From” or “Tenant Name” column is missing.");
+  const out = []; let status = "", from = null;
+  for (const r of rows.slice(hi + 1)){
+    const req = String(r[C.req] ?? "").trim();
+    if (C.status >= 0 && r[C.status] != null && String(r[C.status]).trim()) status = String(r[C.status]).trim();
+    if (r[C.from] != null && String(r[C.from]).trim()) from = parseWhen(r[C.from]) || from;
+    if (!/^REQ-?\d+/i.test(req) || !from) continue;
+    out.push({ req: req.toUpperCase(), status: status.replace(/[^\w\s]/g, "").trim(), from: { ...from }, to: parseWhen(r[C.to]),
+      tenant: cleanTenant(r[C.tenant]), sub: String(r[C.sub] ?? "").trim(), contractor: String(r[C.contr] ?? "").trim(), desc: String(r[C.desc] ?? "").trim() });
+  }
+  return out;
+}
+const dm = d => `${Number(d.slice(8))} ${MON[Number(d.slice(5, 7)) - 1]}`;
+function reqText(q){
+  const t = q.to && q.to.day !== q.from.day ? `${q.from.time || ""} → ${dm(q.to.day)} ${q.to.time || ""}`.trim() : [q.from.time, q.to && q.to.time].filter(Boolean).join("–");
+  return [`${q.tenant} — ${q.desc || q.sub}`, q.desc && q.sub ? q.sub : "", q.contractor, t, q.req + (/submitted/i.test(q.status) ? " (awaiting approval)" : "")].filter(Boolean).join(" · ");
+}
+function planImport(list){
+  const day = H.day, next = D.add(day, 1);
+  const have = new Set(), all = ["ongoing", "today", "tomorrow", "upcoming"].flatMap(k => H.doc[k].map(x => x.text));
+  all.forEach(t => (t.match(/REQ-?\d+/gi) || []).forEach(r => have.add(r.toUpperCase())));
+  const plan = { today: [], tomorrow: [], upcoming: [], dup: [], past: [], skipped: [] };
+  for (const q of list){
+    if (/reject|closed|cancel/i.test(q.status)){ plan.skipped.push(q); continue; }
+    if (have.has(q.req)){ plan.dup.push(q); continue; }
+    const endDay = q.to ? q.to.day : q.from.day;
+    if (q.from.day === day || (q.from.day < day && endDay >= day)) plan.today.push(q);
+    else if (q.from.day === next) plan.tomorrow.push(q);
+    else if (q.from.day > next) plan.upcoming.push(q);
+    else plan.past.push(q);
+    have.add(q.req);
+  }
+  plan.upcoming.sort((a, b) => (a.from.day + a.from.time).localeCompare(b.from.day + b.from.time));
+  return plan;
+}
+$("#impFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f || !H) return;
+  try {
+    await loadXlsx();
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: true });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
+    const list = readRequests(rows);
+    if (!list.length) throw new Error("No requests found in this sheet.");
+    IMP = planImport(list);
+    const n = IMP.today.length + IMP.tomorrow.length + IMP.upcoming.length;
+    const grp = (title, L, dated) => L.length ? `<p class="lbl" style="margin:12px 0 4px">${title} · ${L.length}</p><ul class="impl">${L.map(q => `<li>${dated ? `<b>${esc(D.fmt(q.from.day, { weekday: "short" }))}</b> · ` : ""}${esc(reqText(q))}</li>`).join("")}</ul>` : "";
+    const d = $("#dImp");
+    d.innerHTML = `<div class="dlg-h"><b>Import tenant requests</b><small>${esc(f.name)} · ${list.length} requests · into the ${H.shift === "AM" ? "morning" : "evening"} handover of ${esc(D.fmt(H.day, { weekday: "short" }))}</small></div>
+      <div class="dlg-b" style="max-height:60vh;overflow:auto">
+        ${n ? "" : `<p class="muted">Nothing new to add.</p>`}
+        ${grp("Today", IMP.today)}${grp("Tomorrow", IMP.tomorrow)}${grp("Coming up", IMP.upcoming, true)}
+        <p class="muted" style="font-size:.8rem;margin-top:12px">${[IMP.dup.length ? `${IMP.dup.length} already in this handover` : "", IMP.past.length ? `${IMP.past.length} finished before this day` : "", IMP.skipped.length ? `${IMP.skipped.length} rejected or closed` : ""].filter(Boolean).join(" · ") || "Nothing skipped."}</p>
+      </div>
+      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button>${n ? `<button class="btn gold" data-v="1">Add ${n} to the handover</button>` : ""}</div>`;
+    d.onclick = ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; d.close();
+      if (b && b.dataset.v === "1"){
+        const mk = (q, dated) => ({ text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "" });
+        IMP.today.forEach(q => H.doc.today.push(mk(q)));
+        IMP.tomorrow.forEach(q => H.doc.tomorrow.push(mk(q)));
+        IMP.upcoming.forEach(q => H.doc.upcoming.push(mk(q, true)));
+        H.doc.upcoming.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+        touch(); render(); toast(`${n} request${n === 1 ? "" : "s"} added — save to keep them`);
+      } };
+    d.showModal();
+  } catch (er){ toast(er.message, true); }
+});
+
+/* =====================================================================
+   EMAIL IN OUTLOOK — the handover in its usual layout as a new, unsent email
+   (.eml opens in Outlook as a draft; "Copy" puts the formatted handover on the clipboard for any mail app)
+   ===================================================================== */
+function mailHtml(){
+  const d = H.doc, F = "font-family:Calibri,Arial,sans-serif;", B = "border:1px solid #2F3B52;";
+  const head = (t, sub) => `<tr><td style="${F}background:#8EAADB;color:#10203F;font-weight:bold;font-size:15px;padding:6px 10px;border-top:1.5px solid #2F3B52">${esc(t)}${sub ? ` <span style="font-weight:normal;font-size:12px">· ${esc(sub)}</span>` : ""}</td></tr>`;
+  const items = (L, dated) => `<tr><td style="${F}padding:4px 10px 8px">${L.length ? `<ul style="margin:0;padding-left:20px">${L.map(x => `<li style="color:#2F5597;font-size:14px;margin:2px 0;${x.cctv ? "font-weight:bold;" : ""}${x.done ? "text-decoration:line-through;" : ""}">${dated && x.date ? `<b>${esc(D.fmt(x.date, { weekday: "short" }))}:</b> ` : ""}${esc(x.text)}${x.cctv ? ` <span style="background:#E5484D;color:#fff;font-size:11px;padding:1px 5px">ATT CCTV</span>` : ""}${x.done ? " ✓" : ""}</li>`).join("")}</ul>` : `<span style="color:#777;font-size:13px">Nothing.</span>`}</td></tr>`;
+  const tbl = (cols, rows) => `<tr><td style="padding:0"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
+    <tr>${cols.map(c => `<th style="${F}background:#D9E2F3;font-size:13px;text-align:left;padding:5px 8px;border:1px solid #BFBFBF">${esc(c)}</th>`).join("")}</tr>
+    ${rows.length ? rows.map(r => `<tr>${r.map(v => `<td style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF">${v}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length}" style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF;color:#777">None.</td></tr>`}</table></td></tr>`;
+  const st = v => v === "Done" ? `<b style="color:#2E8B57">Done</b>` : v === "Not done" ? `<b style="color:#C0392B">Not done</b>` : esc(v || "—");
+  const title = `Shift Handover — ABC ${CTX.siteName} — ${D.long(H.day)} · ${H.shift === "AM" ? "Morning" : "Evening"} shift`;
+  return { title, html: `<div style="${F}"><p style="${F}font-size:14px">Dear team,<br><br>Please find below the handover of the ${H.shift === "AM" ? "morning" : "evening"} shift.</p>
+  <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:900px;${B}">
+    <tr><td style="${F}background:#2A0F45;color:#fff;font-weight:bold;font-size:16px;padding:8px 10px">${esc(title)}</td></tr>
+    ${head("Scheduled works", "Ongoing follow-up until solved")}${items(d.ongoing)}
+    ${head("Today")}${items(d.today)}
+    ${head("Tomorrow")}${items(d.tomorrow)}
+    ${head("Coming up")}${items(d.upcoming, true)}
+    ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], d.events.map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
+    ${head("Daily operations checklist tracker")}${tbl(["Checklist name", "AM", "PM", "Clarifications"], d.checklists.map(c => [esc(c.name), st(c.am), st(c.pm), esc(c.note)]))}
+    ${head("Operations documentation tracker")}${tbl(["Document / link", "Task", "Last updated", "Comments"], d.docs.map(x => [x.url ? `<a href="${esc(x.url)}">${esc(x.label || x.url)}</a>` : esc(x.label), esc(x.task), esc(D.fmt(x.updated)), esc(x.comment)]))}
+    ${head("Additional notes")}<tr><td style="${F}font-size:14px;padding:8px 10px;white-space:pre-wrap">${esc(d.notes || "—")}</td></tr>
+  </table>
+  <p style="${F}font-size:14px">Best regards,<br>${esc(CTX.me.name)}</p></div>` };
+}
+function b64utf8(s){ const b = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin).replace(/.{76}/g, "$&\r\n"); }
+function emlFile(){
+  const { title, html } = mailHtml();
+  const subj = "=?UTF-8?B?" + btoa(String.fromCharCode(...new TextEncoder().encode(title))) + "?=";
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
+  return { title, text: ["To: ", `Subject: ${subj}`, "X-Unsent: 1", "MIME-Version: 1.0", "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64utf8(doc)].join("\r\n") };
+}
+function mailDialog(){
+  const d = $("#dMail");
+  d.innerHTML = `<div class="dlg-h"><b>Email this handover</b><small>Opens as a new email with the handover already inside. Add the recipients and send.</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px">
+      <button class="btn gold" data-m="eml">Open in Outlook (desktop)</button>
+      <p class="muted" style="font-size:.8rem;margin-top:-4px">Downloads <b>handover.eml</b>. Open it and Outlook shows a new, unsent email.</p>
+      <button class="btn ghost" data-m="copy">Copy the handover, then open a new email</button>
+      <p class="muted" style="font-size:.8rem;margin-top:-4px">For Outlook on the web or phone: a new email opens with the subject. Paste (Ctrl + V) into the body.</p>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" data-m="x">Close</button></div>`;
+  d.onclick = async ev => {
+    const b = ev.target.closest("[data-m]"); if (!b && ev.target !== d) return;
+    const m = b ? b.dataset.m : "x";
+    if (m === "eml"){
+      const f = emlFile(), a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([f.text], { type: "message/rfc822" }));
+      a.download = `Handover ${CTX.siteName} ${H.day} ${H.shift}.eml`; document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast("Email file ready — open it to see the draft in Outlook");
+    }
+    if (m === "copy"){
+      const { title, html } = mailHtml();
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([mailPlain()], { type: "text/plain" }) })]);
+        toast("Handover copied — paste it into the email");
+      } catch { const w = document.createElement("div"); w.innerHTML = html; w.style.position = "fixed"; w.style.left = "-9999px"; document.body.append(w);
+        const r = document.createRange(); r.selectNodeContents(w); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand("copy"); sel.removeAllRanges(); w.remove(); toast("Handover copied — paste it into the email"); }
+      location.href = "mailto:?subject=" + encodeURIComponent(title);
+    }
+    d.close();
+  };
+  d.showModal();
+}
+function mailPlain(){
+  const d = H.doc, L = (t, arr, dated) => `${t}\n${arr.length ? arr.map(x => `• ${dated && x.date ? D.fmt(x.date) + ": " : ""}${x.text}${x.cctv ? " [ATT CCTV]" : ""}${x.done ? " ✓" : ""}`).join("\n") : "—"}\n`;
+  return [L("SCHEDULED WORKS", d.ongoing), L("TODAY", d.today), L("TOMORROW", d.tomorrow), L("COMING UP", d.upcoming, true), `NOTES\n${d.notes || "—"}`].join("\n");
 }
 addEventListener("beforeunload", e => { if (H && dirty && H.can.handover){ e.preventDefault(); e.returnValue = ""; } });
 boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
