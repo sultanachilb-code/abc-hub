@@ -393,6 +393,24 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .badge{display:inline-block;font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--paper);color:var(--muted);margin-left:6px;vertical-align:1px}
 .badge.live{background:rgba(46,139,87,.14);color:var(--ok)} .badge.off{background:rgba(192,57,43,.12);color:var(--alert)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ftabs{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 16px}
+.ftabs button{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-weight:700;font-size:.84rem;color:var(--text);background:var(--paper)}
+.ftabs button span{font-size:.72rem;background:var(--surface);border-radius:999px;padding:1px 7px;color:var(--muted)}
+.ftabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.ftabs button.on span{background:rgba(255,255,255,.2);color:#fff}
+.pg{padding:14px 0;border-top:1px solid var(--line)}
+.ftabs + .pg{border-top:0;padding-top:4px}
+.pg-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.pg-h h4{font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-2)}
+.pg-n{font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.45}
+.pg-e{font-size:.84rem;color:var(--muted);padding:6px 2px}
+.slot-l{font-size:.74rem;font-weight:700;color:var(--muted);margin:4px 2px -2px}
+.row-i.vac{border-style:dashed}
+.row-i.off .main,.row-i.off .avatar{opacity:.5}
+.ticks{display:grid;gap:2px}.ticks .chk{margin-bottom:6px}
+.side-col{display:grid;gap:22px;align-content:start}
+@media (max-width:640px){.row-i{flex-wrap:wrap}.row-i .main{flex:1 1 calc(100% - 50px)}.row-i .acts{width:100%;justify-content:flex-start;padding-left:46px}
+  .adm-tabs{overflow-x:auto;scrollbar-width:none}.adm-tabs button{white-space:nowrap;flex:none}}
 
 dialog{margin:auto;border:0;border-radius:20px;padding:0;width:min(420px,calc(100% - 32px));background:var(--surface);color:var(--text)}
 dialog::backdrop{background:rgba(20,8,34,.55)}
@@ -604,7 +622,11 @@ const P = {
   storeIn:'<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="m9 15 2 2 4-4"/>',
   storeOut:'<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="m10 13 4 4M14 13l-4 4"/>',
   siren:'<path d="M7 18v-6a5 5 0 0 1 10 0v6"/><path d="M5 21h14v-3H5z"/><path d="M12 3v2M4.2 6.2l1.4 1.4M19.8 6.2l-1.4 1.4M2 12h2M20 12h2"/>',
-  wallet:'<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.3"/>'
+  wallet:'<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.3"/>',
+  gauge:'<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/><circle cx="12" cy="17" r="1.4"/><path d="M4 21h16"/>',
+  scale:'<path d="M12 3v18"/><path d="M6 21h12"/><path d="M4 7h16"/><path d="M7 7l-3 7a3 3 0 0 0 6 0z"/><path d="M17 7l-3 7a3 3 0 0 0 6 0z"/>',
+  handshake:'<path d="M3 11l4-4 5 2 5-2 4 4"/><path d="M7 7v6l4 4 2-2 2 2 4-4"/><path d="M11 17l-2-2"/>',
+  scroll:'<path d="M7 4h11a2 2 0 0 1 2 2v2h-4"/><path d="M16 8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2h10"/><path d="M7 4a2 2 0 0 0-2 2v10"/><path d="M9 9h4M9 12h4"/>'
 };
 const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.clipboard}</svg>`;
 const badgeOf = a => BRIEF && BRIEF.systems && BRIEF.systems[a.id] && BRIEF.systems[a.id].ok ? BRIEF.systems[a.id].badge : null;
@@ -684,12 +706,13 @@ function authScreen(mode, errText){
    ===================================================================== */
 function startHub(){
   const role = ME.user.role;
-  APPS = ALL_APPS.filter(a => !a.roles || role === "ADMIN" || a.roles.includes(role));
+  const fullAccess = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(role);   /* leadership sees every system */
+  APPS = ALL_APPS.filter(a => !a.roles || fullAccess || a.roles.includes(role));
   $("#hubTitle").textContent = H.title;
   const hr = new Date().getHours();
   const first = ME.user.name.split(" ")[0];
   $("#greet").innerHTML = `${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(first)}` +
-    `<span class="chip">${esc(ME.user.roleLabel)}${ME.user.siteName ? " · " + esc(ME.user.siteName) : ""}</span>`;
+    `<span class="chip">${esc(ME.user.positionLabel || ME.user.roleLabel)}${["DIRECTOR", "CDSO"].includes(ME.user.role) ? " · " + esc(ME.user.sitesLabel) : ME.user.siteName ? " · " + esc(ME.user.siteName) : ""}</span>`;
   $("#avatar").textContent = initials(ME.user.name);
   $("#foot").textContent = `${H.org} · ${APPS.length} systems available to you`;
   buildMenu();
@@ -1519,44 +1542,97 @@ async function adminControl(body, editing){
     } catch (er){ $("#fMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
   };
 }
+/* People & roles — one tab per flagship plus Leadership (Property Advisor, Mall Directors, CDSO, Admins) */
+const FLAG_TABS = [["VRM", "ABC Verdun Mall"], ["ACM", "ABC Achrafieh Mall"], ["DBS", "Dbayeh Mall"], ["VRS", "Verdun DS"], ["ACS", "Achrafieh DS"], ["LEAD", "Leadership"]];
+let pplTab = "VRM";
+const ACCESS_NOTE = {
+  MANAGER: "Everything at the flagship.",
+  SUPERVISOR: "Operations Tools and Property Overview &amp; Info. Cannot change reminders, upload the budget, change property details or see the Executive Report.",
+  SECURITY: "Security systems and the tools open to everyone at the flagship.",
+  ADVISOR: "Every flagship, full access.",
+  DIRECTOR: "Full access to the flagships ticked below.",
+  CDSO: "Full access to the flagships ticked below.",
+  ADMIN: "Everything, plus Hub administration."
+};
 async function adminUsers(body, editing){
   const [d, ms] = await Promise.all([api("admin/users"), api("admin/morning-status").catch(() => null)]);
   const e = editing || {};
   const last = ms && ms.last ? `Last sent ${esc(fmtLocal(ms.last.at))} to ${ms.last.sent} ${ms.last.sent === 1 ? "person" : "people"}${ms.last.failed ? ` · <span style="color:var(--alert)">${ms.last.failed} failed</span>` : ""}` : "Not sent yet";
-  const roleOpts = sel => Object.entries(d.roles).map(([c, n]) => `<option value="${c}" ${sel === c ? "selected" : ""}>${esc(n)}</option>`).join("");
-  body.innerHTML = `<div class="panel"><h3>People &amp; roles</h3><div class="rows">${d.users.map(u => `
-      <div class="row-i"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(u.name))}</span>
-        <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.roleLabel) : "Switched off"}</span></b>
-        <small>${u.positionLabel ? esc(u.positionLabel) + " · " : ""}${esc(u.email)}${u.siteName ? " · " + esc(u.siteName) : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</small></div>
-        <div class="acts"><button class="btn small ghost" data-edit="${esc(u.email)}">Edit</button>
-          <button class="btn small ghost" data-reset="${esc(u.email)}">Reset</button>
-          ${u.email !== ME.user.email ? `<button class="btn small ghost" data-act="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`).join("")}</div></div>
-    <div class="panel"><h3>${e.email ? "Edit person" : "Add a person"}</h3><div id="fMsg"></div>
+  const U = d.users;
+  const row = u => `<div class="row-i ${u.active ? "" : "off"}"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(u.name))}</span>
+      <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.positionLabel || u.roleLabel) : "Switched off"}</span></b>
+      <small>${esc(u.email)}${d.multiRoles.includes(u.role) ? " · " + esc(u.sitesLabel || "no flagship ticked") : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</small></div>
+      <div class="acts"><button class="btn small ghost" data-edit="${esc(u.email)}">Edit</button>
+        <button class="btn small ghost" data-reset="${esc(u.email)}">Reset</button>
+        ${u.email !== ME.user.email ? `<button class="btn small ghost" data-act="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`;
+  const vacant = (label, pre) => `<div class="row-i vac"><span class="avatar" style="width:34px;height:34px;font-size:.75rem;background:var(--paper);color:var(--muted)">—</span>
+      <div class="main"><b style="color:var(--muted)">Vacant</b><small>${esc(label)}</small></div>
+      <div class="acts"><button class="btn small" data-new='${esc(JSON.stringify(pre))}'>Assign</button></div></div>`;
+  const group = (title, list, note, addPre) => `<div class="pg"><div class="pg-h"><h4>${title}</h4>${addPre ? `<button class="btn small ghost" data-new='${esc(JSON.stringify(addPre))}'>+ Add</button>` : ""}</div>
+      ${note ? `<p class="pg-n">${note}</p>` : ""}<div class="rows">${list.length ? list.map(row).join("") : `<p class="pg-e">Nobody yet.</p>`}</div></div>`;
+  let main;
+  if (pplTab === "LEAD"){
+    const by = r => U.filter(u => u.role === r);
+    main = group("Property Advisor", by("ADVISOR"), ACCESS_NOTE.ADVISOR + " Verdun, Achrafieh, Dbayeh, Verdun DS and Achrafieh DS.", { role: "ADVISOR" })
+      + group("Mall Directors", by("DIRECTOR"), ACCESS_NOTE.DIRECTOR.replace(" below", " on each person"), { role: "DIRECTOR" })
+      + group("Chief Department Store Operations Officer", by("CDSO"), ACCESS_NOTE.CDSO.replace(" below", " on her account"), { role: "CDSO" })
+      + group("Hub administrators", by("ADMIN"), ACCESS_NOTE.ADMIN, { role: "ADMIN" });
+  } else {
+    const site = pplTab, at = U.filter(u => u.site === site && !d.multiRoles.includes(u.role) && !d.allSiteRoles.includes(u.role));
+    const mgr = at.filter(u => u.role === "MANAGER"), active = mgr.filter(u => u.active);
+    const inSlot = slot => active.find(u => d.titles[u.position] && d.titles[u.position].slot === slot);
+    const slotBox = (slot, title) => { const u = inSlot(slot); return u ? row(u) : vacant(d.slots[slot], { role: "MANAGER", site, position: title }); };
+    const extraMgr = mgr.filter(u => !(u.active && (inSlot("MM") === u || inSlot("OM") === u)));
+    const team = at.filter(u => u.role === "SUPERVISOR");
+    const rankP = { SMS: 1, MS: 2, MO: 3 };
+    team.sort((a, b) => (rankP[a.position] || 9) - (rankP[b.position] || 9) || a.name.localeCompare(b.name));
+    const sec = at.filter(u => u.role === "SECURITY"), adm = at.filter(u => u.role === "ADMIN");
+    const leaders = U.filter(u => u.active && (d.allSiteRoles.includes(u.role) || d.multiRoles.includes(u.role)) && (u.sites || []).includes(site));
+    const noPos = team.filter(u => !u.position);
+    main = `<div class="pg"><div class="pg-h"><h4>Flagship management</h4></div><p class="pg-n">${ACCESS_NOTE.MANAGER} One person in each position.</p>
+        <div class="rows"><div class="slot-l">${esc(d.slots.MM)}</div>${slotBox("MM", "MM")}<div class="slot-l">${esc(d.slots.OM)}</div>${slotBox("OM", "OM")}
+        ${extraMgr.length ? `<div class="slot-l">Management accounts without a position, or switched off</div>${extraMgr.map(row).join("")}` : ""}</div></div>`
+      + group("Operations team", team, ACCESS_NOTE.SUPERVISOR + (noPos.length ? ` <b style="color:var(--alert)">${noPos.length} without a position: edit them to add one.</b>` : ""), { role: "SUPERVISOR", site, position: "MO" })
+      + group("Security", sec, "", { role: "SECURITY", site })
+      + (adm.length ? group("Administrators based here", adm, "") : "")
+      + `<div class="pg"><div class="pg-h"><h4>Leadership with access</h4></div><p class="pg-n">${leaders.length ? leaders.map(u => `<b>${esc(u.name)}</b> · ${esc(u.roleLabel)}`).join("<br>") : "No Property Advisor, Mall Director or CDSO has this flagship yet."}</p></div>`;
+  }
+  /* the form */
+  const role = e.role || "SUPERVISOR";
+  const posField = r => r === "MANAGER" ? `<label class="field"><span>Position</span><select id="uPos">${Object.entries(d.titles).map(([c, t]) => `<option value="${c}" ${e.position === c ? "selected" : ""}>${esc(t.label)}</option>`).join("")}</select></label>`
+    : r === "SUPERVISOR" ? `<label class="field"><span>Position</span><select id="uPos">${Object.entries(d.positions).map(([c, n]) => `<option value="${c}" ${e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>` : "";
+  const siteField = r => d.multiRoles.includes(r) ? `<div class="field"><span>Flagships</span><div class="ticks">${FLAG_TABS.filter(t => t[0] !== "LEAD").map(([c, n]) => `<label class="chk"><input type="checkbox" class="uSites" value="${c}" ${(e.sites || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div></div>`
+    : r === "ADVISOR" ? `<p class="pg-n">All five flagships.</p>`
+    : `<label class="field"><span>Flagship${r === "ADMIN" ? " (optional)" : ""}</span><select id="uSite">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAG_TABS.filter(t => t[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${(e.site || (pplTab !== "LEAD" ? pplTab : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`;
+  const order = ["MANAGER", "SUPERVISOR", "SECURITY", "ADVISOR", "DIRECTOR", "CDSO", "ADMIN"];
+  body.innerHTML = `<div class="panel"><h3>People &amp; roles</h3>
+      <div class="ftabs" role="tablist">${FLAG_TABS.map(([c, n]) => { const k = c === "LEAD" ? U.filter(u => u.active && (d.multiRoles.includes(u.role) || d.allSiteRoles.includes(u.role))).length : U.filter(u => u.active && u.site === c && !d.multiRoles.includes(u.role) && !d.allSiteRoles.includes(u.role)).length;
+        return `<button role="tab" aria-selected="${pplTab === c}" class="${pplTab === c ? "on" : ""}" data-ptab="${c}">${esc(n)}<span>${k}</span></button>`; }).join("")}</div>
+      ${main}</div>
+    <div class="side-col"><div class="panel" id="uForm"><h3>${e.email ? "Edit person" : "Add a person"}</h3><div id="fMsg"></div>
       <label class="field"><span>Full name</span><input id="uName" value="${esc(e.name || "")}"></label>
       <label class="field"><span>Email</span><input id="uEmail" type="email" value="${esc(e.email || "")}" ${e.email ? "readonly" : ""}></label>
-      <div class="two">
-        <label class="field"><span>Role</span><select id="uRole">${roleOpts(e.role || "SUPERVISOR")}</select></label>
-        <label class="field"><span>Flagship</span><select id="uSite">${siteOptions(e.site || "")}</select></label>
-      </div>
-      <div class="two">
-        <label class="field"><span>Operations position</span><select id="uPos"><option value="">— None (not on the schedule) —</option>${Object.entries(d.positions || {}).map(([c, n]) => `<option value="${c}" ${e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
-        <span></span>
-      </div>
+      <label class="field"><span>Role</span><select id="uRole">${order.map(c => `<option value="${c}" ${role === c ? "selected" : ""}>${esc(d.roles[c])}</option>`).join("")}</select></label>
+      <p class="pg-n" id="uNote">${ACCESS_NOTE[role]}</p>
+      <div id="uPosBox">${posField(role)}</div>
+      <div id="uSiteBox">${siteField(role)}</div>
       ${e.email ? "" : `<label class="field"><span>Temporary password (8+)</span><input id="uPass" type="text" autocomplete="off"></label>`}
-      <label class="chk"><input type="checkbox" id="uMorning" ${e.email ? (e.morningEmail ? "checked" : "") : "checked"}> Receive the 08:00 morning email <small style="color:var(--muted)">(Managers &amp; Admins)</small></label>
-      <p class="brief-empty" style="font-size:.8rem;margin-bottom:12px">Admins may leave the flagship empty to see all flagships. Everyone else needs one.</p>
-      <div style="display:flex;gap:8px">${e.email ? `<button class="btn ghost" id="uCancel">Cancel</button>` : ""}<button class="btn" id="uSave">${e.email ? "Save changes" : "Add person"}</button></div>
+      <label class="chk"><input type="checkbox" id="uMorning" ${e.email ? (e.morningEmail ? "checked" : "") : "checked"}> Receive the 08:00 morning email <small style="color:var(--muted)">(management &amp; leadership)</small></label>
+      <div style="display:flex;gap:8px">${e.email || editing ? `<button class="btn ghost" id="uCancel">Cancel</button>` : ""}<button class="btn" id="uSave">${e.email ? "Save changes" : "Add person"}</button></div>
     </div>
     <div class="panel"><h3>Morning email · 08:00</h3>
       <p class="brief-empty" style="font-size:.86rem;margin-bottom:12px">${ms && !ms.relay ? `<span style="color:var(--alert)">Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub.</span>` : last}</p>
       <div id="mMsg"></div>
       <button class="btn ghost" id="mTest">Send me a test now</button>
-    </div>`;
+    </div></div>`;
+  $("#uRole").onchange = () => { const r = $("#uRole").value; $("#uNote").innerHTML = ACCESS_NOTE[r]; $("#uPosBox").innerHTML = posField(r); $("#uSiteBox").innerHTML = siteField(r); };
   body.onclick = async ev => {
     const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
-    const ed = ev.target.closest("[data-edit]"), rs = ev.target.closest("[data-reset]"), ac = ev.target.closest("[data-act]");
+    const ed = ev.target.closest("[data-edit]"), rs = ev.target.closest("[data-reset]"), ac = ev.target.closest("[data-act]"), nw = ev.target.closest("[data-new]"), pt = ev.target.closest("[data-ptab]");
     try {
-      if (ed) return adminUsers(body, d.users.find(u => u.email === ed.dataset.edit));
+      if (pt){ pplTab = pt.dataset.ptab; return adminUsers(body); }
+      if (nw){ await adminUsers(body, JSON.parse(nw.dataset.new)); const f = $("#uForm"); f.scrollIntoView({ behavior: "smooth", block: "start" }); $("#uName").focus(); return; }
+      if (ed) { await adminUsers(body, d.users.find(u => u.email === ed.dataset.edit)); $("#uForm").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
       if (rs){ const p = prompt(`Temporary password for ${rs.dataset.reset} (8+ characters):`); if (!p) return;
         await api("admin/users/reset", { email: rs.dataset.reset, password: p }); msg(`Password reset. They will be asked to change it at next sign-in.`, "okm"); return; }
       if (ac){ await api("admin/users/active", { email: ac.dataset.act, active: ac.dataset.on === "1" }); return adminUsers(body); }
@@ -1568,7 +1644,12 @@ async function adminUsers(body, editing){
         ev.target.disabled = false; ev.target.textContent = "Send me a test now"; return;
       }
       if (ev.target.id === "uSave"){
-        await api("admin/users", { isNew: !e.email, name: $("#uName").value, email: $("#uEmail").value, role: $("#uRole").value, site: $("#uSite").value, position: $("#uPos").value, password: $("#uPass") ? $("#uPass").value : "", morningEmail: $("#uMorning").checked });
+        const r = $("#uRole").value;
+        await api("admin/users", { isNew: !e.email, name: $("#uName").value, email: $("#uEmail").value, role: r,
+          site: $("#uSite") ? $("#uSite").value : "", sites: [...document.querySelectorAll(".uSites:checked")].map(x => x.value),
+          position: $("#uPos") ? $("#uPos").value : "", password: $("#uPass") ? $("#uPass").value : "", morningEmail: $("#uMorning").checked });
+        const st = $("#uSite") ? $("#uSite").value : "";
+        pplTab = ["ADVISOR", "DIRECTOR", "CDSO"].includes(r) || (r === "ADMIN" && !st) ? "LEAD" : (st || pplTab);
         adminUsers(body);
       }
     } catch (er){ msg(er.message); }
@@ -1702,13 +1783,14 @@ boot();
   /* the floating button: only for people who can send (Managers, SMS, Admins), on the hub home screen */
   let canSend = false;
   const fab = document.getElementById("emgFab");
-  const fabPaint = () => fab.classList.toggle("on", canSend && !/^#\/app\//.test(location.hash));
+  const fabPaint = () => { const home = document.getElementById("home"); fab.classList.toggle("on", canSend && !/^#\/app\//.test(location.hash) && !!home && !home.classList.contains("hidden")); };
+  setInterval(fabPaint, 1000);
   fab.onclick = () => HUBX.open("emergency");
   addEventListener("hashchange", fabPaint);
   (async function fabInit(tries){
     if (!window.HUBX || !HUBX.me()){ if (tries < 240) setTimeout(() => fabInit(tries + 1), 500); return; }
     const u = HUBX.me().user || {};
-    canSend = u.role === "ADMIN" || u.role === "MANAGER";      /* show at once for these; the server confirms (and adds the SMS) */
+    canSend = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"].includes(u.role);      /* show at once for these; the server confirms (and adds the SMS) */
     fabPaint();
     try { canSend = !!(await HUBX.api("ops/emergency/meta")).can.send; } catch {}
     fabPaint();

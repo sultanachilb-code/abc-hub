@@ -6,6 +6,7 @@ import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Fo
 import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
 export { EmergencyPager } from "./modules/emergency.js";
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
+import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
@@ -23,13 +24,54 @@ const SITES = {
   ACS: "Achrafieh Department Store",
   VRS: "Verdun Department Store"
 };
-const ROLES = { ADMIN: "Admin", MANAGER: "Manager", SUPERVISOR: "Supervisor", SECURITY: "Security" };
-/* Operations positions, highest first. They decide the order people appear in the schedule. */
+/* ---------- account hierarchy ----------
+   Per flagship : MANAGER    = flagship management (Mall Manager / Senior Mall Manager, Operations Manager / Deputy) — everything at their flagship
+                  SUPERVISOR = operations team (Mall Officer, Mall Supervisor, Senior Mall Supervisor)
+                  SECURITY   = security
+   Across flagships : ADVISOR  = Property Advisor — every flagship, full access
+                      DIRECTOR = Mall Director — the flagships ticked for them, full access
+                      CDSO     = Chief Department Store Operations Officer — the flagships ticked for her, full access
+   ADMIN runs the hub (Hub administration) and sees everything. */
+const ROLES = {
+  ADMIN: "Admin",
+  ADVISOR: "Property Advisor",
+  DIRECTOR: "Mall Director",
+  CDSO: "Chief Department Store Operations Officer",
+  MANAGER: "Flagship Management",
+  SUPERVISOR: "Operations Team",
+  SECURITY: "Security"
+};
+const FULL_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];   // full access at the flagships they can reach
+const MULTI_ROLES = ["DIRECTOR", "CDSO"];                                 // flagships chosen with check boxes
+const ALL_SITE_ROLES = ["ADMIN", "ADVISOR"];                              // every flagship
+/* Operations team positions, highest first. They decide who appears on the schedule and in what order. */
 const POSITIONS = {
   SMS: { label: "Senior Mall Supervisor", rank: 1 },
   MS:  { label: "Mall Supervisor", rank: 2 },
   MO:  { label: "Mall Officer", rank: 3 }
 };
+/* Flagship management titles. Each flagship has one person per slot. */
+const TITLES = {
+  SMM: { label: "Senior Mall Manager", slot: "MM", rank: -4 },
+  MM:  { label: "Mall Manager", slot: "MM", rank: -3 },
+  OM:  { label: "Operations Manager", slot: "OM", rank: -2 },
+  DOM: { label: "Deputy Operations Manager", slot: "OM", rank: -1 }
+};
+const SLOTS = { MM: "Mall Manager / Senior Mall Manager", OM: "Operations Manager / Deputy Operations Manager" };
+const posLabel = p => (POSITIONS[p] || TITLES[p] || {}).label || "";
+/* Which flagships an account can open */
+function sitesOf(u) {
+  if (!u) return [];
+  if (ALL_SITE_ROLES.includes(u.role)) return Object.keys(SITES);
+  if (MULTI_ROLES.includes(u.role)) {
+    const list = String(u.sites || "").split(",").filter(c => SITES[c]);
+    return list.length ? list : (SITES[u.site_code] ? [u.site_code] : []);
+  }
+  return SITES[u.site_code] ? [u.site_code] : [];
+}
+const canSite = (u, site) => sitesOf(u).includes(site);
+const isFull = u => FULL_ROLES.includes(u.role);
+const sitesMap = u => Object.fromEntries(sitesOf(u).map(c => [c, SITES[c]]));
 const SESSION_HOURS = 12;
 const ROUNDS = 100000;
 const SSO_SECONDS = 60;
@@ -88,7 +130,7 @@ const NOTIFY_CACHE_MS = 60 * 1000;
 const VAPID_SUBJECT = "mailto:salaachi@abc.com.lb";
 /* Who may receive each system's events — keep in line with "roles" in apps.js
    (systems not listed go to everyone; Admins always receive everything). */
-const APP_ROLES = { restroom: ["MANAGER", "SUPERVISOR"] };
+const APP_ROLES = { restroom: ["MANAGER", "SUPERVISOR"], exec: ["MANAGER"] };
 
 /* Morning email */
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
@@ -162,6 +204,7 @@ async function ensureSchema(env) {
   if (!has("morning_email")) await env.DB.prepare("ALTER TABLE users ADD COLUMN morning_email INTEGER NOT NULL DEFAULT 1").run();
   if (!has("notif_read_at")) await env.DB.prepare("ALTER TABLE users ADD COLUMN notif_read_at TEXT NOT NULL DEFAULT ''").run();
   if (!has("position")) await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT NOT NULL DEFAULT ''").run();
+  if (!has("sites")) await env.DB.prepare("ALTER TABLE users ADD COLUMN sites TEXT NOT NULL DEFAULT ''").run();   // Mall Director / CDSO flagships
   await layoutsSchema(env);   // Mall Layouts feature
   await propertySchema(env);  // Property Details feature
   await remindersSchema(env); // Reminders feature
@@ -206,6 +249,9 @@ async function ensureSchema(env) {
       created_by TEXT, created_name TEXT, created_at TEXT, updated_at TEXT,
       submitted_at TEXT NOT NULL DEFAULT '', received_by TEXT NOT NULL DEFAULT '', received_at TEXT NOT NULL DEFAULT '')`)
   ]);
+  const mcols = await env.DB.prepare("PRAGMA table_info(mom_meetings)").all();   // MOM meeting type (for reports)
+  if ((mcols.results || []).length && !(mcols.results || []).some(c => c.name === "meeting_type"))
+    await env.DB.prepare("ALTER TABLE mom_meetings ADD COLUMN meeting_type TEXT NOT NULL DEFAULT ''").run();
   const gcols = await env.DB.prepare("PRAGMA table_info(gla_units)").all();
   if ((gcols.results || []).length && !(gcols.results || []).some(c => c.name === "contract_start"))
     await env.DB.prepare("ALTER TABLE gla_units ADD COLUMN contract_start TEXT NOT NULL DEFAULT ''").run();
@@ -230,12 +276,17 @@ async function readSession(request, env) {
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(p.e).first();
   return u && u.active ? u : null;
 }
-const userOut = u => ({
-  email: u.email, name: u.full_name, role: u.role, roleLabel: ROLES[u.role] || u.role,
-  site: u.site_code || "", siteName: u.site_code ? SITES[u.site_code] || u.site_code : "",
-  mustChange: !!u.must_change,
-  position: u.position || "", positionLabel: POSITIONS[u.position] ? POSITIONS[u.position].label : ""
-});
+const userOut = u => {
+  const list = sitesOf(u);
+  return {
+    email: u.email, name: u.full_name, role: u.role, roleLabel: ROLES[u.role] || u.role,
+    site: u.site_code || "", siteName: u.site_code ? SITES[u.site_code] || u.site_code
+      : ALL_SITE_ROLES.includes(u.role) ? "All flagships" : "",
+    sites: list, sitesLabel: list.length === Object.keys(SITES).length ? "All flagships" : list.map(c => SITES[c]).join(", "),
+    full: isFull(u), mustChange: !!u.must_change,
+    position: u.position || "", positionLabel: posLabel(u.position)
+  };
+};
 
 /* ---------- entry ---------- */
 export default {
@@ -381,11 +432,14 @@ async function changePassword(env, me, b) {
 }
 async function listUsers(env) {
   const { results } = await env.DB.prepare(
-    "SELECT email, full_name, role, site_code, active, must_change, last_login_at, morning_email, position FROM users ORDER BY role, full_name").all();
+    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position FROM users ORDER BY role, full_name").all();
   return {
     users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "",
-      morningEmail: !!u.morning_email, morningEligible: u.role === "ADMIN" || u.role === "MANAGER" })),
-    sites: SITES, roles: ROLES, positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label]))
+      morningEmail: !!u.morning_email, morningEligible: isFull(u) })),
+    sites: SITES, roles: ROLES,
+    positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
+    titles: Object.fromEntries(Object.entries(TITLES).map(([k, v]) => [k, { label: v.label, slot: v.slot }])),
+    slots: SLOTS, multiRoles: MULTI_ROLES, allSiteRoles: ALL_SITE_ROLES
   };
 }
 async function saveUser(env, me, b) {
@@ -396,22 +450,47 @@ async function saveUser(env, me, b) {
   if (!validEmail(email)) throw fail("Enter a valid email address");
   if (!name) throw fail("Enter the full name");
   if (!ROLES[role]) throw fail("Choose a role");
-  if (role !== "ADMIN" && !SITES[site]) throw fail("Choose the flagship for this person");
-  if (role === "ADMIN" && !SITES[site]) site = "";
-  const position = POSITIONS[String(b.position || "").toUpperCase()] ? String(b.position).toUpperCase() : "";
+  const pos = String(b.position || "").toUpperCase();
+  let position = "", sites = "";
+  if (role === "ADMIN") { if (!SITES[site]) site = ""; }
+  else if (role === "ADVISOR") { site = ""; }
+  else if (MULTI_ROLES.includes(role)) {
+    const list = [...new Set((Array.isArray(b.sites) ? b.sites : []).map(x => String(x).toUpperCase()).filter(c => SITES[c]))];
+    if (!list.length) throw fail(`Tick the flagships the ${ROLES[role]} looks after`);
+    list.sort((a, c) => Object.keys(SITES).indexOf(a) - Object.keys(SITES).indexOf(c));
+    sites = list.join(","); site = SITES[site] && list.includes(site) ? site : list[0];
+  } else {
+    if (!SITES[site]) throw fail("Choose the flagship for this person");
+    if (role === "MANAGER") {
+      if (!TITLES[pos]) throw fail("Choose the position: Mall Manager, Senior Mall Manager, Operations Manager or Deputy Operations Manager");
+      position = pos;
+    } else if (role === "SUPERVISOR") {
+      if (!POSITIONS[pos]) throw fail("Choose the position: Mall Officer, Mall Supervisor or Senior Mall Supervisor");
+      position = pos;
+    }
+  }
+  /* one person per management slot at each flagship */
+  if (role === "MANAGER") {
+    const slot = TITLES[position].slot;
+    const { results } = await env.DB.prepare("SELECT email, full_name, position FROM users WHERE active = 1 AND role = 'MANAGER' AND site_code = ? AND email != ?")
+      .bind(site, email).all();
+    const taken = (results || []).find(u => TITLES[u.position] && TITLES[u.position].slot === slot);
+    if (taken) throw fail(`${SITES[site]} already has a ${SLOTS[slot]}: ${taken.full_name}. Change their position or switch them off first.`);
+  }
   const exists = await env.DB.prepare("SELECT email FROM users WHERE email = ?").bind(email).first();
+  const morning = b.morningEmail === false ? 0 : 1;
   if (exists) {
     if (b.isNew) throw fail("That email already has an account");
     if (email === me.email && role !== "ADMIN") throw fail("You cannot remove your own admin role");
-    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, morning_email=?, position=? WHERE email=?")
-      .bind(name, role, site || null, b.morningEmail === false ? 0 : 1, position, email).run();
+    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=? WHERE email=?")
+      .bind(name, role, site || null, sites, morning, position, email).run();
     return { email, created: false };
   }
   const password = String(b.password || "");
   if (password.length < 8) throw fail("Set a temporary password of at least 8 characters");
   const h = await hashFor(password);
-  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, salt, hash, iterations, must_change, active, created_at, morning_email, position)
-    VALUES (?,?,?,?,?,?,?,1,1,?,?,?)`).bind(email, name, role, site || null, h.salt, h.hash, h.iterations, nowIso(), b.morningEmail === false ? 0 : 1, position).run();
+  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position)
+    VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position).run();
   return { email, created: true };
 }
 async function resetUser(env, b) {
@@ -427,6 +506,14 @@ async function resetUser(env, b) {
 async function setActive(env, me, b) {
   const email = String(b.email || "").trim().toLowerCase();
   if (email === me.email) throw fail("You cannot switch off your own account");
+  if (b.active) {
+    const u = await env.DB.prepare("SELECT role, site_code, position FROM users WHERE email = ?").bind(email).first();
+    if (u && u.role === "MANAGER" && TITLES[u.position]) {
+      const { results } = await env.DB.prepare("SELECT full_name, position FROM users WHERE active = 1 AND role = 'MANAGER' AND site_code = ? AND email != ?").bind(u.site_code, email).all();
+      const slot = TITLES[u.position].slot, taken = (results || []).find(x => TITLES[x.position] && TITLES[x.position].slot === slot);
+      if (taken) throw fail(`${SITES[u.site_code]} already has a ${SLOTS[slot]}: ${taken.full_name}. Switch them off first.`);
+    }
+  }
   await env.DB.prepare("UPDATE users SET active=? WHERE email=?").bind(b.active ? 1 : 0, email).run();
   return { email, active: !!b.active };
 }
@@ -437,8 +524,10 @@ const annOut = r => ({ id: r.id, message: r.message, level: r.level, site: r.sit
   startsAt: r.starts_at, endsAt: r.ends_at, createdBy: r.created_by, createdAt: r.created_at });
 async function activeAnnouncements(env, me) {
   const now = nowLocal();
-  const siteSql = me.role === "ADMIN" && !me.site_code ? "" : " AND (site = 'ALL' OR site = ?)";
-  const binds = siteSql ? [me.site_code || "ALL"] : [];
+  const list = me.email ? sitesOf(me) : (me.site_code ? [me.site_code] : Object.keys(SITES));
+  const every = list.length === Object.keys(SITES).length && !(me.role === "MANAGER" && me.site_code);
+  const siteSql = every ? "" : ` AND (site = 'ALL' OR site IN (${list.map(() => "?").join(",") || "''"}))`;
+  const binds = every ? [] : list;
   const { results } = await env.DB.prepare(
     `SELECT * FROM announcements WHERE (starts_at = '' OR starts_at <= ?) AND (ends_at = '' OR ends_at >= ?)${siteSql}
      ORDER BY CASE level WHEN 'urgent' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END, id DESC LIMIT 5`
@@ -474,8 +563,9 @@ async function saveAnnouncement(env, me, b) {
 
 /* ---------- daily brief + badges ---------- */
 const briefCache = new Map();
+const homeSite = me => (ALL_SITE_ROLES.includes(me.role) && !me.site_code) ? "ALL" : (me.site_code || sitesOf(me)[0] || "ALL");
 async function brief(env, me, fresh) {
-  const site = me.site_code || "ALL";
+  const site = homeSite(me);
   const hit = briefCache.get(site);
   if (!fresh && hit && Date.now() - hit.at < BRIEF_CACHE_MS) return hit.data;
   const ids = Object.keys(CONNECTORS).filter(id => CONNECTORS[id].stats);
@@ -569,11 +659,11 @@ async function morningRun(env, { only = null, force = false } = {}) {
   if (only) people = [only];
   else {
     const { results } = await env.DB.prepare(
-      "SELECT * FROM users WHERE active = 1 AND morning_email = 1 AND role IN ('ADMIN','MANAGER')").all();
+      "SELECT * FROM users WHERE active = 1 AND morning_email = 1 AND role IN ('ADMIN','ADVISOR','DIRECTOR','CDSO','MANAGER')").all();
     people = results || [];
   }
   const bySite = new Map();
-  for (const u of people) { const k = u.site_code || "ALL"; if (!bySite.has(k)) bySite.set(k, []); bySite.get(k).push(u); }
+  for (const u of people) { const k = homeSite(u); if (!bySite.has(k)) bySite.set(k, []); bySite.get(k).push(u); }
 
   const hs = await health(env).catch(() => null);
   const down = hs ? Object.entries(hs.systems).filter(([, v]) => v.state === "down").map(([id]) => (HEALTH[id] && HEALTH[id].name) || id) : [];
@@ -736,7 +826,8 @@ async function raiseEvent(env, { site = "", app, title, body = "", tone = "info"
   notifyCache.clear();
 }
 async function notificationsFor(env, me) {
-  const site = me.site_code || "ALL";
+  const multi = MULTI_ROLES.includes(me.role);
+  const site = multi ? "ALL" : homeSite(me);
   const hit = notifyCache.get(site);
   let events;
   if (hit && Date.now() - hit.at < NOTIFY_CACHE_MS) events = hit.events;
@@ -744,10 +835,11 @@ async function notificationsFor(env, me) {
     events = (await gatherNotify(env, site, new Date(Date.now() - NOTIFY_DAYS * 864e5).toISOString())).slice(0, 120);
     notifyCache.set(site, { at: Date.now(), events });
   }
-  events = events.filter(e => !e.to || e.to === me.email).slice(0, 80);
+  const mySites = sitesOf(me);
+  events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))).slice(0, 80);
   return { events, readAt: me.notif_read_at || "" };
 }
-const roleAllows = (role, app) => role === "ADMIN" || !APP_ROLES[app] || APP_ROLES[app].includes(role);
+const roleAllows = (role, app) => FULL_ROLES.includes(role) || !APP_ROLES[app] || APP_ROLES[app].includes(role);
 
 /* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
 async function vapidKeys(env) {
@@ -840,7 +932,7 @@ async function ensureWatermark(env) {
    and pushes them to each subscribed device the person is allowed to see. */
 async function pushRun(env) {
   const subsQ = await env.DB.prepare(
-    "SELECT s.*, u.site_code, u.role FROM push_subs s JOIN users u ON u.email = s.email WHERE u.active = 1").all();
+    "SELECT s.*, u.site_code, u.role, u.sites FROM push_subs s JOIN users u ON u.email = s.email WHERE u.active = 1").all();
   const subs = subsQ.results || [];
   const wmRow = await env.DB.prepare("SELECT v FROM meta WHERE k = 'push:wm'").first();
   if (!wmRow) { await ensureWatermark(env); return; }
@@ -854,7 +946,7 @@ async function pushRun(env) {
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
-      (e.to === sub.email || !sub.site_code || !e.site || e.site === sub.site_code) &&
+      (e.to === sub.email || !e.site || (MULTI_ROLES.includes(sub.role) ? sitesOf(sub).includes(e.site) : (!sub.site_code || e.site === sub.site_code))) &&
       roleAllows(sub.role, e.app) && e.app !== "emergency" &&   /* Emergency Alert feature pushes its own alerts */
       (sub.level === "all" || e.tone === "alert" || e.tone === "warn"));
     if (!mine.length) continue;
@@ -892,39 +984,48 @@ const siteName = c => SITES[c] || c;
 
 function opsSite(me, requested) {
   const want = String(requested || "").toUpperCase();
-  if (me.role === "ADMIN") return SITES[want] ? want : (me.site_code || "VRM");
-  if (!me.site_code) throw fail("Your account has no flagship. Ask the administrator to set one.", 403);
-  return me.site_code;
+  const list = sitesOf(me);
+  if (!list.length) throw fail("Your account has no flagship. Ask the administrator to set one.", 403);
+  if (list.includes(want)) return want;
+  return list.includes(me.site_code) ? me.site_code : list[0];
 }
-const rankOf = p => (POSITIONS[p] ? POSITIONS[p].rank : 9);
+const rankOf = p => (POSITIONS[p] ? POSITIONS[p].rank : TITLES[p] ? TITLES[p].rank : 9);
 async function siteStaff(env, site) {
   const { results } = await env.DB.prepare(
-    "SELECT email, full_name, role, position, site_code FROM users WHERE active = 1 AND (site_code = ? OR role = 'ADMIN')").bind(site).all();
-  return (results || []).map(u => ({
+    "SELECT email, full_name, role, position, site_code, sites FROM users WHERE active = 1").all();
+  return (results || []).filter(u => u.site_code === site || canSite(u, site)).map(u => ({
     email: u.email, name: u.full_name, role: u.role, position: u.position || "",
-    positionLabel: POSITIONS[u.position] ? POSITIONS[u.position].label : (ROLES[u.role] || u.role),
-    atSite: u.site_code === site
+    positionLabel: posLabel(u.position) || ROLES[u.role] || u.role,
+    atSite: u.site_code === site && !MULTI_ROLES.includes(u.role)
   })).sort((a, b) => rankOf(a.position) - rankOf(b.position) || a.name.localeCompare(b.name));
 }
+/* What each person may do at a flagship.
+   full    = Admin, Property Advisor, Mall Director, CDSO, flagship management — everything
+   opsLead = full, or the Senior Mall Supervisor — runs the operations tools (schedule, forms, alerts…)
+   Operations team: everything in Operations Tools and Property Overview & Info, except
+   changing reminders, uploading the budget, changing property details and the Executive Report. */
 function rights(me, site) {
-  const mine = me.role === "ADMIN" || me.site_code === site;
-  const lead = me.role === "ADMIN" || me.role === "MANAGER" || me.position === "SMS";
+  const mine = canSite(me, site);
+  const full = mine && isFull(me);
+  const opsLead = full || (mine && me.role === "SUPERVISOR" && me.position === "SMS");
+  const team = full || (mine && me.role === "SUPERVISOR");
   return {
-    schedule: mine && lead,
-    mom: mine && (lead || me.role === "SUPERVISOR"),
+    schedule: opsLead,
+    mom: team,
     handover: mine && me.role !== "SECURITY",
     feedback: mine,                 // anyone at the flagship can log tenant feedback
-    feedbackAdmin: mine && lead,    // edit anyone's entries, import history
-    gla: mine && (lead || me.role === "SUPERVISOR"),  // keep the GLA up to date
-    layouts: mine && lead,                             // Mall Layouts feature: upload plans, adjust pins
-    property: mine && lead,                            // Property Details feature: update the values
-    reminders: mine && lead,                           // Reminders feature: choose which reminders run
-    formsFill: mine && me.role !== "SECURITY",         // Operations Forms feature: fill the checklists
-    formsLead: mine && lead,                           // Operations Forms feature: reopen, delete, upload the Areeba list
-    emergency: mine && lead,                           // Emergency Alert feature: send an alert, end it with All clear
-    budget: mine && (lead || me.role === "SUPERVISOR"), // Budget feature: see the CAPEX / OPEX lines and prepare JDE requests
-    budgetLead: mine && lead,                          // Budget feature: upload the sheets
-    exec: mine && lead                                 // Executive Report feature: see and edit the monthly report
+    feedbackAdmin: opsLead,         // edit anyone's entries, import history
+    gla: team,                      // keep the GLA up to date
+    layouts: opsLead,               // Mall Layouts feature: upload plans, adjust pins
+    property: full,                 // Property Details feature: update the values
+    reminders: full,                // Reminders feature: choose which reminders run
+    formsFill: mine && me.role !== "SECURITY",   // Operations Forms feature: fill the checklists
+    formsLead: opsLead,             // Operations Forms feature: reopen, delete, upload the Areeba list
+    emergency: opsLead,             // Emergency Alert feature: send an alert, end it with All clear
+    budget: team,                   // Budget feature: see the CAPEX / OPEX lines and prepare JDE requests
+    budgetLead: full,               // Budget feature: upload the sheets
+    exec: full,                     // Executive Report feature: see and edit the monthly report
+    accuracy: mine                  // Data Accuracy Score: everyone at the flagship can see it
   };
 }
 
@@ -983,8 +1084,8 @@ async function opsRoute(env, me, p, method, b, url) {
              handover: { count: Number(handovers.n || 0), label: "to receive" } };
   }
   if (p === "context") {
-    return { me: { ...userOut(me) }, site, siteName: siteName(site), sites: SITES, feedback: FEEDBACK,
-      canPickSite: me.role === "ADMIN", can, staff: await siteStaff(env, site),
+    return { me: { ...userOut(me) }, site, siteName: siteName(site), feedback: FEEDBACK,
+      canPickSite: sitesOf(me).length > 1, can, staff: await siteStaff(env, site), sites: sitesMap(me),
       positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])), codes: SHIFT_CODES, today: beirutToday() };
   }
 
@@ -1084,20 +1185,23 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso });
 
   /* ----- Property Details feature (modules/property.js) ----- */
-  if (p.startsWith("property/")) return propertyRoute(env, p, method, b, url, { site, can, me, now: nowIso, isAdmin: me.role === "ADMIN" });
+  if (p.startsWith("property/")) return propertyRoute(env, p, method, b, url, { site, can, me, now: nowIso, isAdmin: me.role === "ADMIN" || me.role === "ADVISOR" });
 
   /* ----- Reminders feature (modules/reminders.js) ----- */
   if (p.startsWith("reminders/")) return remindersRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, pullDay });
 
   /* ----- Executive Report feature (modules/exec.js) ----- */
   if (p.startsWith("exec/")) return execRoute(env, p, method, b, url, { site, can, me, now: nowIso, siteName, glaAsOf,
-    sites: me.role === "ADMIN" ? SITES : { [me.site_code]: SITES[me.site_code] } });
+    sites: sitesMap(me) });
+
+  /* ----- Data Accuracy Score feature (modules/accuracy.js) ----- */
+  if (p === "accuracy") return { ...(await accuracyRoute(env, p, method, b, url, { site, sites: sitesMap(me) })), can };
 
   /* ----- Budget (CAPEX / OPEX) feature (modules/budget.js) ----- */
   if (p.startsWith("budget/")) return budgetRoute(env, p, method, b, url, { site, can, me, now: nowIso });
 
   /* ----- Emergency Alert feature (modules/emergency.js) ----- */
-  if (p.startsWith("emergency/")) return emergencyRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, sendPush });
+  if (p.startsWith("emergency/")) return emergencyRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, sendPush, canSite: s => canSite(me, s), sites: sitesOf(me) });
 
   /* ----- Operations Forms feature (modules/forms.js) ----- */
   if (p.startsWith("forms/")) return formsRoute(env, p, method, b, url, { site, can, me, now: nowIso, today: beirutToday, raiseEvent });
@@ -1203,11 +1307,11 @@ async function opsRoute(env, me, p, method, b, url) {
   /* ----- minutes of meeting ----- */
   if (p === "mom/list") {
     const { results } = await env.DB.prepare(
-      `SELECT m.id, m.title, m.meet_date, m.status, m.participants,
+      `SELECT m.id, m.title, m.meet_date, m.status, m.participants, m.meeting_type,
               (SELECT COUNT(*) FROM mom_actions a WHERE a.meeting_id = m.id) AS actions,
               (SELECT COUNT(*) FROM mom_actions a WHERE a.meeting_id = m.id AND a.status = 'Open') AS open
          FROM mom_meetings m WHERE m.site = ? ORDER BY m.meet_date DESC, m.id DESC LIMIT 60`).bind(site).all();
-    return { site, can, meetings: (results || []).map(r => ({ id: r.id, title: r.title, date: r.meet_date, status: r.status,
+    return { site, can, types: MEETING_TYPES, meetings: (results || []).map(r => ({ id: r.id, title: r.title, date: r.meet_date, status: r.status, type: r.meeting_type || "",
       attended: JSON.parse(r.participants || "[]").filter(x => x.attended).length, actions: r.actions, open: r.open })) };
   }
   if (p === "mom/new") {
@@ -1216,7 +1320,8 @@ async function opsRoute(env, me, p, method, b, url) {
     const staff = await siteStaff(env, site);
     const today = beirutToday();
     return {
-      meeting: { id: 0, site, title: `ABC ${siteName(site)} - Minutes of Meeting`, date: today, weekNo: String(isoWeek(today)),
+      types: MEETING_TYPES,
+      meeting: { id: 0, site, type: MEETING_TYPES.includes(q("type")) ? q("type") : "", title: `ABC ${siteName(site)} - Minutes of Meeting`, date: today, weekNo: String(isoWeek(today)),
         location: `ABC ${siteName(site)} - Conference Room`, nextDate: "", lastDate: last ? last.meet_date : "",
         participants: staff.filter(s => s.atSite).map(s => ({ email: s.email, name: s.name, position: s.positionLabel, attended: false })),
         points: await getSetting(env, site, "agenda", []), preparedBy: me.full_name, preparedEmail: me.email, status: "draft" },
@@ -1225,12 +1330,12 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p === "mom/get") {
     const m = await env.DB.prepare("SELECT * FROM mom_meetings WHERE id = ?").bind(Number(q("id")) || 0).first();
-    if (!m || (me.role !== "ADMIN" && m.site !== me.site_code)) throw fail("Meeting not found", 404);
+    if (!m || !canSite(me, m.site)) throw fail("Meeting not found", 404);
     const [acts, carry] = await Promise.all([
       env.DB.prepare("SELECT * FROM mom_actions WHERE meeting_id = ? ORDER BY seq, id").bind(m.id).all(),
       env.DB.prepare("SELECT * FROM mom_actions WHERE site = ? AND status = 'Open' AND meeting_id != ? AND meeting_id IN (SELECT id FROM mom_meetings WHERE meet_date <= ?) ORDER BY due = '', due, id").bind(m.site, m.id, m.meet_date).all()
     ]);
-    return { meeting: meetingOut(m), actions: (acts.results || []).map(actionOut), carried: (carry.results || []).map(actionOut),
+    return { types: MEETING_TYPES, meeting: meetingOut(m), actions: (acts.results || []).map(actionOut), carried: (carry.results || []).map(actionOut),
       staff: await siteStaff(env, m.site), can: rights(me, m.site) };
   }
   if (p === "mom/save" && method === "POST") return saveMeeting(env, me, site, can, b);
@@ -1281,7 +1386,7 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p === "handover/get") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
-    if (!h || (me.role !== "ADMIN" && h.site !== me.site_code)) throw fail("Handover not found", 404);
+    if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
     return { handover: handoverOut(h), can: rights(me, h.site) };
   }
   if (p === "handover/save" && method === "POST") {
@@ -1313,7 +1418,7 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p === "handover/receive" && method === "POST") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(b.id) || 0).first();
-    if (!h || (me.role !== "ADMIN" && h.site !== me.site_code)) throw fail("Handover not found", 404);
+    if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
     if (h.status !== "submitted") throw fail("This handover has not been submitted yet");
     await env.DB.prepare("UPDATE handovers SET received_by = ?, received_at = ? WHERE id = ?").bind(me.full_name, nowIso(), h.id).run();
     if (h.created_by && h.created_by !== me.email) await raiseEvent(env, { site: h.site, app: "handover", email: h.created_by, tone: "ok",
@@ -1336,7 +1441,9 @@ function isoWeek(day) {
   t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
   return Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / 864e5 + 1) / 7);
 }
-const meetingOut = m => ({ id: m.id, site: m.site, title: m.title, date: m.meet_date, weekNo: m.week_no, location: m.location,
+/* MOM meeting types — asked when a meeting is created, kept for reports */
+const MEETING_TYPES = ["Internal ABC Department", "Internal Operations Meeting", "Tenant Meeting", "Soft Services Meeting", "External Meeting"];
+const meetingOut = m => ({ id: m.id, site: m.site, title: m.title, date: m.meet_date, weekNo: m.week_no, location: m.location, type: m.meeting_type || "",
   nextDate: m.next_date, lastDate: m.last_date, participants: JSON.parse(m.participants || "[]"), points: JSON.parse(m.points || "[]"),
   preparedBy: m.prepared_by, status: m.status, publishedAt: m.published_at, createdBy: m.created_by });
 const actionOut = a => ({ id: a.id, meetingId: a.meeting_id, seq: a.seq, text: a.text, ownerEmail: a.owner_email,
@@ -1353,17 +1460,17 @@ async function saveMeeting(env, me, site, can, b) {
   const points = (Array.isArray(m.points) ? m.points : []).map(x => String(x || "").trim().slice(0, 400)).filter(Boolean).slice(0, 60);
   const vals = [title, m.date, String(m.weekNo || "").slice(0, 10), String(m.location || "").slice(0, 160),
     isDay(m.nextDate) ? m.nextDate : "", isDay(m.lastDate) ? m.lastDate : "", JSON.stringify(parts), JSON.stringify(points),
-    String(m.preparedBy || me.full_name).slice(0, 80)];
+    String(m.preparedBy || me.full_name).slice(0, 80), MEETING_TYPES.includes(m.type) ? m.type : ""];
   const at = nowIso();
   let id = Number(m.id) || 0;
   if (id) {
     const ex = await env.DB.prepare("SELECT site FROM mom_meetings WHERE id = ?").bind(id).first();
     if (!ex || ex.site !== site) throw fail("Meeting not found", 404);
-    await env.DB.prepare(`UPDATE mom_meetings SET title=?, meet_date=?, week_no=?, location=?, next_date=?, last_date=?, participants=?, points=?, prepared_by=?, updated_at=? WHERE id=?`)
+    await env.DB.prepare(`UPDATE mom_meetings SET title=?, meet_date=?, week_no=?, location=?, next_date=?, last_date=?, participants=?, points=?, prepared_by=?, meeting_type=?, updated_at=? WHERE id=?`)
       .bind(...vals, at, id).run();
   } else {
-    const r = await env.DB.prepare(`INSERT INTO mom_meetings (title, meet_date, week_no, location, next_date, last_date, participants, points, prepared_by, site, status, created_by, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,'draft',?,?,?)`).bind(...vals, site, me.email, at, at).run();
+    const r = await env.DB.prepare(`INSERT INTO mom_meetings (title, meet_date, week_no, location, next_date, last_date, participants, points, prepared_by, meeting_type, site, status, created_by, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,'draft',?,?,?)`).bind(...vals, site, me.email, at, at).run();
     id = r.meta.last_row_id;
   }
   /* actions: replace this meeting's list, keeping ids so notifications are not repeated */
@@ -1583,7 +1690,7 @@ async function cleanerDay(env, site, day) {
   } catch (e) { return { error: "Not reachable" }; }
 }
 async function eodReport(env, me, site, day) {
-  const sensitive = me.role === "ADMIN" || me.role === "MANAGER" || me.role === "SECURITY" || me.position === "SMS";
+  const sensitive = isFull(me) || me.role === "SECURITY" || me.position === "SMS";
   await glaSeed(env, site);
   const [restroom, incidents, snag, cleaner, moms, fb, hos, sched, notes, units, staff] = await Promise.all([
     pullDay(env, "restroom", site, day), pullDay(env, "incidents", site, day), pullDay(env, "snaglist", site, day), cleanerDay(env, site, day),
@@ -1596,12 +1703,62 @@ async function eodReport(env, me, site, day) {
     env.DB.prepare("SELECT * FROM gla_units WHERE site = ? AND active = 1").bind(site).all(),
     siteStaff(env, site)
   ]);
+  const ago = n => { const d = new Date(day + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+  const [runs, lastBank, glaEv, recentHo] = await Promise.all([
+    env.DB.prepare("SELECT * FROM form_runs WHERE site = ? AND day = ? ORDER BY form, id").bind(site, day).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT day, status, issues, submitted_name, created_name FROM form_runs WHERE site = ? AND form = 'dbank' AND day <= ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first().catch(() => null),
+    env.DB.prepare("SELECT e.*, u.brand AS cur_brand, u.code AS cur_code, u.level AS cur_level, u.status AS cur_status FROM gla_events e LEFT JOIN gla_units u ON u.id = e.unit_id WHERE e.site = ? AND e.eff_date = ? ORDER BY e.id").bind(site, day).all(),
+    env.DB.prepare("SELECT day, shift, doc, created_name FROM handovers WHERE site = ? AND day >= ? AND day < ? ORDER BY day, shift").bind(site, ago(60), day).all()
+  ]);
+
+  /* Operations Forms: AM / PM checklists, tenant opening / closing, direct banking tour */
+  const formRun = r => {
+    const items = JSON.parse(r.items || "[]"), ans = JSON.parse(r.answers || "{}"), head = JSON.parse(r.header || "{}");
+    const flags = head.flags || {};
+    const findings = items.filter(it => !(it.c && flags[it.c] === false)).map(it => ({ it, a: ans[it.id] || {} }))
+      .filter(x => x.a.v === "n" || (x.it.k === "training" && x.a.tr === "no"))
+      .map(x => ({ section: x.it.s || "", area: x.it.a || "", task: x.it.t || "", ids: x.it.ids || "", remark: x.a.r || "",
+        training: x.it.k === "training" ? (x.a.day ? "Training day " + x.a.day : "Training not done") : "" }));
+    const remarks = items.map(it => ({ it, a: ans[it.id] || {} })).filter(x => x.a.r && x.a.v !== "n").map(x => ({ area: x.it.a || "", task: x.it.t || "", remark: x.a.r }));
+    return { id: r.id, form: r.form, day: r.day, title: r.title, status: r.status, done: r.done, total: r.total, issues: r.issues,
+      by: r.submitted_name || r.created_name, submittedAt: r.submitted_at, updatedAt: r.updated_at, comments: r.comments || "",
+      unit: head.unit || head.code || "", findings, remarks };
+  };
+  const R2 = (runs.results || []).map(formRun);
+  const checklists = { am: R2.find(r => r.form === "am") || null, pm: R2.find(r => r.form === "pm") || null };
+  const dbank = { today: R2.filter(r => r.form === "dbank"), last: lastBank ? { day: lastBank.day, status: lastBank.status, issues: lastBank.issues, by: lastBank.submitted_name || lastBank.created_name } : null };
+  /* tenants that opened / closed on this day — the opening / closing checklists and the GLA changes with this effective date */
+  const opened = [], closedT = [];
+  for (const e of glaEv.results || []) {
+    const b = JSON.parse(e.before || "{}"), a = JSON.parse(e.after || "{}");
+    const brandA = a.brand || e.cur_brand || "", brandB = b.brand || e.cur_brand || "";
+    const unit = { code: e.cur_code || a.code || b.code || "", level: e.cur_level || a.level || b.level || "", note: e.note || "", by: e.by_name || "" };
+    const wasOpen = s2 => ["Open", "Closed"].includes(s2);
+    if (e.kind === "add" && a.status === "Open" && brandA) opened.push({ brand: brandA, ...unit, how: "New unit added as Open" });
+    else if (e.kind === "remove" && wasOpen(b.status) && brandB) closedT.push({ brand: brandB, ...unit, how: "Unit removed" });
+    else if (e.kind === "update") {
+      if (a.status === "Open" && b.status && !wasOpen(b.status)) opened.push({ brand: brandA, ...unit, how: `${b.status} → Open` });
+      if (["Terminated", "Vacant"].includes(a.status) && b.status && wasOpen(b.status)) closedT.push({ brand: brandB, ...unit, how: `${b.status} → ${a.status}` });
+      if (a.brand && b.brand && a.brand !== b.brand && (a.status || e.cur_status) === "Open") { closedT.push({ brand: b.brand, ...unit, how: `Replaced by ${a.brand}` }); opened.push({ brand: a.brand, ...unit, how: `Replaced ${b.brand}` }); }
+    }
+  }
+  const tenants = { opening: R2.filter(r => r.form === "open"), closing: R2.filter(r => r.form === "close"), opened, closed: closedT };
+  /* shift handover tasks that belong to this date */
+  const tasks = [], seen = new Set();
+  const addTask = (x, from, kind) => { const k = x.text.trim().toLowerCase(); if (seen.has(k)) { const t = tasks.find(t => t.key === k); if (t && x.done) t.done = true; return; } seen.add(k);
+    tasks.push({ key: k, text: x.text, cctv: !!x.cctv, done: !!x.done, from, kind }); };
+  for (const h of hos.results || []) { const d = cleanHandover(JSON.parse(h.doc)); for (const x of d.today) addTask(x, `${h.shift} handover · ${h.created_name || ""}`, "today"); }
+  for (const h of recentHo.results || []) {
+    const d = cleanHandover(JSON.parse(h.doc));
+    if (h.day === ago(1)) for (const x of d.tomorrow) addTask({ ...x, done: false }, `"Tomorrow" in the ${h.shift} handover of ${h.day}`, "tomorrow");
+    for (const x of d.upcoming) if (x.date === day) addTask({ ...x, done: false }, `Scheduled in the ${h.shift} handover of ${h.day}`, "dated");
+  }
 
   /* minutes of meeting */
   const momOut = [];
   for (const m of moms.results || []) {
     const acts = await env.DB.prepare("SELECT text, owner_name, due, status FROM mom_actions WHERE meeting_id = ? ORDER BY seq").bind(m.id).all();
-    momOut.push({ id: m.id, title: m.title, date: m.meet_date, status: m.status, preparedBy: m.prepared_by,
+    momOut.push({ id: m.id, title: m.title, type: m.meeting_type || "", date: m.meet_date, status: m.status, preparedBy: m.prepared_by,
       attended: JSON.parse(m.participants || "[]").filter(x => x.attended).map(x => x.name), actions: acts.results || [] });
   }
   /* handovers: the items written for the day */
@@ -1643,6 +1800,8 @@ async function eodReport(env, me, site, day) {
     mom: momOut,
     feedback: (fb.results || []).map(fbOut),
     handovers: hoOut,
+    handoverTasks: tasks.map(({ key, ...t }) => t),
+    checklists, dbank, tenants,
     schedule: { shifts, away, note: notes ? notes.note : "", headcount: shifts.length },
     gla };
 }

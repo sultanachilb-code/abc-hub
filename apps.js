@@ -9,12 +9,14 @@
      group   section on the home screen (must match one of GROUPS)
      icon    clipboard | alert | qr | box | calendar | chart | bolt | truck
              | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut | siren | wallet
+             | gauge | scale | handshake | scroll
      color   tile colour
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
      embed   false = open in its own window instead of inside the hub
      roles   who sees the tile: ["MANAGER","SUPERVISOR","SECURITY"]
-             (leave out = everyone; Admins always see everything)
+             (leave out = everyone; Admin, Property Advisor, Mall Directors and
+             the Chief Department Store Operations Officer always see everything)
      sso     true = sign in automatically with the hub account
    Empty groups are hidden automatically.
    ===================================================================== */
@@ -23,7 +25,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Operations Tools", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Operations Forms"],
+  GROUPS: ["Operations Tools", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -140,7 +142,7 @@ window.HUB = {
       icon: "chart",
       color: "#0F5C7A",
       url: "/tools/exec",
-      roles: ["MANAGER", "SUPERVISOR"]
+      roles: ["MANAGER"]          /* flagship management and leadership only — not the operations team */
     },
     /* Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md */
     {
@@ -152,6 +154,16 @@ window.HUB = {
       color: "#8A6D1F",
       url: "/tools/budget",
       roles: ["MANAGER", "SUPERVISOR"]
+    },
+    /* Data Accuracy Score feature — see docs/FEATURE-accuracy.md */
+    {
+      id: "accuracy",
+      name: "Data Accuracy Score",
+      desc: "When the GLA, property details, executive report and budget were last updated",
+      group: "Property Overview & Info",
+      icon: "gauge",
+      color: "#2E6B4F",
+      url: "/tools/accuracy"
     },
     /* Mall Layouts feature — see docs/FEATURE-layouts.md */
     {
@@ -254,7 +266,11 @@ window.HUB = {
       color: "#8A5A1F",
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/",
       roles: ["MANAGER"]
-    }
+    },
+    /* Policies & Procedures — the three systems are placeholders until their content is built */
+    { id: "pp-owner", name: "Owner", desc: "Owner policies and procedures", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies?s=owner" },
+    { id: "pp-assist", name: "Assist", desc: "Assist policies and procedures", group: "Policies & Procedures", icon: "handshake", color: "#2F6F73", url: "/tools/policies?s=assist" },
+    { id: "pp-general", name: "ABC General Policies", desc: "Company-wide policies", group: "Policies & Procedures", icon: "scroll", color: "#8A5A1F", url: "/tools/policies?s=general" }
 
     /* Next system goes here — add a comma after the } above, then paste:
     ,{
