@@ -25,7 +25,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Operations Tools", "Tenant Management", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
+  GROUPS: ["Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -115,6 +115,8 @@ window.HUB = {
       color: "#A0442F",
       url: "/tools/feedback"
     },
+    /* Leadership dashboards feature — see docs/FEATURE-leadership.md */
+    { id: "leadership", name: "Performance Dashboard", desc: "Every flagship's status, soft services and the monthly pack", group: "Leadership", icon: "gauge", color: "#2A0F45", url: "/tools/leadership", roles: ["ADVISOR", "DIRECTOR", "CDSO"] },
     /* Tenant Management feature — see docs/FEATURE-tenant-management.md */
     { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance" },
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },

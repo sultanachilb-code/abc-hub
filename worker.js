@@ -8,6 +8,7 @@ export { EmergencyPager } from "./modules/emergency.js";
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
+import { leadershipRoute } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
 import { automationSchema, automationRun, backupData, eodEmailHtml } from "./modules/automation.js";   // Automation feature (EOD email, daily snapshot, weekly backup) — see docs/FEATURE-automation.md   // Tenant Management feature — see docs/FEATURE-tenant-management.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
@@ -1222,6 +1223,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("exec/")) return execRoute(env, p, method, b, url, { site, can, me, now: nowIso, siteName, glaAsOf,
     sites: sitesMap(me) });
 
+  if (p.startsWith("lead/")) return leadershipRoute(env, p, method, b, url, { me, sitesOf, siteName, pullDay, today: beirutToday });   // Leadership dashboards feature
   /* ----- Tenant Management feature (modules/tenants.js) ----- */
   if (p.startsWith("tm/") || p === "compliance" || p.startsWith("fitout")) return tenantsRoute(env, p, method, b, url, { site, can, me, now: nowIso,
     isAdmin: me.role === "ADMIN", siteName, raiseEvent, today: beirutToday, sites: sitesMap(me), position: posLabel(me.position) || ROLES[me.role] });
