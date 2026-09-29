@@ -61,6 +61,9 @@ dialog.wide{width:min(760px,calc(100% - 20px))}
 .t .pr{color:var(--warn);font-weight:800}
 .t.live td{padding:8px;font-size:.88rem}
 .t.live{margin-bottom:-1px}
+#dMail{width:min(460px,calc(100vw - 24px));box-sizing:border-box}
+#dMail .dlg-b>*{min-width:0;max-width:100%;box-sizing:border-box}
+#dMail .dlg-b .btn{white-space:normal}
 </style>
 </head>
 <body>
@@ -88,6 +91,10 @@ async function boot(site){
   CTX = await api("ops/context" + (site ? "?site=" + site : ""));
   $("#sub").textContent = CTX.siteName;
   $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  /* a handover waiting for me opens straight away, so "I have received" is one tap from the badge */
+  const want = Number(new URLSearchParams(location.search).get("id")) || 0;
+  if (want) return open(want);
+  if (!site){ try { const sm = await api("ops/summary"); if (sm.handover && sm.handover.id) return open(sm.handover.id); } catch {} }
   list();
 }
 async function list(){
@@ -102,7 +109,7 @@ async function list(){
     <div class="list">${d.handovers.length ? d.handovers.map(h => `<button class="card hrow" data-id="${h.id}">
         <span class="main"><b>${esc(D.long(h.day))}${h.shift === "AM" ? " · Morning" : h.shift === "PM" ? " · Evening" : ""}</b><br>
         <small>${h.handoffs.length ? h.handoffs.map(x => `${esc(x.by)} ${hm(x.at)}${x.receivedBy ? ` → ${esc(x.receivedBy)}` : ""}`).join(" · ") : `started by ${esc(h.created_name || "—")}`}${h.updated_name ? ` · last edit ${esc(h.updated_name)}` : ""}</small></span>
-        ${h.received_by ? `<span class="pill ok">Received</span>` : h.status === "submitted" ? `<span class="pill warn">Awaiting receipt</span>` : `<span class="pill">In progress</span>`}</button>`).join("")
+        ${h.received_by === "Auto-closed" ? `<span class="pill">Closed</span>` : h.received_by ? `<span class="pill ok">Received</span>` : h.status === "submitted" ? `<span class="pill warn">Awaiting receipt</span>` : `<span class="pill">In progress</span>`}</button>`).join("")
       : `<div class="card empty">No handovers yet for ${esc(CTX.siteName)}.</div>`}</div></div>`;
 }
 app.addEventListener("click", async e => {
@@ -155,7 +162,7 @@ function render(){
   <div class="meta" style="max-width:980px;margin:0 auto">
     <button class="btn ghost small" id="back">‹ All handovers</button>
     <input class="inp" type="date" id="hDay" value="${esc(H.day)}" ${ro}>
-    <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
+    <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy === "Auto-closed" ? "Closed" : H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
     <span style="flex:1"></span>
     ${ro ? "" : `<button class="btn ghost small" id="impBtn" title="Salesforce Handover Report (.xlsx)">⤓ Import tenant requests</button>`}
     <button class="btn ghost small" id="mailBtn">✉ Email in Outlook</button>
@@ -178,13 +185,8 @@ function render(){
         <td><input type="time" data-k="events" data-i="${i}" data-f="end" value="${esc(x.end)}" ${ro}></td>
         <td class="xx">${ro ? "" : `<button class="x" data-rm="events" data-i="${i}">×</button>`}</td></tr>`).join("") || `<tr><td colspan="6" class="emptyrow" style="padding:8px">No events.</td></tr>`}</table>
 
-    <div class="hd">Daily operations checklist tracker<span class="sp"></span><button class="add" id="liveRef" title="Refresh the live rows">↻</button>${ro ? "" : `<button class="add" data-add="checklists">+ Add row</button>`}</div>
+    <div class="hd">Daily operations checklist tracker<span class="sp"></span><button class="add" id="liveRef" title="Refresh the live rows">↻</button></div>
     <div id="liveBox">${liveHtml()}</div>
-    <table class="t"><tr><th>Checklist name</th><th style="width:120px">AM</th><th style="width:120px">PM</th><th>Clarifications</th><th></th></tr>
-      ${d.checklists.map((x, i) => `<tr><td><input type="text" data-k="checklists" data-i="${i}" data-f="name" value="${esc(x.name)}" ${ro}></td>
-        ${["am", "pm"].map(f => `<td><select data-k="checklists" data-i="${i}" data-f="${f}" class="${x[f] === "Done" ? "done" : x[f] === "Not done" ? "nd" : ""}" ${ro}>${["", "Done", "Not done", "N/A"].map(o => `<option ${x[f] === o ? "selected" : ""} value="${o}">${o || "—"}</option>`).join("")}</select></td>`).join("")}
-        <td><input type="text" data-k="checklists" data-i="${i}" data-f="note" value="${esc(x.note)}" ${ro}></td>
-        <td class="xx">${ro ? "" : `<button class="x" data-rm="checklists" data-i="${i}">×</button>`}</td></tr>`).join("")}</table>
 
   </div>
   <div class="bar">
@@ -278,6 +280,7 @@ function readRequests(rows){
   const col = re => H0.findIndex(h => re.test(h));
   const C = { status: col(/^status/), from: col(/valid from/), req: col(/request name/), tenant: col(/tenant/), to: col(/valid to/), sub: col(/sub maint|category|type/), contr: col(/contractor|supplier/), desc: col(/description/) };
   if (C.from < 0 || C.tenant < 0) throw new Error("The “Valid From” or “Tenant Name” column is missing.");
+  if (C.status < 0) throw new Error("The “Status” column is missing — only Approved requests can be imported.");
   const out = []; let status = "", from = null;
   for (const r of rows.slice(hi + 1)){
     const req = String(r[C.req] ?? "").trim();
@@ -300,7 +303,7 @@ function planImport(list){
   all.forEach(t => (t.match(/REQ-?\d+/gi) || []).forEach(r => have.add(r.toUpperCase())));
   const plan = { today: [], tomorrow: [], upcoming: [], dup: [], past: [], skipped: [] };
   for (const q of list){
-    if (/reject|closed|cancel/i.test(q.status)){ plan.skipped.push(q); continue; }
+    if (!/^approved/i.test(q.status)){ plan.skipped.push(q); continue; }   // only Approved ✔️ requests go into the handover
     if (have.has(q.req)){ plan.dup.push(q); continue; }
     const endDay = q.to ? q.to.day : q.from.day;
     if (q.from.day === day || (q.from.day < day && endDay >= day)) plan.today.push(q);
@@ -328,7 +331,7 @@ $("#impFile").addEventListener("change", async e => {
       <div class="dlg-b" style="max-height:60vh;overflow:auto">
         ${n ? "" : `<p class="muted">Nothing new to add.</p>`}
         ${grp("Today", IMP.today)}${grp("Tomorrow", IMP.tomorrow)}${grp("Coming up", IMP.upcoming, true)}
-        <p class="muted" style="font-size:.8rem;margin-top:12px">${[IMP.dup.length ? `${IMP.dup.length} already in this handover` : "", IMP.past.length ? `${IMP.past.length} finished before this day` : "", IMP.skipped.length ? `${IMP.skipped.length} rejected or closed` : ""].filter(Boolean).join(" · ") || "Nothing skipped."}</p>
+        <p class="muted" style="font-size:.8rem;margin-top:12px">${[IMP.dup.length ? `${IMP.dup.length} already in this handover` : "", IMP.past.length ? `${IMP.past.length} finished before this day` : "", IMP.skipped.length ? `${IMP.skipped.length} not approved (submitted, rejected or closed) — left out` : ""].filter(Boolean).join(" · ") || "Nothing skipped."}</p>
       </div>
       <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button>${n ? `<button class="btn gold" data-v="1">Add ${n} to the handover</button>` : ""}</div>`;
     d.onclick = ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; d.close();
@@ -348,6 +351,16 @@ $("#impFile").addEventListener("change", async e => {
    EMAIL IN OUTLOOK — the handover in its usual layout as a new, unsent email
    (.eml opens in Outlook as a draft; "Copy" puts the formatted handover on the clipboard for any mail app)
    ===================================================================== */
+/* subject: ABC <Flagship> | <AM/PM> Handover <September 29th, 2026> — AM before 15:00 Beirut, PM after */
+const MAIL_CUTOFF = 15;
+function beirutHour(){ return Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", hour12: false }).format(new Date())) % 24; }
+let MAIL_SHIFT = null;
+function ordinalDate(day){
+  const t = new Date(day + "T12:00:00Z"), n = t.getUTCDate();
+  const suf = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th");
+  return `${t.toLocaleString("en-US", { month: "long", timeZone: "UTC" })} ${n}${suf}, ${t.getUTCFullYear()}`;
+}
+function mailSubject(){ return `ABC ${CTX.siteName} | ${MAIL_SHIFT || (beirutHour() < MAIL_CUTOFF ? "AM" : "PM")} Handover ${ordinalDate(H.day)}`; }
 function mailHtml(){
   const d = H.doc, F = "font-family:Calibri,Arial,sans-serif;", B = "border:1px solid #2F3B52;";
   const head = (t, sub) => `<tr><td style="${F}background:#8EAADB;color:#10203F;font-weight:bold;font-size:15px;padding:6px 10px;border-top:1.5px solid #2F3B52">${esc(t)}${sub ? ` <span style="font-weight:normal;font-size:12px">· ${esc(sub)}</span>` : ""}</td></tr>`;
@@ -356,7 +369,7 @@ function mailHtml(){
     <tr>${cols.map(c => `<th style="${F}background:#D9E2F3;font-size:13px;text-align:left;padding:5px 8px;border:1px solid #BFBFBF">${esc(c)}</th>`).join("")}</tr>
     ${rows.length ? rows.map(r => `<tr>${r.map(v => `<td style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF">${v}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length}" style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF;color:#777">None.</td></tr>`}</table></td></tr>`;
   const st = v => v === "Done" ? `<b style="color:#2E8B57">Done</b>` : v === "Not done" ? `<b style="color:#C0392B">Not done</b>` : esc(v || "—");
-  const title = `Shift Handover — ABC ${CTX.siteName} — ${D.long(H.day)}`;
+  const title = mailSubject();
   const L2 = LIVE && !LIVE.error ? LIVE : null, R = L2 ? L2.restroom || {} : {};
   const ckM = r => !r ? `<b style="color:#C0392B">Not done</b>` : r.status === "submitted" ? `<b style="color:#2E8B57">Done</b> · ${esc(r.by)} ${hm(r.at)}${r.issues ? ` · ${r.issues} ✗` : ""}` : `<b style="color:#C07A12">In progress ${r.done}/${r.total}</b> · ${esc(r.by)}`;
   const rrM = (n, by, st) => R.rooms ? `<b style="color:${n >= R.rooms ? "#2E8B57" : st === "closed" ? "#C0392B" : st === "open" ? "#C07A12" : "#777"}">${n}/${R.rooms}</b>${by.length ? ` · ${esc(by.join(", "))}` : ""}` : "—";
@@ -370,7 +383,7 @@ function mailHtml(){
     ${head("Tomorrow")}${items(d.tomorrow)}
     ${head("Coming up")}${items(d.upcoming, true)}
     ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], d.events.map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
-    ${head("Daily operations checklist tracker")}${liveM}${d.checklists.length ? tbl(["Checklist name", "AM", "PM", "Clarifications"], d.checklists.map(c => [esc(c.name), st(c.am), st(c.pm), esc(c.note)])) : ""}
+    ${head("Daily operations checklist tracker")}${liveM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Live checklist status not available.</td></tr>`}
   </table>
   <p style="${F}font-size:14px">Best regards,<br>${esc(CTX.me.name)}</p></div>` };
 }
@@ -383,9 +396,13 @@ function emlFile(){
 }
 async function mailDialog(){
   if (!LIVE || LIVE.error) await loadLive();
+  MAIL_SHIFT = beirutHour() < MAIL_CUTOFF ? "AM" : "PM";
   const d = $("#dMail");
   d.innerHTML = `<div class="dlg-h"><b>Email this handover</b><small>Opens as a new email with the handover already inside. Add the recipients and send.</small></div>
     <div class="dlg-b" style="display:grid;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="muted" style="font-size:.85rem">Shift</span>
+        <span class="seg" style="display:inline-flex;border:1px solid var(--line,#ccc);border-radius:10px;overflow:hidden">${["AM", "PM"].map(x => `<button type="button" class="btn small ${MAIL_SHIFT === x ? "gold" : "ghost"}" data-sh="${x}" style="border-radius:0;border:0">${x}</button>`).join("")}</span></div>
+      <div id="mailSubj" style="font-size:.85rem;padding:8px 10px;border-radius:10px;background:var(--paper,#f5f5f5)"><span class="muted">Subject:</span> <b>${esc(mailSubject())}</b></div>
       <button class="btn gold" data-m="eml">Open in Outlook (desktop)</button>
       <p class="muted" style="font-size:.8rem;margin-top:-4px">Downloads <b>handover.eml</b>. Open it and Outlook shows a new, unsent email.</p>
       <button class="btn ghost" data-m="copy">Copy the handover, then open a new email</button>
@@ -393,6 +410,9 @@ async function mailDialog(){
     </div>
     <div class="dlg-f"><button class="btn ghost" data-m="x">Close</button></div>`;
   d.onclick = async ev => {
+    const sh = ev.target.closest("[data-sh]");
+    if (sh){ MAIL_SHIFT = sh.dataset.sh; d.querySelectorAll("[data-sh]").forEach(x => x.className = `btn small ${x.dataset.sh === MAIL_SHIFT ? "gold" : "ghost"}`);
+      d.querySelector("#mailSubj").innerHTML = `<span class="muted">Subject:</span> <b>${esc(mailSubject())}</b>`; return; }
     const b = ev.target.closest("[data-m]"); if (!b && ev.target !== d) return;
     const m = b ? b.dataset.m : "x";
     if (m === "eml"){
