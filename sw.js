@@ -1,12 +1,14 @@
 /* ABC Operations Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v14";
+const CACHE = "abc-hub-v16";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
-  "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png"];
+  "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png",
+  /* works offline: the checklists and the handover open without signal once visited */
+  "./tools/common.js", "./tools/tools.css", "./tools/forms", "./tools/handover"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -19,7 +21,7 @@ self.addEventListener("fetch", e => {
     fetch(e.request, { cache: "no-cache" }).then(res => {
       if (res.ok){ const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return res;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match("./index.html")))
+    }).catch(() => caches.match(e.request, { ignoreSearch: url.pathname.startsWith("/tools/") }).then(r => r || (url.pathname.startsWith("/tools/") ? new Response("<p style='font-family:sans-serif;padding:30px;color:#666'>You are offline and this page has not been opened on this device before.</p>", { headers: { "content-type": "text/html" } }) : caches.match("./index.html"))))
   );
 });
 

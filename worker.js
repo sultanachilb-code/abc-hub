@@ -7,6 +7,8 @@ import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./
 export { EmergencyPager } from "./modules/emergency.js";
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
+import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
+import { automationSchema, automationRun, backupData, eodEmailHtml } from "./modules/automation.js";   // Automation feature (EOD email, daily snapshot, weekly backup) — see docs/FEATURE-automation.md   // Tenant Management feature — see docs/FEATURE-tenant-management.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
@@ -212,6 +214,8 @@ async function ensureSchema(env) {
   await emergencySchema(env); // Emergency Alert feature
   await budgetSchema(env);    // Budget (CAPEX / OPEX) feature
   await execSchema(env);      // Executive Report feature
+  await tenantsSchema(env);   // Tenant Management feature
+  await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
       site TEXT NOT NULL DEFAULT '', app TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
@@ -249,6 +253,9 @@ async function ensureSchema(env) {
       created_by TEXT, created_name TEXT, created_at TEXT, updated_at TEXT,
       submitted_at TEXT NOT NULL DEFAULT '', received_by TEXT NOT NULL DEFAULT '', received_at TEXT NOT NULL DEFAULT '')`)
   ]);
+  const hcols = (await env.DB.prepare("PRAGMA table_info(handovers)").all()).results || [];   // one shared handover per day
+  if (hcols.length && !hcols.some(c => c.name === "handoffs")) await env.DB.prepare("ALTER TABLE handovers ADD COLUMN handoffs TEXT NOT NULL DEFAULT '[]'").run();
+  if (hcols.length && !hcols.some(c => c.name === "updated_name")) await env.DB.prepare("ALTER TABLE handovers ADD COLUMN updated_name TEXT NOT NULL DEFAULT ''").run();
   const mcols = await env.DB.prepare("PRAGMA table_info(mom_meetings)").all();   // MOM meeting type (for reports)
   if ((mcols.results || []).length && !(mcols.results || []).some(c => c.name === "meeting_type"))
     await env.DB.prepare("ALTER TABLE mom_meetings ADD COLUMN meeting_type TEXT NOT NULL DEFAULT ''").run();
@@ -308,6 +315,7 @@ export default {
       await taskReminders(env).catch(e => console.error("tasks", e && e.message));
       await remindersRun(env, { raiseEvent, pullDay, now: nowIso }).catch(e => console.error("reminders", e && e.message));   // Reminders feature
       await emergencyRun(env, { raiseEvent, sendPush, now: nowIso }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
+      await automationRun(env, { SITES, eodReport, relay, hubUrl: HUB_URL, canSite, isFull }).catch(e => console.error("automation", e && e.message));   // Automation feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
     })());
@@ -378,6 +386,26 @@ async function route(request, env, ctx, url) {
     }
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
+    /* Automation feature: backup download, backup status, End of Day email test */
+    if (a === "backup" && method === "GET") {
+      const data = await backupData(env);
+      return new Response(JSON.stringify(data), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+        "content-disposition": `attachment; filename="abc-hub-backup-${beirutDate()}.json"` } });
+    }
+    if (a === "backup-status" && method === "GET") {
+      const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'backup:last'").first();
+      const counts = Object.fromEntries(await Promise.all(["users", "gla_units", "handovers", "form_runs", "tenant_feedback", "mom_meetings", "tm_announcements"].map(async t =>
+        [t, Number((await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t}`).first().catch(() => ({ n: 0 }))).n || 0)])));
+      return ok({ last: r ? JSON.parse(r.v) : null, relay: !!env.MAIL_RELAY_URL, counts });
+    }
+    if (a === "eod-test" && method === "POST") {
+      const site = SITES[String(body.site || "").toUpperCase()] ? String(body.site).toUpperCase() : (me.site_code || "VRM");
+      if (!env.MAIL_RELAY_URL) throw fail("Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub");
+      const R = await eodReport(env, me, site, beirutDate());
+      const r = await relay(env, { to: [me.email], subject: `End of Day Report — ABC ${SITES[site]} — ${beirutDate()} (test)`, html: eodEmailHtml(R, HUB_URL) });
+      if (!r.ok) throw fail(r.error || "The email could not be sent");
+      return ok({ to: me.email });
+    }
     if (a === "announcements" && method === "GET") return ok(await listAnnouncements(env));
     if (a === "announcements" && method === "POST") return ok(await saveAnnouncement(env, me, body));
     if (a === "announcements/delete" && method === "POST") {
@@ -683,11 +711,11 @@ async function morningRun(env, { only = null, force = false } = {}) {
   if (!only) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('mail:last', ?)").bind(JSON.stringify(summary)).run();
   return { sent, errors };
 }
-async function relay(env, { to, subject, html }) {
+async function relay(env, { to, subject, html, attachment = null }) {
   try {
     const r = await fetch(env.MAIL_RELAY_URL, {
       method: "POST", redirect: "follow",
-      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc: [], subject, html, fromName: "ABC Operations Hub", attachment: null })
+      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc: [], subject, html, fromName: "ABC Operations Hub", attachment })
     });
     const text = await r.text();
     let j = null; try { j = JSON.parse(text); } catch {}
@@ -942,7 +970,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1194,6 +1222,10 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("exec/")) return execRoute(env, p, method, b, url, { site, can, me, now: nowIso, siteName, glaAsOf,
     sites: sitesMap(me) });
 
+  /* ----- Tenant Management feature (modules/tenants.js) ----- */
+  if (p.startsWith("tm/") || p === "compliance" || p.startsWith("fitout")) return tenantsRoute(env, p, method, b, url, { site, can, me, now: nowIso,
+    isAdmin: me.role === "ADMIN", siteName, raiseEvent, today: beirutToday, sites: sitesMap(me), position: posLabel(me.position) || ROLES[me.role] });
+
   /* ----- Data Accuracy Score feature (modules/accuracy.js) ----- */
   if (p === "accuracy") return { ...(await accuracyRoute(env, p, method, b, url, { site, sites: sitesMap(me) })), can };
 
@@ -1241,7 +1273,8 @@ async function opsRoute(env, me, p, method, b, url) {
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, e.tenant, e.day, e.time, e.category, e.description, e.action, e.actionDesc, me.email, me.full_name, at, at).run();
     if (FEEDBACK.serious.includes(e.action)) await raiseEvent(env, { site, app: "feedback", tone: "warn",
       title: `${e.action} · ${e.tenant}`, body: `${siteName(site)} · ${e.category}${e.description ? " — " + e.description : ""}` });
-    return { id: r.meta.last_row_id };
+    const repeat = await repeatCheck(env, site, e, raiseEvent, siteName).catch(() => null);   // Tenant Management: repeat offenders
+    return { id: r.meta.last_row_id, repeat };
   }
   if (p === "feedback/delete" && method === "POST") {
     const ex = await env.DB.prepare("SELECT * FROM tenant_feedback WHERE id = ? AND site = ?").bind(Number(b.id) || 0, site).first();
@@ -1373,56 +1406,87 @@ async function opsRoute(env, me, p, method, b, url) {
   }
 
   /* ----- handover ----- */
+  /* ----- shift handover — ONE shared handover per flagship per day; each shift hands it over to the next ----- */
   if (p === "handover/list") {
     const { results } = await env.DB.prepare(
-      "SELECT id, day, shift, status, created_name, submitted_at, received_by, received_at, updated_at FROM handovers WHERE site = ? ORDER BY day DESC, shift DESC, id DESC LIMIT 60").bind(site).all();
-    return { site, can, handovers: results || [] };
+      "SELECT id, day, shift, status, created_name, updated_name, submitted_at, received_by, received_at, updated_at, handoffs FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 60").bind(site).all();
+    return { site, can, handovers: (results || []).map(h => ({ ...h, handoffs: JSON.parse(h.handoffs || "[]") })) };
   }
   if (p === "handover/new") {
-    const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? ORDER BY day DESC, shift DESC, id DESC LIMIT 1").bind(site).first();
     const day = isDay(q("day")) ? q("day") : beirutToday();
-    return { handover: { id: 0, site, day, shift: q("shift") === "PM" ? "PM" : "AM", status: "draft",
-      doc: carryHandover(last ? JSON.parse(last.doc) : null, day), createdName: me.full_name, from: last ? { day: last.day, shift: last.shift } : null }, can };
+    const same = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+    if (same) return { handover: handoverOut(same), can, existing: true };
+    const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first()
+      || await env.DB.prepare("SELECT * FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 1").bind(site).first();
+    return { handover: { id: 0, site, day, shift: "DAY", status: "draft", handoffs: [],
+      doc: carryHandover(last ? JSON.parse(last.doc) : null, day), createdName: me.full_name, from: last ? { day: last.day } : null }, can };
   }
   if (p === "handover/get") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
     if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
     return { handover: handoverOut(h), can: rights(me, h.site) };
   }
+  /* live rows for the Daily operations checklist tracker: AM / PM checklists and restroom inspections (OPS and S.S) */
+  if (p === "handover/live") {
+    const day = isDay(q("day")) ? q("day") : beirutToday();
+    const [runs, rr] = await Promise.all([
+      env.DB.prepare("SELECT form, status, done, total, issues, submitted_name, submitted_at, created_name, updated_at FROM form_runs WHERE site = ? AND day = ? AND form IN ('am','pm') ORDER BY id").bind(site, day).all().catch(() => ({ results: [] })),
+      pullDay(env, "restroom", site, day)
+    ]);
+    const ck = f => { const r = (runs.results || []).find(x => x.form === f); return r ? { status: r.status, done: r.done, total: r.total, issues: r.issues,
+      by: r.submitted_name || r.created_name, at: r.submitted_at || r.updated_at } : null; };
+    let restroom = { error: rr.error || "" };
+    if (!rr.error && rr.windows) {
+      const rooms = rr.rooms || [];
+      restroom = { rooms: rooms.length, windows: rr.windows.map(w => {
+        let ops = 0, ss = 0; const by = { ops: new Set(), ss: new Set() };
+        for (const r of rooms) { const c = (rr.grid || {})[`${r.id}|${w.id}`] || {}; if (c.ops) { ops++; c.ops.by && by.ops.add(c.ops.by); } if (c.usm) { ss++; c.usm.by && by.ss.add(c.usm.by); } }
+        return { label: w.label, time: w.display || "", state: w.state, ops, ss, opsBy: [...by.ops], ssBy: [...by.ss] }; }),
+        totals: rr.totals || null };
+    }
+    return { day, am: ck("am"), pm: ck("pm"), restroom };
+  }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
     if (!isDay(b.day)) throw fail("Choose the handover date");
-    const shift = b.shift === "PM" ? "PM" : "AM";
     const doc = JSON.stringify(cleanHandover(b.doc || {}));
-    if (doc.length > 60000) throw fail("This handover is too long — move older items to Additional notes or remove finished ones");
+    if (doc.length > 60000) throw fail("This handover is too long — remove finished items");
     let id = Number(b.id) || 0;
     const at = nowIso();
+    const other = await env.DB.prepare("SELECT id FROM handovers WHERE site = ? AND day = ? AND id != ? LIMIT 1").bind(site, b.day, id).first();
+    if (other) throw fail("There is already a handover for this day — open it from the list and continue there", 409, { id: other.id });
     if (id) {
       const h = await env.DB.prepare("SELECT site FROM handovers WHERE id = ?").bind(id).first();
       if (!h || h.site !== site) throw fail("Handover not found", 404);
-      await env.DB.prepare("UPDATE handovers SET day = ?, shift = ?, doc = ?, updated_at = ? WHERE id = ?").bind(b.day, shift, doc, at, id).run();
+      await env.DB.prepare("UPDATE handovers SET day = ?, shift = 'DAY', doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(b.day, doc, at, me.full_name, id).run();
     } else {
-      const r = await env.DB.prepare(`INSERT INTO handovers (site, day, shift, doc, status, created_by, created_name, created_at, updated_at)
-        VALUES (?,?,?,?,'draft',?,?,?,?)`).bind(site, b.day, shift, doc, me.email, me.full_name, at, at).run();
+      const r = await env.DB.prepare(`INSERT INTO handovers (site, day, shift, doc, status, created_by, created_name, created_at, updated_at, updated_name, handoffs)
+        VALUES (?,?,'DAY',?,'draft',?,?,?,?,?,'[]')`).bind(site, b.day, doc, me.email, me.full_name, at, at, me.full_name).run();
       id = r.meta.last_row_id;
     }
     if (b.submit) {
-      await env.DB.prepare("UPDATE handovers SET status = 'submitted', submitted_at = ? WHERE id = ?").bind(at, id).run();
+      const cur = await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first();
+      const L = JSON.parse(cur.handoffs || "[]"); L.push({ by: me.full_name, email: me.email, at, receivedBy: "", receivedAt: "" });
+      await env.DB.prepare("UPDATE handovers SET status = 'submitted', submitted_at = ?, received_by = '', received_at = '', handoffs = ? WHERE id = ?")
+        .bind(at, JSON.stringify(L.slice(-12)), id).run();
       const d = JSON.parse(doc);
       const cctv = [...d.ongoing, ...d.today, ...d.tomorrow].filter(x => x.cctv && !x.done).length;
       await raiseEvent(env, { site, app: "handover", tone: cctv ? "warn" : "info",
-        title: `Handover submitted · ${shift === "AM" ? "Morning" : "Evening"} ${b.day}`,
-        body: `${siteName(site)} · by ${me.full_name} · ${d.today.length} today, ${d.ongoing.filter(x => !x.done).length} ongoing${cctv ? ` · ${cctv} ATT CCTV` : ""}` });
+        title: `Handover ready to receive · ${b.day}`,
+        body: `${siteName(site)} · handed over by ${me.full_name} · ${d.today.length} today, ${d.ongoing.filter(x => !x.done).length} ongoing${cctv ? ` · ${cctv} ATT CCTV` : ""}` });
     }
     return { id, saved: true };
   }
   if (p === "handover/receive" && method === "POST") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(b.id) || 0).first();
     if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
-    if (h.status !== "submitted") throw fail("This handover has not been submitted yet");
-    await env.DB.prepare("UPDATE handovers SET received_by = ?, received_at = ? WHERE id = ?").bind(me.full_name, nowIso(), h.id).run();
-    if (h.created_by && h.created_by !== me.email) await raiseEvent(env, { site: h.site, app: "handover", email: h.created_by, tone: "ok",
-      title: "Your handover was received", body: `${h.day} ${h.shift === "AM" ? "Morning" : "Evening"} · received by ${me.full_name}` });
+    if (h.status !== "submitted") throw fail("This handover has not been handed over yet");
+    const at = nowIso(), L = JSON.parse(h.handoffs || "[]"), lastH = L[L.length - 1];
+    if (lastH) { lastH.receivedBy = me.full_name; lastH.receivedAt = at; }
+    await env.DB.prepare("UPDATE handovers SET received_by = ?, received_at = ?, handoffs = ? WHERE id = ?").bind(me.full_name, at, JSON.stringify(L), h.id).run();
+    const to = lastH ? lastH.email : h.created_by;
+    if (to && to !== me.email) await raiseEvent(env, { site: h.site, app: "handover", email: to, tone: "ok",
+      title: "Your handover was received", body: `${h.day} · received by ${me.full_name}` });
     return { received: true };
   }
   if (p === "handover/delete" && method === "POST") {
@@ -1577,7 +1641,8 @@ function carryHandover(prev, day) {
   };
 }
 const handoverOut = h => ({ id: h.id, site: h.site, day: h.day, shift: h.shift, status: h.status, doc: cleanHandover(JSON.parse(h.doc)),
-  createdName: h.created_name, createdBy: h.created_by, submittedAt: h.submitted_at, receivedBy: h.received_by, receivedAt: h.received_at, updatedAt: h.updated_at });
+  createdName: h.created_name, createdBy: h.created_by, submittedAt: h.submitted_at, receivedBy: h.received_by, receivedAt: h.received_at, updatedAt: h.updated_at,
+  updatedName: h.updated_name || "", handoffs: JSON.parse(h.handoffs || "[]") });
 
 /* =====================================================================
    USAGE ANALYTICS (admin)
@@ -1742,16 +1807,17 @@ async function eodReport(env, me, site, day) {
       if (a.brand && b.brand && a.brand !== b.brand && (a.status || e.cur_status) === "Open") { closedT.push({ brand: b.brand, ...unit, how: `Replaced by ${a.brand}` }); opened.push({ brand: a.brand, ...unit, how: `Replaced ${b.brand}` }); }
     }
   }
-  const tenants = { opening: R2.filter(r => r.form === "open"), closing: R2.filter(r => r.form === "close"), opened, closed: closedT };
+  const tenants = { opening: R2.filter(r => r.form === "open"), closing: R2.filter(r => r.form === "close"), opened, closed: closedT,
+    announcements: await announcementsOn(env, site, day) };
   /* shift handover tasks that belong to this date */
   const tasks = [], seen = new Set();
   const addTask = (x, from, kind) => { const k = x.text.trim().toLowerCase(); if (seen.has(k)) { const t = tasks.find(t => t.key === k); if (t && x.done) t.done = true; return; } seen.add(k);
     tasks.push({ key: k, text: x.text, cctv: !!x.cctv, done: !!x.done, from, kind }); };
-  for (const h of hos.results || []) { const d = cleanHandover(JSON.parse(h.doc)); for (const x of d.today) addTask(x, `${h.shift} handover · ${h.created_name || ""}`, "today"); }
+  for (const h of hos.results || []) { const d = cleanHandover(JSON.parse(h.doc)); for (const x of d.today) addTask(x, `${h.shift === "AM" ? "Morning handover" : h.shift === "PM" ? "Evening handover" : "Handover"} · ${h.created_name || ""}`, "today"); }
   for (const h of recentHo.results || []) {
     const d = cleanHandover(JSON.parse(h.doc));
-    if (h.day === ago(1)) for (const x of d.tomorrow) addTask({ ...x, done: false }, `"Tomorrow" in the ${h.shift} handover of ${h.day}`, "tomorrow");
-    for (const x of d.upcoming) if (x.date === day) addTask({ ...x, done: false }, `Scheduled in the ${h.shift} handover of ${h.day}`, "dated");
+    if (h.day === ago(1)) for (const x of d.tomorrow) addTask({ ...x, done: false }, `"Tomorrow" in the handover of ${h.day}`, "tomorrow");
+    for (const x of d.upcoming) if (x.date === day) addTask({ ...x, done: false }, `Scheduled in the handover of ${h.day}`, "dated");
   }
 
   /* minutes of meeting */
@@ -1764,6 +1830,7 @@ async function eodReport(env, me, site, day) {
   /* handovers: the items written for the day */
   const hoOut = (hos.results || []).map(h => { const d = cleanHandover(JSON.parse(h.doc));
     return { id: h.id, shift: h.shift, status: h.status, by: h.created_name, receivedBy: h.received_by, submittedAt: h.submitted_at,
+      handoffs: JSON.parse(h.handoffs || "[]"), updatedName: h.updated_name || "",
       today: d.today, tomorrow: d.tomorrow, ongoing: d.ongoing.filter(x => !x.done), upcoming: d.upcoming, events: d.events.filter(e => (!e.from || e.from <= day) && (!e.to || e.to >= day)),
       checklists: d.checklists, notes: d.notes }; });
   /* schedule: who is on today */

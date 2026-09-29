@@ -25,7 +25,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Operations Tools", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
+  GROUPS: ["Operations Tools", "Tenant Management", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -104,15 +104,20 @@ window.HUB = {
       color: "#B0562A",
       url: "/tools/reminders"
     },
+    /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */
+    { id: "tenants", name: "Tenant Announcements", desc: "Opening, closure and relocation emails with photos", group: "Tenant Management", icon: "storeIn", color: "#2F6F73", url: "/tools/tenants" },
     {
       id: "feedback",
       name: "Tenant Feedback",
       desc: "Violations, customer feedback and actions by tenant",
-      group: "Operations Tools",
+      group: "Tenant Management",
       icon: "megaphone",
       color: "#A0442F",
       url: "/tools/feedback"
     },
+    /* Tenant Management feature — see docs/FEATURE-tenant-management.md */
+    { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance" },
+    { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Property Overview & Info — more property references will join this section */
     {
       id: "gla",

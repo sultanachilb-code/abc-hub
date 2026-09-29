@@ -567,6 +567,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <button data-t="users">People &amp; roles</button>
       <button data-t="usage">Usage</button>
       <button data-t="control">Control sheet</button>
+      <button data-t="backup">Backup</button>
     </div>
   </div>
   <div class="adm-body" id="admBody"></div>
@@ -1411,7 +1412,7 @@ async function renderAdmin(){
   show("admin");
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
-  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : await adminAnnouncements(body); }
+  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : await adminAnnouncements(body); }
   catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
 }
 async function adminAnnouncements(body, editing){
@@ -1542,6 +1543,18 @@ async function adminControl(body, editing){
     } catch (er){ $("#fMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
   };
 }
+/* Backup — Automation feature (weekly email every Sunday 03:00, download any time) */
+async function adminBackup(body){
+  const d = await api("admin/backup-status");
+  const L = d.last;
+  body.innerHTML = `<div class="panel"><h3>Backup</h3>
+      <p class="brief-empty" style="font-size:.9rem;line-height:1.55;margin-bottom:14px">Every Sunday from 03:00 the hub emails a compressed copy of all its data to the administrators.
+        Passwords and the mall-plan images are left out. You can also download a copy now and keep it on your laptop or in SharePoint.</p>
+      <p style="font-size:.9rem;margin-bottom:14px">${!d.relay ? `<span style="color:var(--alert)">Mail relay not set up — the weekly email cannot be sent. Download a copy instead.</span>`
+        : L ? `Last weekly backup: <b>${esc(L.day)}</b> · ${Math.round(L.bytes / 1024)} KB · ${L.ok ? `<span style="color:var(--ok)">emailed</span>` : `<span style="color:var(--alert)">not sent — ${esc(L.error)}</span>`}` : "No weekly backup sent yet — the first one goes out on Sunday."}</p>
+      <a class="btn" href="/api/admin/backup" download>Download a backup now</a></div>
+    <div class="panel"><h3>What is in the hub</h3><div class="rows">${Object.entries(d.counts).map(([k, n]) => `<div class="row-i"><div class="main"><b>${esc(k.replace(/_/g, " "))}</b></div><span class="badge">${n}</span></div>`).join("")}</div></div>`;
+}
 /* People & roles — one tab per flagship plus Leadership (Property Advisor, Mall Directors, CDSO, Admins) */
 const FLAG_TABS = [["VRM", "ABC Verdun Mall"], ["ACM", "ABC Achrafieh Mall"], ["DBS", "Dbayeh Mall"], ["VRS", "Verdun DS"], ["ACS", "Achrafieh DS"], ["LEAD", "Leadership"]];
 let pplTab = "VRM";
@@ -1617,13 +1630,13 @@ async function adminUsers(body, editing){
       <div id="uPosBox">${posField(role)}</div>
       <div id="uSiteBox">${siteField(role)}</div>
       ${e.email ? "" : `<label class="field"><span>Temporary password (8+)</span><input id="uPass" type="text" autocomplete="off"></label>`}
-      <label class="chk"><input type="checkbox" id="uMorning" ${e.email ? (e.morningEmail ? "checked" : "") : "checked"}> Receive the 08:00 morning email <small style="color:var(--muted)">(management &amp; leadership)</small></label>
+      <label class="chk"><input type="checkbox" id="uMorning" ${e.email ? (e.morningEmail ? "checked" : "") : "checked"}> Receive the 08:00 morning brief and the 23:30 End of Day report <small style="color:var(--muted)">(management &amp; leadership)</small></label>
       <div style="display:flex;gap:8px">${e.email || editing ? `<button class="btn ghost" id="uCancel">Cancel</button>` : ""}<button class="btn" id="uSave">${e.email ? "Save changes" : "Add person"}</button></div>
     </div>
     <div class="panel"><h3>Morning email · 08:00</h3>
       <p class="brief-empty" style="font-size:.86rem;margin-bottom:12px">${ms && !ms.relay ? `<span style="color:var(--alert)">Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub.</span>` : last}</p>
       <div id="mMsg"></div>
-      <button class="btn ghost" id="mTest">Send me a test now</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="mTest">Send me a test now</button><button class="btn ghost" id="eTest">End of Day report test</button></div>
     </div></div>`;
   $("#uRole").onchange = () => { const r = $("#uRole").value; $("#uNote").innerHTML = ACCESS_NOTE[r]; $("#uPosBox").innerHTML = posField(r); $("#uSiteBox").innerHTML = siteField(r); };
   body.onclick = async ev => {
@@ -1637,6 +1650,12 @@ async function adminUsers(body, editing){
         await api("admin/users/reset", { email: rs.dataset.reset, password: p }); msg(`Password reset. They will be asked to change it at next sign-in.`, "okm"); return; }
       if (ac){ await api("admin/users/active", { email: ac.dataset.act, active: ac.dataset.on === "1" }); return adminUsers(body); }
       if (ev.target.id === "uCancel") return adminUsers(body);
+      if (ev.target.id === "eTest"){
+        ev.target.disabled = true; ev.target.textContent = "Sending…";
+        try { const r = await api("admin/eod-test", { site: pplTab !== "LEAD" ? pplTab : "" }); $("#mMsg").innerHTML = `<div class="msg okm">End of Day report for ${esc(FLAG_TABS.find(t => t[0] === pplTab) ? FLAG_TABS.find(t => t[0] === pplTab)[1] : "your flagship")} sent to ${esc(r.to)}.</div>`; }
+        catch (er){ $("#mMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+        ev.target.disabled = false; ev.target.textContent = "End of Day report test"; return;
+      }
       if (ev.target.id === "mTest"){
         ev.target.disabled = true; ev.target.textContent = "Sending…";
         try { const r = await api("admin/morning-test", {}); $("#mMsg").innerHTML = `<div class="msg okm">Test sent to ${esc(r.to)} — check your inbox.</div>`; }
