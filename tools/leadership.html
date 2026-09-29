@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance Dashboard · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Leadership dashboards feature — see docs/FEATURE-leadership.md -->
+<style>
+.bar2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.views{display:flex;gap:6px;flex-wrap:wrap}
+.views button{padding:8px 14px;border-radius:999px;border:1px solid var(--line);font-weight:800;font-size:.84rem;background:var(--surface)}
+.views button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.sub{color:var(--muted);font-size:.84rem}
+.strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.st{padding:12px 14px}.st strong{display:block;font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}.st span{font-size:.74rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.fc{padding:16px 18px;display:grid;gap:12px;border-top:5px solid var(--line)}
+.fc.green{border-top-color:var(--ok)}.fc.amber{border-top-color:var(--warn)}.fc.red{border-top-color:var(--alert)}
+.fc h2{font-size:1.1rem;font-weight:800;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.light{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:800;padding:3px 10px;border-radius:999px}
+.light.green{background:rgba(46,139,87,.14);color:var(--ok)}.light.amber{background:rgba(192,122,18,.15);color:var(--warn)}.light.red{background:rgba(192,57,43,.14);color:var(--alert)}
+.k4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.k{background:var(--paper);border-radius:10px;padding:8px 10px}.k b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}.k small{font-size:.7rem;color:var(--muted);line-height:1.2;display:block}
+.sec{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:-4px}
+.ok{color:var(--ok)}.bad{color:var(--alert)}.mid{color:var(--warn)}
+.att{display:grid;gap:4px;font-size:.84rem}.att div{display:flex;gap:8px;align-items:flex-start}.att i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+.att .alert i{background:var(--alert)}.att .warn i{background:var(--warn)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:42px}
+.spark span{flex:1;border-radius:3px 3px 0 0;min-height:3px;position:relative}
+.spark span em{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%}
+.fl{display:flex;gap:8px;flex-wrap:wrap}
+table.cmp{width:100%;border-collapse:collapse;font-size:.85rem}
+.cmp th{text-align:left;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.cmp td{padding:9px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.sv{background:var(--paper);border-radius:12px;padding:12px;display:grid;gap:6px}
+.sv .big{font-size:1.8rem;font-weight:800;line-height:1}
+.sv .meter{height:7px;border-radius:5px;background:var(--line);overflow:hidden}.sv .meter b{display:block;height:100%}
+.sv ul{padding-left:16px;font-size:.78rem;color:var(--muted);display:grid;gap:2px}
+.sv small{font-size:.76rem;color:var(--muted);line-height:1.35}
+/* monthly pack — A4 */
+.pack{display:grid;gap:18px;justify-items:center}
+.page{width:210mm;min-height:297mm;background:#fff;color:#1d1726;padding:16mm 15mm;box-shadow:0 6px 24px rgba(20,8,34,.12);border-radius:4px;display:flex;flex-direction:column;gap:10px;font-size:10.5pt}
+.page h1{font-size:22pt;color:#2A0F45;line-height:1.1}.page h2{font-size:15pt;color:#2A0F45;border-bottom:2px solid #C8A24A;padding-bottom:4px}
+.page h3{font-size:10pt;text-transform:uppercase;letter-spacing:.08em;color:#7B4BB0;margin-top:6px}
+.page table{width:100%;border-collapse:collapse;font-size:9.5pt}.page th{background:#EFE9F6;text-align:left;padding:5px 6px;font-size:8.5pt}.page td{border-bottom:1px solid #E3DCEC;padding:5px 6px}
+.page table.sum{font-size:8pt;table-layout:fixed}.page table.sum th{font-size:7pt;padding:4px 3px}.page table.sum td{padding:4px 3px}.page table.sum td:first-child,.page table.sum th:first-child{width:22%}
+.page .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.page .kp div{border:1px solid #E3DCEC;border-radius:6px;padding:6px 8px}.page .kp b{display:block;font-size:14pt;color:#2A0F45}.page .kp span{font-size:8pt;color:#6D6479}
+.cover{justify-content:center;background:linear-gradient(160deg,#2A0F45,#4A1F73)!important;color:#fff!important}
+.cover h1{color:#fff;font-size:30pt}.cover p{color:#E6C878;font-size:13pt}
+.muted2{color:#6D6479;font-size:9pt}
+@media (max-width:900px){.strip{grid-template-columns:repeat(3,minmax(0,1fr))}.k4{grid-template-columns:repeat(2,minmax(0,1fr))}.sc{grid-template-columns:1fr}.cards{grid-template-columns:1fr}.page{width:100%;min-height:0;padding:18px}}
+@media print{@page{size:A4;margin:0} body{background:#fff} .noprint,.top,.bar2{display:none!important} .wrap{padding:0} .pack{gap:0;display:block}
+  .page{box-shadow:none;border-radius:0;page-break-after:always;width:210mm;min-height:296mm} .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact} .page th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Performance Dashboard <small id="sub"></small></h1>
+  <div class="tabs" id="tabs"><button class="on" data-t="ov">Overview</button><button data-t="sc">Soft services</button><button data-t="pk">Monthly pack</button></div>
+  <input class="inp" type="month" id="month" aria-label="Month">
+  <button class="btn ghost small" id="refresh">Refresh</button>
+</div>
+<div class="wrap">
+  <div class="bar2"><div class="views" id="views"></div><span class="sub" id="vsub"></span><span style="flex:1"></span><button class="btn gold hidden" id="pdf">Download PDF</button></div>
+  <div id="app"><div class="empty">Loading…</div></div>
+</div>
+<script src="common.js"></script>
+<script>
+const app = $("#app"); let VIEW = "", TAB = "ov", D1 = null;
+const pctS = v => v === null || v === undefined ? "—" : v + "%";
+const tone = (v, g, a) => v === null || v === undefined ? "" : v >= g ? "ok" : v >= a ? "mid" : "bad";
+const occ = v => v === null || v === undefined ? "—" : (Math.round(v * 1000) / 10) + "%";
+const n = v => v === null || v === undefined ? "—" : Number(v).toLocaleString("en-US");
+const light = { green: "On track", amber: "Needs attention", red: "Action required" };
+async function load(){
+  const m = $("#month").value, path = { ov: "overview", sc: "scorecards", pk: "pack" }[TAB];
+  app.innerHTML = `<div class="card empty">Loading…</div>`;
+  try { D1 = await api(`ops/lead/${path}?view=${VIEW}${m ? "&month=" + m : ""}`); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  VIEW = D1.view; if (!m) $("#month").value = D1.month;
+  const v = D1.views.find(x => x.key === VIEW);
+  $("#sub").textContent = v ? v.name : ""; $("#vsub").textContent = v ? v.sub : "";
+  $("#views").innerHTML = D1.views.length > 1 ? D1.views.map(x => `<button data-v="${x.key}" class="${x.key === VIEW ? "on" : ""}">${esc(x.name)}</button>`).join("") : "";
+  $("#pdf").classList.toggle("hidden", TAB !== "pk");
+  ({ ov: overview, sc: scores, pk: pack })[TAB]();
+}
+/* ---------------- overview ---------------- */
+function spark(tr){
+  return `<div class="spark" title="Restroom inspections done, last 14 days (dots: AM and PM checklists)">${tr.map(t => { const v = t.restroom;
+    const c = v === null ? "var(--line)" : v >= 95 ? "var(--ok)" : v >= 80 ? "var(--warn)" : "var(--alert)";
+    return `<span style="height:${v === null ? 6 : Math.max(8, v * .42)}px;background:${c}" title="${esc(t.day)}: ${v === null ? "no data" : v + "%"}"><em style="background:${t.am === null ? "transparent" : t.am && t.pm ? "var(--ok)" : "var(--alert)"}"></em></span>`; }).join("")}</div>`;
+}
+function overview(){
+  const F = D1.flagships, cur = D1.month === D1.today.slice(0, 7);
+  const avg = (f) => { const v = F.map(f).filter(x => x !== null && x !== undefined); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
+  app.innerHTML = `<div class="strip">
+      <div class="card st"><strong>${F.filter(f => f.light === "green").length}<span style="font-size:.9rem;color:var(--muted)"> / ${F.length}</span></strong><span>Flagships on track</span></div>
+      <div class="card st"><strong>${occ((o => o.length ? o.reduce((a, b) => a + b, 0) / o.length : null)(F.map(f => f.gla.occupancy).filter(x => x !== null && x !== undefined)))}</strong><span>Average occupancy</span></div>
+      <div class="card st"><strong>${n(F.reduce((a, f) => a + f.gla.active, 0))}</strong><span>Active tenants</span></div>
+      <div class="card st"><strong>${pctS(avg(f => f.mtd.checklists))}</strong><span>AM/PM checklists done (month)</span></div>
+      <div class="card st"><strong>${pctS(avg(f => f.mtd.restroom))}</strong><span>Restroom checks done (month)</span></div>
+      <div class="card st"><strong>${n(avg(f => f.mtd.compliance))}</strong><span>Tenant compliance (month)</span></div></div>
+    <div class="cards">${F.map(f => { const t = f.today, m = f.mtd;
+      return `<section class="card fc ${f.light}">
+        <h2>${esc(f.siteName)}<span class="light ${f.light}">● ${light[f.light]}</span></h2>
+        <div class="k4"><div class="k"><b>${occ(f.gla.occupancy)}</b><small>Occupancy</small></div><div class="k"><b>${f.gla.active}</b><small>Active tenants</small></div>
+          <div class="k"><b>${f.gla.fitout + f.gla.reserved}</b><small>Fit-out / reserved</small></div><div class="k"><b class="${tone(f.accuracy && f.accuracy.score, 80, 50)}">${f.accuracy ? f.accuracy.score : "—"}</b><small>Data accuracy</small></div></div>
+        ${t ? `<div class="sec">Today</div><div class="k4">
+          <div class="k"><b class="${t.am && t.am.status === "submitted" ? "ok" : "bad"}">${t.am ? (t.am.status === "submitted" ? "✓" : `${t.am.done}/${t.am.total}`) : "✗"}</b><small>AM checklist</small></div>
+          <div class="k"><b class="${t.pm && t.pm.status === "submitted" ? "ok" : "mid"}">${t.pm ? (t.pm.status === "submitted" ? "✓" : `${t.pm.done}/${t.pm.total}`) : "—"}</b><small>PM checklist</small></div>
+          <div class="k"><b class="${t.restroom ? (t.restroom.missed ? "bad" : "ok") : ""}">${t.restroom ? `${t.restroom.done}/${t.restroom.expected}` : "—"}</b><small>Restroom checks${t.restroom && t.restroom.missed ? ` · ${t.restroom.missed} missed` : ""}</small></div>
+          <div class="k"><b class="${t.incidents ? "mid" : ""}">${t.incidents ?? "—"}</b><small>Incidents</small></div></div>` : ""}
+        <div class="sec">${cur ? "Month to date" : "Month"}</div><div class="k4">
+          <div class="k"><b class="${tone(m.checklists, 95, 80)}">${pctS(m.checklists)}</b><small>Checklists done${m.checklistsSince && m.checklistsSince > D1.month + "-01" ? ` since ${esc(D.fmt(m.checklistsSince))}` : ""}</small></div>
+          <div class="k"><b class="${tone(m.restroom, 95, 85)}">${pctS(m.restroom)}</b><small>Restroom checks</small></div>
+          <div class="k"><b>${m.opened} / ${m.closed}</b><small>Opened / closed</small></div>
+          <div class="k"><b class="${tone(m.compliance, 90, 75)}">${m.compliance ?? "—"}</b><small>Compliance${m.repeatOffenders ? ` · ${m.repeatOffenders} repeat` : ""}</small></div></div>
+        ${spark(f.trend)}
+        <div class="att">${f.attention.length ? f.attention.map(a => `<div class="${a.tone}"><i></i><span>${esc(a.text)}</span></div>`).join("") : `<div><span class="ok">✓ Nothing needs attention right now.</span></div>`}</div>
+        <div class="fl"><a class="btn ghost small" href="/tools/eod?site=${f.site}">End of Day report</a>${m.capex.budget ? `<span class="sub" style="align-self:center">CAPEX landing ${n(Math.round(m.capex.landing))} of ${n(Math.round(m.capex.budget))}</span>` : ""}</div>
+      </section>`; }).join("")}</div>
+    <section class="card" style="margin-top:14px;overflow-x:auto"><table class="cmp"><thead><tr><th>Flagship</th><th>Status</th><th>Occupancy</th><th>Vacant m²</th><th>Active</th><th>Fit-out</th><th>Checklists</th><th>Restroom</th><th>Incidents</th><th>Opened</th><th>Closed</th><th>Compliance</th><th>Data accuracy</th></tr></thead><tbody>
+      ${F.map(f => `<tr><td><b>${esc(f.siteName)}</b></td><td><span class="light ${f.light}">● ${light[f.light]}</span></td><td>${occ(f.gla.occupancy)}</td><td>${n(f.gla.vacantArea)}</td><td>${f.gla.active}</td><td>${f.gla.fitout + f.gla.reserved}</td>
+        <td class="${tone(f.mtd.checklists, 95, 80)}">${pctS(f.mtd.checklists)}</td><td class="${tone(f.mtd.restroom, 95, 85)}">${pctS(f.mtd.restroom)}</td><td>${f.mtd.incidents}</td><td>${f.mtd.opened}</td><td>${f.mtd.closed}</td>
+        <td>${f.mtd.compliance ?? "—"}</td><td>${f.accuracy ? f.accuracy.score : "—"}</td></tr>`).join("")}</tbody></table></section>
+    <p class="sub" style="margin-top:10px">Restroom and incident history builds up every night at 23:30 from the day the hub was updated. Updated ${new Date(D1.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.</p>`;
+}
+/* ---------------- soft services ---------------- */
+function svBox(name, s, extra){
+  const c = s.score === null ? "var(--line)" : s.score >= 90 ? "var(--ok)" : s.score >= 75 ? "var(--warn)" : "var(--alert)";
+  return `<div class="sv"><b>${esc(name)}</b><div class="big" style="color:${c}">${s.score ?? "—"}</div><div class="meter"><b style="width:${s.score || 0}%;background:${c}"></b></div>
+    <small>${extra}</small>${s.findings.length ? `<ul>${s.findings.map(x => `<li>${x.n}× ${esc(x.t)}</li>`).join("")}</ul>` : ""}</div>`;
+}
+function scores(){
+  const F = D1.flagships;
+  app.innerHTML = `<p class="sub" style="margin-bottom:12px;line-height:1.5">Scores out of 100 for the month, from the hub's own records. <b>Cleaning</b>: restroom inspections done (60%) and cleaning lines of the AM/PM checklists (40%).
+      <b>Security</b>: security lines of the checklists (70%) and how fast emergency alerts were answered (30%). <b>Parking</b>: parking lines of the checklists.</p>
+    <div class="cards">${F.map(f => `<section class="card fc"><h2>${esc(f.siteName)}<span class="sub">${f.checklistsUsed} checklists this month</span></h2>
+      <div class="sc">${svBox("Cleaning", f.cleaning, `Restroom checks ${pctS(f.cleaning.restroom)}${f.cleaning.restroomDays ? ` over ${f.cleaning.restroomDays} days` : ""} · checklist lines ${pctS(f.cleaning.checklist)} (${f.cleaning.checked})`)}
+        ${svBox("Security", f.security, `Checklist lines ${pctS(f.security.checklist)} (${f.security.checked})${f.security.emergencies ? ` · ${f.security.emergencies} alert${f.security.emergencies === 1 ? "" : "s"}, answered in ${f.security.ackAvg} min on average` : ""}`)}
+        ${svBox("Parking · Liban Park", f.parking, `Checklist lines ${pctS(f.parking.checklist)} (${f.parking.checked})`)}</div></section>`).join("")}</div>
+    <section class="card" style="margin-top:14px;overflow-x:auto"><table class="cmp"><thead><tr><th>Flagship</th><th>Cleaning</th><th>Restroom checks</th><th>Security</th><th>Parking</th></tr></thead><tbody>
+      ${F.map(f => `<tr><td><b>${esc(f.siteName)}</b></td><td>${f.cleaning.score ?? "—"}</td><td>${pctS(f.cleaning.restroom)}</td><td>${f.security.score ?? "—"}</td><td>${f.parking.score ?? "—"}</td></tr>`).join("")}</tbody></table></section>`;
+}
+/* ---------------- monthly pack (A4, print to PDF) ---------------- */
+function pack(){
+  const F = D1.flagships, [y, mo] = D1.month.split("-").map(Number);
+  const mname = new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const v = D1.views.find(x => x.key === VIEW) || { name: "", sub: "" };
+  const TYPE = { open: "Opening", close: "Closure", reloc: "Relocation" };
+  app.innerHTML = `<div class="pack">
+    <section class="page cover"><img src="/icons/abc-logo-white.png" alt="" style="width:90px;margin-bottom:24px" onerror="this.remove()"><h1>Monthly Management Pack</h1><p>${esc(mname)} · ${esc(v.name)}</p>
+      <p style="color:#fff;font-size:11pt;opacity:.85;margin-top:40px">${esc(F.map(f => f.siteName).join(" · "))}</p><p style="color:#CDB8EA;font-size:9pt">Prepared by the ABC Operations Hub · ${esc(new Date(D1.generatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}</p></section>
+    <section class="page"><h2>Summary</h2>
+      <table class="sum"><tr><th>Flagship</th><th>Occupancy</th><th>Active</th><th>Opened</th><th>Closed</th><th>Checklists</th><th>Restroom</th><th>Incidents</th><th>Compliance</th><th>Cleaning</th><th>Security</th><th>Parking</th></tr>
+      ${F.map(f => `<tr><td><b>${esc(f.siteName)}</b></td><td>${occ(f.gla.occupancy)}</td><td>${f.gla.active}</td><td>${f.mtd.opened}</td><td>${f.mtd.closed}</td><td>${pctS(f.mtd.checklists)}</td><td>${pctS(f.mtd.restroom)}</td><td>${f.mtd.incidents}</td><td>${f.mtd.compliance ?? "—"}</td><td>${f.scores.cleaning.score ?? "—"}</td><td>${f.scores.security.score ?? "—"}</td><td>${f.scores.parking.score ?? "—"}</td></tr>`).join("")}</table>
+      <h3>Points for attention</h3>${F.map(f => f.attention.length ? `<p><b>${esc(f.siteName)}:</b> ${esc(f.attention.map(a => a.text).join(" · "))}</p>` : "").join("") || "<p>None.</p>"}
+      <p class="muted2" style="margin-top:auto">Checklists: AM and PM checklists submitted out of those due. Restroom: inspections done out of those due. Compliance: average tenant score (100 = no violation). Soft services: see the dashboard for how each score is built.</p></section>
+    ${F.map(f => `<section class="page"><h2>${esc(f.siteName)} — ${esc(mname)}</h2>
+      <div class="kp"><div><b>${occ(f.gla.occupancy)}</b><span>Occupancy</span></div><div><b>${f.gla.active}</b><span>Active tenants</span></div><div><b>${n(f.gla.vacantArea)} m²</b><span>Vacant · ${f.gla.vacantUnits} units</span></div><div><b>${f.accuracy ? f.accuracy.score : "—"}</b><span>Data accuracy</span></div>
+        <div><b>${pctS(f.mtd.checklists)}</b><span>AM/PM checklists</span></div><div><b>${pctS(f.mtd.restroom)}</b><span>Restroom checks</span></div><div><b>${f.mtd.incidents}</b><span>Incidents</span></div><div><b>${f.mtd.compliance ?? "—"}</b><span>Tenant compliance</span></div></div>
+      <h3>Tenant movements</h3>${f.announcements.length ? `<table><tr><th>Date</th><th>Type</th><th>Tenant</th><th>Unit</th></tr>${f.announcements.map(a => `<tr><td>${esc(a.eff_date)}</td><td>${TYPE[a.type] || a.type}</td><td><b>${esc(a.brand)}</b></td><td>${esc(a.unit || "—")}</td></tr>`).join("")}</table>` : `<p>${f.mtd.opened} opened · ${f.mtd.closed} closed (from the GLA). No announcement sent this month.</p>`}
+      <h3>Fit-out pipeline</h3>${f.fitout.length ? `<table><tr><th>Tenant</th><th>Unit</th><th>Milestones</th><th>Target opening</th></tr>${f.fitout.map(x => `<tr><td><b>${esc(x.brand)}</b></td><td>${esc(x.unit)}</td><td>${x.done}/${x.total}</td><td>${esc(x.target || "—")}</td></tr>`).join("")}</table>` : "<p>No unit in fit-out.</p>"}
+      <h3>Tenant compliance</h3>${f.offenders.length ? `<table><tr><th>Tenant</th><th>Score</th><th>Violations</th><th>Repeats</th></tr>${f.offenders.map(o => `<tr><td><b>${esc(o.tenant)}</b></td><td>${o.score}</td><td>${o.violations}</td><td>${esc(o.repeats.map(r => `${r.n}× ${r.what} → ${r.suggest}`).join("; ") || "—")}</td></tr>`).join("")}</table>` : "<p>No violation logged.</p>"}
+      <h3>Soft services</h3><table><tr><th>Service</th><th>Score</th><th>Basis</th><th>Most frequent findings</th></tr>
+        ${[["Cleaning", f.scores.cleaning, `Restroom ${pctS(f.scores.cleaning.restroom)} · checklist ${pctS(f.scores.cleaning.checklist)}`], ["Security", f.scores.security, `Checklist ${pctS(f.scores.security.checklist)}${f.scores.security.ackAvg !== null ? ` · alerts answered in ${f.scores.security.ackAvg} min` : ""}`], ["Parking · Liban Park", f.scores.parking, `Checklist ${pctS(f.scores.parking.checklist)}`]]
+          .map(([nm, s, basis]) => `<tr><td><b>${nm}</b></td><td>${s.score ?? "—"}</td><td>${esc(basis)}</td><td>${esc(s.findings.slice(0, 3).map(x => `${x.n}× ${x.t}`).join("; ") || "—")}</td></tr>`).join("")}</table>
+      ${f.accuracy ? `<h3>Data accuracy</h3><p>${f.accuracy.items.map(i => `${esc(i.name)}: <b>${i.state === "fresh" ? "up to date" : i.state === "due" ? "update due" : i.state === "stale" ? "out of date" : "never updated"}</b>`).join(" · ")}</p>` : ""}
+    </section>`).join("")}</div>`;
+}
+$("#tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; TAB = b.dataset.t; $("#tabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); load(); };
+$("#views").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; VIEW = b.dataset.v; load(); };
+$("#month").onchange = load; $("#refresh").onclick = load; $("#pdf").onclick = () => print();
+load();
+</script>
+</body>
+</html>
