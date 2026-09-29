@@ -1102,15 +1102,23 @@ async function opsRoute(env, me, p, method, b, url) {
   const can = rights(me, site);
 
   if (p === "summary") {
-    const [tasks, handovers] = await Promise.all([
+    const [tasks, latest] = await Promise.all([
       env.DB.prepare(`SELECT COUNT(*) AS n, SUM(CASE WHEN a.due != '' AND a.due < ? THEN 1 ELSE 0 END) AS late
         FROM mom_actions a JOIN mom_meetings m ON m.id = a.meeting_id
         WHERE m.status = 'published' AND a.status = 'Open' AND a.owner_email = ?`).bind(beirutToday(), me.email).first(),
-      env.DB.prepare(`SELECT COUNT(*) AS n FROM handovers WHERE site = ? AND status = 'submitted' AND received_by = '' AND created_by != ? AND day >= ?`)
-        .bind(site, me.email, new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10)).first()
+      env.DB.prepare("SELECT id, day, status, received_by, created_by, handoffs FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 1").bind(site).first()
     ]);
+    /* one handover per day: only the newest one can be waiting. Older ones never received
+       (e.g. the retired AM / PM files) are closed so they stop showing as "to receive". */
+    if (latest) await env.DB.prepare("UPDATE handovers SET received_by = 'Auto-closed', received_at = ? WHERE site = ? AND status = 'submitted' AND received_by = '' AND id != ?")
+      .bind(nowIso(), site, latest.id).run().catch(() => {});
+    let waiting = 0;
+    if (latest && latest.status === "submitted" && !latest.received_by && latest.day >= new Date(Date.now() - 864e5).toISOString().slice(0, 10)) {
+      const L = JSON.parse(latest.handoffs || "[]");
+      if ((L.length ? L[L.length - 1].email : latest.created_by) !== me.email) waiting = 1;
+    }
     return { mom: { count: Number(tasks.n || 0), late: Number(tasks.late || 0), label: "open tasks" },
-             handover: { count: Number(handovers.n || 0), label: "to receive" } };
+             handover: { count: waiting, label: "to receive", id: waiting ? latest.id : 0 } };
   }
   if (p === "context") {
     return { me: { ...userOut(me) }, site, siteName: siteName(site), feedback: FEEDBACK,
@@ -1627,18 +1635,20 @@ function cleanHandover(d) {
   return out;
 }
 /* A new handover starts from the last one: unfinished follow-ups stay, yesterday's "tomorrow"
-   becomes today, dated items arrive on their day, finished events drop off, checklists reset. */
+   becomes today, dated items arrive on their day (and the day before, under "Tomorrow"), finished events drop off, checklists reset. */
 function carryHandover(prev, day) {
   if (!prev) return blankHandover();
   const d = cleanHandover(prev);
+  const next = (() => { const t = new Date(day + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); })();
   const due = d.upcoming.filter(x => x.date && x.date <= day);
+  const dueTomorrow = d.upcoming.filter(x => x.date === next);   // "Coming up" dated tomorrow → Tomorrow
   return {
     ongoing: d.ongoing.filter(x => !x.done).map(x => ({ ...x })),
     today: [...d.today.filter(x => !x.done), ...d.tomorrow, ...due].map(x => ({ ...x, done: false, date: "" })),
-    tomorrow: [],
-    upcoming: d.upcoming.filter(x => !x.date || x.date > day),
+    tomorrow: dueTomorrow.map(x => ({ ...x, done: false })),
+    upcoming: d.upcoming.filter(x => !x.date || x.date > next),
     events: d.events.filter(e => !e.to || e.to >= day),
-    checklists: d.checklists.map(c => ({ name: c.name, am: "", pm: "", note: "" })),
+    checklists: [],   // manual checklist table retired — the live AM/PM + restroom rows replace it
     docs: d.docs, notes: ""
   };
 }
