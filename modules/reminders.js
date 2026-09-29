@@ -149,14 +149,22 @@ async function evaluate(env, r, day, deps, cache) {
         : { state: "done", detail: `All ${d.rooms.length} restrooms inspected` };
     }
     if (r.kind === "handover") {
-      const { results } = await env.DB.prepare("SELECT status, received_by, created_name FROM handovers WHERE site = ? AND day = ? AND shift = ?")
-        .bind(r.site, day, p.shift).all();
-      const sub = (results || []).filter(h => h.status === "submitted");
+      /* one shared handover per day: each hand-off is logged; morning = handed over before 17:00 Beirut, evening = after */
+      const { results } = await env.DB.prepare("SELECT status, received_by, created_name, submitted_at, shift, handoffs FROM handovers WHERE site = ? AND day = ?")
+        .bind(r.site, day).all();
+      const bh = at => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", hour12: false }).format(new Date(at))) % 24;
+      const offs = [];
+      for (const h of results || []) {
+        const L = JSON.parse(h.handoffs || "[]");
+        if (L.length) L.forEach(x => offs.push({ ...x, shift: bh(x.at) >= 5 && bh(x.at) < 17 ? "AM" : "PM" }));
+        else if (h.status === "submitted") offs.push({ by: h.created_name, at: h.submitted_at, receivedBy: h.received_by, shift: h.shift === "PM" ? "PM" : "AM" });
+      }
+      const sub = offs.filter(x => x.shift === p.shift);
       const name = `${SHIFTS[p.shift]} handover`;
-      if (!sub.length) return { state: "pending", detail: (results || []).length ? `${name} is still a draft` : `${name} not started` };
-      if (p.stage === "submitted") return { state: "done", detail: `Submitted by ${sub[0].created_name || "—"}` };
-      const got = sub.find(h => h.received_by);
-      return got ? { state: "done", detail: `Received by ${got.received_by}` } : { state: "pending", detail: `${name} submitted but not received yet` };
+      if (!sub.length) return { state: "pending", detail: (results || []).length ? `${name} not handed over yet` : `Today's handover not started` };
+      if (p.stage === "submitted") return { state: "done", detail: `Handed over by ${sub[sub.length - 1].by || "—"}` };
+      const got = sub.find(x => x.receivedBy);
+      return got ? { state: "done", detail: `Received by ${got.receivedBy}` } : { state: "pending", detail: `${name} handed over but not received yet` };
     }
     if (r.kind === "form") {
       let since = day;

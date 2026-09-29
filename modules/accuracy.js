@@ -22,6 +22,7 @@ const ageDays = (at, now) => at ? Math.max(0, Math.floor((now - Date.parse(at)) 
 const band = (days, fresh, due) => days === null ? "never" : days <= fresh ? "fresh" : days <= due ? "due" : "stale";
 const POINTS = { fresh: 100, due: 60, stale: 20, never: 0 };
 
+export async function accuracyOf(env, site, nowMs) { return one(env, site, nowMs); }
 async function one(env, site, nowMs) {
   const q = (sql, ...b) => env.DB.prepare(sql).bind(...b).first().catch(() => null);
   const all = (sql, ...b) => env.DB.prepare(sql).bind(...b).all().then(r => r.results || []).catch(() => []);
