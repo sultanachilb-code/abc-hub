@@ -330,6 +330,28 @@ button.bcard:hover{border-color:var(--brand-2)}
 .tile .live.warn{color:var(--warn)}
 .tile.locked{opacity:.45;cursor:not-allowed}
 .tile.locked:hover{background:none}
+/* ---------- iOS-style folders (Tenant Management, Policies & Procedures) ---------- */
+.fold .ico.fico{background:var(--surface);border:1px solid var(--line);display:grid;grid-template-columns:repeat(3,13px);grid-auto-rows:13px;gap:3px;padding:7px;align-content:center;justify-content:center;box-sizing:border-box}
+.fico .mi{width:13px;height:13px;border-radius:4px;display:grid;place-items:center;color:#fff}
+.fico .mi svg{width:9px;height:9px;stroke-width:2.4}
+.folder-ov{position:fixed;inset:0;z-index:72;display:flex;align-items:center;justify-content:center;padding:16px;pointer-events:none}
+.folder-ov.on{pointer-events:auto}
+.folder-veil{position:absolute;inset:0;background:rgba(12,4,24,.55);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);opacity:0;transition:opacity .3s}
+.folder-ov.on .folder-veil{opacity:1}
+.folder-box{position:relative;width:min(420px,100%);max-height:calc(100vh - 60px);overflow:auto;border-radius:30px;padding:20px 16px 18px;background:color-mix(in srgb,var(--surface) 88%,transparent);box-shadow:0 30px 70px rgba(0,0,0,.35);
+  transform:translate(var(--fx),var(--fy)) scale(.18);opacity:0;transition:transform .42s cubic-bezier(.2,.9,.25,1.12),opacity .25s}
+.folder-ov.on .folder-box{transform:none;opacity:1}
+.folder-box h3{text-align:center;font-size:1.25rem;font-weight:800;margin:0 0 16px;color:var(--text)}
+.folder-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 6px}
+.fapp{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 2px;border-radius:14px;opacity:0;transform:scale(.7);transition:opacity .25s,transform .35s cubic-bezier(.2,1.4,.4,1)}
+.folder-ov.on .fapp{opacity:1;transform:none}
+.fapp .ico{width:62px;height:62px;border-radius:17px}
+.fapp b{font-size:.8rem;font-weight:700;text-align:center;line-height:1.25;color:var(--text)}
+.fapp.locked{opacity:.4!important;cursor:not-allowed}
+.fapp:active .ico{transform:scale(.92)}
+.folder-grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:-8px auto 12px}
+@media (prefers-reduced-motion:reduce){.folder-box,.fapp,.folder-veil{transition:none}}
+
 .empty{color:var(--muted);padding:24px 0}
 footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 
@@ -510,6 +532,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
   </header>
   <div class="tfab-veil" id="tfabVeil"></div>
   <div class="orbit" id="orbit" aria-hidden="true"></div>
+  <div class="folder-ov" id="folderOv" aria-hidden="true"></div>
   <div class="ann-wrap" id="anns"></div>
   <div class="shell">
     <main>
@@ -1120,6 +1143,44 @@ function renderBrief(loading){
 }
 $("#brief").addEventListener("click", e => { const c = e.target.closest(".brow, .chip"); if (c) launch(byId(c.dataset.id)); });
 
+
+/* ---------- iOS-style folders: a section folds into one tile; tap → it zooms open over a blurred home ---------- */
+const FOLDER_GROUPS = ["Tenant Management", "Policies & Procedures"];
+const folderApps = g => APPS.filter(a => a.group === g && !a.hidden);
+function folderTile(g){
+  const list = folderApps(g); if (!list.length) return "";
+  const n = list.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
+  return `<button class="tile fold" data-folder="${esc(g)}" aria-haspopup="dialog">
+    <span class="ico fico">${list.slice(0, 9).map(a => `<span class="mi" style="background:${esc(a.color || "#4A1F73")}">${svg(a.icon)}</span>`).join("")}${n ? `<span class="bdg">${n > 99 ? "99+" : n}</span>` : ""}</span>
+    <span><b>${esc(g)}</b><small>${list.length} tool${list.length === 1 ? "" : "s"} · ${esc(list.slice(0, 3).map(a => a.name).join(", "))}${list.length > 3 ? "…" : ""}</small></span></button>`;
+}
+function openFolder(g, fromEl){
+  const o = $("#folderOv"), list = folderApps(g);
+  const r = fromEl ? fromEl.getBoundingClientRect() : null;
+  const fx = r ? Math.round(r.left + r.width / 2 - innerWidth / 2) : 0, fy = r ? Math.round(r.top + r.height / 2 - innerHeight / 2) : 0;
+  o.innerHTML = `<div class="folder-veil"></div><div class="folder-box" role="dialog" aria-label="${esc(g)}" style="--fx:${fx}px;--fy:${fy}px">
+    <div class="folder-grab"></div><h3>${esc(g)}</h3>
+    <div class="folder-grid">${list.map((a, k) => { const ok = appReady(a);
+      return `<button class="fapp ${ok ? "" : "locked"}" ${ok ? `data-id="${esc(a.id)}"` : 'aria-disabled="true"'} style="transition-delay:${80 + k * 35}ms">${icoHTML(a, true)}<b>${esc(a.name)}</b></button>`; }).join("")}</div></div>`;
+  o.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => requestAnimationFrame(() => o.classList.add("on")));
+  const box = o.querySelector(".folder-box");
+  const close = () => { o.classList.remove("on"); o.setAttribute("aria-hidden", "true"); o.onkeydown = null;
+    setTimeout(() => { if (!o.classList.contains("on")) o.innerHTML = ""; }, 420); };
+  o.onclick = e => { const it = e.target.closest(".fapp[data-id]");
+    if (it){ close(); return setTimeout(() => launch(byId(it.dataset.id)), 180); }
+    if (!e.target.closest(".folder-box")) close(); };
+  o.onkeydown = e => { if (e.key === "Escape") close(); };
+  /* swipe down on the folder to close it */
+  let y0 = null;
+  box.addEventListener("touchstart", e => { y0 = box.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
+  box.addEventListener("touchmove", e => { if (y0 == null) return; const dy = e.touches[0].clientY - y0; if (dy > 0){ box.style.transition = "none"; box.style.transform = `translateY(${dy}px) scale(${1 - Math.min(dy, 300) / 1500})`; } }, { passive: true });
+  box.addEventListener("touchend", e => { if (y0 == null) return; const dy = e.changedTouches[0].clientY - y0; y0 = null; box.style.transition = ""; box.style.transform = "";
+    if (dy > 90) close(); });
+  setTimeout(() => { const f = o.querySelector(".fapp[data-id]"); f && f.focus({ preventScroll: true }); }, 300);
+}
+addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").classList.contains("on")) $("#folderOv").onkeydown(e); });
+
 /* ---------- tiles ---------- */
 function tile(a){
   const ready = appReady(a);
@@ -1136,8 +1197,15 @@ function renderHome(){
   const groups = [...H.GROUPS, ...new Set(APPS.map(a => a.group).filter(g => !H.GROUPS.includes(g)))]
     .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => a.group === TOOLS_GROUP))
     .filter(g => q || !APPS.some(a => a.kind === "orbit" && a.orbitGroup === g));
+  let foldersDone = false;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
+    if (!q && FOLDER_GROUPS.includes(g)){
+      if (foldersDone) continue; foldersDone = true;
+      const tiles = FOLDER_GROUPS.map(folderTile).filter(Boolean).join("");
+      if (tiles) html += `<section><h2>Folders</h2><div class="grid">${tiles}</div></section>`;
+      continue;
+    }
     if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(tile).join("")}</div></section>`;
   }
   $("#list").innerHTML = html || `<p class="empty">No system matches “${esc(q)}”.</p>`;
@@ -1146,6 +1214,7 @@ function renderHome(){
 }
 $("#q").addEventListener("input", renderHome);
 $("#list").addEventListener("click", e => {
+  const f = e.target.closest(".fold"); if (f) return openFolder(f.dataset.folder, f.querySelector(".ico"));
   const t = e.target.closest(".tile"); if (!t || t.classList.contains("locked")) return;
   launch(byId(t.dataset.id));
 });
