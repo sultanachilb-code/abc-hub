@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Compliance · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant Management feature — see docs/FEATURE-tenant-management.md -->
+<style>
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.kpi{padding:14px 16px}.kpi strong{display:block;font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}.kpi span{font-size:.78rem;color:var(--muted)}
+.rules{padding:12px 16px;font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:12px}
+table.c{width:100%;border-collapse:collapse;font-size:.88rem}
+.c th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.c td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+.c tr.t{cursor:pointer}.c tr.t:hover td{background:rgba(123,75,176,.05)}
+.bar{display:flex;align-items:center;gap:8px;min-width:150px}.bar i{flex:1;height:8px;border-radius:5px;background:var(--paper);position:relative;overflow:hidden}
+.bar i b{position:absolute;inset:0 auto 0 0;border-radius:5px}
+.bar strong{width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.rep{display:inline-flex;gap:6px;align-items:center;margin:2px 6px 2px 0;font-size:.8rem}
+.det td{background:var(--paper);font-size:.82rem}
+.det ul{padding-left:18px;display:grid;gap:3px}
+.up{color:var(--ok);font-weight:700}.down{color:var(--alert);font-weight:700}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Tenant Compliance <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <input class="inp" type="month" id="month" aria-label="Month">
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<script src="common.js"></script>
+<script>
+const app = $("#app"); let CTX, R, OPEN = new Set();
+const col = s => s >= 85 ? "var(--ok)" : s >= 60 ? "var(--warn)" : "var(--alert)";
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName; $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  if (!$("#month").value) $("#month").value = CTX.today.slice(0, 7);
+  load();
+}
+async function load(){
+  try { R = await api(`ops/compliance?site=${CTX.site}&month=${$("#month").value}`); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  const L = R.tenants;
+  app.innerHTML = `<div class="kpis">
+      <div class="card kpi"><strong style="color:${col(R.average)}">${R.average}</strong><span>Flagship compliance score</span></div>
+      <div class="card kpi"><strong>${R.clean}</strong><span>of ${R.activeTenants} tenants with no violation</span></div>
+      <div class="card kpi"><strong style="color:${R.repeatOffenders ? "var(--alert)" : "inherit"}">${R.repeatOffenders}</strong><span>Repeat offenders (3+ times)</span></div>
+      <div class="card kpi"><strong>${L.reduce((a, t) => a + t.violations, 0)}</strong><span>Violations logged this month</span></div></div>
+    <div class="card rules">Every tenant starts the month at <b>100</b>. Operations violation −10 · safety −15 · incident −10 · negative customer feedback −5 · written warning −5 more · legal warning −10 more · closed temporarily −15 more.
+      The same violation twice → <b>verbal reminder</b>, 3 times → <b>written warning</b>, 4+ → <b>legal warning</b>. The flagship is alerted on the 3rd and 5th time.</div>
+    <div class="card" style="overflow-x:auto"><table class="c"><thead><tr><th>Tenant</th><th>Score</th><th>vs last month</th><th>Violations</th><th>Repeats · suggested action</th></tr></thead><tbody>
+    ${L.length ? L.map((t, i) => { const d = t.score - t.prevScore;
+      return `<tr class="t" data-i="${i}"><td><b>${esc(t.tenant)}</b>${t.positive ? ` <span class="pill ok">+${t.positive} positive</span>` : ""}</td>
+        <td><div class="bar"><i><b style="width:${t.score}%;background:${col(t.score)}"></b></i><strong>${t.score}</strong></div></td>
+        <td>${d ? `<span class="${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${Math.abs(d)}</span>` : `<span class="muted">—</span>`}</td>
+        <td>${t.violations}${t.negative ? ` <small class="muted">+${t.negative} negative</small>` : ""}</td>
+        <td>${t.repeats.length ? t.repeats.map(r => `<span class="rep"><b>${r.n}×</b> ${esc(r.what)} <span class="pill ${r.n >= 3 ? "alert" : "warn"}">${esc(r.suggest)}</span></span>`).join("") : `<span class="muted">—</span>`}</td></tr>
+        ${OPEN.has(i) ? `<tr class="det"><td colspan="5"><ul>${t.entries.map(x => `<li>${esc(D.fmt(x.day))} ${esc(x.time || "")} · <b>${esc(x.category)}</b>${x.description ? " — " + esc(x.description) : ""} · ${esc(x.action || "None")} <span class="muted">· ${esc(x.by || "")}</span></li>`).join("")}</ul></td></tr>` : ""}`; }).join("")
+      : `<tr><td colspan="5" class="empty">No tenant feedback logged for this month.</td></tr>`}</tbody></table></div>`;
+}
+app.addEventListener("click", e => { const r = e.target.closest("tr.t"); if (!r) return; const i = +r.dataset.i; OPEN.has(i) ? OPEN.delete(i) : OPEN.add(i); load(); });
+$("#month").addEventListener("change", () => { OPEN.clear(); load(); });
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

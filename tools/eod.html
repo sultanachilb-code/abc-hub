@@ -188,7 +188,8 @@ function feedback(){
 }
 function handover(){
   const L = R.handovers, items = (arr, dated) => arr.length ? `<ul class="li">${arr.map(x => `<li>${dated && x.date ? `<b>${esc(D.fmt(x.date))}:</b> ` : ""}${esc(x.text)}${x.cctv ? ` <span class="cctv">ATT CCTV</span>` : ""}${x.done ? " ✓" : ""}</li>`).join("")}</ul>` : `<p class="none">—</p>`;
-  return sec("handover", "Handover", L.length, L.length ? L.map(h => `<div class="card2"><h4>${h.shift === "AM" ? "Morning" : "Evening"} shift · ${esc(h.by)}<span class="pill ${h.receivedBy ? "ok" : h.status === "submitted" ? "warn" : ""}">${h.receivedBy ? "Received by " + esc(h.receivedBy) : h.status === "submitted" ? "Awaiting receipt" : "Draft"}</span></h4>
+  return sec("handover", "Handover", L.length, L.length ? L.map(h => `<div class="card2"><h4>${h.shift === "AM" ? "Morning shift · " : h.shift === "PM" ? "Evening shift · " : "Handover · "}${esc(h.by)}${h.updatedName && h.updatedName !== h.by ? ` · last edit ${esc(h.updatedName)}` : ""}<span class="pill ${h.receivedBy ? "ok" : h.status === "submitted" ? "warn" : ""}">${h.receivedBy ? "Received by " + esc(h.receivedBy) : h.status === "submitted" ? "Awaiting receipt" : "Draft"}</span></h4>
+      ${(h.handoffs || []).length ? `<p><small>Hand-offs: ${h.handoffs.map(x => `${esc(x.by)} ${tm(x.at)}${x.receivedBy ? ` → ${esc(x.receivedBy)} ${tm(x.receivedAt)}` : " → not received"}`).join(" · ")}</small></p>` : ""}
       <p><b>Today</b></p>${items(h.today)}<p><b>Tomorrow</b></p>${items(h.tomorrow)}<p><b>Ongoing follow-ups</b></p>${items(h.ongoing)}
       ${h.upcoming.length ? `<p><b>Coming up</b></p>${items(h.upcoming, true)}` : ""}
       ${h.events.length ? `<p><b>Events</b></p><ul class="li">${h.events.map(e => `<li>${esc(e.name)}${e.start ? ` · ${esc(e.start)}–${esc(e.end)}` : ""}</li>`).join("")}</ul>` : ""}
@@ -217,7 +218,8 @@ function tenantsSec(){
   const T = R.tenants, n = T.opened.length + T.closed.length + T.opening.length + T.closing.length;
   const gl = (L, word) => L.length ? `<div class="scroll"><table class="t"><tr><th>Brand</th><th>Unit</th><th>Level</th><th>Change</th><th>By</th></tr>${L.map(u => `<tr><td><b>${esc(u.brand)}</b></td><td>${esc(u.code)}</td><td>${esc(u.level)}</td><td>${esc(u.how)}${u.note ? `<br><small class="muted">${esc(u.note)}</small>` : ""}</td><td class="muted">${esc(u.by)}</td></tr>`).join("")}</table></div>` : `<p class="none">No tenant ${word} in the GLA on this day.</p>`;
   const forms = (L, label) => L.length ? L.map(r => `<div class="card2"><h4>${label} · ${esc(r.title || "Tenant")}${runHead(r)}</h4>${findingsList(r.findings)}${r.comments ? `<p><b>Comments:</b> ${esc(r.comments)}</p>` : ""}</div>`).join("") : "";
-  return sec("tenants", "Tenant openings &amp; closures", n, `<h3 class="sh">Opened</h3>${gl(T.opened, "opened")}${forms(T.opening, "Opening checklist")}
+  const an = T.announcements || [];
+  return sec("tenants", "Tenant openings &amp; closures", n + an.length, `${an.length ? `<h3 class="sh">Announced</h3><ul class="li">${an.map(a => `<li><b>${esc(a.typeName)}</b> · ${esc(a.brand)}${a.unit ? ` · ${esc(a.level)} ${esc(a.unit)}` : ""} · effective ${esc(D.fmt(a.eff_date))} <small class="muted">· by ${esc(a.created_name)}</small></li>`).join("")}</ul>` : ""}<h3 class="sh">Opened</h3>${gl(T.opened, "opened")}${forms(T.opening, "Opening checklist")}
     <h3 class="sh">Closed</h3>${gl(T.closed, "closed")}${forms(T.closing, "Closing checklist")}`, n ? "warn" : "");
 }
 function dbankSec(){
@@ -300,7 +302,7 @@ app.addEventListener("click", e => {
 $("#day").addEventListener("change", load);
 $("#refresh").onclick = load;
 $("#printBtn").onclick = () => { document.querySelectorAll(".visit").forEach(v => v.classList.add("open")); print(); };
-boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+boot(new URLSearchParams(location.search).get("site") || undefined).catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
 </script>
 </body>
 </html>

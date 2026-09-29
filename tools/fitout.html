@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fit-out Tracker · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant Management feature — see docs/FEATURE-tenant-management.md -->
+<style>
+.list{display:grid;gap:12px;margin-top:14px}
+.u{padding:16px 18px;display:grid;gap:12px}
+.u h3{font-size:1.02rem;font-weight:800;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.u h3 small{font-weight:600;color:var(--muted);font-size:.8rem}
+.prog{height:8px;border-radius:5px;background:var(--paper);overflow:hidden}.prog b{display:block;height:100%;background:var(--brand-2);border-radius:5px}
+.ms{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.m{border:1.5px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:4px;font-size:.78rem;background:var(--surface);text-align:left;min-height:74px}
+.m b{font-size:.8rem;line-height:1.2}
+.m.done{border-color:var(--ok);background:rgba(46,139,87,.08)}
+.m.auto{cursor:default}
+.m small{color:var(--muted)}
+.m .ck{width:18px;height:18px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;font-size:.7rem;color:#fff}
+.m.done .ck{background:var(--ok);border-color:var(--ok)}
+.meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:.84rem}
+.meta label{display:flex;gap:6px;align-items:center;color:var(--muted);font-weight:700;font-size:.78rem}
+.late{color:var(--alert);font-weight:800}
+@media (max-width:900px){.ms{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Fit-out Tracker <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<dialog id="dM"></dialog>
+<script src="common.js"></script>
+<script>
+const app = $("#app"); let CTX, R;
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName; $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  load();
+}
+async function load(){
+  try { R = await api("ops/fitout?site=" + CTX.site); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  const ed = R.can.edit;
+  app.innerHTML = `<p class="muted" style="font-size:.85rem;line-height:1.5">Every unit marked <b>Reserved</b> or <b>Fit-out</b> in the GLA, and units opened in the last 45 days. <b>Opening checklist</b>, <b>Opening announced</b> and <b>Open</b> tick themselves from the hub; tap the others to record the date.</p>
+    <div class="list">${R.units.length ? R.units.map(u => { const late = u.target && u.target < CTX.today && !u.milestones.open.done;
+      return `<section class="card u" data-u="${u.unitId}">
+        <h3>${esc(u.brand || "—")} <small>${esc(u.level)} · ${esc(u.code)} · ${u.area ? Number(u.area).toLocaleString("en-US") + " m²" : ""} ${esc(u.dept || "")}</small>
+          <span class="pill ${u.status === "Open" ? "ok" : u.status === "Fit-out" ? "brand" : "warn"}">${esc(u.status)}</span></h3>
+        <div class="meta"><span><b>${u.done}/${u.total}</b> milestones</span>
+          ${u.contractStart ? `<span class="muted">Contract start ${esc(D.fmt(u.contractStart, { year: "numeric" }))}</span>` : ""}
+          <label>Target opening <input class="inp" type="date" data-target value="${esc(u.target)}" ${ed ? "" : "disabled"} style="height:32px"></label>
+          ${late ? `<span class="late">Past the target date</span>` : ""}${u.openedOn ? `<span class="pill ok">Opened ${esc(D.fmt(u.openedOn))}</span>` : ""}</div>
+        <div class="prog"><b style="width:${Math.round(u.done / u.total * 100)}%"></b></div>
+        <div class="ms">${R.milestones.map(([k, n]) => { const m = u.milestones[k];
+          return `<button class="m ${m.done ? "done" : ""} ${m.auto ? "auto" : ""}" data-m="${k}" ${m.auto || !ed ? "disabled" : ""}><span class="ck">${m.done ? "✓" : ""}</span><b>${esc(n)}</b>
+            <small>${m.date ? esc(D.fmt(m.date)) : m.auto ? "" : "—"}${m.note ? " · " + esc(m.note) : ""}${m.auto ? " · auto" : ""}</small></button>`; }).join("")}</div></section>`; }).join("")
+    : `<div class="card empty">No unit is Reserved or in Fit-out at ${esc(CTX.siteName)}.</div>`}</div>`;
+}
+async function persist(u){ try { await api("ops/fitout/save", { site: CTX.site, unitId: u.unitId, target: u.target, milestones: u.milestones }); toast("Saved"); load(); } catch (e){ toast(e.message, true); } }
+app.addEventListener("change", e => { if (!e.target.matches("[data-target]")) return; const u = R.units.find(x => x.unitId === +e.target.closest("[data-u]").dataset.u); u.target = e.target.value; persist(u); });
+app.addEventListener("click", e => {
+  const b = e.target.closest("[data-m]"); if (!b || b.disabled) return;
+  const u = R.units.find(x => x.unitId === +b.closest("[data-u]").dataset.u), k = b.dataset.m, m = u.milestones[k], name = R.milestones.find(x => x[0] === k)[1];
+  const d = $("#dM");
+  d.innerHTML = `<div class="dlg-h"><b>${esc(name)}</b><small>${esc(u.brand)} · ${esc(u.code)}</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px"><label class="chk" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="mDone" ${m.done ? "checked" : ""} style="width:18px;height:18px"> Done</label>
+      <label><span class="lbl">Date</span><input class="inp" type="date" id="mDate" value="${esc(m.date || CTX.today)}" style="width:100%"></label>
+      <label><span class="lbl">Note</span><input class="inp" id="mNote" value="${esc(m.note || "")}" style="width:100%"></label></div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Save</button></div>`;
+  d.onclick = ev => { const x = ev.target.closest("[data-v]"); if (!x && ev.target !== d) return;
+    if (x && x.dataset.v === "1"){ u.milestones[k] = { done: $("#mDone").checked, date: $("#mDate").value, note: $("#mNote").value }; d.close(); return persist(u); } d.close(); };
+  d.showModal();
+});
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

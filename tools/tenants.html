@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Announcements · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant Management feature — see docs/FEATURE-tenant-management.md -->
+<style>
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:16px;margin-top:14px;align-items:start}
+.fm{padding:18px;display:grid;gap:14px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:110px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);font-weight:800;font-size:.9rem;background:var(--surface)}
+.seg button.on{border-color:var(--brand);background:rgba(123,75,176,.1);color:var(--brand)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f{display:grid;gap:5px}.f .inp,.f .sel{width:100%}
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.ph{position:relative;width:86px;height:86px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover}
+.ph button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:.8rem}
+.addph{width:86px;height:86px;border-radius:10px;border:1.5px dashed var(--line);display:grid;place-items:center;color:var(--muted);font-size:.78rem;font-weight:700;text-align:center;cursor:pointer}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:.88rem;line-height:1.4}.chk input{margin-top:3px;width:17px;height:17px;accent-color:var(--brand)}
+.pv{padding:0;overflow:hidden;position:sticky;top:70px}
+.pv .hdr{padding:12px 16px;border-bottom:1px solid var(--line);display:grid;gap:4px;font-size:.84rem}
+.pv .hdr b{font-size:.95rem}
+.pv .hdr .who{color:var(--muted);max-height:4.2em;overflow:hidden;cursor:pointer}
+.pv .hdr .who.open{max-height:none}
+.pv .body{padding:16px 18px;max-height:62vh;overflow:auto;background:#fff;color:#222}
+.acts{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line)}
+.warnbox{padding:10px 12px;border-radius:10px;background:rgba(192,122,18,.12);color:var(--warn);font-size:.82rem;font-weight:600;line-height:1.45}
+.hist{display:grid;gap:10px;margin-top:14px}
+.hrow{display:flex;gap:12px;align-items:center;padding:12px 14px}
+.hrow .th{display:flex;gap:4px}.hrow .th img{width:44px;height:44px;border-radius:8px;object-fit:cover}
+.hrow .main{flex:1;min-width:0}.hrow small{color:var(--muted)}
+table.rc{width:100%;border-collapse:collapse;font-size:.84rem}
+.rc th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--line)}
+.rc td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.rc textarea{min-height:38px;font-size:.8rem;padding:6px 8px}
+.rc .inp,.rc .sel{height:34px;font-size:.82rem;width:100%}
+.rc .sitebox{display:grid;gap:4px}.rc .sitebox label{display:grid;grid-template-columns:92px 1fr;gap:6px;align-items:start;font-size:.74rem;font-weight:700;color:var(--muted)}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.pv{position:static}.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Tenant Announcements <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <div class="tabs" id="tabs"><button class="on" data-t="new">New announcement</button><button data-t="hist">History</button><button data-t="dir">Recipients</button></div>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<input type="file" id="phFile" accept="image/*" multiple class="hidden">
+<script src="common.js"></script>
+<script>
+const app = $("#app");
+let CTX, META, TAB = "new", F = null, PH = [], SAVED = 0;
+const LEVEL = l => ({ GF: "Ground Floor", LG: "Lower Ground", LGF: "Lower Ground", UG: "Upper Ground", B1: "Basement 1", B2: "Basement 2" })[l] || (/^L(\d+)$/i.test(l || "") ? `Level ${l.slice(1)}` : l || "");
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const ord = n => n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th";
+const blank = () => ({ type: "open", brand: "", unitId: "", effDate: CTX.today, category: "", tagline: "", instagram: "", hours: "10 AM to 10 PM", note: "", newUnitId: "", landmark: "", applyGla: true });
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => { F = null; PH = []; boot(s); });
+  META = await api("ops/tm/meta?site=" + CTX.site);
+  if (!F) F = blank();
+  show(TAB);
+}
+function show(t){ TAB = t; $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === t)); ({ new: renderNew, hist: renderHist, dir: () => renderDir() })[t](); }
+$("#tabs").onclick = e => { const b = e.target.closest("button"); if (b) show(b.dataset.t); };
+
+/* ---------------- new announcement ---------------- */
+const unitOf = id => META.units.find(u => String(u.id) === String(id));
+const unitLabel = u => `${u.level} · ${u.code}${u.brand ? " · " + u.brand : ""} (${u.status})`;
+function renderNew(){
+  if (!META.can.send){ app.innerHTML = `<div class="card empty">Tenant announcements are sent by flagship management and the operations team.</div>`; return; }
+  const t = F.type, R = META.recipients;
+  const brands = [...new Set(META.units.map(u => u.brand).filter(Boolean))].sort();
+  const unitOpts = (sel, filter) => `<option value="">— Unit (from the GLA) —</option>` + META.units.filter(filter).map(u => `<option value="${u.id}" ${String(sel) === String(u.id) ? "selected" : ""}>${esc(unitLabel(u))}</option>`).join("");
+  const glaNote = t === "open" ? "Sets the unit to Open with this brand from the effective date." : t === "close" ? "Sets the unit to Vacant from the effective date (it shows as Ex-brand in the reports)." : "Sets the old unit to Vacant and the new unit to Open with this brand.";
+  app.innerHTML = `<div class="grid">
+    <section class="card fm">
+      <div class="seg" id="seg">${Object.entries(META.types).map(([k, v]) => `<button data-type="${k}" class="${t === k ? "on" : ""}">${esc(v.replace("Tenant ", ""))}</button>`).join("")}</div>
+      <div class="row2">
+        <label class="f"><span class="lbl">Tenant</span><input class="inp" id="fBrand" list="brandList" value="${esc(F.brand)}" placeholder="Pick or type the brand"><datalist id="brandList">${brands.map(b => `<option value="${esc(b)}">`).join("")}</datalist></label>
+        <label class="f"><span class="lbl">Effective date</span><input class="inp" type="date" id="fDate" value="${esc(F.effDate)}"></label>
+      </div>
+      <label class="f"><span class="lbl">${t === "reloc" ? "Current unit" : "Unit"}</span><select class="sel" id="fUnit">${unitOpts(F.unitId, u => t === "open" ? u.status !== "Open" || u.brand === F.brand : u.status === "Open" || u.status === "Closed" || u.brand === F.brand)}</select></label>
+      ${t === "reloc" ? `<div class="row2"><label class="f"><span class="lbl">New unit</span><select class="sel" id="fNew">${unitOpts(F.newUnitId, u => u.status !== "Open" && String(u.id) !== String(F.unitId))}</select></label>
+        <label class="f"><span class="lbl">In front of / next to</span><input class="inp" id="fLand" value="${esc(F.landmark)}" placeholder="e.g. Starbucks"></label></div>` : ""}
+      ${t === "open" ? `<label class="f"><span class="lbl">Tagline (optional)</span><input class="inp" id="fTag" value="${esc(F.tagline)}" placeholder="Modern dishes, elevated everyday flavors…"></label>
+        <div class="row2"><label class="f"><span class="lbl">Category</span><input class="inp" id="fCat" value="${esc(F.category)}" placeholder="Food & Beverage"></label>
+        <label class="f"><span class="lbl">Instagram</span><input class="inp" id="fIg" value="${esc(F.instagram)}" placeholder="patchicafe"></label></div>
+        <label class="f"><span class="lbl">Operating hours</span><input class="inp" id="fHours" value="${esc(F.hours)}"></label>` : ""}
+      ${t !== "open" ? `<label class="f"><span class="lbl">Extra line (optional)</span><input class="inp" id="fNote" value="${esc(F.note)}" placeholder="${t === "close" ? "e.g. The unit will be hoarded from 3 September." : "e.g. The old unit will be closed as of the same date."}"></label>` : ""}
+      <div class="f"><span class="lbl">Photos · attached to the email</span><div class="photos">${PH.map((p, i) => `<div class="ph"><img src="${p.thumb}" alt=""><button data-rmph="${i}" aria-label="Remove">×</button></div>`).join("")}<label class="addph" for="phFile">+ Add<br>photos</label></div></div>
+      ${META.can.applyGla ? `<label class="chk"><input type="checkbox" id="fGla" ${F.applyGla ? "checked" : ""}><span><b>Also update the GLA</b><br><small class="muted">${glaNote}</small></span></label>` : ""}
+      ${R.missing.length ? `<div class="warnbox">${R.missing.length} position${R.missing.length === 1 ? " has" : "s have"} no email yet for ${esc(CTX.siteName)}: ${esc(R.missing.slice(0, 6).join(", "))}${R.missing.length > 6 ? "…" : ""}. ${META.can.editDirectory ? "Fill them in the Recipients tab." : "Ask the administrator to fill the Recipients tab."}</div>` : ""}
+    </section>
+    <section class="card pv" id="pv"></section></div>`;
+  preview();
+}
+function collect(){
+  const v = id => { const x = $("#" + id); return x ? x.value : undefined; };
+  F.brand = v("fBrand") ?? F.brand; F.effDate = v("fDate") ?? F.effDate; F.unitId = v("fUnit") ?? F.unitId;
+  if ($("#fNew")) F.newUnitId = v("fNew"); if ($("#fLand")) F.landmark = v("fLand");
+  if ($("#fTag")) F.tagline = v("fTag"); if ($("#fCat")) F.category = v("fCat"); if ($("#fIg")) F.instagram = v("fIg"); if ($("#fHours")) F.hours = v("fHours");
+  if ($("#fNote")) F.note = v("fNote"); if ($("#fGla")) F.applyGla = $("#fGla").checked;
+}
+function mail(){
+  const u = unitOf(F.unitId) || {}, n = unitOf(F.newUnitId) || {};
+  const d = F.effDate ? D.parse(F.effDate) : null, day = d ? d.getUTCDate() : "", mon = d ? MONTHS[d.getUTCMonth()] : "", yr = d ? d.getUTCFullYear() : "";
+  const brand = F.brand.trim() || "Tenant", flag = META.flag, R = META.recipients;
+  const lvl = LEVEL(F.type === "reloc" ? n.level : u.level);
+  const S = "font-family:Calibri,Arial,sans-serif;font-size:15px;color:#222;line-height:1.5";
+  const sig = `<p style="${S};margin-top:18px">Regards,</p><p style="${S};font-style:italic;font-weight:bold">Operations team on duty are reachable for any assistance needed${R.phone ? ` on <span style="color:#1F5FBF;text-decoration:underline">${esc(R.phone)}</span>` : ""}.</p>
+    <p style="${S};border-left:3px solid #4A1F73;padding-left:10px;margin-top:14px"><span style="color:#4A1F73;font-size:17px">${esc(META.me.name)}</span><br><span style="color:#4A1F73">${esc(META.me.position)}</span><br><span style="color:#888">${esc(flag)}</span></p>`;
+  let subject, body;
+  if (F.type === "open"){
+    subject = `${flag}: Tenant Opening | ${brand}`;
+    body = `<p style="${S}">Dears,</p>
+      <p style="${S}">Kindly be informed that <b>${esc(brand)}</b> has opened in <b>${esc(flag)}${lvl ? ", " + esc(lvl) : ""}</b> effective ${esc(mon)} ${day}<sup>${ord(day)}</sup>, ${yr}.</p>
+      ${F.tagline.trim() ? `<p style="${S};font-weight:bold">“${esc(F.tagline.trim().replace(/^["“]|["”]$/g, ""))}”.</p>` : ""}
+      <ul style="${S}">${F.category.trim() || u.dept ? `<li><b>Category:</b> ${esc(F.category.trim() || u.dept)}</li>` : ""}${lvl ? `<li><b>Floor:</b> ${esc(lvl)}</li>` : ""}${F.instagram.trim() ? `<li><b>Instagram:</b> ${esc(F.instagram.trim())}</li>` : ""}${F.hours.trim() ? `<li><b>Operating Hours:</b> ${esc(F.hours.trim())}</li>` : ""}</ul>` + sig;
+  } else if (F.type === "close"){
+    subject = `${flag}: Tenant Closure | ${brand}`;
+    body = `<p style="${S}">Dear All,</p><p style="${S}">Kindly be informed that <b>${esc(brand)}</b> has officially closed at ${esc(flag)} effective <b>${day}<sup>${ord(day)}</sup> ${esc(mon)}, ${yr}</b>.</p>
+      ${F.note.trim() ? `<p style="${S}">${esc(F.note.trim())}</p>` : ""}` + sig;
+  } else {
+    subject = `${flag}: Tenant Relocation | ${brand}`;
+    body = `<p style="${S}">Dear All,</p><p style="${S}">Kindly be informed that <b>${esc(brand)}</b> has relocated to a new unit${lvl ? ` on <b>${esc(lvl)}</b>` : ""}${F.landmark.trim() ? `, in front of <b>${esc(F.landmark.trim())}</b>` : ""} at ${esc(flag)}, effective <b>${day}<sup>${ord(day)}</sup> ${esc(mon)}, ${yr}</b>.</p>
+      <ul style="${S}">${u.code ? `<li><b>Previous unit:</b> ${esc(LEVEL(u.level))} · ${esc(u.code)}</li>` : ""}${n.code ? `<li><b>New unit:</b> ${esc(LEVEL(n.level))} · ${esc(n.code)}</li>` : ""}</ul>
+      ${F.note.trim() ? `<p style="${S}">${esc(F.note.trim())}</p>` : ""}` + sig;
+  }
+  return { subject, html: `<div>${body}</div>`, to: R.to, cc: R.cc };
+}
+function preview(){
+  const m = mail(), pv = $("#pv"); if (!pv) return;
+  pv.innerHTML = `<div class="hdr"><b>${esc(m.subject)}</b>
+      <div><span class="muted">To:</span> ${m.to.length ? esc(m.to.join("; ")) : `<span style="color:var(--alert)">no address yet</span>`}</div>
+      <div class="who" id="ccBox" title="Show all"><span class="muted">Cc (${m.cc.length}):</span> ${esc(m.cc.join("; ")) || "—"}</div>
+      <div class="muted">${PH.length ? `📎 ${PH.length} photo${PH.length === 1 ? "" : "s"} attached` : "No photos attached"}</div></div>
+    <div class="body">${m.html}</div>
+    <div class="acts"><button class="btn gold" id="bEml">Open in Outlook</button><button class="btn ghost" id="bCopy">Copy + new email</button>
+      <span class="muted" style="font-size:.78rem;align-self:center">${SAVED ? "Saved in History ✓" : "Saved in History when you open the email"}</span></div>`;
+}
+app.addEventListener("input", e => { if (TAB !== "new") return; collect(); if (["fBrand", "fUnit", "fNew"].includes(e.target.id)) return; preview(); });
+app.addEventListener("change", e => { setTimeout(() => onChange(e), 0); });
+function onChange(e){
+  if (TAB !== "new") return; collect(); SAVED = 0;
+  if (e.target.id === "fBrand"){ const u = META.units.find(x => x.brand && x.brand.toLowerCase() === F.brand.trim().toLowerCase()); if (u){ F.unitId = String(u.id); if (!F.category) F.category = u.dept || ""; } return renderNew(); }
+  if (e.target.id === "fUnit"){ const u = unitOf(F.unitId); if (u && F.type === "open" && !F.category) F.category = u.dept || ""; return renderNew(); }
+  preview();
+}
+app.addEventListener("click", async e => {
+  if (TAB === "new"){
+    const tb = e.target.closest("[data-type]"); if (tb){ collect(); F.type = tb.dataset.type; SAVED = 0; return renderNew(); }
+    const rm = e.target.closest("[data-rmph]"); if (rm){ PH.splice(+rm.dataset.rmph, 1); SAVED = 0; return renderNew(); }
+    if (e.target.closest("#ccBox")) return e.target.closest("#ccBox").classList.toggle("open");
+    if (e.target.id === "bEml") return send("eml");
+    if (e.target.id === "bCopy") return send("copy");
+  }
+  if (TAB === "hist"){ const r = e.target.closest("[data-hid]"); if (r) return reopen(Number(r.dataset.hid)); }
+  if (TAB === "dir") dirClick(e);
+});
+
+/* photos: shrink on the phone before anything is sent (max 1600 px, JPEG) */
+function shrink(file, max, q){
+  return new Promise((res, rej) => { const img = new Image(); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src); res(c.toDataURL("image/jpeg", q)); };
+    img.onerror = () => rej(new Error("Could not read " + file.name)); img.src = URL.createObjectURL(file); });
+}
+$("#phFile").addEventListener("change", async e => {
+  const files = [...e.target.files].slice(0, 10 - PH.length); e.target.value = "";
+  for (const f of files){ try { PH.push({ name: f.name.replace(/\.[^.]+$/, ""), full: await shrink(f, 1600, .82), thumb: await shrink(f, 240, .7) }); } catch (er){ toast(er.message, true); } }
+  SAVED = 0; collect(); renderNew();
+});
+
+async function save(){
+  if (SAVED) return true;
+  collect();
+  if (!F.brand.trim()) { toast("Enter the tenant", true); return false; }
+  if (!F.effDate) { toast("Choose the effective date", true); return false; }
+  if (F.type === "reloc" && !F.newUnitId && !F.landmark.trim()) { toast("Choose the new unit or where it is", true); return false; }
+  const u = unitOf(F.unitId) || {}, n = unitOf(F.newUnitId) || {}, m = mail();
+  try {
+    const r = await api("ops/tm/save", { site: CTX.site, type: F.type, brand: F.brand.trim(), unitId: F.unitId || 0, unit: u.code || "", level: u.level || "",
+      category: F.category || u.dept || "", effDate: F.effDate, subject: m.subject, applyGla: !!F.applyGla && !!META.can.applyGla,
+      data: { tagline: F.tagline, instagram: F.instagram, hours: F.hours, note: F.note, newUnitId: F.newUnitId || 0, newUnit: n.code || "", newLevel: n.level || "", landmark: F.landmark, photos: PH.length },
+      thumbs: PH.map(p => p.thumb) });
+    SAVED = r.id;
+    if (r.gla && r.gla.changes && r.gla.changes.length) toast(`GLA updated: ${r.gla.changes.map(c => c.unit).join(", ")}`);
+    if (F.type === "open" || F.type === "close") setTimeout(() => offerChecklist(), 400);
+    return true;
+  } catch (er){ toast(er.message, true); return false; }
+}
+function offerChecklist(){
+  const f = F.type === "open" ? "open" : "close";
+  confirmBox(`Start the ${f === "open" ? "opening" : "closing"} checklist?`, `Opens the Tenant ${f === "open" ? "Opening" : "Closing"} checklist for <b>${esc(F.brand)}</b>${f === "close" ? " — including deactivating their ABC Tenant Connect users" : ""}.`, "Open checklist")
+    .then(ok => { if (ok) location.href = `/tools/forms?f=${f}&site=${CTX.site}&tenant=${encodeURIComponent(F.brand.trim())}`; });
+}
+function b64(s){ const b = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
+const wrap76 = s => s.replace(/.{76}/g, "$&\r\n");
+const hdr = s => /^[\x20-\x7e]*$/.test(s) ? s : "=?UTF-8?B?" + b64(s) + "?=";
+function emlText(m){
+  const B = "==ABC" + Math.random().toString(36).slice(2);
+  const parts = [["Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", wrap76(b64(`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${m.html}</body></html>`))].join("\r\n")];
+  PH.forEach((p, i) => { const fn = `${F.brand.trim() || "tenant"} ${i + 1}.jpg`.replace(/[^\w .&-]/g, "");
+    parts.push([`Content-Type: image/jpeg; name="${fn}"`, "Content-Transfer-Encoding: base64", `Content-Disposition: attachment; filename="${fn}"`, "", wrap76(p.full.split(",")[1])].join("\r\n")); });
+  return [`To: ${m.to.join(", ")}`, `Cc: ${m.cc.join(", ")}`, `Subject: ${hdr(m.subject)}`, "X-Unsent: 1", "MIME-Version: 1.0", `Content-Type: multipart/mixed; boundary="${B}"`, "",
+    ...parts.map(p => `--${B}\r\n${p}`), `--${B}--`, ""].join("\r\n");
+}
+async function send(how){
+  if (!await save()) return;
+  const m = mail(); preview();
+  if (how === "eml"){
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([emlText(m)], { type: "message/rfc822" }));
+    a.download = `${m.subject.replace(/[\\/:*?"<>|]/g, "-")}.eml`; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return toast("Email ready — open it: Outlook shows it with the recipients and photos");
+  }
+  try { await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([m.html], { type: "text/html" }), "text/plain": new Blob([m.subject], { type: "text/plain" }) })]); } catch {}
+  toast(PH.length ? "Copied — paste into the email and attach the photos" : "Copied — paste into the email");
+  location.href = `mailto:${encodeURIComponent(m.to.join(";"))}?cc=${encodeURIComponent(m.cc.join(";"))}&subject=${encodeURIComponent(m.subject)}`;
+}
+
+/* ---------------- history ---------------- */
+async function renderHist(){
+  app.innerHTML = `<div class="hist"><div class="card empty">Loading…</div></div>`;
+  const d = await api("ops/tm/list?site=" + CTX.site);
+  app.innerHTML = `<div class="hist">${d.rows.length ? d.rows.map(r => `<button class="card hrow" data-hid="${r.id}" style="text-align:left;width:100%">
+      <span class="th">${r.thumbs.map(t => `<img src="${t}" alt="">`).join("")}</span>
+      <span class="main"><b>${esc(r.subject || r.brand)}</b><br><small>${esc(D.long(r.eff_date))} · by ${esc(r.created_name)}${r.gla && r.gla.changes && r.gla.changes.length ? ` · GLA updated (${esc(r.gla.changes.map(c => c.unit).join(", "))})` : ""}</small></span>
+      <span class="pill ${r.type === "open" ? "ok" : r.type === "close" ? "alert" : "brand"}">${r.type === "open" ? "Opening" : r.type === "close" ? "Closure" : "Relocation"}</span></button>`).join("")
+    : `<div class="card empty">No tenant announcements yet for ${esc(CTX.siteName)}.</div>`}</div>`;
+}
+async function reopen(id){
+  const { row } = await api(`ops/tm/get?id=${id}&site=${CTX.site}`);
+  F = { ...blank(), type: row.type, brand: row.brand, unitId: row.unit_id || "", effDate: row.eff_date, category: row.category, ...row.data, applyGla: false };
+  PH = []; SAVED = row.id; show("new");
+  toast("Opened from History — add the photos again to attach them");
+}
+
+/* ---------------- recipients directory ---------------- */
+let DIR = null;
+async function renderDir(given){
+  const d = given || await api("ops/tm/recipients"); DIR = d;
+  const ed = d.can.edit, dis = ed ? "" : "disabled";
+  const all5 = { VRM: "Verdun Mall", ACM: "Achrafieh Mall", DBS: "Dbayeh", VRS: "Verdun DS", ACS: "Achrafieh DS" };
+  app.innerHTML = `<div class="card" style="padding:16px;margin-top:14px;overflow-x:auto">
+    <p class="muted" style="font-size:.85rem;margin-bottom:10px;line-height:1.5">Each position once. <b>All flagships</b>: the same emails go on every announcement. <b>Per flagship</b>: each flagship has its own (CCTV, technical, safety…). Separate several emails with a comma.${ed ? "" : " Only administrators can change this list."}</p>
+    <table class="rc"><tr><th style="width:26%">Position</th><th style="width:9%">Line</th><th style="width:12%">Applies to</th><th>Emails</th>${ed ? "<th></th>" : ""}</tr>
+    ${d.rows.map((r, i) => `<tr data-i="${i}"><td><input class="inp" data-f="label" value="${esc(r.label)}" ${dis}></td>
+      <td>${r.field === "phone" ? `<b style="font-size:.8rem">Phone</b>` : `<select class="sel" data-f="field" ${dis}><option value="to" ${r.field === "to" ? "selected" : ""}>To</option><option value="cc" ${r.field === "cc" ? "selected" : ""}>Cc</option></select>`}</td>
+      <td>${r.field === "phone" ? `<small class="muted">Per flagship</small>` : `<select class="sel" data-f="scope" ${dis}><option value="all" ${r.scope === "all" ? "selected" : ""}>All flagships</option><option value="site" ${r.scope === "site" ? "selected" : ""}>Per flagship</option></select>`}</td>
+      <td>${r.scope === "site" ? `<div class="sitebox">${Object.entries(all5).map(([c, n]) => `<label>${esc(n)}<textarea rows="1" data-site="${c}" ${dis}>${esc(r.emails[c] || "")}</textarea></label>`).join("")}</div>`
+        : `<textarea rows="1" data-site="ALL" ${dis}>${esc(r.emails.ALL || "")}</textarea>`}</td>
+      ${ed ? `<td>${r.field === "phone" ? "" : `<button class="btn ghost small danger" data-rmr="${i}">×</button>`}</td>` : ""}</tr>`).join("")}</table>
+    ${ed ? `<div style="display:flex;gap:8px;margin-top:12px"><button class="btn ghost" id="addPos">+ Add position</button><span style="flex:1"></span><button class="btn" id="saveDir">Save recipients</button></div>` : ""}</div>`;
+}
+function readDir(){
+  app.querySelectorAll("tr[data-i]").forEach(tr => { const r = DIR.rows[+tr.dataset.i];
+    tr.querySelectorAll("[data-f]").forEach(x => r[x.dataset.f] = x.value);
+    tr.querySelectorAll("[data-site]").forEach(x => r.emails[x.dataset.site] = x.value); });
+}
+async function dirClick(e){
+  const rm = e.target.closest("[data-rmr]");
+  if (rm){ readDir(); DIR.rows.splice(+rm.dataset.rmr, 1); return rerenderDir(); }
+  if (e.target.id === "addPos"){ readDir(); DIR.rows.push({ k: "", label: "New position", field: "cc", scope: "all", emails: {} }); return rerenderDir(); }
+  if (e.target.id === "saveDir"){ readDir(); try { await api("ops/tm/recipients/save", { rows: DIR.rows }); toast("Recipients saved"); META = await api("ops/tm/meta?site=" + CTX.site); renderDir(); } catch (er){ toast(er.message, true); } }
+}
+app.addEventListener("change", e => { if (TAB === "dir" && e.target.dataset.f === "scope"){ readDir(); rerenderDir(); } });
+function rerenderDir(){ renderDir(DIR); }
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

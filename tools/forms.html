@@ -189,7 +189,7 @@ async function boot(){
     $("#bUpload").classList.toggle("hidden", !(FORM === "dbank" && M.can.lead));
     const id = Number(UP.get("id"));
     if (id) return openRun(id);
-    if (M.meta.kind === "tenant") return showTab("records");
+    if (M.meta.kind === "tenant") return UP.get("tenant") ? openNew() : showTab("records");   /* Tenant Management: opened from an announcement */
     if (FORM === "dbank"){
       const { runs } = await api(`ops/forms/list?form=dbank&site=${site}`);
       const draft = runs.find(r => r.status === "draft");
@@ -218,7 +218,7 @@ addEventListener("beforeprint", () => {
 async function openNew(){
   try {
     if (M.meta.kind === "tenant" || FORM === "dbank"){ const r = await api(`ops/forms/new?form=${FORM}&site=${site}`); run = r.run;
-      if (M.meta.kind === "tenant") run.header = { date: ctx.today, flags: {} }; }
+      if (M.meta.kind === "tenant") run.header = { date: ctx.today, flags: {}, tenant: UP.get("tenant") || "" }; }
     else run = (await api(`ops/forms/new?form=${FORM}&site=${site}`)).run;
     if (FORM === "dbank" && !run.id) run.header = { from: hm(), to: "" };
     setUrl({ id: run.id || null }); tab = "sheet"; $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === "sheet"));
@@ -428,6 +428,7 @@ async function save(submit){
     const answers = JSON.parse(JSON.stringify(run.answers)); Object.values(answers).forEach(a => delete a._other);
     const r = await api("ops/forms/save", { site, form: FORM, id: run.id || 0, day: run.day, header: run.header || {}, answers, comments: run.comments || "",
       itemIds: FORM === "dbank" ? run.items.map(i => i.id) : undefined, submit });
+    if (r.offline){ dirty = false; const s = $("#saveTxt"); if (s) s.textContent = `Saved on this device ${hm()} — sends when back online`; if (submit) toast("No signal — the checklist will be submitted when you are back online"); return; }
     const first = !run.id; run.id = r.id; dirty = false;
     if (first) setUrl({ id: r.id });
     if (submit){ run = (await api(`ops/forms/get?id=${r.id}&site=${site}`)).run; renderSheet(); toast("Checklist submitted"); window.scrollTo({ top: 0, behavior: "smooth" }); }
@@ -435,6 +436,9 @@ async function save(submit){
   } catch (e){ const s = $("#saveTxt"); if (s) s.textContent = "Not saved"; toast(e.message, true); }
   finally { saving = false; }
 }
+/* works offline: when a checklist first saved without signal reaches the server, keep working on that record */
+addEventListener("hub-synced", e => { const { path, body, result } = e.detail || {};
+  if (path === "ops/forms/save" && run && !run.id && body.form === FORM && body.day === run.day && result && result.id){ run.id = result.id; setUrl({ id: result.id }); } });
 async function submit(){
   const t = tally();
   if (M.meta.kind === "tenant"){
