@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Tenants Directory · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="/tools/tools.css">
+<!-- Tenants Directory feature — see docs/FEATURE-directory.md -->
+<style>
+.filters{display:grid;grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) auto;gap:8px;align-items:center;margin:14px 0 10px}
+.filters .sel,.filters .inp{min-width:0;width:100%}
+.filters .cnt{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+table.d{width:100%;border-collapse:collapse;font-size:.86rem}
+.d th{text-align:left;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0}
+.d td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.d tr.grp td{border-top:2px solid var(--line)}
+.d td.t b{font-weight:800}
+.d a{color:var(--brand-2);text-decoration:none;font-weight:600}
+.d a:hover{text-decoration:underline}
+.d .ed{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);font-size:.9rem;color:var(--muted)}
+.d .ed:hover{border-color:var(--brand-2);color:var(--brand-2)}
+.gridwrap{overflow-x:auto}
+table.d.edit{min-width:1180px}
+.d.edit td{padding:3px 4px}
+.d.edit td.dv{padding:3px 8px;white-space:nowrap;font-size:.82rem}
+.ci{width:100%;min-width:0;border:1px solid transparent;background:transparent;border-radius:8px;padding:7px 8px;font:inherit;color:inherit;outline:none}
+.ci:hover{border-color:var(--line)}
+.ci:focus{border-color:var(--brand-2);background:var(--surface);box-shadow:0 0 0 3px rgba(123,75,176,.12)}
+.d.edit td:nth-child(1){min-width:170px}.d.edit td:nth-child(1) .ci{font-weight:800}
+.d.edit td:nth-child(2){min-width:150px}.d.edit td:nth-child(5){min-width:190px}
+.d.edit tr.newrow td{background:rgba(200,162,74,.07)}
+.d.edit tr.newrow .ci::placeholder{color:var(--brand-2);font-weight:700}
+.d.edit tr.bad td{background:rgba(192,57,43,.06)}
+.d .rm{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);color:var(--muted);font-size:1.05rem}
+.d .rm:hover{border-color:var(--alert);color:var(--alert)}
+.d td.x{white-space:nowrap;min-width:120px}
+.st{font-size:.72rem;font-weight:700;color:var(--muted);margin-left:6px}.st.ok{color:var(--ok)}.st.err{color:var(--alert);white-space:normal}.st.hint{color:var(--warn)}
+.lvl{font-weight:800}.unit{color:var(--muted);font-size:.76rem}
+.rxhead{background:var(--ink);color:#fff;padding:10px 16px;font-size:.82rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rxhead b{color:var(--gold)}
+.gla{font-size:.8rem;padding:9px 11px;border-radius:10px;background:var(--paper);color:var(--muted);line-height:1.5}
+.gla b{color:var(--text)}
+.fld{display:grid;gap:4px;margin-bottom:10px}.fld span{font-size:.76rem;font-weight:700;color:var(--muted)}
+.fld .inp{width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.linkbox{display:flex;gap:8px;align-items:center;padding:10px;border:1px dashed var(--line);border-radius:10px;font-size:.8rem;word-break:break-all}
+@media (max-width:760px){
+  .filters{grid-template-columns:1fr 1fr}.filters .q{grid-column:1/-1}
+  .d thead{display:none}
+  .d,.d tbody,.d tr,.d td{display:block;width:100%}
+  .d tr{position:relative;padding:12px 44px 12px 12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:var(--surface)}
+  .d tr.grp td{border-top:0}
+  .d td{border:0;padding:2px 0}
+  .d td:empty{display:none}
+  .d td[data-l]:not(.t):not(:empty)::before{content:attr(data-l) " · ";color:var(--muted);font-size:.74rem}
+  .d td.t{font-size:1rem}
+  .d td.x{position:absolute;right:8px;top:10px;width:auto}
+  .d td.hidem{display:none}
+  table.d.edit{min-width:0}
+  .d.edit td[data-l]{display:grid;grid-template-columns:84px minmax(0,1fr);align-items:center;gap:6px;padding:1px 0}
+  .d.edit td[data-l]::before{content:attr(data-l)!important;color:var(--muted);font-size:.74rem}
+  .d.edit td.dv:empty{display:none}
+  .d.edit td.x{position:static;display:flex;justify-content:flex-end;align-items:center;gap:6px;padding-top:6px;min-width:0}
+  .d.edit tr{padding:10px 12px}
+  .d.edit td:nth-child(n){min-width:0}
+}
+</style>
+</head>
+<body>
+<div id="rxbar"></div>
+<div class="top">
+  <h1>Tenants Directory <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <span class="acts" id="acts"></span>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<dialog id="dImp"></dialog><dialog id="dLink"></dialog>
+<script src="/tools/common.js"></script>
+<script>
+/* Two ways in: the hub (signed in) and the reception link /reception/<token> (no account) */
+const RX = (location.pathname.match(/^\/reception\/([\w-]{16,40})/) || [])[1] || "";
+const app = $("#app");
+let CTX = null, R = null, F = { q: "", status: "", category: "", location: "" };
+async function dapi(p, body){
+  if (!RX) return api("ops/dir/" + p + (body === undefined ? (p.includes("?") ? "&" : "?") + "site=" + CTX.site : ""), body === undefined ? undefined : { ...body, site: CTX.site });
+  const r = await fetch(`/api/rx/${RX}/${p}`, body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  let j = null; try { j = await r.json(); } catch {}
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || `Error ${r.status}`);
+  return j.data;
+}
+async function boot(site){
+  if (RX){
+    CTX = await dapi("context");
+    $("#rxbar").innerHTML = `<div class="rxhead"><b>Reception</b><span>${esc(CTX.siteName)} · keep this link private — anyone with it can edit the directory</span></div>`;
+  } else {
+    CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+    $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  }
+  $("#sub").textContent = CTX.siteName;
+  try { const q = localStorage.getItem("hub.dirq"); if (q){ F.q = q; localStorage.removeItem("hub.dirq"); } } catch {}
+  await load();
+}
+async function load(){
+  try { R = await dapi("list"); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  $("#acts").innerHTML = (R.canEdit ? `<button class="btn small" id="addBtn">+ Add contact</button><button class="btn ghost small" id="impBtn">⤓ Import Excel</button>` : "")
+    + (!RX && R.canEdit ? `<button class="btn ghost small" id="linkBtn">🔗 Reception link</button>` : "");
+  render();
+}
+const uniq = k => [...new Set(R.rows.map(r => r[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+const LVL = ["B6", "B2", "B1", "LGF", "GF", "L1", "L2", "L3", "L4", "L5"];
+const lvlSort = (a, b) => (LVL.indexOf(a) + 1 || 99) - (LVL.indexOf(b) + 1 || 99) || a.localeCompare(b);
+const stPill = s => !s ? `<span class="muted">—</span>` : `<span class="pill ${s === "Open" ? "ok" : s === "Fit-out" ? "warn" : /Closed|Terminated/.test(s) ? "alert" : "brand"}">${esc(s)}</span>`;
+const low = s => String(s || "").toLowerCase();
+function rows(){
+  const q = low(F.q).trim();
+  return R.rows.filter(r => (!F.status || r.status === F.status) && (!F.category || r.category === F.category) && (!F.location || r.location === F.location)
+    && (!q || low(`${r.tenant} ${r.employee} ${r.position} ${r.mobile} ${r.email} ${r.landline}`).includes(q)));
+}
+function render(){
+  const sel = (k, label, list) => `<select class="sel" data-f="${k}" aria-label="${label}"><option value="">${label}: all</option>${list.map(v => `<option ${F[k] === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>`;
+  const L = rows(); let prev = "";
+  if (R.canEdit) return renderGrid(sel, L);
+  const tenants = new Set(L.map(r => r.tenant)).size;
+  app.innerHTML = `<div class="filters">
+      <input class="inp q" id="q" type="search" placeholder="Search tenant, employee, number or email" value="${esc(F.q)}">
+      ${sel("status", "Status", uniq("status"))}${sel("category", "Category", uniq("category"))}${sel("location", "Location", uniq("location").sort(lvlSort))}
+      <span class="cnt" id="cnt">${L.length} contact${L.length === 1 ? "" : "s"} · ${tenants} tenant${tenants === 1 ? "" : "s"}</span></div>
+    <div class="card" style="overflow-x:auto">
+    <table class="d"><thead><tr><th>Tenant Name</th><th>Employee Name</th><th>Position</th><th>Mobile N.</th><th>Email</th><th>Category</th><th>Location</th><th>Status</th><th>Landline</th>${R.canEdit ? "<th></th>" : ""}</tr></thead><tbody>
+    ${L.length ? L.map(r => { const first = r.tenant !== prev; prev = r.tenant;
+      return `<tr class="${first ? "grp" : ""}">
+        <td class="t" data-l="Tenant"><b>${esc(r.tenant)}</b></td>
+        <td data-l="Employee">${esc(r.employee)}</td>
+        <td data-l="Position">${esc(r.position)}</td>
+        <td data-l="Mobile">${r.mobile ? `<a href="tel:${esc(r.mobile.replace(/[^\d+]/g, ""))}">${esc(r.mobile)}</a>` : ""}</td>
+        <td data-l="Email">${r.email ? `<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>` : ""}</td>
+        <td data-l="Category">${esc(r.category)}</td>
+        <td data-l="Location">${r.location ? `<span class="lvl">${esc(r.location)}</span>${r.unit ? ` <span class="unit">${esc(r.unit)}</span>` : ""}` : ""}</td>
+        <td data-l="Status">${stPill(r.status)}</td>
+        <td data-l="Landline">${r.landline ? `<a href="tel:${esc(r.landline.replace(/[^\d+]/g, ""))}">${esc(r.landline)}</a>` : ""}</td>
+        ${R.canEdit ? `<td class="x"><button class="ed" data-id="${r.id}" aria-label="Edit ${esc(r.employee || r.tenant)}" title="Edit">✎</button></td>` : ""}</tr>`; }).join("")
+      : `<tr><td colspan="10" class="empty">${R.rows.length ? "No contact matches these filters." : R.canEdit ? "No contacts yet — add one or import the Excel sheet." : "No contacts yet. Reception fills the directory."}</td></tr>`}
+    </tbody></table></div>`;
+}
+app.addEventListener("input", e => { if (e.target.id === "q"){ F.q = e.target.value; const pos = e.target.selectionStart; render(); const q = $("#q"); q.focus(); q.setSelectionRange(pos, pos); } });
+app.addEventListener("change", e => {
+  const k = e.target.dataset.f; if (k){ F[k] = e.target.value; return render(); }
+  const tr = e.target.closest("tr[data-row]"); if (tr) cellChanged(tr, e.target);
+});
+app.addEventListener("click", async e => { const b = e.target.closest(".rm"); if (b) removeRow(b.closest("tr")); });
+app.addEventListener("keydown", e => {   /* Enter = same column, next row (like Excel) */
+  if (e.key !== "Enter" || !e.target.matches(".ci")) return;
+  e.preventDefault(); const tr = e.target.closest("tr"), k = e.target.dataset.k;
+  const nx = tr.nextElementSibling && tr.nextElementSibling.querySelector(`[data-k="${k}"]`);
+  nx ? nx.focus() : e.target.blur();
+});
+$("#acts").addEventListener("click", e => {
+  if (e.target.id === "addBtn"){ const n = app.querySelector("tr.newrow [data-k='tenant']"); if (n){ n.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => n.focus(), 250); } }
+  if (e.target.id === "impBtn") pickFile();
+  if (e.target.id === "linkBtn") linkDialog();
+});
+
+function renderGrid(sel, L){
+  const t = new Set(L.map(r => r.tenant)).size;
+  app.innerHTML = `<div class="filters">
+      <input class="inp q" id="q" type="search" placeholder="Search tenant, employee, number or email" value="${esc(F.q)}">
+      ${sel("status", "Status", uniq("status"))}${sel("category", "Category", uniq("category"))}${sel("location", "Location", uniq("location").sort(lvlSort))}
+      <span class="cnt" id="cnt">${L.length} contact${L.length === 1 ? "" : "s"} · ${t} tenant${t === 1 ? "" : "s"}</span></div>
+    <p class="muted" style="font-size:.78rem;margin:-2px 0 8px">Type straight into the table — each row saves by itself. The last row adds a new contact. Category, location and status come from the GLA.</p>
+    <datalist id="glaT">${R.tenants.map(u => `<option value="${esc(u.name)}">${esc([u.level, u.code, u.category].filter(Boolean).join(" · "))}</option>`).join("")}</datalist>
+    <div class="card gridwrap"><table class="d edit"><thead><tr><th>Tenant Name</th><th>Employee Name</th><th>Position</th><th>Mobile N.</th><th>Email</th><th>Category</th><th>Location</th><th>Status</th><th>Landline</th><th></th></tr></thead>
+      <tbody>${L.map(gridRow).join("")}${gridRow({ tenant: "" })}</tbody></table></div>`;
+}
+/* ---------- editable table: type in the cells, each row saves itself ---------- */
+const glaOf = name => R.tenants.find(t => low(t.name) === low(String(name || "").trim()));
+function derived(r){
+  const u = glaOf(r.tenant);
+  if (u) return `<td class="dv" data-l="Category">${esc(u.category)}</td><td class="dv" data-l="Location"><span><span class="lvl">${esc(u.level)}</span> <span class="unit">${esc(u.code)}</span></span></td><td class="dv" data-l="Status"><span>${stPill(u.status)}</span></td>`;
+  if (!String(r.tenant || "").trim()) return `<td class="dv" data-l="Category"></td><td class="dv" data-l="Location"></td><td class="dv" data-l="Status"></td>`;
+  return `<td class="dv" data-l="Category"><input class="ci" data-k="category" value="${esc(r.category)}" placeholder="Category"></td>
+    <td class="dv" data-l="Location"><input class="ci" data-k="location" value="${esc(r.location)}" placeholder="L1, GF…" style="text-transform:uppercase"></td>
+    <td class="dv" data-l="Status"><select class="ci" data-k="status">${["", "Open", "Fit-out", "Closed", "Terminated"].map(x => `<option ${r.status === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>`;
+}
+function gridRow(r){
+  const isNew = !r.id;
+  const inp = (k, extra) => `<input class="ci" data-k="${k}" value="${esc(r[k] || "")}" ${extra || ""}>`;
+  return `<tr data-row data-id="${r.id || ""}" class="${isNew ? "newrow" : ""}">
+    <td data-l="Tenant">${inp("tenant", `list="glaT" autocomplete="off" placeholder="${isNew ? "+ New contact — tenant" : "Tenant"}"`)}</td>
+    <td data-l="Employee">${inp("employee", 'placeholder="Name"')}</td>
+    <td data-l="Position">${inp("position")}</td>
+    <td data-l="Mobile">${inp("mobile", 'type="tel" inputmode="tel"')}</td>
+    <td data-l="Email">${inp("email", 'type="email"')}</td>
+    ${derived(r)}
+    <td data-l="Landline">${inp("landline", 'type="tel" inputmode="tel"')}</td>
+    <td class="x">${isNew ? "" : `<button class="rm" title="Delete this contact" aria-label="Delete">×</button>`}<span class="st"></span></td></tr>`;
+}
+const rowVals = tr => Object.fromEntries([...tr.querySelectorAll("[data-k]")].map(i => [i.dataset.k, i.value.trim()]));
+function cellChanged(tr, el){
+  if (el.dataset.k === "tenant"){   /* category, location and status follow the tenant from the GLA */
+    const v = rowVals(tr), u = glaOf(v.tenant); if (u) el.value = u.name;
+    const tmp = document.createElement("tbody"); tmp.innerHTML = `<tr>${derived({ ...v, tenant: el.value })}</tr>`;
+    tr.querySelectorAll("td.dv").forEach((td, i) => td.replaceWith(tmp.firstElementChild.children[0] || td));
+  }
+  saveRow(tr);
+}
+function mark(tr, text, cls){ const s = tr.querySelector(".st"); if (!s) return; s.textContent = text; s.className = "st " + (cls || ""); tr.classList.toggle("bad", cls === "err");
+  if (cls === "ok") setTimeout(() => { if (s.textContent === text) s.textContent = ""; }, 1800); }
+function saveRow(tr){
+  const v = rowVals(tr);
+  if (!tr.dataset.id){
+    if (!v.tenant) return mark(tr, "Choose the tenant", "hint");
+    if (!v.employee && !v.mobile && !v.email && !v.landline) return mark(tr, "Add a name or a number", "hint");
+  }
+  tr._q = (tr._q || Promise.resolve()).then(async () => {
+    const u = glaOf(v.tenant), id = Number(tr.dataset.id) || 0;
+    mark(tr, "Saving…");
+    try {
+      const res = await dapi("save", { id, tenant: u ? u.name : v.tenant, unitId: u ? u.id : 0, employee: v.employee, position: v.position, mobile: v.mobile, email: v.email,
+        landline: v.landline, category: v.category || "", location: (v.location || "").toUpperCase(), status: v.status || "" });
+      const row = { id: res.id, tenant: u ? u.name : v.tenant, employee: v.employee, position: v.position, mobile: v.mobile, email: v.email.toLowerCase(), landline: v.landline,
+        category: u ? u.category : v.category || "", location: u ? u.level : (v.location || "").toUpperCase(), unit: u ? u.code : "", status: u ? u.status : v.status || "" };
+      const i = R.rows.findIndex(x => x.id === res.id); i >= 0 ? R.rows[i] = row : R.rows.push(row);
+      if (!id){   /* the new row becomes a normal row, and a fresh empty row appears under it */
+        tr.dataset.id = res.id; tr.classList.remove("newrow");
+        tr.querySelector('[data-k="tenant"]').placeholder = "Tenant";
+        tr.querySelector("td.x").insertAdjacentHTML("afterbegin", `<button class="rm" title="Delete this contact" aria-label="Delete">×</button>`);
+        tr.insertAdjacentHTML("afterend", gridRow({ tenant: v.tenant }));
+        counts();
+      }
+      mark(tr, "Saved ✓", "ok");
+    } catch (er){ mark(tr, er.message, "err"); }
+  });
+}
+async function removeRow(tr){
+  const r = R.rows.find(x => x.id === Number(tr.dataset.id)); if (!r) return;
+  if (!(await confirmBox("Delete this contact?", `${esc(r.employee || "This contact")} at ${esc(r.tenant)} will be removed from the directory.`, "Delete"))) return;
+  try { await dapi("delete", { id: r.id }); R.rows = R.rows.filter(x => x.id !== r.id); tr.remove(); counts(); toast("Contact deleted"); } catch (er){ toast(er.message, true); }
+}
+function counts(){ const c = $("#cnt"); if (!c) return; const L = rows(), t = new Set(L.map(r => r.tenant)).size;
+  c.textContent = `${L.length} contact${L.length === 1 ? "" : "s"} · ${t} tenant${t === 1 ? "" : "s"}`; }
+
+
+/* ---------- import from Excel ---------- */
+function pickFile(){
+  const i = document.createElement("input"); i.type = "file"; i.accept = ".xlsx,.xls,.xlsm,.csv";
+  i.onchange = () => i.files[0] && importFile(i.files[0]); i.click();
+}
+const HEAD = { tenant: /tenant|brand|shop/, employee: /employee|contact name|^name$/, position: /position|title|role/, mobile: /mobile|cell/,
+  email: /e-?mail/, category: /categ/, location: /locat|level|floor/, status: /status/, landline: /land|phone|tel/ };
+async function importFile(file){
+  try {
+    await xlsxReady();
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const all = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: "" });
+    const hi = all.findIndex(r => r.some(c => /tenant/i.test(String(c))));
+    if (hi < 0) throw new Error("No “Tenant Name” column found in the first sheet.");
+    const H = all[hi].map(c => String(c).toLowerCase().trim()), C = {};
+    for (const [k, re] of Object.entries(HEAD)){ const i = H.findIndex((h, n) => re.test(h) && !Object.values(C).includes(n)); if (i >= 0) C[k] = i; }
+    if (C.mobile !== undefined && C.landline === C.mobile) delete C.landline;
+    let tenant = "";
+    const list = all.slice(hi + 1).map(r => { const o = {}; for (const [k, i] of Object.entries(C)) o[k] = String(r[i] ?? "").trim();
+      if (o.tenant) tenant = o.tenant; else o.tenant = tenant;   /* merged cells: the tenant name is only on its first row */
+      return o; }).filter(o => o.tenant && (o.employee || o.mobile || o.email || o.landline));
+    if (!list.length) throw new Error("No contacts found under the headers.");
+    const d = $("#dImp");
+    d.innerHTML = `<div class="dlg-h"><b>Import contacts</b><small>${esc(file.name)} · ${list.length} contacts · ${new Set(list.map(x => x.tenant)).size} tenants</small></div>
+      <div class="dlg-b"><p class="muted" style="font-size:.85rem;line-height:1.55">Columns found: ${Object.keys(C).map(k => `<b>${k}</b>`).join(", ")}.<br>
+        Tenants found in the GLA take their category, location and status from the GLA. A contact already in the directory (same tenant and employee) is updated, the rest are added.</p></div>
+      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Import ${list.length}</button></div>`;
+    d.onclick = async ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; if (!b || b.dataset.v === "0") return d.close();
+      b.disabled = true; b.textContent = "Importing…";
+      try { const r = await dapi("import", { rows: list }); d.close();
+        toast(`${r.added} added · ${r.updated} updated${r.skippedCount ? ` · ${r.skippedCount} skipped` : ""}`); load(); }
+      catch (er){ d.close(); toast(er.message, true); } };
+    d.showModal();
+  } catch (e){ toast(e.message, true); }
+}
+
+/* ---------- reception link (management only) ---------- */
+async function linkDialog(action){
+  const d = $("#dLink");
+  let L; try { L = action ? await api("ops/dir/link", { site: CTX.site, action }) : await api("ops/dir/link?site=" + CTX.site); } catch (e){ return toast(e.message, true); }
+  d.innerHTML = `<div class="dlg-h"><b>Reception link · ${esc(CTX.siteName)}</b><small>Reception opens it on their computer — no hub account needed. They can view and update this flagship's directory only.</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px">
+      ${L.url ? `<div class="linkbox"><span style="flex:1">${esc(L.url)}</span></div>
+        <div class="acts"><button class="btn small" data-v="copy">Copy link</button><a class="btn ghost small" href="${esc(L.url)}" target="_blank" rel="noopener">Open</a></div>
+        <p class="muted" style="font-size:.78rem">Made by ${esc(L.createdBy)} · ${esc(D.fmt(L.createdAt.slice(0, 10)))}. Treat it like a password.</p>
+        <div class="acts"><button class="btn ghost small" data-v="new">Make a new link</button><button class="btn ghost small danger" data-v="off">Turn the link off</button></div>
+        <p class="muted" style="font-size:.76rem">A new link stops the old one straight away.</p>`
+      : `<p class="muted" style="font-size:.88rem">There is no active reception link for this flagship.</p><div><button class="btn small" data-v="new">Create the reception link</button></div>`}
+    </div><div class="dlg-f"><button class="btn ghost" data-v="x">Close</button></div>`;
+  d.onclick = async ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; const v = b ? b.dataset.v : "x";
+    if (v === "x") return d.close();
+    if (v === "copy"){ try { await navigator.clipboard.writeText(L.url); toast("Link copied"); } catch { toast("Select the link and copy it", true); } return; }
+    if (v === "new" && L.url && !(await confirmBox("Make a new link?", "The current link stops working at once. Send the new one to reception.", "Make new link"))) return;
+    if (v === "off" && !(await confirmBox("Turn the link off?", "Reception can no longer open the directory until you create a new link.", "Turn off"))) return;
+    d.close(); linkDialog(v === "off" ? "off" : "new"); };
+  if (!d.open) d.showModal();
+}
+boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
