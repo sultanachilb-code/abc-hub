@@ -34,3 +34,13 @@ Added: September 2026 · Status: live · Owner: Sultan Al Achi
 ```sql
 DROP TABLE exec_reports;
 ```
+
+
+## Sales — local only (30 Sep 2026)
+Sales are never stored in the hub. **Import sales** reads the monthly *Leasing Sales Performance YTD* workbook in the browser
+(tools/exec-sales.js) and fills, for every flagship at once: monthly sales % in the footfall table, total and LFL %, the groups table
+(property LFL, DS, Azadea / Aishti / Pearl Brands / Retail Group — editable list, saved as names only), the 14 top contributors to the decline,
+new tenants, low performers, plus sales vs last year / budget / 2018, sales by category and cinema / parking.
+Everything can be edited, then Export PDF. Closing or refreshing the page removes the sales. The server strips every sales field on save and on read,
+and a one-time clean-up erased sales saved before (meta `exec:salesPurged`). Footfall stays saved as before.
+Workbook layout expected: sheet "Sales Data Conso" (one row per lease, months by year, LFL flags, space), "Sales Total Summary" (Period YTD), "Footfall Table" (cinema, parking).
