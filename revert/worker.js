@@ -8,6 +8,8 @@ export { EmergencyPager } from "./modules/emergency.js";
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
+import { directorySchema, directoryRoute, directoryPublic } from "./modules/directory.js";   // Tenants Directory feature — see docs/FEATURE-directory.md
+import { profileSchema, profileRoute, coversAdmin } from "./modules/profile.js";   // Profile feature — see docs/FEATURE-profile.md
 import { leadershipRoute } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
 import { automationSchema, automationRun, backupData, eodEmailHtml } from "./modules/automation.js";   // Automation feature (EOD email, daily snapshot, weekly backup) — see docs/FEATURE-automation.md   // Tenant Management feature — see docs/FEATURE-tenant-management.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
@@ -216,6 +218,8 @@ async function ensureSchema(env) {
   await budgetSchema(env);    // Budget (CAPEX / OPEX) feature
   await execSchema(env);      // Executive Report feature
   await tenantsSchema(env);   // Tenant Management feature
+  await directorySchema(env);   // Tenants Directory feature
+  await profileSchema(env);     // Profile feature
   await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
@@ -292,7 +296,7 @@ const userOut = u => {
       : ALL_SITE_ROLES.includes(u.role) ? "All flagships" : "",
     sites: list, sitesLabel: list.length === Object.keys(SITES).length ? "All flagships" : list.map(c => SITES[c]).join(", "),
     full: isFull(u), mustChange: !!u.must_change,
-    position: u.position || "", positionLabel: posLabel(u.position)
+    position: u.position || "", positionLabel: posLabel(u.position), photoAt: u.photo_at || ""
   };
 };
 
@@ -303,6 +307,12 @@ export default {
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
       try { return await route(request, env, ctx, url); }
       catch (e) { return json({ ok: false, error: e.message || String(e), ...(e.extra || {}) }, e.status || 500); }
+    }
+    /* Tenants Directory feature: the reception link opens the directory page (no hub account) */
+    if (/^\/reception\/[\w-]{16,40}\/?$/.test(url.pathname)) {
+      const r = await env.ASSETS.fetch(new Request(new URL("/tools/directory", url), request));
+      const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
+      return new Response(r.body, { status: r.status, headers: h });
     }
     return env.ASSETS.fetch(request);
   },
@@ -339,6 +349,7 @@ async function route(request, env, ctx, url) {
   if (path === "login" && method === "POST") return login(env, body);
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   if (path === "setup" && method === "POST") return setup(env, body);
+  if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
   const me = await readSession(request, env);
   if (!me) {
@@ -348,6 +359,11 @@ async function route(request, env, ctx, url) {
 
   /* ----- signed-in routes ----- */
   if (path === "me") return ok({ user: userOut(me), sites: SITES, roles: ROLES });
+  if (path === "profile" || path.startsWith("profile/")) {   // Profile feature
+    const r = await profileRoute(env, path, method, body, url, { me, SITES, sitesOf, userOut, now: nowIso });
+    if (r instanceof Response) return r;
+    if (r) return ok(r);
+  }
   if (path === "password" && method === "POST") return ok(await changePassword(env, me, body));
   if (path === "announcements") return ok(await activeAnnouncements(env, me));
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
@@ -388,6 +404,7 @@ async function route(request, env, ctx, url) {
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     /* Automation feature: backup download, backup status, End of Day email test */
+    if (a === "covers") return ok(await coversAdmin(env, method, body, { me, SITES, now: nowIso }));   // Profile feature: flagship covers
     if (a === "backup" && method === "GET") {
       const data = await backupData(env);
       return new Response(JSON.stringify(data), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
@@ -1237,6 +1254,10 @@ async function opsRoute(env, me, p, method, b, url) {
     isAdmin: me.role === "ADMIN", siteName, raiseEvent, today: beirutToday, sites: sitesMap(me), position: posLabel(me.position) || ROLES[me.role] });
 
   /* ----- Data Accuracy Score feature (modules/accuracy.js) ----- */
+  /* ----- Tenants Directory feature (modules/directory.js) ----- */
+  if (p.startsWith("dir/")) return directoryRoute(env, p, method, b, url, { site, me, full: canSite(me, site) && isFull(me), sites: sitesOf(me),
+    now: nowIso, siteName, origin: url.origin });
+
   if (p === "accuracy") return { ...(await accuracyRoute(env, p, method, b, url, { site, sites: sitesMap(me) })), can };
 
   /* ----- Budget (CAPEX / OPEX) feature (modules/budget.js) ----- */
