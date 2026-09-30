@@ -13,7 +13,11 @@
      · Fit-out units + contract date .............. GLA (Fit-out / Reserved, contract start)
      · CAPEX projects and annual budget ........... Budget · CAPEX sheet of that year
    Manual (kept from month to month)
-     · Footfall & sales tables, QC results, highlights and commentary, CAPEX status / deadline / comment
+     · Footfall, QC results, highlights and commentary, CAPEX status / deadline / comment
+   Sales — NEVER stored in the hub (local only)
+     · The sales workbook is read in the browser, used for the report / PDF and gone when the page closes.
+       The server strips every sales field on save and on read, and a one-time clean-up erased the sales saved before.
+       Only the names of the retail groups to show ("salesGroups") are kept — no figures.
 
    Tables : exec_reports
    Routes : /api/ops/exec/*
@@ -31,6 +35,16 @@ const nk = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 export async function execSchema(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS exec_reports (site TEXT NOT NULL, period TEXT NOT NULL, data TEXT NOT NULL,
     updated_by TEXT, updated_at TEXT, PRIMARY KEY (site, period))`).run();
+  /* one-time clean-up: erase the sales figures saved before sales became local-only */
+  const done = await env.DB.prepare("SELECT v FROM meta WHERE k = 'exec:salesPurged'").first().catch(() => null);
+  if (!done) {
+    const { results } = await env.DB.prepare("SELECT site, period, data FROM exec_reports").all().catch(() => ({ results: [] }));
+    for (const r of results || []) {
+      let d; try { d = JSON.parse(r.data); } catch { continue; }
+      await env.DB.prepare("UPDATE exec_reports SET data = ? WHERE site = ? AND period = ?").bind(JSON.stringify(clean(d)), r.site, r.period).run();
+    }
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('exec:salesPurged', ?)").bind(new Date().toISOString()).run().catch(() => {});
+  }
 }
 
 /* ---------- automatic part ---------- */
@@ -78,14 +92,17 @@ async function autoPart(env, site, period, deps) {
 }
 
 /* ---------- the saved (manual) part ---------- */
-const TEXT_KEYS = ["prepared", "currency", "highlights", "occNote", "leaseNote", "salesTotal", "salesLfl", "declineBase", "declineTitle", "salesNote", "capexNote",
-  "qcPrevLabel", "qcPrev", "qcCurLabel", "qcCur", "qcNote"];
-const TABLE_KEYS = ["opened", "closed", "contracts", "footfall", "decline", "groups", "newt", "low", "capex"];
+/* sales fields (salesTotal, salesLfl, declineBase, declineTitle, salesNote, decline, groups, newt, low and the
+   sales columns of the footfall table) are deliberately absent: whatever is sent, they are never stored */
+const TEXT_KEYS = ["prepared", "currency", "highlights", "occNote", "leaseNote", "capexNote",
+  "qcPrevLabel", "qcPrev", "qcCurLabel", "qcCur", "qcNote", "salesGroups"];
+const TABLE_KEYS = ["opened", "closed", "contracts", "footfall", "capex"];
+const ROW_KEEP = { footfall: ["month", "ff25", "ff26"] };
 function clean(d) {
   const o = {};
-  for (const k of TEXT_KEYS) o[k] = String(d[k] ?? "").slice(0, k.endsWith("Note") || k === "highlights" ? 6000 : 200);
+  for (const k of TEXT_KEYS) o[k] = String(d[k] ?? "").slice(0, k.endsWith("Note") || k === "highlights" ? 6000 : k === "salesGroups" ? 600 : 200);
   for (const k of TABLE_KEYS) o[k] = Array.isArray(d[k]) ? d[k].slice(0, 400).map(r => {
-    const x = {}; for (const [kk, vv] of Object.entries(r || {})) if (/^[a-z0-9]{1,12}$/i.test(kk)) x[kk] = typeof vv === "number" ? vv : String(vv ?? "").slice(0, 300); return x;
+    const x = {}; for (const [kk, vv] of Object.entries(r || {})) if (/^[a-z0-9]{1,12}$/i.test(kk) && (!ROW_KEEP[k] || ROW_KEEP[k].includes(kk))) x[kk] = typeof vv === "number" ? vv : String(vv ?? "").slice(0, 300); return x;
   }) : [];
   for (const k of ["unitNotes", "fitout"]) o[k] = d[k] && typeof d[k] === "object" && !Array.isArray(d[k]) ? JSON.parse(JSON.stringify(d[k]).slice(0, 60000)) : {};
   return o;
@@ -94,8 +111,8 @@ function clean(d) {
 function rollForward(prev, period) {
   const d = JSON.parse(JSON.stringify(prev));
   d.qcPrevLabel = d.qcCurLabel || ""; d.qcPrev = d.qcCur || ""; d.qcCurLabel = label(period); d.qcCur = "";
-  for (const k of ["highlights", "occNote", "leaseNote", "salesNote", "capexNote", "qcNote"]) d[k] = "";
-  if (period.endsWith("-01")) { d.opened = []; d.closed = []; d.footfall = []; d.decline = []; d.groups = []; d.newt = []; d.low = []; }   // a new year starts clean
+  for (const k of ["highlights", "occNote", "leaseNote", "capexNote", "qcNote"]) d[k] = "";
+  if (period.endsWith("-01")) { d.opened = []; d.closed = []; d.footfall = []; }   // a new year starts clean
   return d;
 }
 
@@ -110,11 +127,11 @@ export async function execRoute(env, p, method, b, url, ctx) {
     if (!period) throw err("Choose the month");
     let row = await env.DB.prepare("SELECT * FROM exec_reports WHERE site = ? AND period = ?").bind(site, period).first();
     let data, source = "saved";
-    if (row) data = JSON.parse(row.data);
+    if (row) data = clean(JSON.parse(row.data));
     else {
       const prev = await env.DB.prepare("SELECT * FROM exec_reports WHERE site = ? AND period < ? ORDER BY period DESC LIMIT 1").bind(site, period).first();
       const seed = EXEC_SEED[site];
-      if (prev) { data = rollForward(JSON.parse(prev.data), period); source = `from ${label(prev.period)}`; }
+      if (prev) { data = rollForward(clean(JSON.parse(prev.data)), period); source = `from ${label(prev.period)}`; }
       else if (seed && seed.period === period) { data = clean(seed.data); source = "the August report"; }
       else if (seed && seed.period < period) { data = rollForward(clean(seed.data), period); source = "the August report"; }
       else { data = clean({}); source = "new"; }
