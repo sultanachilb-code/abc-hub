@@ -24,14 +24,14 @@ table.d{width:100%;border-collapse:collapse;font-size:.86rem}
 .d .ed{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);font-size:.9rem;color:var(--muted)}
 .d .ed:hover{border-color:var(--brand-2);color:var(--brand-2)}
 .gridwrap{overflow-x:auto}
-table.d.edit{min-width:1180px}
+table.d.edit{min-width:1320px}
 .d.edit td{padding:3px 4px}
 .d.edit td.dv{padding:3px 8px;white-space:nowrap;font-size:.82rem}
 .ci{width:100%;min-width:0;border:1px solid transparent;background:transparent;border-radius:8px;padding:7px 8px;font:inherit;color:inherit;outline:none}
 .ci:hover{border-color:var(--line)}
 .ci:focus{border-color:var(--brand-2);background:var(--surface);box-shadow:0 0 0 3px rgba(123,75,176,.12)}
 .d.edit td:nth-child(1){min-width:170px}.d.edit td:nth-child(1) .ci{font-weight:800}
-.d.edit td:nth-child(2){min-width:150px}.d.edit td:nth-child(5){min-width:190px}
+.d.edit td:nth-child(2){min-width:150px}.d.edit td:nth-child(3){min-width:160px}.d.edit td:nth-child(5){min-width:230px}
 .d.edit tr.newrow td{background:rgba(200,162,74,.07)}
 .d.edit tr.newrow .ci::placeholder{color:var(--brand-2);font-weight:700}
 .d.edit tr.bad td{background:rgba(192,57,43,.06)}
@@ -273,9 +273,20 @@ async function importFile(file){
       <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Import ${list.length}</button></div>`;
     d.onclick = async ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; if (!b || b.dataset.v === "0") return d.close();
       b.disabled = true; b.textContent = "Importing…";
-      try { const r = await dapi("import", { rows: list }); d.close();
-        toast(`${r.added} added · ${r.updated} updated${r.skippedCount ? ` · ${r.skippedCount} skipped` : ""}`); load(); }
-      catch (er){ d.close(); toast(er.message, true); } };
+      /* same person twice in the sheet → both kept */
+      const seen = new Set(), key = o => low(o.tenant).replace(/[^a-z0-9]+/g, " ").trim() + "|" + low(o.employee || o.mobile).replace(/[^a-z0-9]+/g, " ").trim();
+      list.forEach(o => { const k = key(o); if (seen.has(k)) o.dup = true; seen.add(k); });
+      const T = { added: 0, updated: 0, skipped: [] };
+      try {
+        for (let i = 0; i < list.length; i += 40){
+          b.textContent = `Importing ${Math.min(i + 40, list.length)} / ${list.length}…`;
+          const r = await dapi("import", { rows: list.slice(i, i + 40), offset: i });
+          T.added += r.added; T.updated += r.updated; T.skipped.push(...r.skipped);
+        }
+        d.close(); load();
+        toast(`${T.added} added · ${T.updated} updated${T.skipped.length ? ` · ${T.skipped.length} skipped` : ""}`);
+        if (T.skipped.length) setTimeout(() => confirmBox("Some rows were not imported", T.skipped.slice(0, 20).map(x => `Row ${x.row}: ${esc(x.why)}`).join("<br>"), "OK"), 600);
+      } catch (er){ d.close(); load(); toast(`Stopped after ${T.added + T.updated} rows: ${er.message}`, true); } };
     d.showModal();
   } catch (e){ toast(e.message, true); }
 }
