@@ -12,6 +12,11 @@
     { "binding": "CLEANER", "service": "abcv-admin-access" },
     { "binding": "FOOTFALL", "service": "footfall-hub" }
   ],
+  /* Mail relay (Google Apps Script). The URL is not secret, so it lives here and survives every deploy.
+     MAIL_RELAY_KEY stays a Secret in the Cloudflare dashboard — never put it in this file. */
+  "vars": {
+    "MAIL_RELAY_URL": "https://script.google.com/macros/s/AKfycbwmTh7hwLaMFRD8oUXgUorsNaZCYO07QQeoOimdZJ4TnIN6WyBKl08a6p7O_t4IGvG2/exec"
+  },
   "triggers": { "crons": ["*/2 * * * *"] },
   "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" } ] },
   "migrations": [ { "tag": "v1-emergency-pager", "new_sqlite_classes": ["EmergencyPager"] } ]
