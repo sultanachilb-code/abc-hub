@@ -1,15 +1,13 @@
-ABC Operations Hub — Two-step login (30 Sep 2026) — separate package
-Install: copy worker.js, index.html, modules/twofa.js (new), tools/qrcode.js (new), docs/ into the abc-hub folder (replace), then deploy.
-No database steps — the tables are created on the first request. Nobody is affected until you turn it on.
+ABC Operations Hub — Executive Report: sales local only (30 Sep 2026) — separate package
+Install: copy modules/, tools/, data/, docs/ into the abc-hub folder (replace), then deploy.
+  modules/exec.js · tools/exec.html · tools/exec-sales.js (new) · data/exec-seed.js · docs/FEATURE-exec-report.md
 
-Turn it on safely (recommended order)
-1. Yourself first: Profile settings → Two-step login →
-     on your phone (hub on the Home Screen, alerts on): "Use this phone"  → Face ID once → save the 8 backup codes
-     and/or "Authenticator app → Set up" (QR on the laptop, or "Add to authenticator app" on the phone).
-2. Sign out and sign in on the laptop: you get a number → tap the phone notification → pick the number → Face ID → green tick.
-3. Hub administration → People & roles → Two-step login → tick the roles that must use it
-   (suggested: Hub administrators, Property Advisor, Mall Directors, CDSO, Mall / Operations Managers). Save.
-   People in those roles set it up at their next sign-in.
-4. Lost or changed phone: People & roles → "Reset 2-step" on that person.
+How to use each month
+1. Open Executive Report → Import sales → choose "Leasing Sales Performance YTD <year>.xlsx".
+2. All five flagships fill in at once (switch the tabs). Change anything you want in Edit data → Footfall & Sales.
+3. Export PDF (or PDF – all malls).
+4. Close the page: the sales are gone. Nothing was sent to the hub.
+Footfall (the two footfall columns) is still saved in the hub as before.
 
-To go back: copy revert/worker.js and revert/index.html over the abc-hub folder and deploy (sign-in returns to password only).
+On the first request after deploying, the hub erases the sales that were saved in past months (one time).
+To go back: copy the files in revert/ over the abc-hub folder and deploy (the erased sales do not come back).
