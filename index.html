@@ -63,6 +63,33 @@ button{background:none;border:0;cursor:pointer}
 .auth-card h1{font-size:1.4rem;font-weight:800}
 .auth-card p.sub{color:var(--muted);font-size:.92rem;margin:4px 0 22px;line-height:1.45}
 .auth-card .btn{width:100%;margin-top:6px}
+
+/* ---------- Two-step login feature ---------- */
+.tf-num{font-size:3.4rem;font-weight:800;letter-spacing:.06em;text-align:center;color:var(--brand);margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.tf-wait{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:.86rem;margin-bottom:14px}
+.tf-spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--brand-2);animation:tfspin 1s linear infinite}
+@keyframes tfspin{to{transform:rotate(360deg)}}
+.tf-links{display:grid;gap:4px;margin-top:10px;text-align:center}
+.tf-links button{color:var(--brand-2);font-weight:700;font-size:.86rem;padding:6px}
+.tf-code{font-size:1.5rem!important;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums}
+.tf-tick{width:96px;height:96px;border-radius:50%;margin:10px auto 14px;display:grid;place-items:center;background:#1E9E5A;color:#fff;animation:tfpop .45s cubic-bezier(.2,1.5,.4,1) both}
+.tf-tick.no{background:var(--alert)}
+.tf-tick svg{width:52px;height:52px;stroke-dasharray:60;stroke-dashoffset:60;animation:tfdraw .5s .2s ease forwards}
+@keyframes tfpop{from{transform:scale(.2);opacity:0}}
+@keyframes tfdraw{to{stroke-dashoffset:0}}
+.tf-picks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.tf-picks button{height:74px;border-radius:18px;border:2px solid var(--line);font-size:1.9rem;font-weight:800;color:var(--text);background:var(--surface)}
+.tf-picks button:active{transform:scale(.96);border-color:var(--brand-2)}
+.tf-dev{background:var(--paper);border-radius:12px;padding:10px 12px;font-size:.9rem;margin:6px 0 4px}
+.tf-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.tf-row .main{flex:1;min-width:0}.tf-row b{display:block;font-size:.92rem}.tf-row small{color:var(--muted);font-size:.8rem}
+.tf-on{font-size:.72rem;font-weight:800;color:var(--ok);background:rgba(46,139,87,.12);border-radius:999px;padding:2px 8px;margin-left:6px}
+.tf-key{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.05rem;letter-spacing:.08em;background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:10px;text-align:center;margin:8px 0;word-break:break-all}
+.tf-qr{display:grid;place-items:center;margin:8px 0}.tf-qr img{width:168px;height:168px;image-rendering:pixelated;background:#fff;padding:6px;border-radius:10px}
+.tf-bc{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0;font-family:ui-monospace,Menlo,Consolas,monospace}
+.tf-bc span{background:var(--paper);border-radius:8px;padding:7px;text-align:center;font-weight:700}
+.tf-note{font-size:.8rem;color:var(--muted);line-height:1.45}
+.tf-trust{display:flex;align-items:center;gap:8px;font-size:.86rem;margin:10px 0 0;cursor:pointer}
 #boot{display:grid;place-items:center;background:var(--ink)}
 #boot img{width:64px;animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.45;transform:scale(.94)}}
@@ -741,6 +768,7 @@ async function boot(){
   }
   SITES = ME.sites; ROLES = ME.roles;
   if (ME.user.mustChange) return authScreen("change");
+  if (ME.user.twofa && ME.user.twofa.setupNeeded) return twofaSetupScreen();   // Two-step login feature: required for this role
   startHub();
 }
 function authScreen(mode, errText){
@@ -772,7 +800,7 @@ function authScreen(mode, errText){
     if (mode === "error") return location.reload();
     go.disabled = true; msg("");
     try {
-      if (mode === "login") await api("login", { email: $("#aEmail").value, password: $("#aPass").value });
+      if (mode === "login"){ const r = await api("login", { email: $("#aEmail").value, password: $("#aPass").value }); if (r && r.twofa) return twofaLogin(r.twofa); }
       if (mode === "setup") await api("setup", { name: $("#aName").value, email: $("#aEmail").value, password: $("#aPass").value });
       if (mode === "change") await api("password", { current: $("#aCur").value, next: $("#aPass").value });
       boot();
@@ -806,7 +834,8 @@ function startHub(){
   buildToolsMenu();
   loadToolSummary();
   setInterval(() => { if (!document.hidden){ loadHealth(); loadNotifications(); loadToolSummary(); } }, 60 * 1000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadNotifications(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden){ loadNotifications(); checkApprovals(); } });
+  checkApprovals();
   route();
   setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
 }
@@ -872,6 +901,8 @@ async function profileSheet(focus){
         <div class="pf-row"><span>Flagships access</span><div class="pf-chips">${access ? `<i>${access}</i>` : (P0.access || []).map(x => `<i>${esc(x.name)}</i>`).join("") || "—"}</div></div>
       </div>
       <p class="pf-note">Your name, email and flagships are set by the hub administrator. You can change your picture and password.</p>
+      <div class="set-label">Two-step login</div>
+      <div id="tfBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Password</div>
       <div class="pf-pw" id="pfPw"><button class="btn ghost small" id="pwOpen">Change password</button></div>
       <div class="set-label">Appearance</div>
@@ -921,6 +952,7 @@ async function profileSheet(focus){
   };
   if (!sheet.open){ sheet.showModal(); sheet.addEventListener("close", () => sheet.classList.remove("pf-sheet"), { once: true }); }
   renderPushBox();
+  renderTwofaBox();
   if (focus === "alerts") setTimeout(() => $("#pfAlerts") && $("#pfAlerts").scrollIntoView({ block: "start", behavior: "smooth" }), 250);
 }
 /* the drawn cover: atrium rings, a gold arc like the hub's Recent line, a floor scale, a dot grid — then the logo and the flagship */
@@ -981,6 +1013,228 @@ async function renderPushBox(msg){
       const lv = t.closest("#segLevel button");
       if (lv){ await pushOn(lv.dataset.v); return renderPushBox({ ok: true, text: lv.dataset.v === "all" ? "You'll get every event." : "You'll get urgent and important events only." }); }
     } catch (er){ renderPushBox({ ok: false, text: er.message }); }
+  };
+}
+
+
+/* =====================================================================
+   TWO-STEP LOGIN — sign-in step, approving on the phone, setup (see docs/FEATURE-two-step.md)
+   ===================================================================== */
+const tfB64u = buf => { const a = new Uint8Array(buf); let s = ""; for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const tfUnb64u = s => b64ToBytes(s);
+const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+let tfPoll = 0;
+/* ---- laptop (or any device): after the password ---- */
+function twofaLogin(t, view){
+  clearInterval(tfPoll);
+  const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
+  const hasApprove = t.methods.includes("approve") && t.challenge, hasCode = t.methods.includes("code");
+  view = view || (hasApprove ? "approve" : hasCode ? "code" : "backup");
+  const trust = `<label class="tf-trust"><input type="checkbox" id="tfTrust"> Trust this device for 30 days</label>`;
+  const links = [view !== "approve" && hasApprove ? `<button data-v="approve">Approve on my phone instead</button>` : "",
+    view !== "code" && hasCode ? `<button data-v="code">Use a 6-digit code instead</button>` : "",
+    view !== "backup" ? `<button data-v="backup">Use a backup code</button>` : "",
+    `<button data-v="cancel">Cancel</button>`].join("");
+  let body;
+  if (view === "approve"){
+    body = `<h1>Approve on your phone</h1><p class="sub">We sent a request to your phone${t.challenge.pushed ? "" : " (if nothing arrives, open the hub on your phone)"}. Open it and pick this number:</p>
+      <div class="tf-num" id="tfNum">${t.challenge.number}</div>
+      <div class="tf-wait" id="tfWait"><span class="tf-spin"></span><span id="tfLeft">Waiting for your phone…</span></div><div id="aMsg"></div>
+      ${window.PublicKeyCredential && /android|iphone|ipad/i.test(navigator.userAgent) ? `<button class="btn ghost" id="tfHere" style="height:auto;min-height:44px">This is my phone — confirm with Face ID / fingerprint</button>` : ""}${trust}`;
+  } else {
+    body = `<h1>${view === "code" ? "Enter the code" : "Enter a backup code"}</h1><p class="sub">${view === "code" ? "Open your authenticator app and type the 6-digit code for ABC Operations Hub." : "Use one of the backup codes you saved when you turned on two-step login. Each code works once."}</p>
+      <div id="aMsg"></div><label class="field"><span>${view === "code" ? "6-digit code" : "Backup code"}</span><input id="tfCode" class="tf-code" ${view === "code" ? 'inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="––––––"' : 'maxlength="9" placeholder="XXXX-XXXX" style="text-transform:uppercase"'}></label>
+      <button class="btn" id="tfGo">Confirm</button>${trust}`;
+  }
+  show("auth");
+  $("#authCard").innerHTML = `${logo}${body}<div class="tf-links">${links}</div>`;
+  const msg = (x, cls = "err") => { const m = $("#aMsg"); if (m) m.innerHTML = x ? `<div class="msg ${cls}">${esc(x)}</div>` : ""; };
+  $("#authCard").onclick = async e => {
+    const v = e.target.closest("[data-v]"); if (!v) return;
+    if (v.dataset.v === "cancel"){ clearInterval(tfPoll); return authScreen("login"); }
+    if (v.dataset.v === "resend"){ try { const r = await api("login/2fa/resend", {}); t.challenge = r.challenge; twofaLogin(t, "approve"); } catch (er){ msg(er.message); } return; }
+    twofaLogin(t, v.dataset.v);
+  };
+  if (view === "approve"){
+    const exp = Date.parse(t.challenge.expiresAt);
+    const tick = async () => {
+      const left = Math.max(0, Math.round((exp - Date.now()) / 1000));
+      const l = $("#tfLeft"); if (l) l.textContent = `Waiting for your phone… ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+      try {
+        const r = await api("login/2fa/status", { id: t.challenge.id, trust: !!($("#tfTrust") || {}).checked });
+        if (r.signedIn){ clearInterval(tfPoll); $("#tfWait").outerHTML = `<div class="tf-tick">${TICK}</div>`; $("#tfNum").remove(); setTimeout(boot, 900); return; }
+        if (r.status === "denied" || r.status === "expired" || left <= 0){
+          clearInterval(tfPoll);
+          $("#tfWait").outerHTML = `<div class="tf-tick no">${CROSS}</div><p class="sub" style="text-align:center">${r.status === "denied" ? "The request was declined on the phone." : "The request expired."}</p>`;
+          $("#tfNum").remove();
+          $("#authCard .tf-links").insertAdjacentHTML("afterbegin", `<button data-v="resend">Send a new request</button>`);
+        }
+      } catch (er){ if (er.status === 401){ clearInterval(tfPoll); authScreen("login"); } }
+    };
+    tfPoll = setInterval(tick, 2000); tick();
+    const here = $("#tfHere");
+    if (here) here.onclick = async () => {
+      try {
+        const pk = (await api("login/2fa/passkey-options", {})).publicKey;
+        const cred = await navigator.credentials.get({ publicKey: { challenge: tfUnb64u(pk.challenge), rpId: pk.rpId, timeout: pk.timeout, userVerification: "required",
+          allowCredentials: pk.allowCredentials.map(c => ({ type: "public-key", id: tfUnb64u(c.id), transports: c.transports })) } });
+        const r = await api("login/2fa/passkey", { trust: !!($("#tfTrust") || {}).checked, assertion: { id: tfB64u(cred.rawId), authenticatorData: tfB64u(cred.response.authenticatorData),
+          clientDataJSON: tfB64u(cred.response.clientDataJSON), signature: tfB64u(cred.response.signature) } });
+        if (r.signedIn){ clearInterval(tfPoll); boot(); }
+      } catch (er){ msg(er.name === "NotAllowedError" ? "Face ID / fingerprint was cancelled, or this is not the phone set up for approvals." : er.message); }
+    };
+  } else {
+    const go = async () => {
+      const b = $("#tfGo"); b.disabled = true; msg("");
+      try { const r = await api("login/2fa/code", { code: $("#tfCode").value, trust: !!$("#tfTrust").checked }); if (r.signedIn) boot(); }
+      catch (er){ msg(er.message); b.disabled = false; if (er.status === 401 && /timed out/.test(er.message)) setTimeout(() => authScreen("login"), 1500); }
+    };
+    $("#tfGo").onclick = go; $("#tfCode").onkeydown = e => { if (e.key === "Enter") go(); };
+    setTimeout(() => $("#tfCode").focus(), 50);
+  }
+}
+/* ---- the phone: approve with the number + Face ID / fingerprint ---- */
+let tfShown = "";
+async function checkApprovals(){
+  if (!ME || !(ME.user.twofa || {}).on) return;
+  try { const r = await api("2fa/pending"); if (r.id && r.id !== tfShown) approveSheet(r.id); } catch {}
+}
+async function approveSheet(id){
+  tfShown = id;
+  let d; try { d = await api("2fa/approve/get?id=" + encodeURIComponent(id)); } catch (e){ d = { status: "error", error: e.message }; }
+  if (location.hash.startsWith("#/approve/")) history.replaceState(null, "", "#/");
+  const done = (ok, text) => {
+    sheet.innerHTML = `<div class="sheet-body" style="padding:26px 22px;text-align:center"><div class="tf-tick ${ok ? "" : "no"}">${ok ? TICK : CROSS}</div><b style="font-size:1.1rem">${esc(text)}</b></div>
+      <div class="sheet-f"><button class="btn" data-close>Done</button></div>`;
+    if (!sheet.open) sheet.showModal();
+    if (ok) setTimeout(() => sheet.open && sheet.close(), 2500);
+  };
+  sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
+  if (d.status !== "pending") return done(false, d.status === "approved" || d.status === "used" ? "This sign-in was already approved." : d.status === "denied" ? "This sign-in was declined." : d.status === "expired" ? "This request has expired. Sign in again on the other device." : (d.error || "Request not found."));
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Is this you signing in?</b><small>ABC Operations Hub</small></div></div>
+    <div class="sheet-body"><div class="tf-dev">${esc(d.device)} · ${esc(d.time)}</div>
+      <p class="tf-note" style="margin-top:10px">Pick the number shown on the other screen, then confirm with Face ID, fingerprint or your phone PIN.</p>
+      <div class="tf-picks">${d.options.map(n => `<button data-pick="${n}">${n}</button>`).join("")}</div>
+      <div id="tfMsg"></div></div>
+    <div class="sheet-f" style="justify-content:space-between"><button class="btn ghost" data-deny style="color:var(--alert)">This wasn't me</button><button class="btn ghost" data-close>Later</button></div>`;
+  sheet.onclick = async e => {
+    if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
+    if (e.target.closest("[data-deny]")){ await api("2fa/approve/decide", { id, deny: true }).catch(() => {}); return done(false, "Blocked. The sign-in was stopped and your administrator was told."); }
+    const b = e.target.closest("[data-pick]"); if (!b) return;
+    try {
+      const pk = d.publicKey;
+      const cred = await navigator.credentials.get({ publicKey: { challenge: tfUnb64u(pk.challenge), rpId: pk.rpId, timeout: pk.timeout, userVerification: "required",
+        allowCredentials: pk.allowCredentials.map(c => ({ type: "public-key", id: tfUnb64u(c.id), transports: c.transports })) } });
+      const r = await api("2fa/approve/decide", { id, pick: Number(b.dataset.pick), assertion: { id: tfB64u(cred.rawId),
+        authenticatorData: tfB64u(cred.response.authenticatorData), clientDataJSON: tfB64u(cred.response.clientDataJSON), signature: tfB64u(cred.response.signature) } });
+      if (r.status === "approved") done(true, "Approved — the other device is signing in.");
+      else done(false, "That was not the number on the other screen, so the sign-in was blocked.");
+    } catch (er){ $("#tfMsg").innerHTML = `<div class="msg err">${esc(er.name === "NotAllowedError" ? "Face ID / fingerprint was cancelled. Pick the number again." : er.message)}</div>`; }
+  };
+  if (!sheet.open) sheet.showModal();
+}
+/* ---- setup (Profile settings → Two-step login, or the required-setup screen) ---- */
+async function renderTwofaBox(){
+  const box = $("#tfBox"); if (!box) return;
+  let st; try { st = await api("2fa/status"); } catch (e){ box.innerHTML = `<p class="brief-empty">${esc(e.message)}</p>`; return; }
+  const wa = !!(window.PublicKeyCredential && navigator.credentials);
+  box.innerHTML = `${st.required ? `<p class="tf-note" style="margin-bottom:8px">Required for your role — keep at least one way on.</p>` : ""}
+    <div class="tf-row"><div class="main"><b>Approve on phone${st.approveOn ? `<span class="tf-on">On</span>` : ""}</b><small>${st.approveOn ? esc(st.approveDevice) + " · pick the number, then Face ID / fingerprint" : "Get a notification, pick the number shown on the laptop, confirm with Face ID or fingerprint."}</small></div>
+      ${st.approveOn ? `<button class="btn ghost small" data-tf="offApprove">Turn off</button>` : wa ? `<button class="btn small" data-tf="setApprove">Use this phone</button>` : `<small>Not available in this browser</small>`}</div>
+    <div class="tf-row"><div class="main"><b>Authenticator app${st.totpOn ? `<span class="tf-on">On</span>` : ""}</b><small>6-digit code from Microsoft / Google Authenticator — works without signal.</small></div>
+      ${st.totpOn ? `<button class="btn ghost small" data-tf="offTotp">Turn off</button>` : `<button class="btn small" data-tf="setTotp">Set up</button>`}</div>
+    ${st.approveOn || st.totpOn ? `<div class="tf-row"><div class="main"><b>Backup codes</b><small>${st.backupLeft} left · for when the phone is lost</small></div><button class="btn ghost small" data-tf="newBackup">New codes</button></div>
+    <div class="tf-row"><div class="main"><b>Trusted devices</b><small>${st.trusted ? `${st.trusted} device${st.trusted === 1 ? "" : "s"} skip the second step for 30 days` : "None"}</small></div>${st.trusted ? `<button class="btn ghost small" data-tf="forget">Forget them</button>` : ""}</div>` : ""}
+    <div id="tfMsg2"></div>`;
+  box.onclick = e => { const b = e.target.closest("[data-tf]"); if (b) twofaAction(b.dataset.tf, box); };
+}
+function tfBackupHtml(codes){
+  return `<p class="tf-note" style="margin-top:12px"><b>Your backup codes</b> — each works once if you lose your phone. Save them somewhere safe (they are shown only now).</p>
+    <div class="tf-bc">${codes.map(c => `<span>${esc(c)}</span>`).join("")}</div><button class="btn ghost small" data-copycodes="${esc(codes.join(" "))}">Copy codes</button>`;
+}
+async function twofaAction(a, box, onDone){
+  const note = (t, ok) => { const m = box.querySelector("#tfMsg2") || box; m.insertAdjacentHTML("beforeend", ""); const x = box.querySelector("#tfMsg2"); if (x) x.innerHTML = t ? `<div class="msg ${ok ? "okm" : "err"}" style="margin-top:8px">${t}</div>` : ""; };
+  const after = () => { if (!onDone) renderTwofaBox(); if (ME) ME.user.twofa = Object.assign(ME.user.twofa || {}, { on: true, setupNeeded: false }); };
+  try {
+    if (a === "setApprove"){
+      if (!pushSupported()) throw new Error("This browser cannot receive notifications. On iPhone, add the hub to the Home Screen and open it from there.");
+      let sub = await currentSub();
+      if (!sub){ await pushOn("important"); sub = await currentSub(); }
+      if (!sub) throw new Error("Turn on alerts on this phone first.");
+      const o = (await api("2fa/approve/options", {})).publicKey;
+      const cred = await navigator.credentials.create({ publicKey: { ...o, challenge: tfUnb64u(o.challenge), user: { ...o.user, id: tfUnb64u(o.user.id) } } });
+      const spki = cred.response.getPublicKey && cred.response.getPublicKey();
+      if (!spki) throw new Error("This phone cannot be used for approvals — use the authenticator app instead.");
+      const r = await api("2fa/approve/register", { id: tfB64u(cred.rawId), publicKey: tfB64u(spki), alg: cred.response.getPublicKeyAlgorithm ? cred.response.getPublicKeyAlgorithm() : -7,
+        clientDataJSON: tfB64u(cred.response.clientDataJSON), endpoint: sub.endpoint });
+      after();
+      if (r.backup) twofaShowCodes(r.backup, "Approve on phone is on", onDone);
+      else if (onDone) onDone(); else note("Approve on phone is on for this phone.", true);
+      return;
+    }
+    if (a === "setTotp") return twofaTotpSetup(box, onDone);
+    if (a === "newBackup"){ const r = await api("2fa/backup/new", {}); twofaShowCodes(r.backup, "New backup codes"); return; }
+    if (a === "forget"){ await api("2fa/trusted/clear", {}); renderTwofaBox(); return; }
+    if (a === "offApprove" || a === "offTotp"){
+      const pw = prompt("Enter your password to turn this off"); if (!pw) return;
+      await api("2fa/off", { what: a === "offApprove" ? "approve" : "totp", password: pw }); renderTwofaBox(); return;
+    }
+  } catch (e){ note(esc(e.name === "NotAllowedError" ? "Face ID / fingerprint was cancelled." : e.message)); }
+}
+function twofaShowCodes(codes, title, then){
+  sheet.classList.remove("pf-sheet");
+  sheet.innerHTML = `<div class="sheet-h"><div><b>${esc(title)}</b></div></div><div class="sheet-body">${tfBackupHtml(codes)}</div><div class="sheet-f"><button class="btn" data-close>I saved them</button></div>`;
+  sheet.onclick = e => { const c = e.target.closest("[data-copycodes]"); if (c){ navigator.clipboard.writeText(c.dataset.copycodes).then(() => c.textContent = "Copied ✓").catch(() => {}); return; }
+    if (e.target.closest("[data-close]")){ sheet.close(); if (then) then(); } };
+  if (!sheet.open) sheet.showModal();
+}
+function qrReady(){ return window.qrcode ? Promise.resolve() : new Promise((res, rej) => { const s = document.createElement("script"); s.src = "/tools/qrcode.js"; s.onload = res; s.onerror = rej; document.head.append(s); }); }
+async function twofaTotpSetup(box, onDone){
+  const r = await api("2fa/totp/start", {});
+  const key = r.secret.match(/.{1,4}/g).join(" ");
+  const phone = /android|iphone|ipad/i.test(navigator.userAgent);
+  sheet.classList.remove("pf-sheet");
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Authenticator app</b><small>Microsoft Authenticator, Google Authenticator or Authy</small></div></div>
+    <div class="sheet-body">
+      ${phone ? "" : `<p class="tf-note">Scan this with the app on your phone:</p><div class="tf-qr" id="tfQr"></div>`}
+      <a class="btn" href="${esc(r.uri)}" style="width:100%;margin:6px 0">Add to authenticator app</a>
+      <div style="text-align:center"><button class="btn ghost small" id="tfCopy" style="border:0;color:var(--brand-2)">Can't open it? Copy setup key</button></div>
+      <div class="tf-key" id="tfKey">${esc(key)}</div>
+      <label class="field" style="margin-top:12px"><span>Enter the 6-digit code from the app</span><input id="tfCode" class="tf-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="––––––"></label>
+      <div id="tfErr"></div>
+    </div>
+    <div class="sheet-f"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="tfConfirm">Confirm</button></div>`;
+  if (!phone) qrReady().then(() => { const q = qrcode(0, "M"); q.addData(r.uri); q.make(); $("#tfQr").innerHTML = `<img alt="QR code" src="${q.createDataURL(5, 1)}">`; }).catch(() => {});
+  sheet.onclick = async e => {
+    if (e.target === sheet || e.target.closest("[data-close]")){ sheet.close(); return; }
+    if (e.target.id === "tfCopy"){ try { await navigator.clipboard.writeText(r.secret); e.target.textContent = "Setup key copied ✓"; } catch { e.target.textContent = "Select the key below and copy it"; } }
+    if (e.target.id === "tfConfirm"){
+      try { const x = await api("2fa/totp/confirm", { code: $("#tfCode").value });
+        if (ME) ME.user.twofa = Object.assign(ME.user.twofa || {}, { on: true, setupNeeded: false });
+        if (x.backup) twofaShowCodes(x.backup, "Authenticator app is on", onDone); else { sheet.close(); if (onDone) onDone(); }
+        if (!onDone) setTimeout(renderTwofaBox, 300);
+      } catch (er){ $("#tfErr").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+    }
+  };
+  if (!sheet.open) sheet.showModal();
+  setTimeout(() => $("#tfCode") && $("#tfCode").focus(), 80);
+}
+/* required for the role and not set up yet: the hub opens only after one way is on */
+function twofaSetupScreen(){
+  show("auth");
+  const wa = !!(window.PublicKeyCredential && navigator.credentials), phone = /android|iphone|ipad/i.test(navigator.userAgent);
+  $("#authCard").innerHTML = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div><h1>Turn on two-step login</h1>
+    <p class="sub">Your administrator made two-step login required for your role. Choose one way to continue — you can add the other later in Profile settings.</p>
+    <div id="tfMsg2"></div>
+    ${wa && phone ? `<button class="btn" data-tf="setApprove" style="height:auto;min-height:48px;padding:10px 14px">Approve on this phone (Face ID / fingerprint)</button>` : ""}
+    <button class="btn ${wa && phone ? "ghost" : ""}" data-tf="setTotp" style="margin-top:8px;height:auto;min-height:48px;padding:10px 14px">Use an authenticator app (6-digit code)</button>
+    ${wa && !phone ? `<p class="tf-note" style="margin-top:12px">To approve sign-ins with your phone instead, open the hub on your phone and choose “Approve on this phone” there.</p>` : ""}
+    <div class="tf-links"><button data-out>Sign out</button></div>`;
+  const card = $("#authCard");
+  card.onclick = async e => {
+    if (e.target.closest("[data-out]")){ await api("logout", {}).catch(() => {}); return location.reload(); }
+    const b = e.target.closest("[data-tf]"); if (b) twofaAction(b.dataset.tf, card, () => boot());
   };
 }
 
@@ -1828,15 +2082,16 @@ const ACCESS_NOTE = {
   ADMIN: "Everything, plus Hub administration."
 };
 async function adminUsers(body, editing){
-  const [d, ms] = await Promise.all([api("admin/users"), api("admin/morning-status").catch(() => null)]);
+  const [d, ms, tf] = await Promise.all([api("admin/users"), api("admin/morning-status").catch(() => null), api("admin/2fa/policy").catch(() => ({ roles: [], on: {} }))]);
   const e = editing || {};
   const last = ms && ms.last ? `Last sent ${esc(fmtLocal(ms.last.at))} to ${ms.last.sent} ${ms.last.sent === 1 ? "person" : "people"}${ms.last.failed ? ` · <span style="color:var(--alert)">${ms.last.failed} failed</span>` : ""}` : "Not sent yet";
   const U = d.users;
   const row = u => `<div class="row-i ${u.active ? "" : "off"}"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(u.name))}</span>
-      <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.positionLabel || u.roleLabel) : "Switched off"}</span></b>
+      <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.positionLabel || u.roleLabel) : "Switched off"}</span>${tf.on[u.email] ? ` <span class="badge live" title="${tf.on[u.email].phone ? "Approves on phone" : ""}${tf.on[u.email].phone && tf.on[u.email].code ? " · " : ""}${tf.on[u.email].code ? "Authenticator app" : ""}">2-step on</span>` : tf.roles.includes(u.role) ? ` <span class="badge off">2-step not set up</span>` : ""}</b>
       <small>${esc(u.email)}${d.multiRoles.includes(u.role) ? " · " + esc(u.sitesLabel || "no flagship ticked") : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</small></div>
       <div class="acts"><button class="btn small ghost" data-edit="${esc(u.email)}">Edit</button>
         <button class="btn small ghost" data-reset="${esc(u.email)}">Reset</button>
+        ${tf.on[u.email] ? `<button class="btn small ghost" data-tfreset="${esc(u.email)}" title="Lost phone: they set two-step up again at the next sign-in">Reset 2-step</button>` : ""}
         ${u.email !== ME.user.email ? `<button class="btn small ghost" data-act="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`;
   const vacant = (label, pre) => `<div class="row-i vac"><span class="avatar" style="width:34px;height:34px;font-size:.75rem;background:var(--paper);color:var(--muted)">—</span>
       <div class="main"><b style="color:var(--muted)">Vacant</b><small>${esc(label)}</small></div>
@@ -1893,6 +2148,11 @@ async function adminUsers(body, editing){
       <label class="chk"><input type="checkbox" id="uMorning" ${e.email ? (e.morningEmail ? "checked" : "") : "checked"}> Receive the 08:00 morning brief and the 23:30 End of Day report <small style="color:var(--muted)">(management &amp; leadership)</small></label>
       <div style="display:flex;gap:8px">${e.email || editing ? `<button class="btn ghost" id="uCancel">Cancel</button>` : ""}<button class="btn" id="uSave">${e.email ? "Save changes" : "Add person"}</button></div>
     </div>
+    <div class="panel"><h3>Two-step login</h3>
+      <p class="brief-empty" style="font-size:.86rem;margin-bottom:10px">Required for the roles ticked below: after the password, people approve on their phone (number + Face ID / fingerprint) or type the 6-digit code from an authenticator app. People not set up yet are asked to set it up at their next sign-in.</p>
+      <div class="ticks" id="tfRoles">${["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER", "SUPERVISOR", "SECURITY"].map(r => `<label class="chk"><input type="checkbox" value="${r}" ${tf.roles.includes(r) ? "checked" : ""}> ${esc(d.roles[r] || r)}</label>`).join("")}</div>
+      <div id="tfPolMsg"></div><button class="btn ghost" id="tfPolSave">Save</button>
+    </div>
     <div class="panel"><h3>Morning email · 08:00</h3>
       <p class="brief-empty" style="font-size:.86rem;margin-bottom:12px">${ms && !ms.relay ? `<span style="color:var(--alert)">Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub.</span>` : last}</p>
       <div id="mMsg"></div>
@@ -1902,6 +2162,15 @@ async function adminUsers(body, editing){
   body.onclick = async ev => {
     const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
     const ed = ev.target.closest("[data-edit]"), rs = ev.target.closest("[data-reset]"), ac = ev.target.closest("[data-act]"), nw = ev.target.closest("[data-new]"), pt = ev.target.closest("[data-ptab]");
+    /* Two-step login feature */
+    if (ev.target.id === "tfPolSave"){
+      try { await api("admin/2fa/policy", { roles: [...document.querySelectorAll("#tfRoles input:checked")].map(i => i.value) }); $("#tfPolMsg").innerHTML = `<div class="msg okm">Saved.</div>`; setTimeout(() => adminUsers(body, editing), 800); }
+      catch (er){ $("#tfPolMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+      return;
+    }
+    const tr = ev.target.closest("[data-tfreset]");
+    if (tr){ if (!confirm("Reset two-step login for " + tr.dataset.tfreset + "? Use this when the phone was lost or changed. They set it up again at the next sign-in.")) return;
+      try { await api("admin/2fa/reset", { email: tr.dataset.tfreset }); adminUsers(body, editing); } catch (er){ alert(er.message); } return; }
     try {
       if (pt){ pplTab = pt.dataset.ptab; return adminUsers(body); }
       if (nw){ await adminUsers(body, JSON.parse(nw.dataset.new)); const f = $("#uForm"); f.scrollIntoView({ behavior: "smooth", block: "start" }); $("#uName").focus(); return; }
@@ -1941,6 +2210,8 @@ async function adminUsers(body, editing){
 function route(){
   if (!ME) return;
   const h = location.hash;
+  const ap = h.match(/^#\/approve\/([\w-]+)$/);
+  if (ap){ goHome(); return approveSheet(ap[1]); }   // Two-step login feature: approve a sign-in from the phone
   const m = h.match(/^#\/app\/(.+)$/);
   if (m) return showApp(decodeURIComponent(m[1]));
   if (h === "#/admin") return renderAdmin();

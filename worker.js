@@ -9,7 +9,8 @@ import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
 import { directorySchema, directoryRoute, directoryPublic } from "./modules/directory.js";   // Tenants Directory feature — see docs/FEATURE-directory.md
-import { profileSchema, profileRoute, coversAdmin } from "./modules/profile.js";   // Profile feature — see docs/FEATURE-profile.md
+import { profileSchema, profileRoute, coversAdmin } from "./modules/profile.js";
+import { twofaSchema, twofaGate, twofaPublic, twofaRoute, twofaAdmin, twofaClean, requiredRoles } from "./modules/twofa.js";   // Two-step login feature — see docs/FEATURE-two-step.md   // Profile feature — see docs/FEATURE-profile.md
 import { leadershipRoute } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
 import { automationSchema, automationRun, backupData, eodEmailHtml } from "./modules/automation.js";   // Automation feature (EOD email, daily snapshot, weekly backup) — see docs/FEATURE-automation.md   // Tenant Management feature — see docs/FEATURE-tenant-management.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
@@ -220,6 +221,7 @@ async function ensureSchema(env) {
   await tenantsSchema(env);   // Tenant Management feature
   await directorySchema(env);   // Tenants Directory feature
   await profileSchema(env);     // Profile feature
+  await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
@@ -328,6 +330,7 @@ export default {
       await emergencyRun(env, { raiseEvent, sendPush, now: nowIso }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
       await automationRun(env, { SITES, eodReport, relay, hubUrl: HUB_URL, canSite, isFull }).catch(e => console.error("automation", e && e.message));   // Automation feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
+      await twofaClean(env).catch(() => {});   // Two-step login feature
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
     })());
   }
@@ -346,7 +349,8 @@ async function route(request, env, ctx, url) {
   const body = method === "POST" ? await request.json().catch(() => ({})) : {};
 
   /* ----- public routes ----- */
-  if (path === "login" && method === "POST") return login(env, body);
+  if (path === "login" && method === "POST") return login(env, body, request);
+  if (path.startsWith("login/2fa/")) { const r = await twofaPublic(env, twofaDeps, path, method, body, request); return r instanceof Response ? r : json(r); }   // Two-step login feature
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   if (path === "setup" && method === "POST") return setup(env, body);
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
@@ -358,7 +362,12 @@ async function route(request, env, ctx, url) {
   }
 
   /* ----- signed-in routes ----- */
-  if (path === "me") return ok({ user: userOut(me), sites: SITES, roles: ROLES });
+  if (path === "me") {
+    const [roles, st] = await Promise.all([requiredRoles(env), env.DB.prepare("SELECT totp_on, approve_on FROM user_2fa WHERE email = ?").bind(me.email).first().catch(() => null)]);
+    const on = !!(st && (st.totp_on || st.approve_on));
+    return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES });
+  }
+  if (path.startsWith("2fa/")) { const r = await twofaRoute(env, twofaDeps, path, method, body, url, request, me); if (r) return ok(r); }   // Two-step login feature
   if (path === "profile" || path.startsWith("profile/")) {   // Profile feature
     const r = await profileRoute(env, path, method, body, url, { me, SITES, sitesOf, userOut, now: nowIso });
     if (r instanceof Response) return r;
@@ -404,7 +413,8 @@ async function route(request, env, ctx, url) {
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     /* Automation feature: backup download, backup status, End of Day email test */
-    if (a === "covers") return ok(await coversAdmin(env, method, body, { me, SITES, now: nowIso }));   // Profile feature: flagship covers
+    if (a === "covers") return ok(await coversAdmin(env, method, body, { me, SITES, now: nowIso }));
+    if (a.startsWith("2fa/")) { const r = await twofaAdmin(env, a, method, body); if (r) return ok(r); }   // Two-step login feature   // Profile feature: flagship covers
     if (a === "backup" && method === "GET") {
       const data = await backupData(env);
       return new Response(JSON.stringify(data), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
@@ -454,7 +464,17 @@ async function setup(env, b) {
     VALUES (?,?, 'ADMIN', NULL, ?,?,?, 0, 1, ?)`).bind(email, name, h.salt, h.hash, h.iterations, nowIso()).run();
   return json({ ok: true, data: { created: true } }, 200, { "set-cookie": cookieFor(await makeSession(env, email)) });
 }
-async function login(env, b) {
+/* Two-step login feature: what the module needs from the hub */
+const twofaDeps = {
+  hmac, cookieFor: t => cookieFor(t), makeSession: (env, e) => makeSession(env, e), userOut: u => userOut(u),
+  sendPush: (env, sub, msg) => sendPush(env, sub, msg),
+  checkPassword: async (me, p) => !!p && same(await derive(p, me.salt, me.iterations || ROUNDS), me.hash),
+  alertAdmins: async (env, title, body) => {
+    const { results } = await env.DB.prepare("SELECT p.* FROM push_subs p JOIN users u ON u.email = p.email WHERE u.role = 'ADMIN' AND u.active = 1").all();
+    await Promise.all((results || []).map(sub => sendPush(env, sub, { title, body, url: "/#/admin", tone: "alert", tag: "twofa-denied" })));
+  }
+};
+async function login(env, b, request) {
   const email = String(b.email || "").trim().toLowerCase();
   const password = String(b.password || "");
   if (!email || !password) throw fail("Enter your email and password");
@@ -462,6 +482,7 @@ async function login(env, b) {
   const attempt = u ? await derive(password, u.salt, u.iterations || ROUNDS) : "";
   if (!u || !same(attempt, u.hash)) throw fail("Email or password is incorrect", 401);
   if (!u.active) throw fail("This account is switched off. Contact your administrator.", 403);
+  if (request) { const gate = await twofaGate(env, twofaDeps, request, u, b); if (gate) return gate; }   // Two-step login feature: second step needed
   await env.DB.prepare("UPDATE users SET last_login_at = ? WHERE email = ?").bind(nowIso(), email).run();
   await logUsage(env, u, "signin").catch(() => {});
   return json({ ok: true, data: { user: userOut(u) } }, 200, { "set-cookie": cookieFor(await makeSession(env, email)) });
