@@ -330,6 +330,50 @@ button.bcard:hover{border-color:var(--brand-2)}
 .tile .live.warn{color:var(--warn)}
 .tile.locked{opacity:.45;cursor:not-allowed}
 .tile.locked:hover{background:none}
+/* ---------- Profile feature: menu, profile page, photo ---------- */
+.avatar{overflow:hidden;padding:0}
+.avatar img,.pf-av img,.pm-av img{width:100%;height:100%;object-fit:cover;display:block}
+.menu.pm{min-width:270px;padding:8px;transform-origin:top right;animation:pmIn .32s cubic-bezier(.2,.9,.3,1.18) both}
+@keyframes pmIn{from{opacity:0;transform:scale(.6) translateY(-10px)}}
+.pm-head{display:flex;gap:12px;align-items:center;padding:8px 8px 12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.pm-av{width:46px;height:46px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:800;display:grid;place-items:center;overflow:hidden;flex:none}
+.pm-head b{display:block;font-size:.95rem}.pm-head small{color:var(--muted);font-size:.78rem;word-break:break-all}
+.menu .pm-i{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;animation:pmItem .34s cubic-bezier(.2,1.2,.4,1) both}
+.menu .pm-i:nth-of-type(2){animation-delay:.05s}.menu .pm-i:nth-of-type(3){animation-delay:.1s}
+@keyframes pmItem{from{opacity:0;transform:translateX(14px)}}
+.pm-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--paper);color:var(--brand-2);flex:none}
+.pm-ic svg{width:19px;height:19px}
+.pm-i small{display:block;color:var(--muted);font-weight:500;font-size:.76rem;margin-top:1px}
+.menu .pm-i.out .pm-ic{color:var(--alert)}
+dialog.pf-sheet{width:min(520px,calc(100% - 20px));max-height:calc(100dvh - 24px);overflow:auto;animation:pfIn .36s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes pfIn{from{opacity:0;transform:translateY(26px) scale(.97)}}
+.pf-cover{position:relative;height:150px;background:linear-gradient(135deg,#2A0F45,#7B4BB0 60%,#C8A24A);background-size:cover;background-position:center;border-radius:20px 20px 0 0}
+.pf-cover .pf-flag{position:absolute;left:16px;top:14px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.35);color:#fff;font-weight:800;font-size:.8rem;letter-spacing:.04em;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.pf-x{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;display:grid;place-items:center;font-size:1.1rem}
+.pf-id{display:flex;align-items:flex-end;gap:14px;padding:0 20px;margin-top:-46px;position:relative}
+.pf-av{position:relative;width:104px;height:104px;border-radius:50%;border:4px solid var(--surface);background:var(--gold);color:var(--ink);font-weight:800;font-size:2rem;display:grid;place-items:center;overflow:hidden;flex:none}
+.pf-cam{position:absolute;left:84px;bottom:2px;width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;border:3px solid var(--surface);cursor:pointer}
+.pf-cam svg{width:16px;height:16px}
+.pf-name{padding-bottom:6px;min-width:0}.pf-name b{display:block;font-size:1.2rem;line-height:1.2}.pf-name small{color:var(--muted);font-size:.84rem}
+.pf-rm{font-size:.76rem;color:var(--muted);text-decoration:underline;padding:6px 20px 0}
+.pf-rows{border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden}
+.pf-row{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px;padding:11px 14px;font-size:.9rem;border-bottom:1px solid var(--line)}
+.pf-row:last-child{border-bottom:0}.pf-row span{color:var(--muted);font-size:.8rem;font-weight:700}
+.pf-row b{font-weight:600;word-break:break-word}
+.pf-chips{display:flex;flex-wrap:wrap;gap:5px}.pf-chips i{font-style:normal;font-size:.76rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--paper);border:1px solid var(--line)}
+.pf-note{font-size:.76rem;color:var(--muted);margin:-10px 0 18px}
+.pf-pw{margin-bottom:18px}.pf-pw .field{margin-bottom:10px}
+@media (max-width:480px){.pf-row{grid-template-columns:1fr;gap:2px}.pf-av{width:88px;height:88px}.pf-cam{left:70px}.pf-id{margin-top:-40px}}
+/* Tenants Directory feature: results in the home search */
+.dir-r{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);text-align:left;width:100%;cursor:pointer}
+.dir-r:hover{border-color:var(--brand-2)}
+.dir-r .main{flex:1;min-width:0}.dir-r b{display:block;font-size:.95rem}.dir-r small{display:block;color:var(--muted);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dir-r .lnk{display:flex;gap:6px}.dir-r .lnk a{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--line);color:var(--brand-2)}
+.dir-r .lnk a svg{width:17px;height:17px}
+.dir-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+/* Profile feature: flagship covers (admin) */
+.cov-prev{width:120px;height:52px;border-radius:10px;background:linear-gradient(135deg,#2A0F45,#7B4BB0 60%,#C8A24A);background-size:cover;background-position:center;flex:none}
+
 /* ---------- iOS-style folders (Tenant Management, Policies & Procedures) ---------- */
 .fold .ico.fico{background:var(--surface);border:1px solid var(--line);display:grid;grid-template-columns:repeat(3,13px);grid-auto-rows:13px;gap:3px;padding:7px;align-content:center;justify-content:center;box-sizing:border-box}
 .fico .mi{width:13px;height:13px;border-radius:4px;display:grid;place-items:center;color:#fff}
@@ -591,6 +635,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <button data-t="usage">Usage</button>
       <button data-t="control">Control sheet</button>
       <button data-t="backup">Backup</button>
+      <button data-t="covers">Flagship covers</button>
     </div>
   </div>
   <div class="adm-body" id="admBody"></div>
@@ -737,7 +782,7 @@ function startHub(){
   const first = ME.user.name.split(" ")[0];
   $("#greet").innerHTML = `${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(first)}` +
     `<span class="chip">${esc(ME.user.positionLabel || ME.user.roleLabel)}${["DIRECTOR", "CDSO"].includes(ME.user.role) ? " · " + esc(ME.user.sitesLabel) : ME.user.siteName ? " · " + esc(ME.user.siteName) : ""}</span>`;
-  $("#avatar").textContent = initials(ME.user.name);
+  paintAvatar();
   $("#foot").textContent = `${H.org} · ${APPS.length} systems available to you`;
   buildMenu();
   renderHome();
@@ -754,13 +799,22 @@ function startHub(){
 }
 
 /* ---------- account menu ---------- */
+function avatarInner(){ return ME.user.photoAt ? `<img src="/api/profile/photo?v=${encodeURIComponent(ME.user.photoAt)}" alt="">` : esc(initials(ME.user.name)); }
+function paintAvatar(){ $("#avatar").innerHTML = avatarInner(); }
+const PM_IC = {
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+  admin: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m9 12 2 2 4-4"/>',
+  out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/>'
+};
+const pmIcon = k => `<span class="pm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PM_IC[k]}</svg></span>`;
 function buildMenu(){
   const m = $("#menu");
-  m.innerHTML = `<div class="who"><b>${esc(ME.user.name)}</b><small>${esc(ME.user.email)}</small></div>
-    ${ME.user.role === "ADMIN" ? `<button data-a="admin">Hub administration</button>` : ""}
-    <button data-a="settings">Settings</button>
-    <button data-a="pw">Change password</button>
-    <button data-a="out">Sign out</button>`;
+  m.classList.add("pm");
+  const paint = () => { m.innerHTML = `<div class="pm-head"><span class="pm-av">${avatarInner()}</span><div><b>${esc(ME.user.name)}</b><small>${esc(ME.user.email)}</small></div></div>
+    <button data-a="profile" class="pm-i">${pmIcon("user")}<span>Profile settings<small>Picture, password, appearance, alerts</small></span></button>
+    ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
+    <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
+  paint(); m._paint = paint;
   $("#avatar").onclick = e => { e.stopPropagation(); $("#aiMenu").classList.add("hidden"); $("#npanel").classList.add("hidden"); placePops($("#avatar")); m.classList.toggle("hidden"); };
   document.addEventListener("click", e => {
     m.classList.add("hidden"); $("#aiMenu").classList.add("hidden");
@@ -772,8 +826,7 @@ function buildMenu(){
     const a = e.target.closest("button")?.dataset.a; if (!a) return;
     m.classList.add("hidden");
     if (a === "admin") location.hash = "#/admin";
-    if (a === "pw") changePwDialog();
-    if (a === "settings") settingsDialog();
+    if (a === "profile") profileSheet();
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
 }
@@ -782,33 +835,94 @@ function applyTheme(t){
   if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
   else document.documentElement.removeAttribute("data-theme");
 }
-function settingsDialog(){
-  const theme = store.get("hub.theme", "light");
-  const collapsed = store.get("hub.briefCollapsed", false);
-  sheet.innerHTML = `<div class="sheet-h"><div><b>Settings</b><small>Saved on this device</small></div></div>
-    <div class="sheet-body">
+function settingsDialog(){ return profileSheet("alerts"); }
+/* ---------- Profile feature: LinkedIn-style profile — flagship cover, picture, account, password, appearance, brief, alerts ---------- */
+const CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+async function profileSheet(focus){
+  let P0 = null; try { P0 = await api("profile"); } catch { P0 = { ...ME.user, access: (ME.user.sites || []).map(c => ({ code: c, name: SITES[c] })) }; }
+  const theme = store.get("hub.theme", "light"), collapsed = store.get("hub.briefCollapsed", false);
+  const home = ME.user.site;
+  const cover = home && P0.coverAt ? `background-image:url('/api/profile/cover?site=${home}&v=${encodeURIComponent(P0.coverAt)}')` : "";
+  const access = (P0.access || []).length === Object.keys(SITES).length ? "All flagships" : "";
+  sheet.classList.add("pf-sheet");
+  sheet.innerHTML = `<div class="pf-cover" style="${cover}"><span class="pf-flag">${esc(ME.user.siteName || "ABC")}</span><button class="pf-x" data-close aria-label="Close">✕</button></div>
+    <div class="pf-id"><div class="pf-av" id="pfAv">${avatarInner()}</div>
+      <label class="pf-cam" title="Change your profile picture">${CAM}<input type="file" id="pfFile" accept="image/*" hidden></label>
+      <div class="pf-name"><b>${esc(ME.user.name)}</b><small>${esc(ME.user.positionLabel || ME.user.roleLabel)}</small></div></div>
+    ${ME.user.photoAt ? `<button class="pf-rm" id="pfRm">Remove picture</button>` : ""}
+    <div class="sheet-body" style="padding-top:18px"><div id="pfMsg"></div>
+      <div class="set-label">Account</div>
+      <div class="pf-rows">
+        <div class="pf-row"><span>Name</span><b>${esc(ME.user.name)}</b></div>
+        <div class="pf-row"><span>Email address</span><b>${esc(ME.user.email)}</b></div>
+        <div class="pf-row"><span>Flagship</span><b>${esc(ME.user.siteName || "—")}</b></div>
+        <div class="pf-row"><span>Flagships access</span><div class="pf-chips">${access ? `<i>${access}</i>` : (P0.access || []).map(x => `<i>${esc(x.name)}</i>`).join("") || "—"}</div></div>
+      </div>
+      <p class="pf-note">Your name, email and flagships are set by the hub administrator. You can change your picture and password.</p>
+      <div class="set-label">Password</div>
+      <div class="pf-pw" id="pfPw"><button class="btn ghost small" id="pwOpen">Change password</button></div>
       <div class="set-label">Appearance</div>
       <div class="seg" id="segTheme">${["light","dark","system"].map(t => `<button data-v="${t}" class="${theme === t ? "on" : ""}">${t === "system" ? "Automatic" : t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div>
       <div class="set-label">Daily brief</div>
       <div class="seg" id="segBrief" style="grid-template-columns:1fr 1fr">
         <button data-v="0" class="${collapsed ? "" : "on"}">Show everything</button>
         <button data-v="1" class="${collapsed ? "on" : ""}">Attention only</button></div>
-      <div class="set-label">Alerts on this device</div>
+      <div class="set-label" id="pfAlerts">Alerts on this device</div>
       <div id="pushBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Recently opened</div>
       <button class="btn ghost small" id="setClear" style="margin-bottom:8px">Clear the Recent line</button>
     </div>
     <div class="sheet-f"><button class="btn" data-close>Done</button></div>`;
-  sheet.onclick = e => {
+  const msg = (t, ok) => { $("#pfMsg").innerHTML = t ? `<div class="msg ${ok ? "okm" : "err"}">${esc(t)}</div>` : ""; };
+  const setPhoto = async data => {
+    const r = await api("profile/photo", { data });
+    ME.user.photoAt = r.photoAt; paintAvatar(); $("#menu")._paint && $("#menu")._paint(); profileSheet();
+  };
+  sheet.onclick = async e => {
     if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
     const t = e.target.closest("#segTheme button");
     if (t){ store.set("hub.theme", t.dataset.v); applyTheme(t.dataset.v); $("#segTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b === t)); }
     const b = e.target.closest("#segBrief button");
     if (b){ store.set("hub.briefCollapsed", b.dataset.v === "1"); $("#segBrief").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); renderBrief(false); }
     if (e.target.id === "setClear"){ store.set("hub.recent", []); renderRail(); e.target.textContent = "Cleared ✓"; }
+    if (e.target.id === "pfRm"){ try { await setPhoto(""); } catch (er){ msg(er.message); } }
+    if (e.target.id === "pwOpen"){
+      $("#pfPw").innerHTML = `<label class="field"><span>Current password</span><input id="pwCur" type="password" autocomplete="current-password"></label>
+        <label class="field"><span>New password (8+ characters)</span><input id="pwNew" type="password" autocomplete="new-password"></label>
+        <label class="field"><span>Repeat the new password</span><input id="pwNew2" type="password" autocomplete="new-password"></label>
+        <div style="display:flex;gap:8px"><button class="btn small" id="pwGo">Save password</button><button class="btn ghost small" id="pwCancel">Cancel</button></div>`;
+      $("#pwCur").focus();
+    }
+    if (e.target.id === "pwCancel") $("#pfPw").innerHTML = `<button class="btn ghost small" id="pwOpen">Change password</button>`;
+    if (e.target.id === "pwGo"){
+      if ($("#pwNew").value !== $("#pwNew2").value) return msg("The two new passwords are not the same.");
+      try { await api("password", { current: $("#pwCur").value, next: $("#pwNew").value });
+        $("#pfPw").innerHTML = `<button class="btn ghost small" id="pwOpen">Change password</button>`; msg("Password changed.", true); sheet.scrollTo({ top: 0, behavior: "smooth" }); }
+      catch (er){ msg(er.message); sheet.scrollTo({ top: 0, behavior: "smooth" }); }
+    }
   };
-  sheet.showModal();
+  $("#pfFile").onchange = async ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    try { $("#pfAv").style.opacity = ".5"; await setPhoto(await squareJpeg(f, 360)); }
+    catch (er){ $("#pfAv").style.opacity = ""; msg(er.message || "That picture could not be read."); }
+  };
+  if (!sheet.open){ sheet.showModal(); sheet.addEventListener("close", () => sheet.classList.remove("pf-sheet"), { once: true }); }
   renderPushBox();
+  if (focus === "alerts") setTimeout(() => $("#pfAlerts") && $("#pfAlerts").scrollIntoView({ block: "start", behavior: "smooth" }), 250);
+}
+/* resize on the device: centre square crop (profile) or width-limited (cover) → JPEG data URL */
+function loadImg(file){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file is not a picture this browser can read.")); i.src = URL.createObjectURL(file); }); }
+async function squareJpeg(file, size){
+  const img = await loadImg(file), s = Math.min(img.naturalWidth, img.naturalHeight);
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  c.getContext("2d").drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+  return c.toDataURL("image/jpeg", .86);
+}
+async function wideJpeg(file, maxW){
+  const img = await loadImg(file), w = Math.min(maxW, img.naturalWidth), h = Math.round(img.naturalHeight * w / img.naturalWidth);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+  let q = .85, d = c.toDataURL("image/jpeg", q); while (d.length > 1150000 && q > .45){ q -= .1; d = c.toDataURL("image/jpeg", q); }
+  return d;
 }
 async function renderPushBox(msg){
   const box = $("#pushBox"); if (!box) return;
@@ -1181,6 +1295,40 @@ function openFolder(g, fromEl){
 }
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").classList.contains("on")) $("#folderOv").onkeydown(e); });
 
+/* ---------- Tenants Directory feature: tenants and employees in the home search ---------- */
+const DIRS = { q: "", res: null, t: 0, busy: "" };
+const DIR_IC = { tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>' };
+const dirIco = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${DIR_IC[k]}</svg>`;
+function dirSection(q){
+  if (!byId("directory")) return "";
+  if (DIRS.q !== q){
+    clearTimeout(DIRS.t);
+    DIRS.t = setTimeout(async () => {
+      DIRS.busy = q;
+      try { const r = await api("ops/dir/search?q=" + encodeURIComponent(q)); DIRS.q = q; DIRS.res = r; } catch { DIRS.q = q; DIRS.res = { results: [] }; }
+      if ($("#q").value.trim().toLowerCase() === q) renderHome();
+    }, 250);
+    return DIRS.res && DIRS.res.results.length ? dirHtml(DIRS.res, true) : "";
+  }
+  return DIRS.res && DIRS.res.results.length ? dirHtml(DIRS.res) : "";
+}
+function dirHtml(r, stale){
+  const multi = new Set(r.results.map(x => x.site)).size > 1;
+  return `<section style="${stale ? "opacity:.5" : ""}"><h2>Tenants Directory</h2><div class="dir-list">${r.results.map(x => {
+    const tel = (x.mobile || x.landline || "").replace(/[^\d+]/g, "");
+    return `<div class="dir-r" role="button" tabindex="0" data-dq="${esc(x.employee || x.tenant)}" data-site="${esc(x.site)}"><span class="avatar" style="width:40px;height:40px;background:#3C4F8A;color:#fff">${esc(initials(x.employee || x.tenant))}</span>
+      <span class="main"><b>${esc(x.employee || x.tenant)}</b><small>${esc([x.position, x.employee ? x.tenant : "", x.location, multi ? x.siteName : ""].filter(Boolean).join(" · "))}</small>
+        <small>${esc([x.mobile, x.email].filter(Boolean).join(" · ") || x.landline || "")}</small></span>
+      <span class="lnk">${tel ? `<a href="tel:${esc(tel)}" aria-label="Call">${dirIco("tel")}</a>` : ""}${x.email ? `<a href="mailto:${esc(x.email)}" aria-label="Email">${dirIco("mail")}</a>` : ""}</span></div>`; }).join("")}</div>
+    ${r.more ? `<p class="brief-empty" style="font-size:.8rem;margin-top:8px">More matches — open the directory to see them all.</p>` : ""}</section>`;
+}
+$("#list").addEventListener("click", e => {
+  if (e.target.closest(".dir-r a")) return;
+  const r = e.target.closest(".dir-r"); if (!r) return;
+  e.stopPropagation(); try { localStorage.setItem("hub.dirq", r.dataset.dq); } catch {}
+  launch(byId("directory"));
+}, true);
+
 /* ---------- tiles ---------- */
 function tile(a){
   const ready = appReady(a);
@@ -1208,7 +1356,8 @@ function renderHome(){
     }
     if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(tile).join("")}</div></section>`;
   }
-  $("#list").innerHTML = html || `<p class="empty">No system matches “${esc(q)}”.</p>`;
+  const dir = q.length >= 2 ? dirSection(q) : "";
+  $("#list").innerHTML = dir + html || (DIRS.q === q && DIRS.res && DIRS.res.results.length ? "" : `<p class="empty">No system matches “${esc(q)}”.</p>`);
   $("#brief").classList.toggle("hidden", !!q);
   renderRail();
 }
@@ -1481,7 +1630,7 @@ async function renderAdmin(){
   show("admin");
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
-  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : await adminAnnouncements(body); }
+  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : await adminAnnouncements(body); }
   catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
 }
 async function adminAnnouncements(body, editing){
@@ -1611,6 +1760,20 @@ async function adminControl(body, editing){
       }
     } catch (er){ $("#fMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
   };
+}
+/* Flagship covers — Profile feature: the picture behind everyone's profile at that flagship */
+async function adminCovers(body, res){
+  const d = res || await api("admin/covers");
+  body.innerHTML = `<div class="panel"><h3>Flagship covers</h3>
+    <p class="brief-empty" style="font-size:.9rem;line-height:1.55;margin-bottom:14px">One wide picture per flagship (about 1600 × 500 works best). It shows at the top of the profile of everyone working at that flagship.</p>
+    <div class="rows">${d.covers.map(c => `<div class="row-i"><span class="cov-prev" style="${c.updatedAt ? `background-image:url('/api/profile/cover?site=${c.code}&v=${encodeURIComponent(c.updatedAt)}')` : ""}"></span>
+      <div class="main"><b>${esc(c.name)}</b><small>${c.updatedAt ? `Updated ${esc(fmtLocal(c.updatedAt))} by ${esc(c.updatedBy)}` : "No cover yet — the ABC colours are shown"}</small></div>
+      <div class="acts"><label class="btn small ghost" style="cursor:pointer">${c.updatedAt ? "Replace" : "Upload"}<input type="file" accept="image/*" hidden data-cov="${c.code}"></label>
+        ${c.updatedAt ? `<button class="btn small ghost" data-covrm="${c.code}">Remove</button>` : ""}</div></div>`).join("")}</div></div>`;
+  body.onchange = async e => { const i = e.target.closest("[data-cov]"); if (!i || !i.files[0]) return;
+    try { adminCovers(body, await api("admin/covers", { site: i.dataset.cov, data: await wideJpeg(i.files[0], 1600) })); } catch (er){ alert(er.message); } };
+  body.onclick = async e => { const b = e.target.closest("[data-covrm]"); if (!b) return;
+    adminCovers(body, await api("admin/covers", { site: b.dataset.covrm, data: "" })); };
 }
 /* Backup — Automation feature (weekly email every Sunday 03:00, download any time) */
 async function adminBackup(body){
