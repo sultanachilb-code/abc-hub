@@ -217,6 +217,12 @@ svg .b25{fill:var(--py)} svg .b26{fill:var(--accent)}
 .vn th{font-size:.75rem;color:var(--muted);background:#fafafb}
 .vn input{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:4px}
 .lk{color:var(--accent);font-weight:600}
+/* local sales (never saved) */
+.lsb{max-width:980px;margin:10px auto 0;padding:9px 14px;border-radius:10px;font-size:.86rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px dashed var(--line);background:#fafafb}
+.lsb.on{background:#eaf6ee;border:1px solid #9fd4b3}
+.lsb b{font-weight:700}.lsb .sp{flex:1}
+.lsb .lock{font-size:.75rem;font-weight:700;color:#1e7a4f;background:#fff;border:1px solid #9fd4b3;border-radius:999px;padding:2px 8px}
+.bar .btn.sal{background:#1e7a4f;color:#fff;border-color:#1e7a4f}
 
 </style>
 </head>
@@ -229,15 +235,18 @@ svg .b25{fill:var(--py)} svg .b26{fill:var(--accent)}
   <span class="per">Month <input type="month" id="perIn" aria-label="Report month"></span>
   <div class="acts">
     <button class="btn" id="btnGla" title="Units and statuses come from the GLA">Open GLA</button>
+    <button class="btn sal" id="btnSales" title="Read the Leasing Sales Performance file on this device — nothing is sent to the hub">Import sales</button>
     <button class="btn pri" id="btnEdit">Edit data</button>
     <button class="btn" id="btnPdf">Export PDF</button>
     <button class="btn" id="btnPdfAll">PDF – all malls</button>
   </div>
   <span class="st" id="saveSt"></span>
   <input type="file" id="xlsIn" accept=".xlsx,.xls,.csv" hidden>
+  <input type="file" id="salesIn" accept=".xlsx,.xlsm" hidden>
 </div>
 
 <div class="src no-print" id="src"></div>
+<div class="lsb no-print" id="lsb"></div>
 <div id="emptyMsg"></div>
 <main id="report"><div class="mall">Loading…</div></main>
 
@@ -246,6 +255,7 @@ svg .b25{fill:var(--py)} svg .b26{fill:var(--accent)}
   <div class="dtabs" id="dTabs" role="tablist"></div>
   <div class="dbody" id="dBody"></div>
 </aside>
+<script src="/tools/exec-sales.js"></script>
 <script>
 (function(){
 'use strict';
@@ -323,16 +333,18 @@ var EDIT=[
     {f:'leaseNote',l:'Leasing commentary (appears in report)',t:'text'}
   ]},
   {id:'sales',title:'Footfall & Sales',items:[
-    {info:'Sales are not in the hub yet, so this part stays manual until a sales import exists. Paste straight from Excel.'},
+    {info:'<b>Sales stay on this device.</b> Press <b>Import sales</b> and choose the monthly <i>Leasing Sales Performance YTD</i> file: every sales figure below fills in for all flagships. You can change anything, then Export PDF. Nothing here is saved in the hub — closing or refreshing the page removes the sales. <b>Footfall</b> (the two footfall columns) is saved as before.'},
+    {salesPanel:true},
     {tbl:'footfall',l:'Footfall and sales by month',h:'Enter prior and current year – every % is calculated. If you also enter monthly sales for both years, the sales % is calculated too (the manual % is only a fallback). Leave future months empty.'},
     {row:[{f:'salesTotal',l:'Total sales % – manual fallback (auto if monthly sales entered)'},{f:'salesLfl',l:'LFL sales % – manual fallback (auto from first row of groups table)'}]},
     {tbl:'groups',l:'YTD mall performance & groups',h:'First row = the mall total (LFL). Change %, drop and contribution are calculated; the remainder shows as "All other tenants".'},
     {f:'declineBase',l:'Property sales drop (required – contribution % is calculated against this number)'},
-    {f:'declineTitle',l:'Decline table title (filled from the Excel import)'},
-    {tbl:'decline',l:'YTD top contributors to sales decline',h:'Import an Excel file (title row, then Tenants and Drop columns) or paste it. Contribution % is calculated for you.'},
+    {f:'declineTitle',l:'Decline table title'},
+    {tbl:'decline',l:'YTD top contributors to sales decline',h:'Filled from the sales file (the 14 largest drops). Contribution % is calculated for you.'},
     {tbl:'newt',l:'New tenant performance YTD'},
     {tbl:'low',l:'Low performing tenants YTD',h:'Sorted automatically by lowest sales / sqm; the bottom 10 are shown.'},
-    {f:'salesNote',l:'Sales commentary (appears in report)',t:'text'}
+    {f:'salesNote',l:'Sales commentary (appears in report — not saved, write it before exporting)',t:'text'},
+    {f:'salesGroups',l:'Retail groups to show in the groups table (one per line — saved; empty = Azadea, Aishti, Pearl Brands, Retail Group)',t:'text'}
   ]},
   {id:'capex',title:'CAPEX & Quality',items:[
     {info:'Projects and annual budget come from <b>Budget · CAPEX</b> (the uploaded sheet of this year). Set the deadline, status and comment here. Status <b>Hidden</b> keeps a line out of the report.'},
@@ -346,14 +358,17 @@ var EDIT=[
 
 /* ================= data (from the hub) ================= */
 var MALLS=[];                    /* the flagships this person can see */
-var SAVED=['prepared','currency','highlights','occNote','leaseNote','salesTotal','salesLfl','declineBase','declineTitle','salesNote','capexNote','qcPrevLabel','qcPrev','qcCurLabel','qcCur','qcNote'];
+var SAVED=['prepared','currency','highlights','occNote','leaseNote','capexNote','qcPrevLabel','qcPrev','qcCurLabel','qcCur','qcNote','salesGroups'];
+/* sales: kept in this page only — never in SAVED, never sent */
+var LOCALF=['salesTotal','salesLfl','declineBase','declineTitle','salesNote'],LOCALT=['decline','groups','newt','low'];
+var LOCAL=null;   /* { file, D, bySite:{site:{...}} } — the sales workbook, in memory only */
 var state={current:'',period:'',malls:{}},AUTO={},META={};
 function M(){return state.malls[state.current]}
 function rows(m,key){
   return (m[key]||[]).filter(function(r){return Object.keys(r).some(function(k){return trim(r[k])!==''})});
 }
 function blankMall(name){
-  var m={};SAVED.forEach(function(k){m[k]=''});
+  var m={};SAVED.concat(LOCALF).forEach(function(k){m[k]=''});
   m.name=name;TKEYS.forEach(function(k){m[k]=[]});m.units=[];m.unitNotes={};m.fitout={};
   m.footfall=MN.map(function(n){return {month:n,ff25:'',ff26:'',s25:'',s26:'',sales:''}});
   return m;
@@ -404,11 +419,12 @@ async function loadMall(site){
   m._autoOpened=a.opened;m._autoClosed=a.closed;
   mergeCapex(m,a.capex,d.source==='the August report');
   state.malls[site]=m;
+  applyLocal(site,m);
   return m;
 }
 function payload(m){
   var o={};SAVED.forEach(function(k){o[k]=m[k]});
-  TKEYS.forEach(function(k){o[k]=(m[k]||[]).map(function(r){var x={};Object.keys(r).forEach(function(kk){if(kk.charAt(0)!=='_')x[kk]=r[kk]});return x})});
+  TKEYS.forEach(function(k){if(LOCALT.indexOf(k)>=0)return;o[k]=(m[k]||[]).map(function(r){var x={};Object.keys(r).forEach(function(kk){if(kk.charAt(0)!=='_'&&(k!=='footfall'||/^(month|ff25|ff26)$/.test(kk)))x[kk]=r[kk]});return x})});
   o.unitNotes=m.unitNotes;o.fitout=m.fitout;return o;
 }
 var saveT=0,saving=null;
@@ -492,6 +508,89 @@ function statsHtml(m){
   function row(l,b,c){return '<tr'+(c?' class="tot"':'')+'><td><b>'+esc(l)+'</b></td><td class="r">'+fmt(b.gla)+'</td><td class="r">'+fmt(b.act)+'</td><td class="r">'+fmt(b.fit)+'</td><td class="r">'+fmt(b.term)+'</td><td class="r">'+fmt(b.vac)+'</td><td class="c '+heat(b.cur)+'"><b>'+fpct(b.cur,1)+'</b></td><td class="c '+heat(b.exp)+'"><b>'+fpct(b.exp,1)+'</b></td></tr>'}
   return '<table class="t st"><thead><tr><th>Level</th><th class="r">GLA (sqm)</th><th class="r">Active</th><th class="r">Fit out</th><th class="r">Terminated</th><th class="r">Vacant</th><th class="c">Current %</th><th class="c">Expected %</th></tr></thead><tbody>'+oc.order.map(function(f){return row(f,oc.by[f])}).join('')+row('Mall',oc.tot,1)+'</tbody></table><div class="foot">Current = Active only. Expected = Active + Terminated + Fit out. GLA = units of type “Leasing GLA” (pop-ups, DS and iPlay are excluded; storage units and B2 / B6 additional spaces are not counted). Source: the hub GLA as it stood on the last day of the month.</div>';
 }
+/* ================= local sales (never saved) ================= */
+function monthOfPeriod(){return +String(state.period).slice(5,7)}
+function groupsWanted(m){return String(m.salesGroups||'').split(/[\n,;]+/).map(trim).filter(Boolean)}
+function shortName(site){var x=MALLS.filter(function(z){return z.id===site})[0];return x?x.short:String((state.malls[site]||{}).name||'').replace(/^ABC\s*/,'')}
+function computeFor(site,m){
+  var M=Math.min(monthOfPeriod(),LOCAL.D.upTo||12);
+  var r=SalesLocal.compute(LOCAL.D,shortName(site)||m.name.replace(/^ABC\s*/,''),M,{groups:groupsWanted(m)});
+  if(r)r.salesNote='';
+  return r;
+}
+function applyLocal(site,m){
+  if(!LOCAL||!m)return;
+  if(+String(state.period).slice(0,4)!==LOCAL.D.year){m._sales=null;return}
+  var r=LOCAL.bySite[site];
+  if(r===undefined)r=LOCAL.bySite[site]=computeFor(site,m);
+  if(!r){m._sales=null;return}
+  /* the same objects every time: changes made in Edit data stay while the page is open */
+  LOCALT.forEach(function(k){m[k]=r[k]});
+  LOCALF.forEach(function(k){m[k]=r[k]==null?'':r[k]});
+  var ff=m.footfall||[];
+  r.footfall.forEach(function(s){
+    var row=ff.filter(function(x){return trim(x.month).toLowerCase()===s.month.toLowerCase()})[0];
+    if(!row){row={month:s.month,ff25:'',ff26:''};ff.push(row)}
+    if(r._ffEdit&&r._ffEdit[s.month]){row.s25=r._ffEdit[s.month].s25;row.s26=r._ffEdit[s.month].s26}else{row.s25=s.s25;row.s26=s.s26}
+    row.sales='';
+  });
+  m.footfall=ff;m._sales=r;
+}
+function clearLocal(){
+  LOCAL=null;
+  Object.keys(state.malls).forEach(function(site){var m=state.malls[site];if(!m)return;
+    LOCALT.forEach(function(k){m[k]=[]});LOCALF.forEach(function(k){m[k]=''});
+    (m.footfall||[]).forEach(function(r){r.s25='';r.s26='';r.sales=''});m._sales=null});
+  $('#salesIn').value='';
+  lsBar();renderReport();buildEditor();
+}
+function lsBar(){
+  var b=$('#lsb');if(!b)return;
+  if(!LOCAL){b.className='lsb no-print';b.innerHTML='<span>Sales are <b>not loaded</b>. Press <b>Import sales</b> to add them from this month\'s <i>Leasing Sales Performance</i> file — they stay on this device only.</span>';return}
+  var D=LOCAL.D,wrongYear=+String(state.period).slice(0,4)!==D.year,M=monthOfPeriod(),late=!wrongYear&&M>D.upTo;
+  b.className='lsb on no-print';
+  b.innerHTML='<span class="lock">🔒 Only on this device</span><span>Sales from <b>'+esc(LOCAL.file)+'</b> · up to <b>'+MN[D.upTo-1]+' '+D.year+'</b> · not saved — closing or refreshing this page removes them.'+
+    (wrongYear?' <b style="color:#c0392b">This file is for '+D.year+'; the report month is '+esc(state.period.slice(0,4))+' — sales are not shown.</b>':'')+
+    (late?' <b style="color:#b7791f">The report month is '+MN[M-1]+' but the file stops at '+MN[D.upTo-1]+' — sales shown up to '+MN[D.upTo-1]+'.</b>':'')+
+    '</span><span class="sp"></span><button class="btn sm" id="lsReload">Import another file</button><button class="btn sm danger" id="lsClear">Remove sales now</button>';
+}
+function salesPanelHtml(m){
+  if(!LOCAL)return '<div class="hint"><button class="btn sal" data-a="salesImport">Import sales file</button> &nbsp;Nothing is filled until you import the file.</div>';
+  return '<div class="hint">Loaded from <b>'+esc(LOCAL.file)+'</b> for all flagships ('+esc(LOCAL.D.units.filter(function(u){return /mall$|department store$/i.test(u)}).join(', '))+'). <button class="btn sm" data-a="salesRecalc">Recalculate this flagship from the file</button> <button class="btn sm danger" data-a="salesClear">Remove sales</button></div>';
+}
+async function importSales(file){
+  try{
+    var sheets=await readWorkbook(await file.arrayBuffer());
+    var D=SalesLocal.parse(sheets);
+    LOCAL={file:file.name,D:D,bySite:{}};
+    Object.keys(state.malls).forEach(function(site){applyLocal(site,state.malls[site])});
+    lsBar();renderReport();buildEditor();
+  }catch(e){alert(e&&e.message?e.message:'Could not read this file. Save it as .xlsx and try again.')}
+}
+$('#btnSales').onclick=function(){$('#salesIn').click()};
+$('#salesIn').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';if(f)importSales(f)});
+$('#lsb').addEventListener('click',function(e){if(e.target.id==='lsReload')$('#salesIn').click();if(e.target.id==='lsClear'&&confirm('Remove the sales from this page?'))clearLocal()});
+addEventListener('beforeunload',function(e){if(LOCAL){e.preventDefault();e.returnValue=''}});
+/* extra tables that only exist with the sales file: vs last year / budget / base year, categories, cinema & parking */
+function localBlocks(m,y){
+  var r=m._sales;if(!r)return '';
+  var h='',v=r.vs,pc=function(a,b){return b>0?(a/b-1)*100:NaN},by=r.baseYear;
+  function line(l,cur,prev,cb,bud,cB,base){var a=pc(cur,prev),b=pc(cb,bud),c=by?(base>0?cB/base*100:NaN):NaN;
+    return '<tr><td><b>'+esc(l)+'</b></td><td class="r">'+fmt(cur)+'</td><td class="r">'+fmt(prev)+'</td><td class="r '+cls(a)+'"><b>'+fpct(a,1,true)+'</b></td><td class="r">'+fmt(bud)+'</td><td class="r '+cls(b)+'"><b>'+fpct(b,1,true)+'</b></td>'+(by?'<td class="r">'+fmt(base)+'</td><td class="r"><b>'+fpct(c,0)+'</b></td>':'')+'</tr>'}
+  h+='<h3>YTD sales vs last year, budget'+(by?' and '+by:'')+' <small style="font-weight:400;color:var(--muted)">(to '+MN[r.months-1]+')</small></h3><div class="tw keep"><table class="t"><thead><tr><th></th><th class="r">'+y+'</th><th class="r">'+(y-1)+'</th><th class="r">vs '+(y-1)+'</th><th class="r">Budget '+y+'</th><th class="r">vs Budget</th>'+(by?'<th class="r">'+by+'</th><th class="r">'+y+' / '+by+'</th>':'')+'</tr></thead><tbody>'+
+    line('All tenants',v.all.cur,v.all.prev,v.all.cur,v.all.bud,v.all.cur,v.all.base)+
+    line('Like for like',v.lfl.cur,v.lfl.prev,v.lfl.curB,v.lfl.bud,v.lfl.curBase,v.lfl.base)+
+    '</tbody></table></div><div class="foot">Like for like = the tenants trading in both periods of each comparison (the LFL flags of the sales file).</div>';
+  if(r.cats&&r.cats.length){
+    h+='<h3>Sales by category YTD</h3><div class="tw"><table class="t"><thead><tr><th>Category</th><th class="r">'+(y-1)+'</th><th class="r">'+y+'</th><th class="r">'+String(y).slice(2)+' vs '+String(y-1).slice(2)+'</th><th class="r">Share</th></tr></thead><tbody>'+
+      r.cats.map(function(c){var a=pc(c.cur,c.prev);return '<tr><td><b>'+esc(c.cat)+'</b></td><td class="r">'+fmt(c.prev)+'</td><td class="r">'+fmt(c.cur)+'</td><td class="r '+cls(a)+'">'+fpct(a,0,true)+'</td><td class="r">'+fpct(c.share,0)+'</td></tr>'}).join('')+'</tbody></table></div>';
+  }
+  if(r.ind&&r.ind.length){
+    h+='<h3>Other indicators YTD <small style="font-weight:400;color:var(--muted)">('+esc(r.property)+' — mall and department store together)</small></h3><div class="tw keep"><table class="t"><thead><tr><th></th><th class="r">'+(y-1)+'</th><th class="r">'+y+'</th><th class="r">'+String(y).slice(2)+' vs '+String(y-1).slice(2)+'</th></tr></thead><tbody>'+
+      r.ind.map(function(x){var a=pc(x.cur,x.prev);return '<tr><td><b>'+esc(x.what)+'</b></td><td class="r">'+fmt(x.prev)+'</td><td class="r">'+fmt(x.cur)+'</td><td class="r '+cls(a)+'"><b>'+fpct(a,0,true)+'</b></td></tr>'}).join('')+'</tbody></table></div>';
+  }
+  return h;
+}
 /* ================= report rendering ================= */
 function rowSales(r){var c=chg(r.s25,r.s26);return isNaN(c)?num(r.sales):c}
 function totalSales(m,ff){
@@ -513,7 +612,7 @@ function hasData(m){
 function head(m){
   return '<header class="rh"><img src="'+LOGO+'" alt="ABC"><div class="rh-t"><div class="k">Executive Summary</div><h1>'+esc(m.name)+'</h1></div><div class="rh-m"><b>'+esc(m.period)+'</b>'+(trim(m.prepared)?'<span>Prepared by '+esc(m.prepared)+'</span>':'')+'</div></header>';
 }
-function ffRows(m){return rows(m,'footfall').filter(function(r){return !isNaN(num(r.ff25))||!isNaN(num(r.ff26))})}
+function ffRows(m){return rows(m,'footfall').filter(function(r){return !isNaN(num(r.ff25))||!isNaN(num(r.ff26))||!isNaN(num(r.s26))})}
 
 function heat(v){return isNaN(v)?'':(v>=95?'h-hi':(v>=85?'h-mid':'h-lo'))}
 
@@ -574,7 +673,7 @@ function secLease(m){
 function secSales(m){
   var y=yearOf(m),ff=ffRows(m),dec=rows(m,'decline'),grp=rows(m,'groups'),nt=rows(m,'newt'),lo=rows(m,'low');
   var st=totalSales(m,ff),lfl=lflSales(m);
-  if(!ff.length&&!dec.length&&!grp.length&&!nt.length&&!lo.length&&!trim(m.salesNote))return '';
+  if(!ff.length&&!dec.length&&!grp.length&&!nt.length&&!lo.length&&!trim(m.salesNote)&&!m._sales)return '';
   var cur=trim(m.currency)?' ('+esc(m.currency)+')':'';
   var h='<section class="sec"><h2>Footfall &amp; Sales</h2>';
   if(ff.length){
@@ -588,6 +687,7 @@ function secSales(m){
     var tc=chg(a,b);
     h+='</tbody><tfoot><tr><td>TOTAL</td><td class="r">'+fmt(a)+'</td><td class="r">'+fmt(b)+'</td><td class="r '+cls(tc)+'">'+fpct(tc,0,true)+'</td><td class="r '+cls(st)+'">'+fpct(st,0,true)+(isNaN(lfl)?'':' <small>(LFL '+fpct(lfl,0,true)+')</small>')+'</td></tr></tfoot></table></div>';
   }
+  h+=localBlocks(m,y);
   var gTot=grp[0],mallDrop=gTot?(num(gTot.s26)-num(gTot.s25)):NaN;
   if(dec.length){
     var base=Math.abs(num(m.declineBase));
@@ -778,6 +878,7 @@ function buildEditor(){
     if(it.row)h+='<div class="grid2">'+it.row.map(fieldHtml).join('')+'</div>';
     else if(it.occPanel)h+=occPanelHtml(m);
     else if(it.fitPanel)h+=fitPanelHtml(m);
+    else if(it.salesPanel)h+=salesPanelHtml(m);
     else if(it.info)h+='<div class="hint">'+it.info+'</div>';
     else if(it.tbl)h+=tableHtml(it.tbl,it.l,it.h);
     else h+=fieldHtml(it);
@@ -934,10 +1035,14 @@ $('#xlsIn').addEventListener('change',function(e){
 var body=$('#dBody');
 body.addEventListener('input',function(e){
   var t=e.target,m=M();
-  if(t.dataset.f){m[t.dataset.f]=t.value;rerender();return}
+  if(t.dataset.f){m[t.dataset.f]=t.value;
+    if(t.dataset.f==='salesGroups'&&LOCAL&&LOCAL.bySite[state.current]){var nr=computeFor(state.current,m);if(nr){LOCAL.bySite[state.current].groups=nr.groups;m.groups=nr.groups;refreshTable('groups')}}
+    if(LOCALF.indexOf(t.dataset.f)>=0&&LOCAL&&LOCAL.bySite[state.current])LOCAL.bySite[state.current][t.dataset.f]=t.value;
+    rerender();return}
   if(t.dataset.c){
     var te=t.closest('.te'),ri=+t.closest('tr').dataset.r;
     m[te.dataset.t][ri][t.dataset.c]=t.value;
+    if(te.dataset.t==='footfall'&&/^s2[56]$/.test(t.dataset.c)&&LOCAL&&LOCAL.bySite[state.current]){var rr=m.footfall[ri],L=LOCAL.bySite[state.current];L._ffEdit=L._ffEdit||{};L._ffEdit[rr.month]={s25:rr.s25,s26:rr.s26}}
     if(te.dataset.t==='vacant')t.classList.toggle('req',reqBad('vacant',t.dataset.c,t.value));
     rerender();
   }
@@ -962,6 +1067,9 @@ body.addEventListener('paste',function(e){
 body.addEventListener('click',function(e){
   var b=e.target.closest('[data-a]');if(!b)return;
   var a=b.dataset.a,m=M();
+  if(a==='salesImport'){$('#salesIn').click();return}
+  if(a==='salesClear'){if(confirm('Remove the sales from this page?'))clearLocal();return}
+  if(a==='salesRecalc'&&LOCAL){delete LOCAL.bySite[state.current];applyLocal(state.current,m);renderReport();buildEditor();return}
   var te=b.closest('.te');if(!te)return;
   var key=te.dataset.t;
   if(a==='add'){m[key].push(blankRow(key));refreshTable(key);save();
@@ -1002,10 +1110,10 @@ body.addEventListener('input',function(e){
 /* ================= init ================= */
 function srcLine(){
   var m=M(),a=AUTO[state.current]||{},me=META[state.current]||{};
-  $('#src').innerHTML='<b>'+esc(m.name)+' · '+esc(m.period)+'</b> — occupancy, vacant units, opened / closed YTD and fit-out from the GLA on '+esc(a.asOf||'')+'; CAPEX from the Budget sheet'+(a.capex&&a.capex.length?'':' (none uploaded for this year)')+'. Sales, footfall, QC and commentary are typed in Edit data'+(me.savedAt?' · last saved '+esc(new Date(me.savedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+(me.savedBy?' by '+esc(me.savedBy):''):' · not saved yet (started from '+esc(me.source)+')')+'.';
+  $('#src').innerHTML='<b>'+esc(m.name)+' · '+esc(m.period)+'</b> — occupancy, vacant units, opened / closed YTD and fit-out from the GLA on '+esc(a.asOf||'')+'; CAPEX from the Budget sheet'+(a.capex&&a.capex.length?'':' (none uploaded for this year)')+'. Sales come only from the sales file imported on this device ('+(LOCAL?'loaded: '+esc(LOCAL.file):'not loaded')+'); footfall, QC and commentary are typed in Edit data'+(me.savedAt?' · last saved '+esc(new Date(me.savedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+(me.savedBy?' by '+esc(me.savedBy):''):' · not saved yet (started from '+esc(me.source)+')')+'.';
 }
 var baseRender=renderReport;
-renderReport=function(){var n=baseRender();try{srcLine()}catch(e){}return n};
+renderReport=function(){var n=baseRender();try{srcLine();lsBar()}catch(e){}return n};
 function monthNow(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function prevMonth(p){var y=+p.slice(0,4),m=+p.slice(5);m--;if(!m){m=12;y--}return y+'-'+String(m).padStart(2,'0')}
 (async function(){
@@ -1017,12 +1125,12 @@ function prevMonth(p){var y=+p.slice(0,4),m=+p.slice(5);m--;if(!m){m=12;y--}retu
     state.current=ctx.site;
     await loadMall(state.current);
     if(!META[state.current].all)$('#btnPdfAll').style.display='none';
-    renderTabs();renderReport();buildEditor();
+    renderTabs();lsBar();renderReport();buildEditor();
   }catch(e){$('#report').innerHTML='<div class="mall">'+esc(e.message)+'</div>'}
 })();
 $('#perIn').addEventListener('change',function(){
   var v=$('#perIn').value;if(!/^20\d\d-\d\d$/.test(v))return;
-  flush().then(function(){state.period=v;state.malls={};return loadMall(state.current)}).then(function(){renderTabs();renderReport();buildEditor()}).catch(function(e){alert(e.message)});
+  flush().then(function(){state.period=v;state.malls={};if(LOCAL)LOCAL.bySite={};return loadMall(state.current)}).then(function(){renderTabs();renderReport();buildEditor()}).catch(function(e){alert(e.message)});
 });
 $('#btnGla').onclick=function(){location.href='/tools/gla?back='+encodeURIComponent('/tools/exec?period='+state.period)};
 addEventListener('beforeunload',function(){if(saveT)doSave()});
