@@ -78,24 +78,31 @@ async function saveRow(env, site, b, by, now) {
   return x.meta.last_row_id;
 }
 
-/* Excel import: one row per contact. Tenant + employee already in the directory → updated, otherwise added. */
-async function importRows(env, site, rows, by, now) {
+/* Excel import: one row per contact. Tenant + employee already in the directory → updated, otherwise added.
+   The page sends the sheet in chunks of up to 40 rows (Cloudflare's free plan allows 50 database calls per request):
+   2 reads + one batch of writes per chunk. Rows flagged "dup" (same person twice in the sheet) are always added. */
+async function importRows(env, site, rows, by, now, offset = 0) {
   if (!Array.isArray(rows) || !rows.length) throw err("The sheet has no rows");
-  if (rows.length > 3000) throw err("Up to 3,000 rows at a time");
+  if (rows.length > 40) throw err("Send the sheet in chunks of 40 rows");
   const gla = await glaTenants(env, site), byName = new Map();
   gla.forEach(u => { const k = norm(u.brand); if (!byName.has(k)) byName.set(k, u); });
   const { results } = await env.DB.prepare("SELECT id, tenant, employee, mobile FROM dir_contacts WHERE site = ?").bind(site).all();
   const have = new Map((results || []).map(c => [norm(c.tenant) + "|" + norm(c.employee || c.mobile), c.id]));
-  let added = 0, updated = 0, linked = 0; const skipped = [];
+  let added = 0, updated = 0, linked = 0; const skipped = [], stmts = [];
   for (const [i, raw] of rows.entries()) {
-    let r; try { r = cleanRow(raw); } catch (e) { skipped.push({ row: i + 2, why: e.message }); continue; }
+    let r; try { r = cleanRow(raw); } catch (e) { skipped.push({ row: offset + i + 2, why: e.message }); continue; }
     const u = byName.get(norm(r.tenant)); if (u) { r.unit_id = u.id; r.tenant = u.brand; linked++; }
-    const k = norm(r.tenant) + "|" + norm(r.employee || r.mobile), id = have.get(k) || 0;
-    await saveRow(env, site, { ...r, unitId: r.unit_id, id }, by, now);
+    const id = raw.dup ? 0 : have.get(norm(r.tenant) + "|" + norm(r.employee || r.mobile)) || 0;
+    stmts.push(id
+      ? env.DB.prepare(`UPDATE dir_contacts SET tenant = ?, unit_id = ?, employee = ?, position = ?, mobile = ?, email = ?, landline = ?,
+          category = ?, location = ?, status = ?, updated_at = ?, updated_by = ? WHERE id = ? AND site = ?`)
+          .bind(r.tenant, r.unit_id, r.employee, r.position, r.mobile, r.email, r.landline, r.category, r.location, r.status, now, by, id, site)
+      : env.DB.prepare(`INSERT INTO dir_contacts (site, tenant, unit_id, employee, position, mobile, email, landline, category, location, status, updated_at, updated_by)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, r.tenant, r.unit_id, r.employee, r.position, r.mobile, r.email, r.landline, r.category, r.location, r.status, now, by));
     id ? updated++ : added++;
-    if (!id) have.set(k, -1);
   }
-  return { added, updated, linked, skipped: skipped.slice(0, 50), skippedCount: skipped.length };
+  if (stmts.length) await env.DB.batch(stmts);
+  return { added, updated, linked, skipped, skippedCount: skipped.length };
 }
 
 /* shared by the hub page and the reception link */
@@ -108,7 +115,7 @@ async function core(env, p, method, b, url, { site, canEdit, by, now }) {
     if (!r.meta.changes) throw err("Contact not found", 404);
     return { deleted: true };
   }
-  if (p === "import" && method === "POST") return importRows(env, site, b.rows, by, now());
+  if (p === "import" && method === "POST") return importRows(env, site, b.rows, by, now(), Number(b.offset) || 0);
   throw err("Unknown endpoint", 404);
 }
 
