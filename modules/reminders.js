@@ -23,15 +23,18 @@ const MAX_SLOTS = 48;
 
 /* Restroom inspection windows (same as the Restroom system) */
 const WINDOWS = {
-  W1: { label: "Window 1", from: "09:00", to: "11:30" },
-  W2: { label: "Window 2", from: "11:45", to: "13:30" },
-  W3: { label: "Window 3", from: "13:45", to: "15:30" },
-  W4: { label: "Window 4", from: "15:45", to: "17:30" },
-  W5: { label: "Window 5", from: "17:45", to: "19:30" },
-  W6: { label: "Window 6", from: "19:45", to: "22:00" }
+  W1: { label: "Window 1", from: "10:00", to: "11:00" },
+  W2: { label: "Window 2", from: "12:30", to: "13:30" },
+  W3: { label: "Window 3", from: "14:30", to: "15:30" },
+  W4: { label: "Window 4", from: "16:30", to: "17:30" },
+  W5: { label: "Window 5", from: "18:30", to: "19:30" },
+  W6: { label: "Window 6", from: "20:30", to: "21:30" }
 };
-/* Times before 1 Oct 2026 — saved restroom reminders still on these defaults move to the new windows */
-const OLD_WINDOWS = { W1: "11:00", W2: "13:00", W3: "15:00", W4: "17:00", W5: "19:00", W6: "21:00" };
+/* Earlier window end times — saved restroom reminders still on those defaults move to the current windows */
+const OLD_WINDOWS = [
+  { W1: "11:00", W2: "13:00", W3: "15:00", W4: "17:00", W5: "19:00", W6: "21:00" },   // until 1 Oct 2026
+  { W1: "11:30", W2: "13:30", W3: "15:30", W4: "17:30", W5: "19:30", W6: "22:00" }    // short-lived draft, 1 Oct 2026
+];
 const TEAMS = { both: "Operations & Soft services", ops: "Operations", usm: "Soft services" };
 const SHIFTS = { AM: "Morning", PM: "Evening" };
 const FORM_NAMES = { am: "AM Checklist", pm: "PM Checklist", dbank: "Direct Banking Checklist", open: "Tenant Opening Checklist", close: "Tenant Closing Checklist" };
@@ -77,7 +80,7 @@ export async function remindersSchema(env) {
       PRIMARY KEY (reminder_id, day))`)
   ]);
   /* restroom windows changed (Oct 2026): move reminders that still use the old default times; edited ones are left alone */
-  await env.DB.batch(Object.entries(OLD_WINDOWS).map(([w, to]) => env.DB.prepare(
+  await env.DB.batch(OLD_WINDOWS.flatMap(set => Object.entries(set)).filter(([w, to]) => WINDOWS[w] && WINDOWS[w].to !== to).map(([w, to]) => env.DB.prepare(
     "UPDATE reminders SET at_time = ?, until_time = ? WHERE kind = 'restroom' AND preset = ? AND at_time = ? AND until_time = ?")
     .bind(toHM(toMin(WINDOWS[w].to) - 15), WINDOWS[w].to, `rr-${w}`, toHM(toMin(to) - 15), to))).catch(() => {});
 }
