@@ -8,7 +8,8 @@ export { EmergencyPager } from "./modules/emergency.js";
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
-import { directorySchema, directoryRoute, directoryPublic } from "./modules/directory.js";   // Tenants Directory feature — see docs/FEATURE-directory.md
+import { directorySchema, directoryRoute, directoryPublic } from "./modules/directory.js";
+import { worksSchema, worksInbox, worksFile, worksRoute } from "./modules/works.js";   // Tenant Works Forms feature — see docs/FEATURE-tenant-works.md   // Tenants Directory feature — see docs/FEATURE-directory.md
 import { profileSchema, profileRoute, coversAdmin } from "./modules/profile.js";
 import { twofaSchema, twofaGate, twofaPublic, twofaRoute, twofaAdmin, twofaClean, requiredRoles } from "./modules/twofa.js";   // Two-step login feature — see docs/FEATURE-two-step.md   // Profile feature — see docs/FEATURE-profile.md
 import { leadershipRoute } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
@@ -220,6 +221,7 @@ async function ensureSchema(env) {
   await execSchema(env);      // Executive Report feature
   await tenantsSchema(env);   // Tenant Management feature
   await directorySchema(env);   // Tenants Directory feature
+  await worksSchema(env);   // Tenant Works Forms feature
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -353,6 +355,7 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("login/2fa/")) { const r = await twofaPublic(env, twofaDeps, path, method, body, request); return r instanceof Response ? r : json(r); }   // Two-step login feature
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   if (path === "setup" && method === "POST") return setup(env, body);
+  if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
   const me = await readSession(request, env);
@@ -393,6 +396,7 @@ async function route(request, env, ctx, url) {
   if (path === "push/test" && method === "POST") return ok(await pushTest(env, me, body));
   if (path === "usage" && method === "POST") { await logUsage(env, me, String(body.app || "").slice(0, 40)); return ok({ logged: true }); }
   if (path === "ops/layouts/image") return layoutsImage(env, opsSite(me, url.searchParams.get("site")), url);   // Mall Layouts feature
+  if (path === "ops/works/file") return worksFile(env, me, url, { canSite });   // Tenant Works Forms feature: the PDF
   if (path.startsWith("ops/")) return ok(await opsRoute(env, me, path.slice(4), method, body, url));
 
   /* ----- admin ----- */
@@ -1031,7 +1035,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1298,6 +1302,8 @@ async function opsRoute(env, me, p, method, b, url) {
 
   /* ----- Data Accuracy Score feature (modules/accuracy.js) ----- */
   /* ----- Tenants Directory feature (modules/directory.js) ----- */
+  /* ----- Tenant Works Forms feature (modules/works.js) ----- */
+  if (p.startsWith("works/")) return worksRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, raiseEvent, SITES });
   if (p.startsWith("dir/")) return directoryRoute(env, p, method, b, url, { site, me, full: canSite(me, site) && isFull(me), sites: sitesOf(me),
     now: nowIso, siteName, origin: url.origin });
 
