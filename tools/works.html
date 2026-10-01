@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Tenant Works Forms · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="/tools/tools.css">
+<!-- Tenant Works Forms feature — see docs/FEATURE-tenant-works.md -->
+<style>
+a.btn{text-decoration:none}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 14px}
+.bar .inp{flex:1 1 220px;min-width:0}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+.seg button{height:30px;padding:0 12px;border-radius:8px;font-weight:700;font-size:.8rem;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.seg button .n{display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:9px;background:var(--line);font-size:.7rem}
+.seg button.on .n{background:var(--brand);color:#fff}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.fc{display:flex;gap:12px;padding:14px;text-align:left;width:100%;border-radius:16px;background:var(--surface);border:1px solid var(--line);transition:border-color .15s,transform .15s}
+.fc:hover{border-color:var(--brand-2);transform:translateY(-1px)}
+.fc .ic{width:44px;height:52px;flex:none;border-radius:8px;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center;color:var(--brand-2);position:relative}
+.fc .ic svg{width:22px;height:22px}
+.fc .ic i{position:absolute;bottom:-6px;right:-6px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:.7rem;color:#fff;border:2px solid var(--surface)}
+.fc .m{min-width:0;flex:1}
+.fc .t{font-weight:800;font-size:.95rem;line-height:1.3}
+.fc .s{font-size:.8rem;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc .p{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.dots{display:flex;gap:4px;margin-top:9px}
+.dots span{height:5px;flex:1;border-radius:9px;background:var(--line)}
+.dots span.on{background:var(--ok)}.dots span.cur{background:var(--warn)}
+/* detail */
+.det{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+.viewer{background:#525659;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;align-items:center;min-height:300px;position:relative}
+.viewer canvas{max-width:100%;height:auto;background:#fff;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.viewer.tap canvas{cursor:crosshair;outline:3px dashed var(--gold);outline-offset:3px}
+.viewer .vmsg{color:#eee;font-size:.85rem;padding:30px 10px;text-align:center}
+#tapNote{position:sticky;top:64px;z-index:5}
+#tapNote:not(:empty){margin-bottom:10px}
+.tapnote{background:var(--gold);box-shadow:0 6px 18px rgba(0,0,0,.18);color:var(--ink);font-weight:800;font-size:.85rem;padding:9px 14px;border-radius:12px;display:flex;gap:10px;align-items:center}
+.side{display:flex;flex-direction:column;gap:12px;position:sticky;top:70px}
+.side .card{padding:16px}
+.side h3{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.85rem}
+.kv dt{color:var(--muted)}.kv dd{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.fld>span{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.fld .sel,.fld .inp{width:100%}
+.hint{font-size:.78rem;color:var(--brand-2);font-weight:700;margin-top:-4px;margin-bottom:8px}
+.tp{position:relative}
+.tp .opts{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);max-height:280px;overflow:auto;display:none}
+.tp.open .opts{display:block}
+.tp .opts button{display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;text-align:left;font-size:.86rem;border-bottom:1px solid var(--line)}
+.tp .opts button:hover,.tp .opts button.act{background:var(--paper)}
+.tp .opts small{color:var(--muted)}
+.steps{display:flex;flex-direction:column;gap:0}
+.st{display:grid;grid-template-columns:28px 1fr;gap:10px;padding-bottom:14px;position:relative}
+.st:not(:last-child)::before{content:"";position:absolute;left:13px;top:28px;bottom:2px;width:2px;background:var(--line)}
+.st .b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.8rem;background:var(--paper);border:2px solid var(--line);color:var(--muted)}
+.st.ok .b{background:var(--ok);border-color:var(--ok);color:#fff}
+.st.cur .b{border-color:var(--warn);color:var(--warn);box-shadow:0 0 0 4px rgba(192,122,18,.15)}
+.st .l{font-weight:800;font-size:.9rem;padding-top:4px}
+.st .w{font-size:.8rem;color:var(--muted);margin-top:2px}
+.st .w img{display:block;max-height:34px;margin-top:4px;background:#fff;border-radius:6px;padding:2px}
+.act{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.done-b{background:rgba(46,139,87,.1);border:1px solid rgba(46,139,87,.3);color:var(--ok);border-radius:12px;padding:12px;font-weight:800;text-align:center}
+/* signature dialog */
+#dSign{width:min(620px,calc(100% - 16px))}
+.pad{position:relative;border:2px dashed var(--line);border-radius:14px;background:#fff;touch-action:none;margin-top:8px}
+.pad canvas{display:block;width:100%;height:220px;border-radius:12px;cursor:crosshair}
+.pad .base{position:absolute;left:24px;right:24px;bottom:46px;border-bottom:1.5px solid #c9c3d4;pointer-events:none}
+.pad .ph{position:absolute;left:0;right:0;top:44%;text-align:center;color:#b9b1c6;font-weight:700;pointer-events:none}
+.dlg-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dlg-b{padding:16px 18px}
+.dlg-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.who{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:12px;padding:10px 12px;font-size:.85rem;margin-bottom:10px}
+.who b{font-size:.95rem}
+.inboxnote{font-size:.82rem;color:var(--muted);line-height:1.5;margin-top:10px}
+@media (max-width:900px){
+  .det{grid-template-columns:1fr}
+  .side{position:static;order:-1}
+  .viewer{padding:8px;border-radius:12px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Tenant Works Forms <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <span id="acts"></span>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<dialog id="dSign"></dialog>
+<input type="file" id="fileIn" accept="application/pdf,.pdf" hidden>
+<script src="/tools/common.js"></script>
+<script src="/tools/pdfjs/pdf.min.js"></script>
+<script src="/tools/pdf-lib.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/tools/pdfjs/pdf.worker.min.js";
+const app = $("#app");
+let CTX = null, L = null, TEN = null, F = { tab: "todo", q: "" }, CUR = null;
+const ICON_PDF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>';
+const fmtT = iso => iso ? new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+const stPill = s => !s ? "" : `<span class="pill ${s === "Open" ? "ok" : s === "Fit-out" ? "warn" : /Closed|Terminated/.test(s) ? "alert" : "brand"}">${esc(s)}</span>`;
+const statusPill = f => `<span class="pill ${f.status === "done" ? "ok" : f.status === "setup" ? "brand" : "warn"}">${esc(f.statusLabel)}</span>`;
+
+/* ---------------- boot / list ---------------- */
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#siteBox").innerHTML = siteSelect(CTX, s => { TEN = null; boot(s); });
+  $("#sub").textContent = CTX.siteName;
+  const id = Number((location.hash.match(/^#(\d+)/) || [])[1]);
+  await load();
+  if (id) openForm(id);
+}
+async function load(){
+  try { L = await api("ops/works/list?site=" + CTX.site); } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  $("#acts").innerHTML = L.can.add ? `<button class="btn small" id="addBtn">+ Add form</button>` : "";
+  if (!CUR) renderList();
+}
+function counts(){ const c = { todo: 0, done: 0, all: L.forms.length }; L.forms.forEach(f => f.status === "done" ? c.done++ : c.todo++); return c; }
+function renderList(){
+  CUR = null; history.replaceState(null, "", location.pathname + location.search);
+  const c = counts(), q = F.q.toLowerCase().trim();
+  const rows = L.forms.filter(f => (F.tab === "all" || (F.tab === "done" ? f.status === "done" : f.status !== "done"))
+    && (!q || `${f.typeName} ${f.tenant} ${f.unit} ${f.fileName} ${f.fromName}`.toLowerCase().includes(q)));
+  app.innerHTML = `<div class="bar">
+      <div class="seg" id="seg">${[["todo", "To do"], ["done", "Completed"], ["all", "All"]].map(([k, l]) => `<button data-tab="${k}" class="${F.tab === k ? "on" : ""}">${l}<span class="n">${c[k]}</span></button>`).join("")}</div>
+      <input class="inp" id="q" type="search" placeholder="Search tenant, unit, form or file" value="${esc(F.q)}">
+    </div>
+    ${rows.length ? `<div class="list">${rows.map(card).join("")}</div>`
+      : `<div class="card empty">${L.forms.length ? "Nothing here." : `No forms yet.<br>Forward an RDM email with the PDF to this flagship's hub address${L.can.add ? ", or press <b>+ Add form</b> to upload one" : ""}.`}
+         ${!L.inbox ? `<div class="inboxnote">The email inbox is not connected yet (INBOX_KEY) — forms can still be added from this page.</div>` : ""}</div>`}`;
+  $("#seg").onclick = e => { const b = e.target.closest("[data-tab]"); if (b){ F.tab = b.dataset.tab; renderList(); } };
+  $("#q").oninput = e => { F.q = e.target.value; const pos = e.target.selectionStart; renderList(); const i = $("#q"); i.focus(); i.setSelectionRange(pos, pos); };
+  app.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openForm(Number(b.dataset.open)));
+}
+function card(f){
+  const steps = f.steps || [], done = steps.filter(s => f.done[s.key]).length;
+  const badge = f.status === "done" ? `<i style="background:var(--ok)">✓</i>` : f.status === "setup" ? `<i style="background:var(--brand-2)">?</i>` : `<i style="background:var(--warn)">!</i>`;
+  return `<button class="fc" data-open="${f.id}">
+    <span class="ic">${ICON_PDF}${badge}</span>
+    <span class="m">
+      <div class="t">${esc(f.typeName || "Form type not set")}</div>
+      <div class="s">${f.tenant ? `<b>${esc(f.tenant)}</b>${f.unit ? " · " + esc(f.unit) : ""}${f.level ? " · " + esc(f.level) : ""}` : esc(f.fileName)}</div>
+      <div class="s">${f.via === "email" ? "✉︎ Forwarded" : "⤒ Uploaded"} by ${esc(f.fromName || f.fromEmail)} · ${esc(fmtT(f.receivedAt))}</div>
+      <div class="p">${statusPill(f)}${stPill(f.tenantStatus)}</div>
+      ${steps.length ? `<div class="dots">${steps.map(s => `<span class="${f.done[s.key] ? "on" : f.status === s.key ? "cur" : ""}"></span>`).join("")}</div>` : ""}
+    </span></button>`;
+}
+document.addEventListener("click", e => { if (e.target.id === "addBtn") $("#fileIn").click(); });
+$("#fileIn").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  if (f.size > 8 * 1048576) return toast("The PDF is larger than 8 MB", true);
+  try { toast("Uploading…"); const r = await api("ops/works/add", { site: CTX.site, name: f.name, data: await b64(await f.arrayBuffer()) });
+    await load(); openForm(r.id); } catch (er){ toast(er.message, true); }
+};
+async function b64(buf){
+  return await new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.readAsDataURL(new Blob([buf])); });
+}
+addEventListener("hashchange", () => { const id = Number((location.hash.match(/^#(\d+)/) || [])[1]); if (!id && CUR) { load().then(renderList); } else if (id && (!CUR || CUR.form.id !== id)) openForm(id); });
+
+/* ---------------- one form ---------------- */
+async function tenants(){ if (!TEN) TEN = (await api("ops/works/tenants?site=" + CTX.site)).tenants; return TEN; }
+async function openForm(id){
+  app.innerHTML = `<div class="empty">Opening…</div>`;
+  try {
+    const [g] = await Promise.all([api("ops/works/get?id=" + id), tenants()]);
+    CUR = { form: g.form, can: g.can, bytes: null, doc: null, preview: null, guess: null };
+    if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+    renderForm();
+    await loadPdf();
+  } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}<br><br><button class="btn ghost" onclick="renderList()">Back to the list</button></div>`; }
+}
+async function loadPdf(){
+  const f = CUR.form;
+  const r = await fetch(`/api/ops/works/file?id=${f.id}&v=${f.ver}`, { credentials: "same-origin" });
+  if (!r.ok) throw new Error("The PDF could not be opened");
+  CUR.bytes = new Uint8Array(await r.arrayBuffer());
+  CUR.doc = await pdfjsLib.getDocument({ data: CUR.bytes.slice() }).promise;
+  await renderPages(CUR.doc);
+  if (f.status === "setup" || !f.type) { CUR.guess = await guess(CUR.doc); renderSide(); }
+}
+function renderForm(){
+  app.innerHTML = `<div class="bar"><button class="btn ghost small" id="back">← All forms</button><span style="flex:1"></span>
+      <a class="btn ghost small" id="dl" href="/api/ops/works/file?id=${CUR.form.id}&dl=1">⤓ Download</a>
+      ${CUR.form.ver > 0 ? `<a class="btn ghost small" href="/api/ops/works/file?id=${CUR.form.id}&v=0&dl=1">Original</a>` : ""}</div>
+    <div class="det"><div><div id="tapNote"></div><div class="viewer" id="viewer"><div class="vmsg">Loading the PDF…</div></div></div><div class="side" id="side"></div></div>`;
+  $("#back").onclick = () => { load().then(renderList); };
+  renderSide();
+}
+async function renderPages(doc, onTap){
+  const v = $("#viewer"); if (!v) return;
+  v.innerHTML = ""; v.classList.toggle("tap", !!onTap);
+  const w = Math.min(v.clientWidth - 28, 900), dpr = Math.min(2, devicePixelRatio || 1);
+  for (let i = 1; i <= doc.numPages; i++){
+    const pg = await doc.getPage(i);
+    const vp0 = pg.getViewport({ scale: 1 }), scale = Math.max(0.5, w / vp0.width);
+    const vp = pg.getViewport({ scale: scale * dpr });
+    const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height; c.style.width = (vp.width / dpr) + "px";
+    v.append(c);
+    await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+    if (onTap) c.onclick = ev => { const r = c.getBoundingClientRect(); const k = vp.width / r.width;
+      const [x, y] = vp.convertToPdfPoint((ev.clientX - r.left) * k, (ev.clientY - r.top) * k); onTap(i - 1, x, y); };
+  }
+}
+
+/* ---------- smart setup: guess the form type and the tenant from the PDF text ---------- */
+async function pageLines(doc, i){
+  const pg = await doc.getPage(i + 1), tc = await pg.getTextContent();
+  const items = tc.items.filter(t => t.str && t.str.trim()).map(t => ({ s: t.str, x: t.transform[4], y: t.transform[5], w: t.width, h: Math.abs(t.transform[3]) || Math.abs(t.transform[0]) || 10 }));
+  const lines = [];
+  items.sort((a, b) => b.y - a.y || a.x - b.x).forEach(t => { const l = lines.find(l => Math.abs(l.y - t.y) < 2.5); l ? l.items.push(t) : lines.push({ y: t.y, items: [t] }); });
+  lines.forEach(l => l.items.sort((a, b) => a.x - b.x));
+  return lines;
+}
+async function allText(doc){ let s = ""; for (let i = 0; i < Math.min(doc.numPages, 4); i++) (await pageLines(doc, i)).forEach(l => s += l.items.map(t => t.s).join(" ") + "\n"); return s; }
+const TYPE_RE = { start: /approval\s+to\s+start\s+on\s+site|F06\.5/i, handover: /handover\s+to\s+beneficiary|F06\.2/i, trade: /approval\s+to\s+trade|F08\.2/i, return: /return\s+of\s+area|F09\.1/i };
+async function guess(doc){
+  const f = CUR.form, text = (await allText(doc)) + "\n" + f.fileName + "\n" + f.subject;
+  const type = Object.keys(TYPE_RE).find(k => TYPE_RE[k].test(text)) || "";
+  const low = " " + text.toLowerCase().replace(/[^a-z0-9؀-ۿ&]+/g, " ") + " ";
+  const hit = (TEN || []).filter(t => t.name.length >= 3).map(t => ({ t, k: " " + t.name.toLowerCase().replace(/[^a-z0-9؀-ۿ&]+/g, " ").trim() + " " }))
+    .filter(x => x.k.trim().length >= 3 && low.includes(x.k)).sort((a, b) => b.k.length - a.k.length)[0];
+  return { type, tenant: hit ? hit.t : null, scanned: !text.replace(/\s/g, "").length };
+}
+
+/* ---------- side panel ---------- */
+function renderSide(){
+  const s = $("#side"); if (!s) return;
+  const f = CUR.form, can = CUR.can, T = L.types[f.type];
+  const g = CUR.guess || {};
+  const setup = f.status === "setup" || !f.type;
+  let html = `<div class="card"><h3>Form</h3><dl class="kv">
+      <dt>File</dt><dd>${esc(f.fileName)} <small class="muted">(${kb(f.bytes)})</small></dd>
+      <dt>${f.via === "email" ? "Forwarded" : "Uploaded"}</dt><dd>${esc(f.fromName || f.fromEmail)} · ${esc(fmtT(f.receivedAt))}</dd>
+      ${f.subject ? `<dt>Subject</dt><dd>${esc(f.subject)}</dd>` : ""}
+    </dl></div>`;
+  if (setup || CUR.edit){
+    const type = CUR.edit ? f.type : (f.type || g.type || "");
+    const ten = CUR.pick || (f.unitId ? { id: f.unitId, name: f.tenant, unit: f.unit, level: f.level, status: f.tenantStatus } : g.tenant);
+    html += `<div class="card"><h3>${CUR.edit ? "Change form or tenant" : "1 · Which form and which tenant?"}</h3>
+      <label class="fld"><span>Form</span><select class="sel" id="sType"><option value="">— choose —</option>
+        ${Object.entries(L.types).map(([k, t]) => `<option value="${k}" ${type === k ? "selected" : ""}>${esc(t.name)}</option>`).join("")}</select></label>
+      ${!CUR.edit && g.type && !f.type ? `<div class="hint">✨ Detected from the PDF</div>` : ""}
+      <label class="fld"><span>Tenant</span><div class="tp" id="tp"><input class="inp" id="tq" autocomplete="off" placeholder="Search tenant or unit" value="${esc(ten ? ten.name : "")}"><div class="opts" id="topts"></div></div></label>
+      <div id="tSel">${ten ? `<div class="hint" style="color:var(--muted)">${esc(ten.unit || "")}${ten.level ? " · " + esc(ten.level) : ""} ${stPill(ten.status)}${!CUR.pick && !f.unitId && g.tenant ? ` <span style="color:var(--brand-2)">✨ found in the PDF</span>` : ""}</div>` : ""}</div>
+      ${g.scanned ? `<div class="hint" style="color:var(--warn)">This PDF is a scan — choose the form and tenant yourself; you will tap where to sign.</div>` : ""}
+      <div class="act">${can.sign ? `<button class="btn" id="sSave">Save</button>` : `<div class="muted" style="font-size:.85rem">Only the operations team can set this.</div>`}
+      ${CUR.edit ? `<button class="btn ghost" id="sCancel">Cancel</button>` : ""}</div></div>`;
+    CUR.sel = ten || null;
+  } else {
+    html += `<div class="card"><h3>Tenant</h3><dl class="kv"><dt>Form</dt><dd>${esc(T.name)}</dd><dt>Tenant</dt><dd>${esc(f.tenant)}</dd>
+        ${f.unit ? `<dt>Unit</dt><dd>${esc(f.unit)}${f.level ? " · " + esc(f.level) : ""}</dd>` : ""}${f.tenantStatus ? `<dt>Status</dt><dd>${stPill(f.tenantStatus)}</dd>` : ""}</dl>
+        ${can.sign && f.status !== "done" && f.ver === 0 ? `<button class="btn ghost small" id="sEdit" style="margin-top:10px">Change</button>` : ""}</div>`;
+    html += `<div class="card"><h3>Steps</h3><div class="steps">${T.steps.map((st, i) => { const d = f.done[st.key], cur = f.status === st.key;
+        return `<div class="st ${d ? "ok" : cur ? "cur" : ""}"><span class="b">${d ? "✓" : i + 1}</span><div><div class="l">${esc(st.label)}</div>
+          <div class="w">${d ? `${st.kind === "ack" ? "Acknowledged" : "Signed"} by <b>${esc(d.name)}</b>${d.by && d.by !== d.name ? ` (on ${esc(d.by)}'s device)` : ""} · ${esc(fmtT(d.at))}${d.note ? `<br>“${esc(d.note)}”` : ""}`
+            : cur ? (st.who === "tenant" ? "The tenant signs on this device" : st.kind === "ack" ? "A supervisor or the manager confirms the form was received and noted" : "A supervisor or the manager signs") : "Next"}</div></div></div>`; }).join("")}</div>
+      ${f.status === "done" ? `<div class="done-b">✓ Completed · ${esc(fmtT(f.completedAt))}</div>` : action(T, f, can)}</div>`;
+  }
+  if (can.delete) html += `<button class="btn ghost small danger" id="sDel" style="align-self:flex-start">Delete form</button>`;
+  s.innerHTML = html;
+  bindSide();
+}
+function action(T, f, can){
+  const st = T.steps.find(x => x.key === f.status);
+  if (!can.sign) return `<div class="muted" style="font-size:.85rem">Waiting for a supervisor or the manager.</div>`;
+  if (st.kind === "ack") return `<div class="act"><label class="fld"><span>Note (optional)</span><input class="inp" id="ackNote" maxlength="300" placeholder="e.g. Contractor briefed, works start Monday"></label>
+    <button class="btn" id="ackBtn">✓ Acknowledge</button></div>`;
+  return `<div class="act"><button class="btn gold" id="signBtn">✍︎ ${st.who === "tenant" ? "Tenant signs now" : "Sign as " + esc(st.label)}</button></div>`;
+}
+function bindSide(){
+  const f = CUR.form;
+  const on = (id, fn) => { const el = $("#" + id); if (el) el.onclick = fn; };
+  on("sEdit", () => { CUR.edit = true; CUR.pick = null; renderSide(); });
+  on("sCancel", () => { CUR.edit = false; CUR.pick = null; renderSide(); });
+  on("sDel", async () => { if (!await confirmBox("Delete this form?", "It is removed from the hub with its signatures.", "Delete")) return;
+    try { await api("ops/works/delete", { site: CTX.site, id: f.id }); toast("Form deleted"); load().then(renderList); } catch (e){ toast(e.message, true); } });
+  on("sSave", async () => {
+    const type = $("#sType").value, t = CUR.sel;
+    if (!type) return toast("Choose the form", true);
+    if (!t) return toast("Choose the tenant", true);
+    try { const r = await api("ops/works/setup", { site: CTX.site, id: f.id, type, unitId: t.id || 0, tenant: t.name });
+      CUR.form = r.form; CUR.edit = false; CUR.pick = null; renderSide(); toast("Saved"); } catch (e){ toast(e.message, true); }
+  });
+  on("ackBtn", async () => {
+    try { const r = await api("ops/works/ack", { site: CTX.site, id: f.id, step: f.status, note: $("#ackNote").value });
+      CUR.form = r.form; renderSide(); toast(r.form.status === "done" ? "Form completed ✓" : "Acknowledged"); } catch (e){ toast(e.message, true); }
+  });
+  on("signBtn", () => signDialog());
+  const tq = $("#tq");
+  if (tq){
+    const box = $("#tp"), opts = $("#topts");
+    const draw = () => {
+      const q = tq.value.toLowerCase().trim();
+      const list = (TEN || []).filter(t => !q || `${t.name} ${t.unit} ${t.level}`.toLowerCase().includes(q)).slice(0, 60);
+      opts.innerHTML = list.length ? list.map(t => `<button data-t="${t.id}"><span><b>${esc(t.name)}</b><br><small>${esc(t.unit)}${t.level ? " · " + esc(t.level) : ""}</small></span>${stPill(t.status)}</button>`).join("")
+        : `<div class="empty" style="padding:14px">No tenant matches — the name will be used as typed.</div>`;
+      box.classList.add("open");
+    };
+    tq.onfocus = draw; tq.oninput = () => { CUR.sel = tq.value.trim() ? { id: 0, name: tq.value.trim() } : null; draw(); };
+    opts.onmousedown = e => e.preventDefault();
+    opts.onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; const t = TEN.find(x => x.id === Number(b.dataset.t));
+      CUR.pick = t; CUR.sel = t; tq.value = t.name; box.classList.remove("open");
+      $("#tSel").innerHTML = `<div class="hint" style="color:var(--muted)">${esc(t.unit)}${t.level ? " · " + esc(t.level) : ""} ${stPill(t.status)}</div>`; };
+    tq.onblur = () => setTimeout(() => box.classList.remove("open"), 150);
+  }
+}
+
+/* ---------------- signing ---------------- */
+function signDialog(){
+  const f = CUR.form, st = L.types[f.type].steps.find(x => x.key === f.status), tenant = st.who === "tenant";
+  const d = $("#dSign");
+  d.innerHTML = `<div class="dlg-h"><b>${tenant ? "Tenant signature" : "Sign as " + esc(st.label)}</b><button class="btn ghost small" data-x>✕</button></div>
+    <div class="dlg-b">
+      ${tenant ? `<div class="who">🤝 <span>Hand the device to the tenant's representative of <b>${esc(f.tenant)}</b>.</span></div>`
+        : `<div class="who">👤 <span><b>${esc(CTX.me.name)}</b><br><small class="muted">${esc(CTX.me.positionLabel || CTX.me.roleLabel || "")}</small></span></div>`}
+      <label class="fld"><span>${tenant ? "Tenant representative — full name" : "Name on the form"}</span>
+        <input class="inp" id="sgName" maxlength="80" value="${tenant ? "" : esc(CTX.me.name)}" placeholder="${tenant ? "e.g. Rami Haddad — Store Manager" : ""}"></label>
+      <div class="pad"><canvas id="sgPad"></canvas><div class="base"></div><div class="ph" id="sgPh">Sign here</div></div>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" id="sgClear">Clear</button><span style="flex:1"></span><button class="btn ghost" data-x>Cancel</button><button class="btn" id="sgNext">Place on the form →</button></div>`;
+  d.showModal();
+  const pad = makePad($("#sgPad"), () => $("#sgPh").style.display = "none");
+  d.onclick = e => { if (e.target.closest("[data-x]")) d.close(); };
+  $("#sgClear").onclick = () => { pad.clear(); $("#sgPh").style.display = ""; };
+  $("#sgNext").onclick = async () => {
+    const name = $("#sgName").value.trim();
+    if (!name) return toast(tenant ? "Type the tenant representative's name" : "Type your name", true);
+    if (pad.empty()) return toast("Please sign in the box", true);
+    const png = pad.png(); d.close();
+    await place({ st, name, png });
+  };
+  if (tenant) setTimeout(() => $("#sgName").focus(), 50);
+}
+function makePad(c, onInk){
+  const dpr = Math.max(2, devicePixelRatio || 1);
+  const fit = () => { const r = c.getBoundingClientRect(); c.width = r.width * dpr; c.height = r.height * dpr; const x = c.getContext("2d");
+    x.scale(dpr, dpr); x.lineCap = x.lineJoin = "round"; x.strokeStyle = "#13235C"; x.lineWidth = 2.6; };
+  fit();
+  const ctx = c.getContext("2d"); let down = false, last = null, ink = false, minX = 1e9, minY = 1e9, maxX = 0, maxY = 0;
+  const pt = e => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, p: e.pressure || .5 }; };
+  c.onpointerdown = e => { down = true; c.setPointerCapture(e.pointerId); last = pt(e); ctx.beginPath(); ctx.arc(last.x, last.y, 1.2, 0, 7); ctx.fillStyle = "#13235C"; ctx.fill(); grow(last); };
+  c.onpointermove = e => { if (!down) return; const p = pt(e); ctx.lineWidth = 1.8 + (e.pointerType === "pen" ? p.p * 2 : 1);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.quadraticCurveTo(last.x, last.y, (last.x + p.x) / 2, (last.y + p.y) / 2); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; grow(p); };
+  c.onpointerup = c.onpointercancel = () => { down = false; };
+  function grow(p){ if (!ink){ ink = true; onInk && onInk(); } minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); }
+  return {
+    empty: () => !ink || (maxX - minX < 12 && maxY - minY < 12),
+    clear(){ ctx.clearRect(0, 0, c.width, c.height); ink = false; minX = minY = 1e9; maxX = maxY = 0; },
+    png(){   // cropped to the ink
+      const m = 6, x = Math.max(0, minX - m), y = Math.max(0, minY - m), w = Math.min(c.width / dpr, maxX + m) - x, h = Math.min(c.height / dpr, maxY + m) - y;
+      const o = document.createElement("canvas"); o.width = Math.round(w * dpr); o.height = Math.round(h * dpr);
+      o.getContext("2d").drawImage(c, x * dpr, y * dpr, w * dpr, h * dpr, 0, 0, o.width, o.height);
+      return { url: o.toDataURL("image/png"), w, h };
+    }
+  };
+}
+/* the caption under each signature: name + date, drawn as an image so Arabic names work too */
+function caption(lines, align){
+  const s = 4, fs = 11, lh = 14, c = document.createElement("canvas"), x = c.getContext("2d");
+  x.font = `600 ${fs}px Helvetica, Arial, sans-serif`;
+  const w = Math.ceil(Math.max(...lines.map(l => x.measureText(l.t).width))) + 4, h = lines.length * lh + 2;
+  c.width = w * s; c.height = h * s; x.scale(s, s);
+  lines.forEach((l, i) => { x.font = `${l.b ? 700 : 500} ${l.size || fs}px Helvetica, Arial, sans-serif`; x.fillStyle = l.c || "#13235C"; x.textBaseline = "top";
+    const lw = x.measureText(l.t).width; x.fillText(l.t, align === "center" ? (w - lw) / 2 : 2, i * lh + 1); });
+  return { url: c.toDataURL("image/png"), w, h };
+}
+/* where to sign: find the form's own label (e.g. "Operations Rep", "Beneficiary Name", "Operation Manager") */
+async function findSpot(doc, anchor){
+  const re = new RegExp("^\\s*" + anchor.replace(/ /g, "\\s*"), "i");
+  for (let i = doc.numPages - 1; i >= 0; i--){
+    const lines = await pageLines(doc, i);
+    for (const l of lines){
+      for (let k = 0; k < l.items.length; k++){
+        let txt = "", w = 0;
+        for (let j = k; j < Math.min(l.items.length, k + 4); j++){
+          txt += (j > k ? " " : "") + l.items[j].s; w = l.items[j].x + l.items[j].w - l.items[k].x;
+          if (re.test(txt.trim())){
+            const a = l.items[k], h = a.h;
+            const sig = l.items.find(t => t.x > a.x + w - 1 && /^\s*Signature/i.test(t.s));
+            const date = l.items.find(t => t.x > a.x + w - 1 && /^\s*Date/i.test(t.s));
+            const lineY = a.y + h * 1.25;                         // the signature line sits just above the label
+            if (sig) return { page: i, mode: "row", lineY, nameX: a.x, sigX: sig.x - 6, dateX: date ? date.x : null };
+            return { page: i, mode: "col", lineY, cx: a.x + w / 2 };   // a column of signatures (Return of Area)
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+async function stamp(bytes, spot, ink, name){
+  const { PDFDocument } = PDFLib;
+  const pdf = await PDFDocument.load(bytes);
+  const page = pdf.getPage(spot.page);
+  const when = new Date().toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const sigImg = await pdf.embedPng(ink.url);
+  const ratio = ink.w / ink.h;
+  if (spot.mode === "row"){
+    const H = 30, W = Math.min(150, H * ratio), h = W / ratio;
+    page.drawImage(sigImg, { x: spot.sigX, y: spot.lineY + 2, width: W, height: h });
+    const nm = caption([{ t: name, b: true }]), nmImg = await pdf.embedPng(nm.url);
+    page.drawImage(nmImg, { x: spot.nameX, y: spot.lineY + 3, width: nm.w * .72, height: nm.h * .72 });
+    const dt = caption([{ t: when }]), dtImg = await pdf.embedPng(dt.url);
+    page.drawImage(dtImg, { x: spot.dateX != null ? spot.dateX : spot.sigX + W + 10, y: spot.lineY + 3, width: dt.w * .72, height: dt.h * .72 });
+  } else {
+    const H = 26, W = Math.min(120, H * ratio), h = W / ratio;
+    const cap = caption([{ t: name, b: true }, { t: when, size: 10, c: "#4a4f6a" }], "center"), capImg = await pdf.embedPng(cap.url);
+    const cw = cap.w * .58, ch = cap.h * .58;
+    page.drawImage(capImg, { x: spot.cx - cw / 2, y: spot.lineY + 2, width: cw, height: ch });
+    page.drawImage(sigImg, { x: spot.cx - W / 2, y: spot.lineY + 2 + ch, width: W, height: h });
+  }
+  pdf.setModificationDate(new Date());
+  return await pdf.save();
+}
+async function place({ st, name, png }){
+  const tapNote = $("#tapNote");
+  let spot = await findSpot(CUR.doc, st.anchor);
+  const preview = async () => {
+    try {
+      const out = await stamp(CUR.bytes, spot, png, name);
+      const doc = await pdfjsLib.getDocument({ data: out.slice() }).promise;
+      await renderPages(doc);
+      const cv = $("#viewer").querySelectorAll("canvas")[spot.page]; if (cv) cv.scrollIntoView({ behavior: "smooth", block: "center" });
+      tapNote.innerHTML = `<div class="tapnote">✍︎ Check the signature on the form <span style="flex:1"></span>
+        <button class="btn ghost small" id="pMove">Move</button><button class="btn ghost small" id="pCancel">Cancel</button><button class="btn small" id="pOk">Confirm</button></div>`;
+      $("#pCancel").onclick = cancel;
+      $("#pMove").onclick = tapMode;
+      $("#pOk").onclick = async () => {
+        $("#pOk").disabled = true;
+        try { const r = await api("ops/works/sign", { site: CTX.site, id: CUR.form.id, step: st.key, name, ver: CUR.form.ver, pdf: await b64(out) });
+          tapNote.innerHTML = ""; CUR.form = r.form; CUR.bytes = out; CUR.doc = doc; renderForm(); await renderPages(doc);
+          toast(r.form.status === "done" ? "Form completed ✓" : "Signed ✓"); }
+        catch (e){ toast(e.message, true); $("#pOk").disabled = false; }
+      };
+    } catch (e){ toast("Could not place the signature: " + e.message, true); tapMode(); }
+  };
+  const cancel = async () => { tapNote.innerHTML = ""; await renderPages(CUR.doc); };
+  const tapMode = async () => {
+    tapNote.innerHTML = `<div class="tapnote">👆 Tap on the form where the signature should go <span style="flex:1"></span><button class="btn ghost small" id="pCancel">Cancel</button></div>`;
+    $("#pCancel").onclick = cancel;
+    await renderPages(CUR.doc, (page, x, y) => { spot = { page, mode: "col", lineY: y - 14, cx: x }; preview(); });
+    $("#viewer").scrollIntoView({ behavior: "smooth" });
+  };
+  spot ? preview() : tapMode();
+}
+boot();
+</script>
+</body>
+</html>
