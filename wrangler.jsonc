@@ -15,7 +15,7 @@
   /* Mail relay (Google Apps Script). The URL is not secret, so it lives here and survives every deploy.
      MAIL_RELAY_KEY stays a Secret in the Cloudflare dashboard — never put it in this file. */
   "vars": {
-    "MAIL_RELAY_URL": "https://script.google.com/macros/s/AKfycbwmTh7hwLaMFRD8oUXgUorsNaZCYO07QQeoOimdZJ4TnIN6WyBKl08a6p7O_t4IGvG2/exec"
+    "MAIL_RELAY_URL": "https://script.google.com/macros/s/AKfycbzbF1aOmDk--b8ccMz0cd1xKx9kOW5ZC6ULjZp9v6k2rtva5KIC8zU-BXwZQUOhr8Q/exec"
   },
   "triggers": { "crons": ["*/2 * * * *"] },
   "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" } ] },
