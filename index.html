@@ -487,6 +487,16 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .adm-tabs{max-width:1100px;margin:10px auto 0;display:flex;gap:4px}
 .adm-tabs button{padding:10px 14px;border-radius:10px 10px 0 0;font-weight:700;font-size:.9rem;color:#CDBFE0}
 .adm-tabs button.on{background:var(--paper);color:var(--text)}
+.adm-quota{max-width:1100px;margin:0 auto;padding:18px 20px 0}
+.adm-quota:empty{display:none}
+.mq{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 16px}
+.mq .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--mq) 14%,transparent);color:var(--mq)}
+.mq .ic svg{width:20px;height:20px}
+.mq .tx{flex:1;min-width:180px}
+.mq .tx b{font-size:1.05rem}.mq .tx small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px;overflow-wrap:anywhere}
+.mq .bar{flex:1 1 160px;max-width:260px;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.mq .bar i{display:block;height:100%;border-radius:99px;background:var(--mq);transition:width .5s}
+.mq .warn{flex-basis:100%;font-size:.82rem;color:var(--mq);font-weight:600}
 .adm-body{max-width:1100px;margin:0 auto;padding:22px 20px 60px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
 .panel h3{font-size:1rem;font-weight:800;margin-bottom:14px}
@@ -678,6 +688,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <button data-t="covers">Flagship covers</button>
     </div>
   </div>
+  <div class="adm-quota" id="admQuota"></div>
   <div class="adm-body" id="admBody"></div>
 </div>
 
@@ -1485,7 +1496,7 @@ function renderBrief(loading){
   }
   const hr = new Date().getHours();
   const title = hr < 12 ? "Morning brief" : hr < 18 ? "Afternoon brief" : "Evening brief";
-  const when = BRIEF && BRIEF.generatedAt ? new Date(BRIEF.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+  const when = BRIEF && BRIEF.generatedAt ? new Date(BRIEF.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "";
   const collapsed = store.get("hub.briefCollapsed", false);
   const num = v => typeof v === "number" ? v : /^\d+$/.test(String(v)) ? Number(v) : null;
 
@@ -1910,6 +1921,7 @@ const siteOptions = (sel, allLabel) => (allLabel ? `<option value="ALL">${esc(al
 async function renderAdmin(){
   if (ME.user.role !== "ADMIN") return goHome();
   show("admin");
+  mailQuotaBar();
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
   try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : await adminAnnouncements(body); }
@@ -2056,6 +2068,33 @@ async function adminCovers(body, res){
     try { adminCovers(body, await api("admin/covers", { site: i.dataset.cov, data: await wideJpeg(i.files[0], 1600) })); } catch (er){ alert(er.message); } };
   body.onclick = async e => { const b = e.target.closest("[data-covrm]"); if (!b) return;
     adminCovers(body, await api("admin/covers", { site: b.dataset.covrm, data: "" })); };
+}
+/* Mail quota feature — always on top of Hub administration: recipients the mail relay can still send today */
+let mqAt = 0;
+async function mailQuotaBar(force){
+  const el = $("#admQuota");
+  if (!force && Date.now() - mqAt < 60000 && el.innerHTML) return;
+  mqAt = Date.now();
+  if (!el.innerHTML) el.innerHTML = `<div class="mq" style="--mq:var(--muted)"><div class="tx"><small>Checking the mail relay…</small></div></div>`;
+  let d;
+  try { d = await api("admin/mail-quota"); } catch (e){ d = { relay: true, error: e.message, remaining: null }; }
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+  if (!d.relay || !d.key){
+    el.innerHTML = `<div class="mq" style="--mq:var(--alert)"><div class="ic">${icon}</div><div class="tx"><b>Mail relay not set up</b><small>Add ${!d.relay ? "MAIL_RELAY_URL" : "the MAIL_RELAY_KEY secret"} on the hub — emails cannot be sent.</small></div></div>`;
+    return;
+  }
+  const n = d.remaining, lim = d.limit || 100;
+  const tone = n == null ? "var(--muted)" : n < 20 ? "var(--alert)" : n < 50 ? "var(--warn)" : "var(--ok)";
+  const when = d.at ? new Date(d.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "";
+  el.innerHTML = `<div class="mq" style="--mq:${tone}">
+      <div class="ic">${icon}</div>
+      <div class="tx"><b>${n == null ? "Email quota unknown" : `${n} of ${lim} emails left today`}</b>
+        <small>Mail relay${d.account ? " · sending as " + esc(d.account) : ""}${when ? ` · ${d.live ? "checked" : "last known at"} ${when}` : ""}${d.error && !d.live ? ` · ${esc(d.error)}` : ""}</small></div>
+      ${n == null ? "" : `<div class="bar" title="${n} left"><i style="width:${Math.max(2, Math.min(100, n / lim * 100))}%"></i></div>`}
+      <button class="btn small ghost" id="mqRe">Refresh</button>
+      ${n != null && n < 20 ? `<div class="warn">Almost used up — hub emails may fail until the quota resets (about 24 hours after the first sends). Every address in To/Cc counts; send to distribution lists where you can.</div>` : ""}
+    </div>`;
+  $("#mqRe").onclick = () => mailQuotaBar(true);
 }
 /* Backup — Automation feature (weekly email every Sunday 03:00, download any time) */
 async function adminBackup(body){

@@ -412,6 +412,7 @@ async function route(request, env, ctx, url) {
     }
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
+    if (a === "mail-quota" && method === "GET") return ok(await mailQuota(env));   // Mail quota feature
     /* Automation feature: backup download, backup status, End of Day email test */
     if (a === "covers") return ok(await coversAdmin(env, method, body, { me, SITES, now: nowIso }));
     if (a.startsWith("2fa/")) { const r = await twofaAdmin(env, a, method, body); if (r) return ok(r); }   // Two-step login feature   // Profile feature: flagship covers
@@ -705,6 +706,25 @@ function beirutParts(d = new Date()) {
 const beirutHour = () => Number(beirutParts().hour) % 24;
 const beirutDate = () => { const p = beirutParts(); return `${p.year}-${p.month}-${p.day}`; };
 
+/* Mail quota feature — how many email recipients the relay (Google Apps Script) can still send today.
+   Asks the relay live (its /exec page answers {remainingToday}); falls back to the figure saved after the last send. */
+async function mailQuota(env) {
+  if (!env.MAIL_RELAY_URL) return { relay: false };
+  let live = null, error = null;
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(env.MAIL_RELAY_URL, { redirect: "follow", signal: ctl.signal });
+    clearTimeout(t);
+    const j = JSON.parse(await r.text());
+    if (j && j.ok && Number.isFinite(Number(j.remainingToday))) live = { remaining: Number(j.remainingToday), account: j.account || null, at: nowIso() };
+    else error = (j && j.error) || "Unexpected answer from the relay";
+  } catch (e) { error = e.name === "AbortError" ? "The relay did not answer in time" : "The relay could not be reached"; }
+  if (live) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('mail:quota', ?)").bind(JSON.stringify(live)).run().catch(() => {});
+  const row = live ? null : await env.DB.prepare("SELECT v FROM meta WHERE k = 'mail:quota'").first().catch(() => null);
+  const q = live || (row ? JSON.parse(row.v) : null);
+  return { relay: true, key: !!env.MAIL_RELAY_KEY, live: !!live, error, remaining: q ? q.remaining : null, account: q && q.account || null, at: q ? q.at : null,
+    limit: q && q.remaining > 100 ? 1500 : 100 };
+}
 async function morningStatus(env) {
   const row = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind("mail:last").first();
   return { last: row ? JSON.parse(row.v) : null, relay: !!(env.MAIL_RELAY_URL && env.MAIL_RELAY_KEY), hour: MAIL_HOUR };
@@ -758,6 +778,8 @@ async function relay(env, { to, subject, html, attachment = null }) {
     });
     const text = await r.text();
     let j = null; try { j = JSON.parse(text); } catch {}
+    if (j && j.ok && Number.isFinite(Number(j.remaining)))   // Mail quota feature: remember what the relay reports after each send
+      await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('mail:quota', ?)").bind(JSON.stringify({ remaining: Number(j.remaining), at: nowIso() })).run().catch(() => {});
     return j && j.ok ? { ok: true } : { ok: false, error: (j && j.error) || text.slice(0, 200) };
   } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
 }
