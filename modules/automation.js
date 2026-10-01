@@ -90,7 +90,7 @@ export function eodEmailHtml(R, hubUrl) {
 }
 
 /* ---------- backup ---------- */
-const SKIP_TABLES = new Set(["layout_images", "user_photos", "site_covers", "usage_log", "hub_events", "reminder_runs", "_cf_KV", "d1_migrations"]);
+const SKIP_TABLES = new Set(["layout_images", "user_photos", "site_covers", "works_blobs", "usage_log", "hub_events", "reminder_runs", "_cf_KV", "d1_migrations"]);
 export async function backupData(env) {
   const { results } = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
   const out = { hub: "ABC Operations Hub", at: new Date().toISOString(), tables: {} };
