@@ -228,18 +228,28 @@ app.addEventListener("click", async e => {
   const rm = t.closest("[data-rm]"); if (rm){ H.doc[rm.dataset.rm].splice(+rm.dataset.i, 1); touch(); return render(); }
   const tg = t.closest("[data-tg]"); if (tg){ const x = H.doc[tg.dataset.k][+tg.dataset.i]; x[tg.dataset.tg] = !x[tg.dataset.tg]; touch(); return render(); }
   if (t.id === "saveBtn") return save(false);
-  if (t.id === "submitBtn"){ if (!(await confirmBox("Hand over to the next shift?", "Everyone at the flagship is notified that the handover is ready to receive. The next shift keeps working in this same handover.", "Hand over"))) return; return save(true); }
+  if (t.id === "submitBtn"){
+    let R = null; try { R = await api("ops/handover/mailto?site=" + CTX.site); } catch {}
+    const who = R && R.auto && R.relay && R.to.length ? `<br><br>✉︎ The handover is also <b>emailed</b> to <b>${esc(R.to.join(", "))}</b>${R.cc.length ? `, Cc <b>${esc(R.cc.join(", "))}</b>` : ""}.` : "";
+    if (!(await confirmBox("Hand over to the next shift?", "Everyone at the flagship is notified that the handover is ready to receive. The next shift keeps working in this same handover." + who, "Hand over"))) return;
+    return save(true, false, !!who);
+  }
   if (t.id === "recvBtn"){ try { await api("ops/handover/receive", { site: CTX.site, id: H.id }); toast("Marked as received"); open(H.id); } catch (er){ toast(er.message, true); } return; }
   if (t.id === "delBtn"){ if (!(await confirmBox("Delete this draft?", "The draft is removed permanently.", "Delete"))) return;
     try { await api("ops/handover/delete", { site: CTX.site, id: H.id }); toast("Draft deleted"); list(); } catch (er){ toast(er.message, true); } }
 });
-async function save(submit, quiet){
+async function save(submit, quiet, email){
   clearTimeout(timer);
   try {
-    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, doc: H.doc, submit });
+    let mail;
+    if (submit && email){ if (!LIVE || LIVE.error) await loadLive(); MAIL_SHIFT = null; const m = mailHtml(); mail = { subject: m.title, html: m.html }; }   // ABC Operations Groups: emailed by the hub
+    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, doc: H.doc, submit, mail });
     if (r.offline){ dirty = false; const m = $("#savedMsg"); if (m) m.textContent = "Saved on this device — sends when back online"; if (submit) toast("No signal — the hand-over will be sent when you are back online"); return; }
     const first = !H.id; H.id = r.id; dirty = false;
-    if (submit){ toast("Handed over — the next shift has been notified"); return open(H.id); }
+    if (submit){
+      toast(r.mail && r.mail.sent ? "Handed over and emailed to " + r.mail.to.join(", ") : r.mail && r.mail.error ? "Handed over — but the email failed: " + r.mail.error : "Handed over — the next shift has been notified", !!(r.mail && r.mail.error));
+      return open(H.id);
+    }
     if (!quiet) toast("Saved");
     const m = $("#savedMsg"); if (m) m.textContent = `Saved ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
     if (first) open(H.id);
