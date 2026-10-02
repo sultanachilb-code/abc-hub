@@ -516,6 +516,7 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .ftabs button.on span{background:rgba(255,255,255,.2);color:#fff}
 .pg{padding:14px 0;border-top:1px solid var(--line)}
 .ftabs + .pg{border-top:0;padding-top:4px}
+.pg.og{background:color-mix(in srgb,var(--brand-2,#7B4BB0) 6%,transparent);border:1px solid var(--line);border-radius:14px;padding:14px;margin:6px 0 10px}
 .pg-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
 .pg-h h4{font-size:.8rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-2)}
 .pg-n{font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.45}
@@ -1552,7 +1553,7 @@ $("#brief").addEventListener("click", e => { const c = e.target.closest(".brow, 
 
 
 /* ---------- iOS-style folders: a section folds into one tile; tap → it zooms open over a blurred home ---------- */
-const FOLDER_GROUPS = ["Tenant Management", "Policies & Procedures"];
+const FOLDER_GROUPS = ["Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Tenant Management", "Policies & Procedures"];
 const folderApps = g => APPS.filter(a => a.group === g && !a.hidden);
 function folderTile(g){
   const list = folderApps(g); if (!list.length) return "";
@@ -2113,7 +2114,7 @@ const FLAG_TABS = [["VRM", "ABC Verdun Mall"], ["ACM", "ABC Achrafieh Mall"], ["
 let pplTab = "VRM";
 const ACCESS_NOTE = {
   MANAGER: "Everything at the flagship.",
-  SUPERVISOR: "Operations Tools and Property Overview &amp; Info. Cannot change reminders, upload the budget, change property details or see the Executive Report.",
+  SUPERVISOR: "Operations Tools, Property Overview &amp; Info and the budget. Cannot change reminders, upload the budget, change property details or see the Executive Report.",
   SECURITY: "Security systems and the tools open to everyone at the flagship.",
   ADVISOR: "Every flagship, full access.",
   DIRECTOR: "Full access to the flagships ticked below.",
@@ -2156,7 +2157,17 @@ async function adminUsers(body, editing){
     const sec = at.filter(u => u.role === "SECURITY"), adm = at.filter(u => u.role === "ADMIN");
     const leaders = U.filter(u => u.active && (d.allSiteRoles.includes(u.role) || d.multiRoles.includes(u.role)) && (u.sites || []).includes(site));
     const noPos = team.filter(u => !u.position);
-    main = `<div class="pg"><div class="pg-h"><h4>Flagship management</h4></div><p class="pg-n">${ACCESS_NOTE.MANAGER} One person in each position.</p>
+    /* ABC Operations Groups — the flagship's operations group email; the handover is emailed to it automatically */
+    const og = (d.opsGroups || {})[site] || { emails: [], auto: true };
+    const mm = inSlot("MM"), om = inSlot("OM");
+    main = `<div class="pg og"><div class="pg-h"><h4>ABC Operations Groups</h4></div>
+        <p class="pg-n">The flagship's operations group email. When a handover is handed over, the hub emails it from <b>ABC Operations Hub</b> to this group, with the Mall Manager and the Operations Manager in Cc.</p>
+        <label class="field"><span>Group email${og.emails.length > 1 ? "s" : ""}</span><input id="ogEmails" type="text" placeholder="e.g. abcverdunoperations@abc.com.lb" value="${esc(og.emails.join(", "))}"></label>
+        <label class="chk"><input type="checkbox" id="ogAuto" ${og.auto ? "checked" : ""}> Email the handover automatically when it is handed over</label>
+        <p class="pg-n" style="margin-top:8px">To: <b>${og.emails.length ? esc(og.emails.join(", ")) : `<span style="color:var(--alert)">no group email yet</span>`}</b><br>
+          Cc: ${[mm, om].filter(Boolean).map(u => `<b>${esc(u.name)}</b> <small>(${esc(u.positionLabel)})</small>`).join(" · ") || `<span style="color:var(--muted)">no Mall Manager or Operations Manager assigned</span>`}</p>
+        <div id="ogMsg"></div><button class="btn ghost small" id="ogSave">Save group</button></div>`
+      + `<div class="pg"><div class="pg-h"><h4>Flagship management</h4></div><p class="pg-n">${ACCESS_NOTE.MANAGER} One person in each position.</p>
         <div class="rows"><div class="slot-l">${esc(d.slots.MM)}</div>${slotBox("MM", "MM")}<div class="slot-l">${esc(d.slots.OM)}</div>${slotBox("OM", "OM")}
         ${extraMgr.length ? `<div class="slot-l">Management accounts without a position, or switched off</div>${extraMgr.map(row).join("")}` : ""}</div></div>`
       + group("Operations team", team, ACCESS_NOTE.SUPERVISOR + (noPos.length ? ` <b style="color:var(--alert)">${noPos.length} without a position: edit them to add one.</b>` : ""), { role: "SUPERVISOR", site, position: "MO" })
@@ -2201,6 +2212,12 @@ async function adminUsers(body, editing){
   body.onclick = async ev => {
     const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
     const ed = ev.target.closest("[data-edit]"), rs = ev.target.closest("[data-reset]"), ac = ev.target.closest("[data-act]"), nw = ev.target.closest("[data-new]"), pt = ev.target.closest("[data-ptab]");
+    if (ev.target.id === "ogSave"){   // ABC Operations Groups
+      try { const r = await api("admin/opsgroups", { site: pplTab, emails: $("#ogEmails").value, auto: $("#ogAuto").checked });
+        $("#ogMsg").innerHTML = `<div class="msg okm">Saved.</div>`; setTimeout(() => adminUsers(body, editing), 700); }
+      catch (er){ $("#ogMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+      return;
+    }
     /* Two-step login feature */
     if (ev.target.id === "tfPolSave"){
       try { await api("admin/2fa/policy", { roles: [...document.querySelectorAll("#tfRoles input:checked")].map(i => i.value) }); $("#tfPolMsg").innerHTML = `<div class="msg okm">Saved.</div>`; setTimeout(() => adminUsers(body, editing), 800); }

@@ -431,6 +431,7 @@ async function route(request, env, ctx, url) {
         [t, Number((await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t}`).first().catch(() => ({ n: 0 }))).n || 0)])));
       return ok({ last: r ? JSON.parse(r.v) : null, relay: !!env.MAIL_RELAY_URL, counts });
     }
+    if (a === "opsgroups" && method === "POST") return ok(await saveOpsGroup(env, body));   // ABC Operations Groups
     if (a === "eod-test" && method === "POST") {
       const site = SITES[String(body.site || "").toUpperCase()] ? String(body.site).toUpperCase() : (me.site_code || "VRM");
       if (!env.MAIL_RELAY_URL) throw fail("Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub");
@@ -511,7 +512,7 @@ async function listUsers(env) {
     sites: SITES, roles: ROLES,
     positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
     titles: Object.fromEntries(Object.entries(TITLES).map(([k, v]) => [k, { label: v.label, slot: v.slot }])),
-    slots: SLOTS, multiRoles: MULTI_ROLES, allSiteRoles: ALL_SITE_ROLES
+    slots: SLOTS, multiRoles: MULTI_ROLES, allSiteRoles: ALL_SITE_ROLES, opsGroups: await opsGroups(env)
   };
 }
 async function saveUser(env, me, b) {
@@ -774,11 +775,41 @@ async function morningRun(env, { only = null, force = false } = {}) {
   if (!only) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('mail:last', ?)").bind(JSON.stringify(summary)).run();
   return { sent, errors };
 }
-async function relay(env, { to, subject, html, attachment = null }) {
+/* ABC Operations Groups — each flagship's operations group email (Admin → People & roles).
+   The handover is emailed automatically when it is handed over: To = the group, Cc = the flagship's
+   Mall Manager / Senior Mall Manager and Operations Manager / Deputy Operations Manager. */
+const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+async function opsGroups(env) {
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'opsgroups'").first().catch(() => null);
+  let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
+  return Object.fromEntries(Object.keys(SITES).map(c => [c, { emails: (g[c] && g[c].emails) || [], auto: g[c] ? g[c].auto !== false : true }]));
+}
+async function saveOpsGroup(env, b) {
+  const site = String(b.site || "").toUpperCase();
+  if (!SITES[site]) throw fail("Choose the flagship");
+  const emails = [...new Set(String(b.emails || "").split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean))];
+  const bad = emails.find(e => !EMAIL_RE.test(e));
+  if (bad) throw fail(`Not a valid email: ${bad}`);
+  if (emails.length > 5) throw fail("Up to 5 group emails per flagship");
+  const g = await opsGroups(env);
+  g[site] = { emails, auto: !!b.auto };
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('opsgroups', ?)").bind(JSON.stringify(g)).run();
+  return { opsGroups: g };
+}
+async function handoverRecipients(env, site) {
+  const g = (await opsGroups(env))[site];
+  const { results } = await env.DB.prepare("SELECT email, full_name, position FROM users WHERE active = 1 AND role = 'MANAGER' AND site_code = ?").bind(site).all();
+  const mgrs = (results || []).filter(u => TITLES[u.position]).sort((a, b) => TITLES[a.position].rank - TITLES[b.position].rank);
+  const to = g.emails.slice(), cc = mgrs.map(u => u.email.toLowerCase()).filter(e => !to.includes(e));
+  return { auto: g.auto, relay: !!(env.MAIL_RELAY_URL && env.MAIL_RELAY_KEY), to: to.length ? to : cc.slice(0, 1), cc: to.length ? cc : cc.slice(1),
+    names: mgrs.map(u => ({ email: u.email, name: u.full_name, title: TITLES[u.position].label })), group: g.emails };
+}
+
+async function relay(env, { to, cc = [], replyTo = "", subject, html, attachment = null }) {
   try {
     const r = await fetch(env.MAIL_RELAY_URL, {
       method: "POST", redirect: "follow",
-      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc: [], subject, html, fromName: "ABC Operations Hub", attachment })
+      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc, replyTo, subject, html, fromName: "ABC Operations Hub", attachment })
     });
     const text = await r.text();
     let j = null; try { j = JSON.parse(text); } catch {}
@@ -1507,6 +1538,7 @@ async function opsRoute(env, me, p, method, b, url) {
     return { handover: handoverOut(h), can: rights(me, h.site) };
   }
   /* live rows for the Daily operations checklist tracker: AM / PM checklists and restroom inspections (OPS and S.S) */
+  if (p === "handover/mailto") return handoverRecipients(env, site);   // who receives the handover email
   if (p === "handover/live") {
     const day = isDay(q("day")) ? q("day") : beirutToday();
     const [runs, rr] = await Promise.all([
@@ -1554,6 +1586,22 @@ async function opsRoute(env, me, p, method, b, url) {
       await raiseEvent(env, { site, app: "handover", tone: cctv ? "warn" : "info",
         title: `Handover ready to receive · ${b.day}`,
         body: `${siteName(site)} · handed over by ${me.full_name} · ${d.today.length} today, ${d.ongoing.filter(x => !x.done).length} ongoing${cctv ? ` · ${cctv} ATT CCTV` : ""}` });
+      /* ABC Operations Groups: email the handover to the flagship group + its managers */
+      let mail = null;
+      if (b.mail && b.mail.html) {
+        const R = await handoverRecipients(env, site);
+        if (!R.auto) mail = { sent: false, skipped: true };
+        else if (!R.relay) mail = { sent: false, error: "Mail relay not set up" };
+        else if (!R.to.length) mail = { sent: false, error: "No group email or manager for this flagship" };
+        else {
+          const html = String(b.mail.html).slice(0, 250000), subject = String(b.mail.subject || `ABC ${siteName(site)} | Handover ${b.day}`).slice(0, 200);
+          const r = await relay(env, { to: R.to, cc: R.cc, replyTo: me.email, subject, html });
+          mail = r.ok ? { sent: true, to: R.to, cc: R.cc, at: nowIso() } : { sent: false, error: r.error };
+        }
+        const L2 = JSON.parse((await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first()).handoffs || "[]");
+        if (L2.length) { L2[L2.length - 1].mail = mail; await env.DB.prepare("UPDATE handovers SET handoffs = ? WHERE id = ?").bind(JSON.stringify(L2), id).run(); }
+      }
+      return { id, saved: true, mail };
     }
     return { id, saved: true };
   }

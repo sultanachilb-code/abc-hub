@@ -25,7 +25,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
+  GROUPS: ["Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -148,7 +148,7 @@ window.HUB = {
       id: "exec",
       name: "Executive Report",
       desc: "Monthly executive summary — occupancy, leasing, CAPEX, QC",
-      group: "Property Overview & Info",
+      group: "Executive Report",
       icon: "chart",
       color: "#0F5C7A",
       url: "/tools/exec",
@@ -159,7 +159,7 @@ window.HUB = {
       id: "budget",
       name: "Budget · CAPEX & OPEX",
       desc: "Budget lines by flagship — prepare the JDE request",
-      group: "Property Overview & Info",
+      group: "Operations Projects and Budget",
       icon: "wallet",
       color: "#8A6D1F",
       url: "/tools/budget",
@@ -170,7 +170,7 @@ window.HUB = {
       id: "accuracy",
       name: "Data Accuracy Score",
       desc: "When the GLA, property details, executive report and budget were last updated",
-      group: "Property Overview & Info",
+      group: "Executive Report",
       icon: "gauge",
       color: "#2E6B4F",
       url: "/tools/accuracy"
@@ -229,10 +229,20 @@ window.HUB = {
       id: "abc-connect",
       name: "ABC Connect",
       desc: "Employee portal (Salesforce)",
-      group: "Operations",
+      group: "Enterprise Systems",
       icon: "users",
       color: "#1B5E9E",
       url: "https://abclebanon.my.site.com/abcemployee/s/",
+      embed: false
+    },
+    {
+      id: "tenant-connect",
+      name: "Tenant Connect",
+      desc: "Tenant portal (Salesforce) — requests and approvals",
+      group: "Enterprise Systems",
+      icon: "handshake",
+      color: "#2F6F7E",
+      url: "https://abclebanon.my.site.com/abctenant/s/",
       embed: false
     },
     {
@@ -264,7 +274,7 @@ window.HUB = {
       group: "Enterprise Systems",
       icon: "users",
       color: "#0A6ED1",
-      url: "https://performancemanager8.successfactors.com/login#/companyEntry",
+      url: "https://performancemanager8.successfactors.com/sf/home?bplte_company=abcsal",   /* company sign-in (SSO) */
       embed: false
     },
     {
