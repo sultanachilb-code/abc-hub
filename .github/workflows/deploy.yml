@@ -1,0 +1,28 @@
+# ABC Operations Hub — deploy to Cloudflare on every upload to main
+# (and by hand: GitHub → Actions → "Deploy hub to Cloudflare" → Run workflow)
+name: Deploy hub to Cloudflare
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hub
+  cancel-in-progress: true   # several uploads in a row → only the newest one deploys
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Get the files
+        uses: actions/checkout@v4
+
+      - name: Deploy with Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          command: deploy
