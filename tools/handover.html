@@ -62,19 +62,52 @@ dialog.wide{width:min(760px,calc(100% - 20px))}
 .t.live td{padding:8px;font-size:.88rem}
 .t.live{margin-bottom:-1px}
 #dMail{width:min(460px,calc(100vw - 24px));box-sizing:border-box}
+/* manual items (typed by the team) red · portal items (Tenant Connect import) black */
+.it.manual textarea{color:#C00000}
+.it.portal textarea{color:#111}
+:root[data-theme="dark"] .it.manual textarea{color:#FF8A80} :root[data-theme="dark"] .it.portal textarea{color:#EFEAF5}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .it.manual textarea{color:#FF8A80} :root:not([data-theme="light"]) .it.portal textarea{color:#EFEAF5} }
+@media print{ .it.manual textarea{color:#C00000!important} .it.portal textarea{color:#000!important} .shifts,.vtabs{display:none!important} }
+.grp-h{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.86rem;color:#2F5597;padding:6px 2px 2px}
+.grp-h .sp{flex:1}
+.grp-h + .emptyrow{padding-left:22px}
+.grp{padding-bottom:6px}
+.grp + .grp{border-top:1px dashed var(--line);margin-top:4px}
+.vtabs{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+.vtabs button{height:32px;padding:0 14px;border-radius:8px;font-weight:700;font-size:.84rem;color:var(--muted)}
+.vtabs button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.shifts{max-width:980px;margin:12px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.shifts .sh-h{display:flex;align-items:center;gap:8px;padding:10px 14px;font-weight:800;font-size:.86rem;border-bottom:1px solid var(--line)}
+.shifts .sh-h .sp{flex:1}
+.shr{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.shr:last-child{border-bottom:0}
+.shr b.n{font-size:.92rem}
+.shr .st{font-size:.84rem;color:var(--muted);min-width:0}
+.shr.ok .st{color:var(--text)}
+.shr.ok b.n::before{content:"✓ ";color:var(--ok)}
+.shr.cur{background:rgba(200,162,74,.16);box-shadow:inset 4px 0 0 var(--gold)}
+.shr .acts{display:flex;gap:6px}
+@media (max-width:700px){ .shr{grid-template-columns:1fr auto} .shr .st{grid-column:1/-1;order:3} }
+.hfil{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.hfil label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);font-weight:700;font-size:.8rem;background:var(--surface)}
+.chips button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 #dMail .dlg-b>*{min-width:0;max-width:100%;box-sizing:border-box}
 #dMail .dlg-b .btn{white-space:normal}
 </style>
 </head>
 <body>
 <div class="top">
-  <h1>Handover <small id="sub"></small></h1>
+  <h1>Shift Handover <small id="sub"></small></h1>
+  <span class="vtabs" id="vtabs"><button data-view="today" class="on">Today's handover</button><button data-view="hist">Handover History</button></span>
   <span id="siteBox"></span>
 </div>
 <div class="wrap" id="app"></div>
 <input type="file" id="impFile" accept=".xlsx,.xls,.xlsm,.csv" class="hidden">
 <dialog id="dImp" class="wide"></dialog>
 <dialog id="dMail"></dialog>
+<dialog id="dShifts"></dialog>
 
 <script src="common.js"></script>
 <script>
@@ -87,6 +120,16 @@ const SEC = [
   ["upcoming", "Coming up", "Dated items move into “Today” automatically on their day"]
 ];
 
+let BACK = "";                       // where "‹ back" goes: "hist" when opened from Handover History
+let HF = { from: "", to: "", day: "" };  // Handover History filter
+function setTabs(v){ document.querySelectorAll("#vtabs button").forEach(b => b.classList.toggle("on", b.dataset.view === v)); }
+document.getElementById("vtabs").addEventListener("click", async e => {
+  const b = e.target.closest("[data-view]"); if (!b) return;
+  if (H && dirty && H.can.handover && H.id) await save(false, true);
+  clearTimeout(timer);
+  if (b.dataset.view === "hist"){ BACK = ""; return history(); }
+  BACK = ""; openDay(CTX.today);
+});
 async function boot(site){
   CTX = await api("ops/context" + (site ? "?site=" + site : ""));
   $("#sub").textContent = CTX.siteName;
@@ -95,34 +138,62 @@ async function boot(site){
   const want = Number(new URLSearchParams(location.search).get("id")) || 0;
   if (want) return open(want);
   if (!site){ try { const sm = await api("ops/summary"); if (sm.handover && sm.handover.id) return open(sm.handover.id); } catch {} }
-  list();
+  openDay(CTX.today);
 }
-async function list(){
-  H = null;
-  const d = await api(`ops/handover/list?site=${CTX.site}`);
-  const hr = new Date().getHours();
-  app.innerHTML = `<div id="listView">
-    ${CTX.can.handover ? `<div class="card" style="padding:16px"><span class="lbl">Start a handover</span>
-      <div class="newbox"><input class="inp" type="date" id="nDay" value="${CTX.today}">
-        <button class="btn gold" id="newBtn">Open the day's handover</button>
-        <small class="muted">One handover per day, shared by every shift. A new day starts from the last one — open follow-ups, tomorrow's items and events carry over.</small></div></div>` : ""}
-    <div class="list">${d.handovers.length ? d.handovers.map(h => `<button class="card hrow" data-id="${h.id}">
-        <span class="main"><b>${esc(D.long(h.day))}${h.shift === "AM" ? " · Morning" : h.shift === "PM" ? " · Evening" : ""}</b><br>
-        <small>${h.handoffs.length ? h.handoffs.map(x => `${esc(x.by)} ${hm(x.at)}${x.receivedBy ? ` → ${esc(x.receivedBy)}` : ""}`).join(" · ") : `started by ${esc(h.created_name || "—")}`}${h.updated_name ? ` · last edit ${esc(h.updated_name)}` : ""}</small></span>
+/* Today's handover opens straight away — a new day starts from the last one and is saved at once, so every shift works in the same one */
+async function openDay(day){
+  setTabs(day === CTX.today && !BACK ? "today" : "hist");
+  app.innerHTML = `<div class="card empty">Opening the handover…</div>`;
+  try {
+    const d = await api(`ops/handover/new?site=${CTX.site}&day=${day}`);
+    if (d.existing) return open(d.handover.id);
+    H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin;
+    dirty = true; LIVE = null; render(); loadLive();
+    if (H.can.handover) save(false, true);
+  } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+}
+/* ---------------- Handover History ---------------- */
+async function history(){
+  H = null; setTabs("hist");
+  if (!HF.to){ HF.to = CTX.today; HF.from = D.add(CTX.today, -30); }
+  app.innerHTML = `<div class="card" style="padding:16px">
+      <div class="hfil">
+        <label>From<input class="inp" type="date" id="fFrom" value="${esc(HF.from)}" max="${esc(CTX.today)}"></label>
+        <label>To<input class="inp" type="date" id="fTo" value="${esc(HF.to)}" max="${esc(CTX.today)}"></label>
+        <span class="muted" style="align-self:center;font-size:.8rem">or</span>
+        <label>Specific date<input class="inp" type="date" id="fDay" value="${esc(HF.day)}" max="${esc(CTX.today)}"></label>
+      </div>
+      <div class="chips" style="margin-top:10px">${[["7", "Last 7 days"], ["30", "Last 30 days"], ["month", "This month"], ["90", "Last 3 months"]].map(([k, l]) => `<button data-q="${k}">${l}</button>`).join("")}</div>
+    </div>
+    <div class="list" id="hList"><div class="card empty">Loading…</div></div>`;
+  const run = async () => {
+    const from = HF.day || HF.from, to = HF.day || HF.to;
+    try {
+      const d = await api(`ops/handover/list?site=${CTX.site}&from=${from}&to=${to}`);
+      $("#hList").innerHTML = d.handovers.length ? d.handovers.map(h => `<button class="card hrow" data-id="${h.id}">
+        <span class="main"><b>${esc(D.long(h.day))}</b><br>
+        <small>${h.handoffs.length ? h.handoffs.map(x => `${x.shift ? `<b>${esc((x.shift === "MID" ? "Mid" : x.shift === "NIGHT" ? "Night" : x.shift))}</b> ` : ""}${esc(x.by)} ${hm(x.at)}${x.receivedBy ? ` → ${esc(x.receivedBy)}` : ""}`).join(" · ") : `started by ${esc(h.created_name || "—")}`}${h.updated_name ? ` · last edit ${esc(h.updated_name)}` : ""}</small></span>
         ${h.received_by === "Auto-closed" ? `<span class="pill">Closed</span>` : h.received_by ? `<span class="pill ok">Received</span>` : h.status === "submitted" ? `<span class="pill warn">Awaiting receipt</span>` : `<span class="pill">In progress</span>`}</button>`).join("")
-      : `<div class="card empty">No handovers yet for ${esc(CTX.siteName)}.</div>`}</div></div>`;
+        : `<div class="card empty">No handovers ${HF.day ? "on " + esc(D.long(HF.day)) : "between " + esc(D.fmt(from, { year: "numeric" })) + " and " + esc(D.fmt(to, { year: "numeric" }))}.</div>`;
+    } catch (e){ $("#hList").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+  };
+  $("#fFrom").onchange = e => { HF.from = e.target.value; HF.day = ""; $("#fDay").value = ""; run(); };
+  $("#fTo").onchange = e => { HF.to = e.target.value; HF.day = ""; $("#fDay").value = ""; run(); };
+  $("#fDay").onchange = e => { HF.day = e.target.value; run(); };
+  app.querySelector(".chips").onclick = e => { const b = e.target.closest("[data-q]"); if (!b) return;
+    HF.day = ""; HF.to = CTX.today; HF.from = b.dataset.q === "month" ? CTX.today.slice(0, 8) + "01" : D.add(CTX.today, -Number(b.dataset.q));
+    $("#fFrom").value = HF.from; $("#fTo").value = HF.to; $("#fDay").value = ""; run(); };
+  $("#hList").onclick = e => { const r = e.target.closest(".hrow"); if (r){ BACK = "hist"; open(Number(r.dataset.id)); } };
+  run();
 }
-app.addEventListener("click", async e => {
-  if (H) return;
-  if (e.target.id === "newBtn"){
-    const d = await api(`ops/handover/new?site=${CTX.site}&day=${$("#nDay").value}`);
-    if (d.existing){ toast("Opened the handover already started for that day"); return open(d.handover.id); }
-    H = d.handover; H.can = d.can; dirty = true; LIVE = null; render(); loadLive(); return;
-  }
-  const r = e.target.closest(".hrow"); if (r) open(Number(r.dataset.id));
-});
-async function open(id){ const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; dirty = false; LIVE = null; render(); loadLive(); }
-const hm = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+async function open(id){
+  const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin;
+  setTabs(BACK === "hist" || H.day !== CTX.today ? "hist" : "today");
+  dirty = false; LIVE = null; render(); loadLive();
+}
+const hm = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "";
+const dmy = iso => iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }).replace(",", "") : "";
+const shName = c => (H && H.shiftNames && H.shiftNames[c]) || c;
 /* live rows for the checklist tracker (AM / PM checklists, restroom inspections OPS and S.S) */
 let LIVE = null;
 async function loadLive(){
@@ -132,12 +203,20 @@ async function loadLive(){
 }
 function ckCell(r){ return !r ? `<span class="nd">Not done</span>` : r.status === "submitted" ? `<span class="done">Done</span> <small class="muted">${esc(r.by)} · ${hm(r.at)}${r.issues ? ` · ${r.issues} ✗` : ""}</small>` : `<span class="pr">In progress ${r.done}/${r.total}</span> <small class="muted">${esc(r.by)}</small>`; }
 function liveHtml(){
-  if (!LIVE) return `<div class="emptyrow" style="padding:8px 10px">Loading today's checklists and restroom inspections…</div>`;
+  if (!LIVE) return `<div class="emptyrow" style="padding:8px 10px">Loading today's incidents, tenant feedback, checklists and restroom inspections…</div>`;
   if (LIVE.error) return `<div class="emptyrow" style="padding:8px 10px">${esc(LIVE.error)}</div>`;
   const R = LIVE.restroom || {};
+  const I = LIVE.incidents || {}, FB = LIVE.feedback || [];
+  const incT = `<table class="t live"><tr><th>Incident reports today${I.list ? ` · ${I.list.length}` : ""}</th><th style="width:34%">Type / severity</th><th style="width:30%">Status</th></tr>
+    ${I.error ? `<tr><td colspan="3" class="emptyrow" style="padding:8px">Incident Report System not available right now (${esc(I.error)}).</td></tr>`
+      : (I.list || []).length ? I.list.map(i => `<tr><td><b>${esc(i.ref)}</b> <small class="muted">${esc(i.time)}${i.location ? " · " + esc(i.location) : ""}</small></td><td>${esc(i.type)}${i.severity ? ` <small class="${/major|high|critical/i.test(i.severity) ? "nd" : "muted"}">· ${esc(i.severity)}</small>` : ""}</td><td>${esc(i.status)}</td></tr>`).join("")
+      : `<tr><td colspan="3" class="emptyrow" style="padding:8px">No incident reported today.</td></tr>`}</table>`;
+  const fbT = `<table class="t live"><tr><th>Tenant feedback today${FB.length ? ` · ${FB.length}` : ""}</th><th style="width:34%">Feedback</th><th style="width:30%">Action</th></tr>
+    ${FB.length ? FB.map(f => `<tr><td><b>${esc(f.tenant)}</b> <small class="muted">${esc(f.time)}${f.category ? " · " + esc(f.category) : ""}</small></td><td>${esc(f.description)}</td><td>${esc([f.action, f.actionDesc].filter(Boolean).join(" — "))}</td></tr>`).join("")
+      : `<tr><td colspan="3" class="emptyrow" style="padding:8px">No tenant feedback logged today.</td></tr>`}</table>`;
   const wrow = w => { const cls = (n) => n >= R.rooms ? "done" : w.state === "closed" ? "nd" : w.state === "open" ? "pr" : ""; const cell = (n, by) => R.rooms ? `<span class="${cls(n)}">${n}/${R.rooms}</span>${by.length ? ` <small class="muted">${esc(by.join(", "))}</small>` : ""}` : "—";
     return `<tr><td>${esc(w.label)} <small class="muted">${esc(w.time)}</small></td><td>${cell(w.ops, w.opsBy)}</td><td>${cell(w.ss, w.ssBy)}</td></tr>`; };
-  return `<table class="t live"><tr><th>From the hub · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
+  return incT + fbT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
     <tr><td><b>AM Checklist</b></td><td colspan="2">${ckCell(LIVE.am)}</td></tr>
     <tr><td><b>PM Checklist</b></td><td colspan="2">${ckCell(LIVE.pm)}</td></tr></table>
     <table class="t live"><tr><th>Restroom inspections${R.rooms ? ` · ${R.rooms} restrooms` : ""}</th><th style="width:34%">OPS</th><th style="width:30%">S.S</th></tr>
@@ -147,7 +226,7 @@ function liveHtml(){
 /* ---------------- document ---------------- */
 function itemRow(k, x, i, ro){
   const dated = k === "upcoming";
-  return `<div class="it ${dated ? "dated" : ""} ${x.cctv ? "cctv" : ""} ${x.done ? "done" : ""}">
+  return `<div class="it ${dated ? "dated" : ""} ${x.cctv ? "cctv" : ""} ${x.done ? "done" : ""} ${x.src === "portal" ? "portal" : "manual"}" ${x.req ? `title="${esc(x.req)} · imported from Tenant Connect"` : ""}>
     <span class="dot"></span>
     ${dated ? `<input type="date" class="inp" data-k="${k}" data-i="${i}" data-f="date" value="${esc(x.date)}" ${ro}>` : ""}
     <textarea rows="1" data-k="${k}" data-i="${i}" data-f="text" placeholder="Write the item…" ${ro}>${esc(x.text)}</textarea>
@@ -160,7 +239,7 @@ function render(){
   const submitted = H.status === "submitted";
   app.innerHTML = `
   <div class="meta" style="max-width:980px;margin:0 auto">
-    <button class="btn ghost small" id="back">‹ All handovers</button>
+    ${BACK === "hist" ? `<button class="btn ghost small" id="back">‹ Handover History</button>` : H.day !== CTX.today ? `<button class="btn ghost small" id="toToday">‹ Today's handover</button>` : ""}
     <input class="inp" type="date" id="hDay" value="${esc(H.day)}" ${ro}>
     <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy === "Auto-closed" ? "Closed" : H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
     <span style="flex:1"></span>
@@ -169,12 +248,15 @@ function render(){
     <button class="btn ghost small" id="printBtn">Print / PDF</button>
   </div>
   ${!H.id && H.from ? `<div class="banner">Started from the handover of ${esc(D.fmt(H.from.day, { weekday: "short" }))} — review, then save.</div>` : ""}
-  ${(H.handoffs || []).length ? `<div class="banner" style="background:var(--paper);color:var(--text);font-weight:500">Hand-offs today: ${H.handoffs.map(x => `<b>${esc(x.by)}</b> ${hm(x.at)}${x.receivedBy ? ` → received by <b>${esc(x.receivedBy)}</b> ${hm(x.receivedAt)}` : ` → <span style="color:var(--warn)">not received yet</span>`}`).join(" · ")}</div>` : ""}
+  ${shiftTable()}
   <div class="doc">
     ${SEC.map(([k, title, subtitle], si) => `
       ${si === 0 ? `<div class="hd">${esc(title)}<span class="sp"></span></div><div class="sub" style="display:flex;align-items:center">${esc(subtitle)}<span style="flex:1"></span>${ro ? "" : `<button class="add" data-add="${k}">+ Add row</button>`}</div>`
-        : `<div class="hd">${esc(title)}${subtitle ? `<small style="font-weight:600;opacity:.75">· ${esc(subtitle)}</small>` : ""}<span class="sp"></span>${ro ? "" : `<button class="add" data-add="${k}">+ Add row</button>`}</div>`}
-      <div class="items">${d[k].length ? d[k].map((x, i) => itemRow(k, x, i, ro)).join("") : `<div class="emptyrow">Nothing yet.</div>`}</div>`).join("")}
+        : `<div class="hd">${esc(title)}${subtitle ? `<small style="font-weight:600;opacity:.75">· ${esc(subtitle)}</small>` : ""}<span class="sp"></span>${ro || SPLIT.includes(k) ? "" : `<button class="add" data-add="${k}">+ Add row</button>`}</div>`}
+      <div class="items">${SPLIT.includes(k) ? splitItems(k, ro) : d[k].length ? d[k].map((x, i) => itemRow(k, x, i, ro)).join("") : `<div class="emptyrow">Nothing yet.</div>`}</div>`).join("")}
+
+    <div class="hd">Daily operations tracker<small style="font-weight:600;opacity:.75">· live from the hub</small><span class="sp"></span><button class="add" id="liveRef" title="Refresh the live rows">↻</button></div>
+    <div id="liveBox">${liveHtml()}</div>
 
     <div class="hd">Marketing events<span class="sp"></span>${ro ? "" : `<button class="add" data-add="events">+ Add row</button>`}</div>
     <table class="t"><tr><th>From</th><th>To</th><th>Event / activation</th><th>Start</th><th>End</th><th></th></tr>
@@ -185,18 +267,61 @@ function render(){
         <td><input type="time" data-k="events" data-i="${i}" data-f="end" value="${esc(x.end)}" ${ro}></td>
         <td class="xx">${ro ? "" : `<button class="x" data-rm="events" data-i="${i}">×</button>`}</td></tr>`).join("") || `<tr><td colspan="6" class="emptyrow" style="padding:8px">No events.</td></tr>`}</table>
 
-    <div class="hd">Daily operations checklist tracker<span class="sp"></span><button class="add" id="liveRef" title="Refresh the live rows">↻</button></div>
-    <div id="liveBox">${liveHtml()}</div>
 
   </div>
   <div class="bar">
     <span class="saved" id="savedMsg">${H.id ? `Started by ${esc(H.createdName || "")}${H.updatedName && H.updatedName !== H.createdName ? ` · last edit ${esc(H.updatedName)}` : ""}` : "Not saved yet"}</span>
     ${H.can.handover && H.id && H.status === "draft" ? `<button class="btn ghost danger" id="delBtn">Delete draft</button>` : ""}
     ${H.can.handover ? `<button class="btn ghost" id="saveBtn">Save</button>` : ""}
-    ${H.can.handover && (!submitted || H.receivedBy) ? `<button class="btn gold" id="submitBtn">Hand over to the next shift</button>` : ""}
-    ${submitted && !H.receivedBy && lastBy() !== CTX.me.email ? `<button class="btn gold" id="recvBtn">I have received this handover</button>` : ""}
+
   </div>`;
   app.querySelectorAll(".it textarea").forEach(grow);
+}
+/* ---------- the day's shifts: AM / Mid / PM … each submitted once; the next one is highlighted ---------- */
+const SPLIT = ["today", "tomorrow"];   // these two show Operations Handover (red) and Portal Handover (black)
+function splitItems(k, ro){
+  const grp = (src, label) => {
+    const L = H.doc[k].map((x, i) => [x, i]).filter(([x]) => (x.src === "portal") === (src === "portal"));
+    return `<div class="grp"><div class="grp-h" style="${src === "portal" ? "color:var(--text)" : "color:#C00000"}">${label}<span class="sp"></span>${ro ? "" : `<button class="add" data-add="${k}" data-src="${src}">+ Add row</button>`}</div>
+      ${L.length ? L.map(([x, i]) => itemRow(k, x, i, ro)).join("") : `<div class="emptyrow">Nothing yet.</div>`}</div>`;
+  };
+  return grp("", "Operations Handover:") + grp("portal", "Portal Handover:");
+}
+function shiftTable(){
+  const S = H.shifts || ["AM", "PM"], L = H.handoffs || [], can = H.can.handover;
+  const lastOf = c => [...L].reverse().find(x => x.shift === c);
+  const next = S.find(c => !lastOf(c)), latest = L[L.length - 1];
+  const rows = S.map(c => {
+    const x = lastOf(c), cur = c === next;
+    const st = x ? `Submitted <b>${esc(dmy(x.at))}</b> by <b>${esc(x.by)}</b>${x.mail && x.mail.sent ? " · ✉︎ emailed" : x.mail && x.mail.error ? ` · <span style="color:var(--alert)">email failed</span>` : ""}${x.receivedBy ? ` · received by <b>${esc(x.receivedBy)}</b> ${esc(hm(x.receivedAt))}` : x === latest ? ` · <span style="color:var(--warn)">not received yet</span>` : ""}`
+      : cur ? "<b>Next to submit</b>" : "Waiting";
+    const act = !can ? "" : !x ? `<button class="btn small ${cur ? "gold" : "ghost"}" data-shsub="${c}">Submit</button>`
+      : `${x === latest && !x.receivedBy && x.email !== CTX.me.email ? `<button class="btn small gold" id="recvBtn">Received</button>` : ""}<button class="btn small ghost" data-shsub="${c}" title="Send this shift's handover again">Submit again</button>`;
+    return `<div class="shr ${x ? "ok" : ""} ${cur ? "cur" : ""}"><b class="n">${esc(shName(c))} handover</b><span class="st">${st}</span><span class="acts">${act}</span></div>`;
+  }).join("");
+  return `<div class="shifts"><div class="sh-h">Shift handovers · ${esc(D.fmt(H.day, { weekday: "short" }))}<span class="sp"></span>${H.admin ? `<button class="btn small ghost" id="shSet" title="Choose this flagship's shifts">⚙ Shifts</button>` : ""}</div>${rows}</div>`;
+}
+async function submitShift(c){
+  let R = null; try { R = await api("ops/handover/mailto?site=" + CTX.site); } catch {}
+  const who = R && R.auto && R.relay && R.to.length ? `<br><br>✉︎ It is also <b>emailed</b> to <b>${esc(R.to.join(", "))}</b>${R.cc.length ? `, Cc <b>${esc(R.cc.join(", "))}</b>` : ""}.` : "";
+  const again = (H.handoffs || []).some(x => x.shift === c);
+  if (!(await confirmBox(`${again ? "Submit again" : "Submit"} the ${shName(c)} handover?`, `The time is recorded and everyone at the flagship is notified that the ${shName(c)} handover is ready to receive.` + who, "Submit"))) return;
+  return save(true, false, !!who, c);
+}
+function shiftsDialog(){
+  const d = $("#dShifts"), on = new Set(H.shifts || ["AM", "PM"]);
+  d.innerHTML = `<div class="dlg-h"><b>Handover shifts · ${esc(CTX.siteName)}</b><small>Tick the handovers this flagship submits each day, in order.</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px">${Object.entries(H.shiftNames || { AM: "AM", MID: "Mid", PM: "PM", NIGHT: "Night" }).map(([c, n]) =>
+      `<label class="chk" style="display:flex;gap:8px;align-items:center"><input type="checkbox" value="${c}" ${on.has(c) ? "checked" : ""}> <b>${esc(n)} handover</b></label>`).join("")}
+      <p class="muted" style="font-size:.8rem">Each ticked shift gets its own row with a Submit button. Reminders can be set per shift in Reminders.</p></div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Save</button></div>`;
+  d.onclick = async ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return;
+    if (b && b.dataset.v === "1"){
+      try { const r = await api("ops/handover/shifts", { site: CTX.site, shifts: [...d.querySelectorAll("input:checked")].map(i => i.value) }); H.shifts = r.shifts; render(); toast("Shifts saved"); }
+      catch (er){ return toast(er.message, true); }
+    }
+    d.close(); };
+  d.showModal();
 }
 function lastBy(){ const L = H.handoffs || []; return L.length ? L[L.length - 1].email : H.createdBy; }
 function grow(t){ t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
@@ -218,36 +343,33 @@ app.addEventListener("change", e => { if (H && e.target.id === "hDay"){ LIVE = n
 app.addEventListener("click", async e => {
   if (!H) return;
   const t = e.target;
-  if (t.id === "back"){ if (dirty && H.can.handover && !(await confirmBox("Leave without saving?", "Your latest changes to this handover are not saved yet.", "Leave"))) return; clearTimeout(timer); return list(); }
+  if (t.id === "back" || t.id === "toToday"){ if (dirty && H.can.handover && H.id) await save(false, true); clearTimeout(timer); const back = t.id === "back"; BACK = ""; return back ? history() : openDay(CTX.today); }
+  if (t.id === "shSet") return shiftsDialog();
+  const shs = t.closest("[data-shsub]"); if (shs) return submitShift(shs.dataset.shsub);
   if (t.id === "printBtn") return print();
   if (t.id === "liveRef"){ LIVE = null; $("#liveBox").innerHTML = liveHtml(); return loadLive(); }
   if (t.id === "impBtn") return $("#impFile").click();
   if (t.id === "mailBtn") return mailDialog();
-  const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add; H.doc[k].push(blank[k]()); touch(); render();
+  const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add; H.doc[k].push({ ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}) }); touch(); render();
     const last = app.querySelectorAll(`[data-k="${k}"][data-i="${H.doc[k].length - 1}"]`); const f = [...last].find(x => x.tagName === "TEXTAREA" || x.type === "text"); f && f.focus(); return; }
   const rm = t.closest("[data-rm]"); if (rm){ H.doc[rm.dataset.rm].splice(+rm.dataset.i, 1); touch(); return render(); }
   const tg = t.closest("[data-tg]"); if (tg){ const x = H.doc[tg.dataset.k][+tg.dataset.i]; x[tg.dataset.tg] = !x[tg.dataset.tg]; touch(); return render(); }
   if (t.id === "saveBtn") return save(false);
-  if (t.id === "submitBtn"){
-    let R = null; try { R = await api("ops/handover/mailto?site=" + CTX.site); } catch {}
-    const who = R && R.auto && R.relay && R.to.length ? `<br><br>✉︎ The handover is also <b>emailed</b> to <b>${esc(R.to.join(", "))}</b>${R.cc.length ? `, Cc <b>${esc(R.cc.join(", "))}</b>` : ""}.` : "";
-    if (!(await confirmBox("Hand over to the next shift?", "Everyone at the flagship is notified that the handover is ready to receive. The next shift keeps working in this same handover." + who, "Hand over"))) return;
-    return save(true, false, !!who);
-  }
   if (t.id === "recvBtn"){ try { await api("ops/handover/receive", { site: CTX.site, id: H.id }); toast("Marked as received"); open(H.id); } catch (er){ toast(er.message, true); } return; }
   if (t.id === "delBtn"){ if (!(await confirmBox("Delete this draft?", "The draft is removed permanently.", "Delete"))) return;
-    try { await api("ops/handover/delete", { site: CTX.site, id: H.id }); toast("Draft deleted"); list(); } catch (er){ toast(er.message, true); } }
+    try { await api("ops/handover/delete", { site: CTX.site, id: H.id }); toast("Draft deleted"); BACK = ""; history(); } catch (er){ toast(er.message, true); } }
 });
-async function save(submit, quiet, email){
+async function save(submit, quiet, email, shift){
   clearTimeout(timer);
   try {
     let mail;
-    if (submit && email){ if (!LIVE || LIVE.error) await loadLive(); MAIL_SHIFT = null; const m = mailHtml(); mail = { subject: m.title, html: m.html }; }   // ABC Operations Groups: emailed by the hub
-    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, doc: H.doc, submit, mail });
+    if (submit && email){ if (!LIVE || LIVE.error) await loadLive(); MAIL_SHIFT = shift ? shName(shift) : null; const m = mailHtml(); mail = { subject: m.title, html: m.html }; }   // ABC Operations Groups: emailed by the hub
+    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, doc: H.doc, submit, mail, shift });
     if (r.offline){ dirty = false; const m = $("#savedMsg"); if (m) m.textContent = "Saved on this device — sends when back online"; if (submit) toast("No signal — the hand-over will be sent when you are back online"); return; }
     const first = !H.id; H.id = r.id; dirty = false;
     if (submit){
-      toast(r.mail && r.mail.sent ? "Handed over and emailed to " + r.mail.to.join(", ") : r.mail && r.mail.error ? "Handed over — but the email failed: " + r.mail.error : "Handed over — the next shift has been notified", !!(r.mail && r.mail.error));
+      const nm = shift ? shName(shift) + " handover submitted" : "Handed over";
+      toast(r.mail && r.mail.sent ? nm + " and emailed to " + r.mail.to.join(", ") : r.mail && r.mail.error ? nm + " — but the email failed: " + r.mail.error : nm + " — the next shift has been notified", !!(r.mail && r.mail.error));
       return open(H.id);
     }
     if (!quiet) toast("Saved");
@@ -270,6 +392,7 @@ function loadXlsx(){
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function parseWhen(v){
   if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v)) v = new Date(Math.round(v.getTime() / 60000) * 60000);   // Excel times can be a few ms short (09:59:59.999 → 10:00)
   if (v instanceof Date && !isNaN(v)) return { day: `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`, time: `${String(v.getHours()).padStart(2, "0")}:${String(v.getMinutes()).padStart(2, "0")}` };
   if (typeof v === "number"){ const d = XLSX.SSF.parse_date_code(v); if (d) return { day: `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`, time: `${String(d.H).padStart(2, "0")}:${String(d.M).padStart(2, "0")}` }; return null; }
   const m = String(v).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:[,\sT]+(\d{1,2}):(\d{2}))?/);
@@ -303,22 +426,26 @@ function readRequests(rows){
   return out;
 }
 const dm = d => `${Number(d.slice(8))} ${MON[Number(d.slice(5, 7)) - 1]}`;
+/* Portal handover line: Phil & Joe : Electrical job by Dany from 01/10/2026 06:00 to 02/10/2026 09:45 [Checking UPS Issue] (REQ-008717) */
+const dmyDay = d => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+const nice = t => /[a-z]/.test(t) ? t : t.toLowerCase().replace(/(^|[\s\-\/&(.'])([a-z\u00C0-\u024F])/g, (m, a, b) => a + b.toUpperCase());   // ALL CAPS → Title Case
 function reqText(q){
-  const t = q.to && q.to.day !== q.from.day ? `${q.from.time || ""} → ${dm(q.to.day)} ${q.to.time || ""}`.trim() : [q.from.time, q.to && q.to.time].filter(Boolean).join("–");
-  return [`${q.tenant} — ${q.desc || q.sub}`, q.desc && q.sub ? q.sub : "", q.contractor, t, q.req + (/submitted/i.test(q.status) ? " (awaiting approval)" : "")].filter(Boolean).join(" · ");
+  const at = w => `${dmyDay(w.day)}${w.time ? " " + w.time : ""}`;
+  const to = q.to ? (q.to.day === q.from.day ? (q.to.time || "") : at(q.to)) : "";
+  return `${nice(q.tenant)} : ${q.sub ? q.sub + " job" : "Job"}${q.contractor ? " by " + q.contractor : ""} from ${at(q.from)}${to ? " to " + to : ""}${q.desc ? ` [${q.desc}]` : ""} (${q.req})`;
 }
 function planImport(list){
   const day = H.day, next = D.add(day, 1);
-  const have = new Set(), all = ["ongoing", "today", "tomorrow", "upcoming"].flatMap(k => H.doc[k].map(x => x.text));
+  const have = new Set(["ongoing", "today", "tomorrow", "upcoming"].flatMap(k => H.doc[k].map(x => x.req).filter(Boolean))), all = ["ongoing", "today", "tomorrow", "upcoming"].flatMap(k => H.doc[k].map(x => x.text));
   all.forEach(t => (t.match(/REQ-?\d+/gi) || []).forEach(r => have.add(r.toUpperCase())));
-  const plan = { today: [], tomorrow: [], upcoming: [], dup: [], past: [], skipped: [] };
+  const plan = { today: [], tomorrow: [], upcoming: [], later: [], dup: [], past: [], skipped: [] };
   for (const q of list){
     if (!/^approved/i.test(q.status)){ plan.skipped.push(q); continue; }   // only Approved ✔️ requests go into the handover
     if (have.has(q.req)){ plan.dup.push(q); continue; }
     const endDay = q.to ? q.to.day : q.from.day;
     if (q.from.day === day || (q.from.day < day && endDay >= day)) plan.today.push(q);
     else if (q.from.day === next) plan.tomorrow.push(q);
-    else if (q.from.day > next) plan.upcoming.push(q);
+    else if (q.from.day > next){ plan.later.push(q); continue; }   // only today's and tomorrow's requests are imported — later ones come in with that day's import
     else plan.past.push(q);
     have.add(q.req);
   }
@@ -341,12 +468,12 @@ $("#impFile").addEventListener("change", async e => {
       <div class="dlg-b" style="max-height:60vh;overflow:auto">
         ${n ? "" : `<p class="muted">Nothing new to add.</p>`}
         ${grp("Today", IMP.today)}${grp("Tomorrow", IMP.tomorrow)}${grp("Coming up", IMP.upcoming, true)}
-        <p class="muted" style="font-size:.8rem;margin-top:12px">${[IMP.dup.length ? `${IMP.dup.length} already in this handover` : "", IMP.past.length ? `${IMP.past.length} finished before this day` : "", IMP.skipped.length ? `${IMP.skipped.length} not approved (submitted, rejected or closed) — left out` : ""].filter(Boolean).join(" · ") || "Nothing skipped."}</p>
+        <p class="muted" style="font-size:.8rem;margin-top:12px">${[IMP.dup.length ? `${IMP.dup.length} already in this handover` : "", IMP.past.length ? `${IMP.past.length} finished before this day` : "", IMP.later.length ? `${IMP.later.length} after tomorrow — not imported (they come in when you import on their day)` : "", IMP.skipped.length ? `${IMP.skipped.length} not approved (submitted, rejected or closed) — left out` : ""].filter(Boolean).join(" · ") || "Nothing skipped."}</p>
       </div>
       <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button>${n ? `<button class="btn gold" data-v="1">Add ${n} to the handover</button>` : ""}</div>`;
     d.onclick = ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; d.close();
       if (b && b.dataset.v === "1"){
-        const mk = (q, dated) => ({ text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "" });
+        const mk = (q, dated) => ({ text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "", src: "portal", req: q.req });
         IMP.today.forEach(q => H.doc.today.push(mk(q)));
         IMP.tomorrow.forEach(q => H.doc.tomorrow.push(mk(q)));
         IMP.upcoming.forEach(q => H.doc.upcoming.push(mk(q, true)));
@@ -374,7 +501,11 @@ function mailSubject(){ return `ABC ${CTX.siteName} | ${MAIL_SHIFT || (beirutHou
 function mailHtml(){
   const d = H.doc, F = "font-family:Calibri,Arial,sans-serif;", B = "border:1px solid #2F3B52;";
   const head = (t, sub) => `<tr><td style="${F}background:#8EAADB;color:#10203F;font-weight:bold;font-size:15px;padding:6px 10px;border-top:1.5px solid #2F3B52">${esc(t)}${sub ? ` <span style="font-weight:normal;font-size:12px">· ${esc(sub)}</span>` : ""}</td></tr>`;
-  const items = (L, dated) => `<tr><td style="${F}padding:4px 10px 8px">${L.length ? `<ul style="margin:0;padding-left:20px">${L.map(x => `<li style="color:#2F5597;font-size:14px;margin:2px 0;${x.cctv ? "font-weight:bold;" : ""}${x.done ? "text-decoration:line-through;" : ""}">${dated && x.date ? `<b>${esc(D.fmt(x.date, { weekday: "short" }))}:</b> ` : ""}${esc(x.text)}${x.cctv ? ` <span style="background:#E5484D;color:#fff;font-size:11px;padding:1px 5px">ATT CCTV</span>` : ""}${x.done ? " ✓" : ""}</li>`).join("")}</ul>` : `<span style="color:#777;font-size:13px">Nothing.</span>`}</td></tr>`;
+  const items = (L, dated) => `<tr><td style="${F}padding:4px 10px 8px">${L.length ? `<ul style="margin:0;padding-left:20px">${L.map(x => `<li style="color:${x.src === "portal" ? "#000000" : "#C00000"};font-size:14px;margin:2px 0;${x.cctv ? "font-weight:bold;" : ""}${x.done ? "text-decoration:line-through;" : ""}">${dated && x.date ? `<b>${esc(D.fmt(x.date, { weekday: "short" }))}:</b> ` : ""}${esc(x.text)}${x.cctv ? ` <span style="background:#E5484D;color:#fff;font-size:11px;padding:1px 5px">ATT CCTV</span>` : ""}${x.done ? " ✓" : ""}</li>`).join("")}</ul>` : `<span style="color:#777;font-size:13px">Nothing.</span>`}</td></tr>`;
+  /* Today / Tomorrow: Operations Handover (typed, red) then Portal Handover (Tenant Connect, black) */
+  const split = L => { const ops = L.filter(x => x.src !== "portal"), por = L.filter(x => x.src === "portal");
+    const sub = (t, c) => `<tr><td style="${F}padding:6px 10px 0;font-size:14px;font-weight:bold;color:${c}">${t}</td></tr>`;
+    return sub("Operations Handover:", "#C00000") + items(ops) + sub("Portal Handover:", "#000000") + items(por); };
   const tbl = (cols, rows) => `<tr><td style="padding:0"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
     <tr>${cols.map(c => `<th style="${F}background:#D9E2F3;font-size:13px;text-align:left;padding:5px 8px;border:1px solid #BFBFBF">${esc(c)}</th>`).join("")}</tr>
     ${rows.length ? rows.map(r => `<tr>${r.map(v => `<td style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF">${v}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length}" style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF;color:#777">None.</td></tr>`}</table></td></tr>`;
@@ -383,17 +514,21 @@ function mailHtml(){
   const L2 = LIVE && !LIVE.error ? LIVE : null, R = L2 ? L2.restroom || {} : {};
   const ckM = r => !r ? `<b style="color:#C0392B">Not done</b>` : r.status === "submitted" ? `<b style="color:#2E8B57">Done</b> · ${esc(r.by)} ${hm(r.at)}${r.issues ? ` · ${r.issues} ✗` : ""}` : `<b style="color:#C07A12">In progress ${r.done}/${r.total}</b> · ${esc(r.by)}`;
   const rrM = (n, by, st) => R.rooms ? `<b style="color:${n >= R.rooms ? "#2E8B57" : st === "closed" ? "#C0392B" : st === "open" ? "#C07A12" : "#777"}">${n}/${R.rooms}</b>${by.length ? ` · ${esc(by.join(", "))}` : ""}` : "—";
+  const IM = L2 && L2.incidents || {}, FM = L2 && L2.feedback || [];
+  const incM = L2 ? (IM.error ? "" : tbl(["Incident report", "Time", "Type", "Severity", "Status"], (IM.list || []).map(i => [`<b>${esc(i.ref)}</b>${i.location ? ` <span style="color:#777">${esc(i.location)}</span>` : ""}`, esc(i.time), esc(i.type), esc(i.severity), esc(i.status)])))
+    + tbl(["Tenant feedback", "Time", "Category", "Feedback", "Action"], FM.map(f => [`<b>${esc(f.tenant)}</b>`, esc(f.time), esc(f.category), esc(f.description), esc([f.action, f.actionDesc].filter(Boolean).join(" — "))])) : "";
   const liveM = L2 ? tbl(["Checklist", "Status"], [["AM Checklist", ckM(L2.am)], ["PM Checklist", ckM(L2.pm)]])
     + (R.windows && R.windows.length ? tbl(["Restroom inspections", "OPS", "S.S"], R.windows.map(w => [`${esc(w.label)} <span style="color:#777">${esc(w.time)}</span>`, rrM(w.ops, w.opsBy, w.state), rrM(w.ss, w.ssBy, w.state)])) : "") : "";
   return { title, html: `<div style="${F}"><p style="${F}font-size:14px">Dear team,<br><br>Please find below the shift handover.</p>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:900px;${B}">
     <tr><td style="${F}background:#2A0F45;color:#fff;font-weight:bold;font-size:16px;padding:8px 10px">${esc(title)}</td></tr>
     ${head("Scheduled works", "Ongoing follow-up until solved")}${items(d.ongoing)}
-    ${head("Today")}${items(d.today)}
-    ${head("Tomorrow")}${items(d.tomorrow)}
+    ${head("Today")}${split(d.today)}
+    ${head("Tomorrow")}${split(d.tomorrow)}
     ${head("Coming up")}${items(d.upcoming, true)}
-    ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], d.events.map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
+    ${head("Incidents & tenant feedback")}${incM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Not available.</td></tr>`}
     ${head("Daily operations checklist tracker")}${liveM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Live checklist status not available.</td></tr>`}
+    ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], d.events.map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
   </table>
   <p style="${F}font-size:14px">Best regards,<br>${esc(CTX.me.name)}</p></div>` };
 }
@@ -406,12 +541,12 @@ function emlFile(){
 }
 async function mailDialog(){
   if (!LIVE || LIVE.error) await loadLive();
-  MAIL_SHIFT = beirutHour() < MAIL_CUTOFF ? "AM" : "PM";
+  { const S = H.shifts || ["AM", "PM"], L = H.handoffs || [], nx = S.find(c => !L.some(x => x.shift === c)) || S[S.length - 1]; MAIL_SHIFT = shName(nx); }
   const d = $("#dMail");
   d.innerHTML = `<div class="dlg-h"><b>Email this handover</b><small>Opens as a new email with the handover already inside. Add the recipients and send.</small></div>
     <div class="dlg-b" style="display:grid;gap:10px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="muted" style="font-size:.85rem">Shift</span>
-        <span class="seg" style="display:inline-flex;border:1px solid var(--line,#ccc);border-radius:10px;overflow:hidden">${["AM", "PM"].map(x => `<button type="button" class="btn small ${MAIL_SHIFT === x ? "gold" : "ghost"}" data-sh="${x}" style="border-radius:0;border:0">${x}</button>`).join("")}</span></div>
+        <span class="seg" style="display:inline-flex;border:1px solid var(--line,#ccc);border-radius:10px;overflow:hidden">${(H.shifts || ["AM", "PM"]).map(shName).map(x => `<button type="button" class="btn small ${MAIL_SHIFT === x ? "gold" : "ghost"}" data-sh="${x}" style="border-radius:0;border:0">${x}</button>`).join("")}</span></div>
       <div id="mailSubj" style="font-size:.85rem;padding:8px 10px;border-radius:10px;background:var(--paper,#f5f5f5)"><span class="muted">Subject:</span> <b>${esc(mailSubject())}</b></div>
       <button class="btn gold" data-m="eml">Open in Outlook (desktop)</button>
       <p class="muted" style="font-size:.8rem;margin-top:-4px">Downloads <b>handover.eml</b>. Open it and Outlook shows a new, unsent email.</p>

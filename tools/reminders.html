@@ -111,7 +111,7 @@ function statusOf(r){
 function describe(r){
   const p = r.params || {}, K = data.kinds[r.kind] || {};
   if (r.kind === "restroom") return `${data.windows[p.window] ? data.windows[p.window].label + " (" + data.windows[p.window].from + "–" + data.windows[p.window].to + ")" : ""} · ${data.teams[p.team] || ""}`;
-  if (r.kind === "handover") return `${p.shift === "PM" ? "Evening" : "Morning"} shift · ${p.stage === "received" ? "received by the next shift" : "submitted"}`;
+  if (r.kind === "handover") return `${({ AM: "AM", MID: "Mid", PM: "PM", NIGHT: "Night" })[p.shift] || "AM"} handover · ${p.stage === "received" ? "received by the next shift" : "submitted"}`;
   if (r.kind === "pir") return p.overdueOnly ? "Overdue reports only" : "Every report waiting";
   if (r.kind === "form") return `${({ am: "AM Checklist", pm: "PM Checklist", dbank: "Direct Banking" })[p.form] || ""} · ${p.period === "week" ? "this week" : "today"}`;
   if (r.kind === "sitevisit") return `Open ${p.days} day${p.days === 1 ? "" : "s"} or more`;
@@ -213,7 +213,7 @@ function paramFields(){
     <div><label class="lbl">Window</label><select class="sel" id="pWin">${Object.entries(data.windows).map(([k, w]) => `<option value="${k}" ${p.window === k ? "selected" : ""}>${w.label} · ${w.from}–${w.to}</option>`).join("")}</select></div>
     <div><label class="lbl">Who inspects</label><select class="sel" id="pTeam">${Object.entries(data.teams).map(([k, v]) => `<option value="${k}" ${(p.team || "both") === k ? "selected" : ""}>${v}</option>`).join("")}</select></div>`;
   if (edit.kind === "handover") return `
-    <div><label class="lbl">Shift</label><select class="sel" id="pShift"><option value="AM" ${p.shift !== "PM" ? "selected" : ""}>Morning</option><option value="PM" ${p.shift === "PM" ? "selected" : ""}>Evening</option></select></div>
+    <div><label class="lbl">Shift</label><select class="sel" id="pShift">${[["AM", "AM"], ["MID", "Mid"], ["PM", "PM"], ["NIGHT", "Night"]].map(([c, n]) => `<option value="${c}" ${(p.shift || "AM") === c ? "selected" : ""}>${n} handover</option>`).join("")}</select></div>
     <div><label class="lbl">Done when</label><select class="sel" id="pStage"><option value="submitted" ${p.stage !== "received" ? "selected" : ""}>It is submitted</option><option value="received" ${p.stage === "received" ? "selected" : ""}>The next shift received it</option></select></div>`;
   if (edit.kind === "pir") return `
     <div class="full"><label class="lbl">Count</label><select class="sel" id="pOver"><option value="1" ${p.overdueOnly !== false ? "selected" : ""}>Overdue reports only</option><option value="0" ${p.overdueOnly === false ? "selected" : ""}>Every report still waiting</option></select></div>`;
