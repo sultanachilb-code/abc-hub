@@ -268,6 +268,16 @@ window.HUB = {
       roles: ["MANAGER", "SUPERVISOR"]
     },
     {
+      id: "pm-portal",
+      name: "PM Portal",
+      desc: "Company PM system — office network only",
+      group: "Enterprise Systems",
+      icon: "clipboard",
+      color: "#5A3E8A",
+      url: "http://pm/pm/Home.aspx?dir=ltr&HeaderId=20",   /* no employee ID in the link: each person signs in as themselves */
+      embed: false
+    },
+    {
       id: "successfactors",
       name: "SAP SuccessFactors",
       desc: "HR — performance and people",

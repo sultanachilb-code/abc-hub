@@ -1,7 +1,7 @@
 import { GLA } from "./data/gla-data.js";
 import { layoutsSchema, layoutsRoute, layoutsImage } from "./modules/layouts.js";   // Mall Layouts feature — see docs/FEATURE-layouts.md
 import { propertySchema, propertyRoute } from "./modules/property.js";   // Property Details feature — see docs/FEATURE-property-details.md
-import { remindersSchema, remindersRoute, remindersRun } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
+import { remindersSchema, remindersRoute, remindersRun, reminderDone } from "./modules/reminders.js";   // Reminders feature — see docs/FEATURE-reminders.md
 import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Forms feature — see docs/FEATURE-forms.md
 import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
 export { EmergencyPager } from "./modules/emergency.js";
@@ -1520,31 +1520,49 @@ async function opsRoute(env, me, p, method, b, url) {
   /* ----- shift handover — ONE shared handover per flagship per day; each shift hands it over to the next ----- */
   if (p === "handover/list") {
     const { results } = await env.DB.prepare(
-      "SELECT id, day, shift, status, created_name, updated_name, submitted_at, received_by, received_at, updated_at, handoffs FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 60").bind(site).all();
+      `SELECT id, day, shift, status, created_name, updated_name, submitted_at, received_by, received_at, updated_at, handoffs FROM handovers
+       WHERE site = ? AND day >= ? AND day <= ? ORDER BY day DESC, id DESC LIMIT 400`).bind(site, isDay(q("from")) ? q("from") : "0000-00-00", isDay(q("to")) ? q("to") : "9999-12-31").all();
     return { site, can, handovers: (results || []).map(h => ({ ...h, handoffs: JSON.parse(h.handoffs || "[]") })) };
   }
   if (p === "handover/new") {
     const day = isDay(q("day")) ? q("day") : beirutToday();
     const same = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
-    if (same) return { handover: handoverOut(same), can, existing: true };
+    const shiftInfo = { shifts: await handoverShifts(env, site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN" };
+    if (same) return { handover: handoverOut(same), can, existing: true, ...shiftInfo };
     const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first()
       || await env.DB.prepare("SELECT * FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 1").bind(site).first();
     return { handover: { id: 0, site, day, shift: "DAY", status: "draft", handoffs: [],
-      doc: carryHandover(last ? JSON.parse(last.doc) : null, day), createdName: me.full_name, from: last ? { day: last.day } : null }, can };
+      doc: carryHandover(last ? JSON.parse(last.doc) : null, day), createdName: me.full_name, from: last ? { day: last.day } : null }, can, ...shiftInfo };
   }
   if (p === "handover/get") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
     if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
-    return { handover: handoverOut(h), can: rights(me, h.site) };
+    return { handover: handoverOut(h), can: rights(me, h.site), shifts: await handoverShifts(env, h.site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN" };
+  }
+  if (p === "handover/shifts" && method === "POST") {   // administrators choose the flagship's handover shifts
+    if (me.role !== "ADMIN") throw fail("Only an administrator can change the handover shifts", 403);
+    const list = Object.keys(HO_SHIFTS).filter(c => (b.shifts || []).includes(c));
+    if (!list.length) throw fail("Tick at least one shift");
+    const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'hoshifts'").first();
+    let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
+    g[site] = list;
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('hoshifts', ?)").bind(JSON.stringify(g)).run();
+    return { shifts: list };
   }
   /* live rows for the Daily operations checklist tracker: AM / PM checklists and restroom inspections (OPS and S.S) */
   if (p === "handover/mailto") return handoverRecipients(env, site);   // who receives the handover email
   if (p === "handover/live") {
     const day = isDay(q("day")) ? q("day") : beirutToday();
-    const [runs, rr] = await Promise.all([
+    const [runs, rr, inc, fb] = await Promise.all([
       env.DB.prepare("SELECT form, status, done, total, issues, submitted_name, submitted_at, created_name, updated_at FROM form_runs WHERE site = ? AND day = ? AND form IN ('am','pm') ORDER BY id").bind(site, day).all().catch(() => ({ results: [] })),
-      pullDay(env, "restroom", site, day)
+      pullDay(env, "restroom", site, day), pullDay(env, "incidents", site, day),
+      env.DB.prepare("SELECT tenant, time, category, description, action, action_desc, created_name FROM tenant_feedback WHERE site = ? AND day = ? ORDER BY time, id").bind(site, day).all().catch(() => ({ results: [] }))
     ]);
+    /* the day's incident reports (no names — the handover is emailed to the whole group) and tenant feedback */
+    const incidents = inc.error ? { error: inc.error } : { list: (inc.incidents || []).map(i => ({ ref: i.ref || "", time: i.time || "", type: i.type || "",
+      severity: i.severity || "", status: i.status || "", location: i.location || i.where || "" })) };
+    const feedback = (fb.results || []).map(f => ({ tenant: f.tenant, time: f.time, category: f.category, description: f.description,
+      action: f.action, actionDesc: f.action_desc, by: f.created_name || "" }));
     const ck = f => { const r = (runs.results || []).find(x => x.form === f); return r ? { status: r.status, done: r.done, total: r.total, issues: r.issues,
       by: r.submitted_name || r.created_name, at: r.submitted_at || r.updated_at } : null; };
     let restroom = { error: rr.error || "" };
@@ -1556,7 +1574,7 @@ async function opsRoute(env, me, p, method, b, url) {
         return { label: w.label, time: w.display || "", state: w.state, ops, ss, opsBy: [...by.ops], ssBy: [...by.ss] }; }),
         totals: rr.totals || null };
     }
-    return { day, am: ck("am"), pm: ck("pm"), restroom };
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
@@ -1578,14 +1596,18 @@ async function opsRoute(env, me, p, method, b, url) {
     }
     if (b.submit) {
       const cur = await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first();
-      const L = JSON.parse(cur.handoffs || "[]"); L.push({ by: me.full_name, email: me.email, at, receivedBy: "", receivedAt: "" });
+      const shifts = await handoverShifts(env, site);
+      const shift = shifts.includes(b.shift) ? b.shift : "";
+      const L = JSON.parse(cur.handoffs || "[]"); L.push({ by: me.full_name, email: me.email, at, shift, receivedBy: "", receivedAt: "" });
       await env.DB.prepare("UPDATE handovers SET status = 'submitted', submitted_at = ?, received_by = '', received_at = '', handoffs = ? WHERE id = ?")
         .bind(at, JSON.stringify(L.slice(-12)), id).run();
       const d = JSON.parse(doc);
       const cctv = [...d.ongoing, ...d.today, ...d.tomorrow].filter(x => x.cctv && !x.done).length;
       await raiseEvent(env, { site, app: "handover", tone: cctv ? "warn" : "info",
-        title: `Handover ready to receive · ${b.day}`,
+        title: `${shift ? HO_SHIFTS[shift] + " handover" : "Handover"} ready to receive · ${b.day}`,
         body: `${siteName(site)} · handed over by ${me.full_name} · ${d.today.length} today, ${d.ongoing.filter(x => !x.done).length} ongoing${cctv ? ` · ${cctv} ATT CCTV` : ""}` });
+      /* the "handover submitted" reminders for this shift are done */
+      if (shift && b.day === beirutToday()) await reminderDone(env, site, "handover", p => p.shift === shift && p.stage !== "received", `${HO_SHIFTS[shift]} handover submitted by ${me.full_name}`, at);
       /* ABC Operations Groups: email the handover to the flagship group + its managers */
       let mail = null;
       if (b.mail && b.mail.html) {
@@ -1615,6 +1637,8 @@ async function opsRoute(env, me, p, method, b, url) {
     const to = lastH ? lastH.email : h.created_by;
     if (to && to !== me.email) await raiseEvent(env, { site: h.site, app: "handover", email: to, tone: "ok",
       title: "Your handover was received", body: `${h.day} · received by ${me.full_name}` });
+    if (lastH && lastH.shift && h.day === beirutToday())
+      await reminderDone(env, h.site, "handover", p => p.shift === lastH.shift && p.stage === "received", `${HO_SHIFTS[lastH.shift]} handover received by ${me.full_name}`, at);
     return { received: true };
   }
   if (p === "handover/delete" && method === "POST") {
@@ -1740,7 +1764,8 @@ function blankHandover() {
 }
 const s = (v, n) => String(v == null ? "" : v).slice(0, n);
 function cleanHandover(d) {
-  const item = x => ({ text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "" });
+  const item = x => ({ text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "",
+    src: x.src === "portal" ? "portal" : "", req: /^REQ-?\d+$/i.test(x.req || "") ? String(x.req).toUpperCase() : "" });   // src: portal = imported from Tenant Connect (black), else typed by the team (red)
   const out = blankHandover();
   for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) out[k] = (Array.isArray(d[k]) ? d[k] : []).slice(0, 80).map(item).filter(x => x.text.trim());
   out.events = (Array.isArray(d.events) ? d.events : []).slice(0, 40).map(e => ({ from: isDay(e.from) ? e.from : "", to: isDay(e.to) ? e.to : "",
@@ -1769,6 +1794,14 @@ function carryHandover(prev, day) {
     checklists: [],   // manual checklist table retired — the live AM/PM + restroom rows replace it
     docs: d.docs, notes: ""
   };
+}
+/* Handover shifts per flagship — Settings in Shift Handover (administrators tick them). */
+const HO_SHIFTS = { AM: "AM", MID: "Mid", PM: "PM", NIGHT: "Night" };
+async function handoverShifts(env, site) {
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'hoshifts'").first().catch(() => null);
+  let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
+  const list = (g[site] || []).filter(c => HO_SHIFTS[c]);
+  return list.length ? list : ["AM", "PM"];
 }
 const handoverOut = h => ({ id: h.id, site: h.site, day: h.day, shift: h.shift, status: h.status, doc: cleanHandover(JSON.parse(h.doc)),
   createdName: h.created_name, createdBy: h.created_by, submittedAt: h.submitted_at, receivedBy: h.received_by, receivedAt: h.received_at, updatedAt: h.updated_at,
