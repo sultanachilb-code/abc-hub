@@ -21,3 +21,4 @@
   "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" } ] },
   "migrations": [ { "tag": "v1-emergency-pager", "new_sqlite_classes": ["EmergencyPager"] } ]
 }
+
