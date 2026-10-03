@@ -15,6 +15,7 @@
    ===================================================================== */
 
 const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
+import { reminderDone } from "./reminders.js";   // checklist submitted → its reminders are done
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
 const SITES5 = ["VRM", "ACM", "DBS", "ACS", "VRS"];
@@ -353,6 +354,8 @@ export async function formsRoute(env, p, method, b, url, ctx) {
       const issueText = t.issues ? `${t.issues} issue${t.issues === 1 ? "" : "s"}` : "no issues";
       await ctx.raiseEvent(env, { site, app: "forms", tone: t.issues ? "warn" : "ok",
         title: `${name} submitted`, body: `${day} · ${issueText} · by ${me.full_name}` });
+      /* reminders for this checklist are done for today — no reminder goes out */
+      await reminderDone(env, site, "form", p => p.form === form, `${FORMS[form].name} submitted by ${me.full_name}`, at);
     }
     return { id, status: submit ? "submitted" : "draft", ...t };
   }

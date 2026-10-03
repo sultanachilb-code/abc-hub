@@ -36,7 +36,7 @@ const OLD_WINDOWS = [
   { W1: "11:30", W2: "13:30", W3: "15:30", W4: "17:30", W5: "19:30", W6: "22:00" }    // short-lived draft, 1 Oct 2026
 ];
 const TEAMS = { both: "Operations & Soft services", ops: "Operations", usm: "Soft services" };
-const SHIFTS = { AM: "Morning", PM: "Evening" };
+const SHIFTS = { AM: "AM", MID: "Mid", PM: "PM", NIGHT: "Night" };   // handover shifts (each flagship ticks its own in Shift Handover → Settings)
 const FORM_NAMES = { am: "AM Checklist", pm: "PM Checklist", dbank: "Direct Banking Checklist", open: "Tenant Opening Checklist", close: "Tenant Closing Checklist" };
 
 /* The checks the hub knows how to verify. `source` says where the answer comes from. */
@@ -107,7 +107,7 @@ function cleanParams(kind, p = {}) {
     if (!WINDOWS[p.window]) throw err("Choose the inspection window");
     return { window: p.window, team: TEAMS[p.team] ? p.team : "both" };
   }
-  if (kind === "handover") return { shift: p.shift === "PM" ? "PM" : "AM", stage: p.stage === "received" ? "received" : "submitted" };
+  if (kind === "handover") return { shift: SHIFTS[p.shift] ? p.shift : "AM", stage: p.stage === "received" ? "received" : "submitted" };
   if (kind === "pir") return { overdueOnly: p.overdueOnly !== false };
   if (kind === "form") return { form: ["am", "pm", "dbank"].includes(p.form) ? p.form : "am", period: p.period === "week" ? "week" : "day" };
   if (kind === "sitevisit") return { days: Math.max(0, Math.min(60, Math.round(Number(p.days) || 0))) };
@@ -165,7 +165,7 @@ async function evaluate(env, r, day, deps, cache) {
       const offs = [];
       for (const h of results || []) {
         const L = JSON.parse(h.handoffs || "[]");
-        if (L.length) L.forEach(x => offs.push({ ...x, shift: bh(x.at) >= 5 && bh(x.at) < 17 ? "AM" : "PM" }));
+        if (L.length) L.forEach(x => offs.push({ ...x, shift: x.shift || (bh(x.at) >= 5 && bh(x.at) < 17 ? "AM" : "PM") }));   // older hand-offs: by the clock
         else if (h.status === "submitted") offs.push({ by: h.created_name, at: h.submitted_at, receivedBy: h.received_by, shift: h.shift === "PM" ? "PM" : "AM" });
       }
       const sub = offs.filter(x => x.shift === p.shift);
@@ -215,6 +215,21 @@ async function evaluate(env, r, day, deps, cache) {
   } catch (e) {
     return { state: "error", detail: clip(String(e && e.message || e), 200) };
   }
+}
+
+/* A task was just done in the hub (handover submitted, checklist submitted): mark the matching reminders
+   done for today straight away, so no reminder goes out for it. test(params) picks the reminders. */
+export async function reminderDone(env, site, kind, test, detail, now) {
+  try {
+    const t = beirutNow();
+    const { results } = await env.DB.prepare("SELECT id, params FROM reminders WHERE site = ? AND kind = ? AND active = 1").bind(site, kind).all();
+    const hit = (results || []).filter(r => { try { return test(JSON.parse(r.params || "{}")); } catch { return false; } });
+    if (!hit.length) return 0;
+    await env.DB.batch(hit.map(r => env.DB.prepare(
+      "INSERT OR REPLACE INTO reminder_runs (reminder_id, site, day, slot, state, detail, pushed, at) VALUES (?,?,?,'zz-done','done',?,0,?)")
+      .bind(r.id, site, t.day, clip(detail, 400), now)));
+    return hit.length;
+  } catch { return 0; }
 }
 
 /* ---------- the cron: every 2 minutes ---------- */
