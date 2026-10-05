@@ -25,7 +25,7 @@ import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
 import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";
-import { gateSchema, gateRoute, gateDay } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
+import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
@@ -406,6 +406,8 @@ async function route(request, env, ctx, url) {
   if (path === "setup" && method === "POST") return setup(env, body);
   if (path === "inbox/mail" && method === "POST") return ok(await mailInbox(env, request, body, { SITES, canSite, isFull, now: nowIso, today: beirutToday, raiseEvent, audit }));   // Email inbox: MOM · calendar · contracts report
   if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
+  if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
+    { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
   if (path === "addin/pair" && method === "POST") return ok(await addinPair(env, body, request));   // Outlook add-in: email + 6-digit code → token

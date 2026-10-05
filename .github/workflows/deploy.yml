@@ -1,4 +1,4 @@
-# ABC Operations Hub — deploy to Cloudflare on every upload to main
+# ABC Operations Hub — deploy to Cloudflare on every upload to main (the hub, then the Loading Gate app)
 # (and by hand: GitHub → Actions → "Deploy hub to Cloudflare" → Run workflow)
 name: Deploy hub to Cloudflare
 
@@ -25,4 +25,17 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: 61f649b35159d4a26df7dde3c09a91dd
           wranglerVersion: "4"
+          command: deploy
+
+      # Loading Gate: the loading-area scanner on its own link (worker abc-loading-gate), same scanner page as the hub
+      - name: Copy the scanner into the Loading Gate app
+        run: sh gate-worker/build.sh
+
+      - name: Deploy the Loading Gate app
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          workingDirectory: gate-worker
           command: deploy

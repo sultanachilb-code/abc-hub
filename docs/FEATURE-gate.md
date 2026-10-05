@@ -1,6 +1,25 @@
 # Loading Gate — QR scanner for the loading area
 
-**Day to Day Operations → Loading Gate** (`/tools/gate`) — Managers, Supervisors, Security. Built for the loading-area phone.
+* **Loading-area phone:** its own link — **https://abc-loading-gate.sultanachi-lb-61f.workers.dev** (worker `abc-loading-gate`, folder `gate-worker/`).
+  No hub account, no other hub tool reachable from it. The phone is paired once by a manager.
+* **In the hub:** Day to Day Operations → Loading Gate (`/tools/gate`) — the same scanner for Managers / Supervisors / Security,
+  plus **Loading-area phones** (managers only) to pair and remove phones.
+
+## Separate link — how it is protected
+* The gate app serves only the scanner page and 5 calls (`pair`, `me`, `lookup`, `decide`, `day`). Everything else returns 404.
+* It reaches the hub only through a Cloudflare **service binding** (`HUB` → `operations-hub`) with the shared secret **GATE_KEY**;
+  the hub's door `/api/gate-ext/*` refuses any request without that secret.
+* **Pairing:** a manager taps *Pair a phone* → an 8-character code + QR, valid 30 minutes, one use. The phone scans the QR (or types the code)
+  and receives its own token; the hub stores only its SHA-256. 8 wrong codes from one address → locked 15 minutes.
+* **Remove** a phone in the hub → it is cut off at once and shows the pairing screen again.
+* Each day the agent writes his name; decisions are saved as "<name> · <phone name>". The phone can only see and act on its own flagship.
+* Strict security headers (no framing, camera only, no referrer, CSP).
+
+## Set-up (once)
+1. Merge to `main` — the GitHub Action deploys the hub, then the Loading Gate app (`sh gate-worker/build.sh` copies the scanner into it).
+2. Make one long random secret (40+ characters, e.g. from a password manager) and add it as **GATE_KEY** (type *Secret*) on **both** workers:
+   Cloudflare → Workers & Pages → `operations-hub` → Settings → Variables and Secrets, and the same on `abc-loading-gate`.
+3. Hub → Loading Gate → **Loading-area phones** → *Pair a phone* → scan the QR with the loading-area phone → *Add to Home Screen*.
 
 ## How the agent uses it
 1. Open **Loading Gate** on the phone. The camera starts straight away and the screen stays on.
@@ -57,6 +76,8 @@ The **Run As** user must be able to read the request object and those fields (Fi
 * `modules/gate.js` — routes `ops/gate/lookup`, `ops/gate/decide`, `ops/gate/day`; table `gate_scans`; column `sf_id` added to `contractor_visits`.
 * Check-in/out write the same `contractor_checks` rows as the Contractors tool. Decisions with the same `clientId` are saved once (offline replays).
 * Permit window: valid from 30 minutes before the start (`EARLY_MIN`) to the end time. Rejection reasons: `GATE_REASONS`.
+* `gate-worker/` — worker.js (proxy + headers), wrangler.jsonc (service binding HUB), public/common.js (pairing, agent name, offline queue), sw.js, manifest; `public/index.html`, `tools.css`, `jsqr.min.js`, icons are copied from the hub by `build.sh`.
+* Table `gate_devices` (name, token hash, pairing code hash + expiry, last seen, agent on duty, removed).
 * `tools/gate.html` — camera via BarcodeDetector (Android Chrome) or `tools/jsqr.min.js` (jsQR 1.4.0, Apache-2.0) on iPhone.
 * Handover: `handover/live` returns `gate`; `tools/handover.html` draws it and adds it to the email. The line marks are written by `gateMarkHandover` and kept on save by `keepGateMarks` (worker.js).
 * `tools/common.js` — `gate/decide` added to the offline queue. `sw.js` caches the scanner (cache v18).
