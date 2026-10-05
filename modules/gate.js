@@ -69,6 +69,55 @@ export function parseCode(raw) {
 }
 const reqDigits = r => String(r || "").replace(/\D/g, "");
 
+/* ---------- the pass page itself (no set-up) ----------
+   The QR opens the public Tenant Connect page …/ABCQRCode/s/?recordId=…, which runs the screen flow "QRCodeFlow".
+   The hub starts that same flow (the guest call the page makes) and reads what the page shows:
+   Request Name, Contractor / Supplier, Sender, Account, Date and Valid From / To, and IsApproved (APPROVED / REJECTED stamp). */
+const PASS_HOSTS = ["abclebanon.my.site.com"];
+const passDate = v => { const m = String(v || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s*(\d{1,2}):(\d{2}))?/);
+  return m ? { day: `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`, time: m[4] ? `${m[4].padStart(2, "0")}:${m[5]}` : "" } : null; };
+export function passMap(res) {
+  const L = [];
+  const walk = list => { for (const f of list || []) { if (f && f.label && typeof f.value === "string" && f.value.trim()) L.push([String(f.label).trim(), f.value.trim()]); if (f && f.fields) walk(f.fields); } };
+  walk(res.fields);
+  const get = (...res2) => { for (const re of res2) { const h = L.find(([l]) => re.test(l)); if (h) return h[1]; } return ""; };
+  const ap = (res.outputVariables || []).find(o => o.name === "IsApproved");
+  const req = get(/^request name$/i, /request/i);
+  return {
+    req: /^REQ-?\d+$/i.test(req) ? req.toUpperCase() : "", contractor: clip(get(/contractor|supplier/i), 160), sender: clip(get(/sender/i), 120),
+    tenant: clip(get(/^account$/i, /tenant/i), 160).replace(/\s+(ABC\s+)?(Verdun|Achrafieh|Dbayeh)(\s+(Mall|Department Store|DS))?$/i, ""),
+    work: clip([get(/^maintenance type$/i), get(/^sub maintenance$/i)].filter(Boolean).join(" · "), 120),
+    desc: clip(get(/notes and description/i, /^description$/i), 500),
+    from: passDate(get(/^valid from$/i, /^date from$/i)), to: passDate(get(/^valid (to|until)$/i, /^date to$/i)),
+    status: ap && ap.value === true ? "Approved" : ap && ap.value === false ? "Rejected" : "",
+    fields: L.slice(0, 40)
+  };
+}
+async function passRecord(env, code) {
+  let u; try { u = new URL(code.raw); } catch { return null; }
+  const hosts = [...PASS_HOSTS, ...String(env.PASS_HOSTS || "").split(",").map(x => x.trim()).filter(Boolean)];
+  if (u.protocol !== "https:" || !hosts.includes(u.hostname) || !code.sfId) return null;   // only our own Tenant Connect site
+  const prefix = (u.pathname.match(/^\/[\w-]+(?=\/s\/)/) || ["/ABCQRCode"])[0];
+  const msg = { actions: [{ id: "1;a", descriptor: "aura://FlowRuntimeConnectController/ACTION$startFlow", callingDescriptor: "UNKNOWN",
+    params: { flowDevName: env.PASS_FLOW || "QRCodeFlow", arguments: JSON.stringify([{ name: "recordId", type: "String", value: code.sfId }]) } }] };
+  const body = new URLSearchParams({ message: JSON.stringify(msg), "aura.context": JSON.stringify({ mode: "PROD", app: "siteforce:communityApp" }),
+    "aura.pageURI": `${prefix}/s/?recordId=${code.sfId}`, "aura.token": "null" });
+  const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 7000);
+  try {
+    const r = await fetch(`https://${u.hostname}${prefix}/s/sfsites/aura?r=1&aura.FlowRuntimeConnect.startFlow=1`,
+      { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" }, body, signal: ac.signal });
+    const t = await r.text();
+    if (!r.ok) throw new Error(`Tenant Connect answered ${r.status}`);
+    const j = JSON.parse(t.replace(/^\s*while\(1\);\s*/, ""));
+    const a = j.actions && j.actions[0];
+    if (!a || a.state !== "SUCCESS" || !a.returnValue || !a.returnValue.response) throw new Error("Tenant Connect could not open this pass");
+    const m = passMap(a.returnValue.response);
+    if (!m.req && !m.contractor) throw new Error("This pass was not found in Tenant Connect");
+    return m;
+  } catch (e) { throw new Error(e.name === "AbortError" ? "Tenant Connect is slow to answer" : e.message); }
+  finally { clearTimeout(tm); }
+}
+
 /* ---------- Salesforce (optional) ----------
    Settings (Cloudflare → operations-hub → Settings → Variables and Secrets):
      SF_DOMAIN        e.g. abclebanon.my.salesforce.com           (variable)
@@ -311,8 +360,14 @@ export async function gateRoute(env, p, method, b, url, d) {
     let info = null, source = "none", sfError = "", sfFields = null;
     let { v } = await findVisit(env, site, today, today, { ...c, visitId: b.visitId });
     if (v) { source = "hub"; info = visitInfo(v); }
-    if (c.sfId && sfOn(env)) {   // Salesforce is asked every time: the request may have been cancelled since the import
-      try { const { fields, ...s } = await sfRecord(env, c.sfId); sfFields = fields; info = { ...(info || {}), ...Object.fromEntries(Object.entries(s).filter(([, x]) => x)) }; source = "salesforce";
+    let pass = null;
+    if (c.sfId) {   // the pass page is read on every scan: the request may have been rejected or changed since the import
+      try { pass = await passRecord(env, c); } catch (e) { sfError = e.message; }
+      if (pass) { const { fields, ...s } = pass; sfFields = fields; sfError = ""; info = { ...(info || {}), ...Object.fromEntries(Object.entries(s).filter(([, x]) => x)) }; source = "pass";
+        if (!v && s.req) ({ v } = await findVisit(env, site, today, today, { req: s.req })); }
+    }
+    if (c.sfId && !pass && sfOn(env)) {   // optional Connected App (also used when the pass page cannot be read)
+      try { const { fields, ...s } = await sfRecord(env, c.sfId); sfFields = fields; sfError = ""; info = { ...(info || {}), ...Object.fromEntries(Object.entries(s).filter(([, x]) => x)) }; source = "salesforce";
         if (!v && s.req) ({ v } = await findVisit(env, site, today, today, { req: s.req })); }
       catch (e) { sfError = e.message; }
     }

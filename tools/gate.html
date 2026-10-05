@@ -327,11 +327,11 @@ function drawRes(){
   const passUrl = /^https:\/\/[\w.-]+\.(my\.)?site\.com\//.test((R.code && R.code.raw) || "") ? R.code.raw : "";
   const notes = [];
   if (R.offline) notes.push(["warn", "No signal. Your decision is saved on this phone and sent when the signal is back."]);
-  else if (vk === "check" && !R.sfError) notes.push(["info", "Live Salesforce check is not connected yet — open the pass to see Approved / Rejected."]);
+  else if (vk === "check" && !R.sfError) notes.push(["info", "The pass could not be read automatically — open it to see Approved / Rejected."]);
   if (R.last) notes.push([R.last.decision === "out" ? "alert" : "info", `Scanned before today at ${hm(R.last.at)} — ${R.last.decision === "in" ? "approved in" : R.last.decision === "out" ? "rejected (" + esc(R.last.reason) + ")" : "left"} by ${esc(R.last.by)}.`]);
   if (v && v.state === "onsite") notes.push(["ok", `Already on site since ${hm(v.inAt)}${v.workers ? ` · ${v.workers} workers` : ""}. Use <b>Leaving</b> when they go out.`]);
   if (v && v.ins === "expired") notes.push(["alert", "The contractor's insurance has expired (Contractors register)."]);
-  if (R.sfError) notes.push(["info", `Salesforce: ${esc(R.sfError)} — showing what the hub knows.`]);
+  if (R.sfError) notes.push(["info", `${esc(R.sfError)} — open the pass to check it.`]);
 
   const f = (k, val, big) => val ? `<div class="f"><span>${k}</span><div class="${big ? "big" : ""}">${val}</div></div>` : "";
 
@@ -349,7 +349,7 @@ function drawRes(){
         ${f("From", esc(when(I.from)))}
         ${f("To", esc(when(I.to)))}
         ${f("Status", I.status ? esc(I.status) : "")}
-        ${f("Checked by", R.offline ? "" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
+        ${f("Checked by", R.offline ? "" : R.source === "pass" ? "Tenant Connect pass · live" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
       </div>` : ""}
       ${R.sfFields && R.sfFields.length ? `<details class="card" style="margin:12px 14px 0;padding:10px 14px"><summary style="font-weight:800;font-size:.84rem;cursor:pointer">Salesforce fields read <span class="muted" style="font-weight:600">· managers only</span></summary>
         <div style="font-size:.78rem;line-height:1.5;margin-top:8px;word-break:break-word">${R.sfFields.map(x => `<div><b>${esc(x[0])}</b> <span class="muted">${esc(x[1])}</span></div>`).join("")}</div></details>` : ""}
