@@ -23,7 +23,13 @@ When the agent presses a button he first answers **What does the pass show? Appr
 Decisions taken without signal are kept on the phone ("Not sent yet") and sent automatically when the connection is back.
 
 ## Shift Handover
-The handover's live tracker gets a **Loading area gate** table (time, contractor, tenant, REQ, approved in / rejected + reason, overrides) and the same table goes into the handover email.
+* The day's handover line of the same REQ (the Portal Handover line imported from Tenant Connect) gets the outcome added at its end:
+  * `— ✓ Attended 23:58 · 3 workers` (approved in; `· override: <reason>` when let in against Salesforce)
+  * `— ✕ Refused at gate 08:40 · Permit expired` (rejected out)
+  * `… → left 02:10` (checked out)
+  A newer decision replaces the older mark. Saving the handover from a page opened earlier keeps the marks.
+  When the REQ has no line in the day's handover, nothing is added there — it is still in the table below.
+* The live tracker also has a **Loading area gate** table (time, contractor, tenant, REQ, approved in / rejected + reason, overrides), and the same table goes into the handover email.
 
 ## How the request is read
 The QR holds a Salesforce link (`…/ABCQRCode/s/?recordId=a0G…`). On every scan the hub reads that record from Salesforce
@@ -52,5 +58,5 @@ The **Run As** user must be able to read the request object and those fields (Fi
 * Check-in/out write the same `contractor_checks` rows as the Contractors tool. Decisions with the same `clientId` are saved once (offline replays).
 * Permit window: valid from 30 minutes before the start (`EARLY_MIN`) to the end time. Rejection reasons: `GATE_REASONS`.
 * `tools/gate.html` — camera via BarcodeDetector (Android Chrome) or `tools/jsqr.min.js` (jsQR 1.4.0, Apache-2.0) on iPhone.
-* Handover: `handover/live` returns `gate`; `tools/handover.html` draws it and adds it to the email.
+* Handover: `handover/live` returns `gate`; `tools/handover.html` draws it and adds it to the email. The line marks are written by `gateMarkHandover` and kept on save by `keepGateMarks` (worker.js).
 * `tools/common.js` — `gate/decide` added to the offline queue. `sw.js` caches the scanner (cache v18).

@@ -316,6 +316,11 @@ export async function gateRoute(env, p, method, b, url, d) {
       body: `${who}${info.req ? " · " + info.req : ""} — ${reason} · ${me.full_name}` }).catch(() => {});
     if (override && decision === "in" && d.raiseEvent) await d.raiseEvent(env, { site, app: "gate", tone: "warn", title: `Let in against Salesforce · ${info.contractor || info.tenant || info.req || "contractor"}`,
       body: `${verdict.label} — ${reason} · ${me.full_name}` }).catch(() => {});
+    /* the Shift Handover line of the same REQ gets the outcome: ✓ Attended · ✕ Refused at gate · → left */
+    const hhmm = (when.time || "").slice(0, 5), reqN = info.req || c.req;
+    const mark = decision === "in" ? `✓ Attended ${hhmm}${workers ? ` · ${workers} worker${workers === 1 ? "" : "s"}` : ""}${override ? ` · override: ${reason}` : ""}`
+      : decision === "out" ? `✕ Refused at gate ${hhmm} · ${reason}` : `→ Left ${hhmm}`;
+    if (d.markHandover && reqN) await d.markHandover(env, site, day, reqN, mark).catch(() => false);
     const row = await env.DB.prepare("SELECT * FROM gate_scans WHERE id = ?").bind(res.meta.last_row_id).first();
     return { scan: scanOut(row), ...(await gateDay(env, site, day)) };
   }

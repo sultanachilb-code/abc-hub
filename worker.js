@@ -1458,7 +1458,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
-  if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent });   // Loading Gate feature
+  if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover });   // Loading Gate feature
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
   if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
   if (p === "today") return todayRoute(env, { site, me, canSite, isFull, schedStaff, siteName, pullDay, sites: sitesMap(me), today: beirutToday,
@@ -1744,9 +1744,14 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
     if (!isDay(b.day)) throw fail("Choose the handover date");
-    const doc = JSON.stringify(cleanHandover(b.doc || {}));
-    if (doc.length > 60000) throw fail("This handover is too long — remove finished items");
     let id = Number(b.id) || 0;
+    const incoming = cleanHandover(b.doc || {});
+    if (id) {   // Loading Gate feature: a page opened before a scan must not wipe the gate's "✓ Attended / ✕ Refused" marks
+      const cur = await env.DB.prepare("SELECT doc FROM handovers WHERE id = ? AND site = ?").bind(id, site).first().catch(() => null);
+      if (cur) keepGateMarks(cleanHandover(JSON.parse(cur.doc || "{}")), incoming);
+    }
+    const doc = JSON.stringify(incoming);
+    if (doc.length > 60000) throw fail("This handover is too long — remove finished items");
     const at = nowIso();
     const other = await env.DB.prepare("SELECT id FROM handovers WHERE site = ? AND day = ? AND id != ? LIMIT 1").bind(site, b.day, id).first();
     if (other) throw fail("There is already a handover for this day — open it from the list and continue there", 409, { id: other.id });
@@ -1928,6 +1933,37 @@ function blankHandover() {
     docs: [], notes: "" };
 }
 const s = (v, n) => String(v == null ? "" : v).slice(0, n);
+/* Loading Gate feature: write the gate decision on the handover line of the same REQ
+   ("… (REQ-009004) — ✓ Attended 23:58 · 3 workers"). Only the day's handover; a newer mark replaces the old one. */
+const GATE_MARK = /\s+— (✓ Attended|✕ Refused at gate|→ Left)[^\n]*$/;
+async function gateMarkHandover(env, site, day, req, mark) {
+  const dg = String(req || "").replace(/\D/g, "");
+  if (!dg || !mark) return false;
+  const h = await env.DB.prepare("SELECT id, doc FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+  if (!h) return false;
+  const d = cleanHandover(JSON.parse(h.doc || "{}"));
+  let hit = 0;
+  for (const k of ["today", "ongoing", "tomorrow"]) for (const x of d[k]) {
+    const own = String(x.req || "").replace(/\D/g, "") === dg || new RegExp(`\\bREQ-?0*${dg.replace(/^0+/, "")}\\b`, "i").test(x.text);
+    if (!own) continue;
+    const base = x.text.replace(GATE_MARK, "");
+    const keep = mark.startsWith("→ Left") ? (x.text.match(GATE_MARK) || [""])[0].replace(/ → left.*$/, "") : "";   // leaving keeps the "Attended" part
+    x.text = (keep ? base + keep + " → left " + mark.replace(/^→ Left\s*/, "") : base + " — " + mark).slice(0, 500);
+    hit++;
+  }
+  if (!hit) return false;
+  await env.DB.prepare("UPDATE handovers SET doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(JSON.stringify(cleanHandover(d)), nowIso(), "Loading Gate", h.id).run();
+  return true;
+}
+function keepGateMarks(saved, incoming) {
+  const marks = new Map();
+  for (const k of ["today", "ongoing", "tomorrow"]) for (const x of saved[k] || []) { const m = x.req && x.text.match(GATE_MARK); if (m) marks.set(x.req, m[0]); }
+  if (!marks.size) return;
+  for (const k of ["today", "ongoing", "tomorrow"]) for (const x of incoming[k] || []) {
+    const m = x.req && marks.get(x.req);
+    if (m && !GATE_MARK.test(x.text)) x.text = (x.text + m).slice(0, 500);
+  }
+}
 function cleanHandover(d) {
   const item = x => ({ text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "",
     src: x.src === "portal" ? "portal" : "", req: /^REQ-?\d+$/i.test(x.req || "") ? String(x.req).toUpperCase() : "" });   // src: portal = imported from Tenant Connect (black), else typed by the team (red)
