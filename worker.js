@@ -24,7 +24,8 @@ import { contractsSchema, contractsRoute, contractsRun } from "./modules/contrac
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
-import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";   // Contractors feature — see docs/FEATURE-contractors.md   // Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md
+import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";
+import { gateSchema, gateRoute, gateDay } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
@@ -260,6 +261,7 @@ async function ensureSchema(env) {
   await historySchema(env);   // Change history feature
   await evacSchema(env);   // Tenant Evacuation Plan feature
   await contractorsSchema(env);   // Contractors feature
+  await gateSchema(env);   // Loading Gate feature (after Contractors: adds sf_id to contractor_visits)
   await projectsSchema(env);   // Projects feature
   await addinSchema(env);   // Outlook add-in feature
   await contractsSchema(env);   // Contracts near ending
@@ -1138,7 +1140,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", projects: "Projects", contracts: "Contracts" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1456,6 +1458,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
+  if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent });   // Loading Gate feature
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
   if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
   if (p === "today") return todayRoute(env, { site, me, canSite, isFull, schedStaff, siteName, pullDay, sites: sitesMap(me), today: beirutToday,
@@ -1735,7 +1738,8 @@ async function opsRoute(env, me, p, method, b, url) {
         totals: rr.totals || null };
     }
     const calendar = await calendarDayEvents(env, site, day).catch(() => []);   // Operations Calendar feature: the day's marketing events
-    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar };
+    const gate = await gateDay(env, site, day).catch(() => null);   // Loading Gate feature: approved in / rejected out at the loading area
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);

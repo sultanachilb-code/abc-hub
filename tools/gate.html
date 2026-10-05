@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A0F45">
+<title>Loading Gate · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Loading Gate feature — see docs/FEATURE-gate.md -->
+<style>
+:root{--in:#1F8A4C;--out:#C62F2F;--early:#C07A12}
+body{padding-bottom:env(safe-area-inset-bottom)}
+.wrap{max-width:560px}
+.ar{font-family:"Segoe UI",Tahoma,Arial,sans-serif;direction:rtl;unicode-bidi:isolate}
+.net{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;background:rgba(46,139,87,.14);color:var(--ok)}
+.net.off{background:rgba(192,57,43,.13);color:var(--alert)}
+
+/* scanner */
+.cam{position:relative;aspect-ratio:1/1;border-radius:22px;overflow:hidden;background:#0B0612;margin-top:4px}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .frame{position:absolute;inset:14%;border-radius:18px;pointer-events:none;
+  background:linear-gradient(var(--gold),var(--gold)) top left/34px 4px no-repeat,linear-gradient(var(--gold),var(--gold)) top left/4px 34px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) top right/34px 4px no-repeat,linear-gradient(var(--gold),var(--gold)) top right/4px 34px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) bottom left/34px 4px no-repeat,linear-gradient(var(--gold),var(--gold)) bottom left/4px 34px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) bottom right/34px 4px no-repeat,linear-gradient(var(--gold),var(--gold)) bottom right/4px 34px no-repeat}
+.cam .line{position:absolute;left:16%;right:16%;height:2px;background:var(--gold);box-shadow:0 0 12px var(--gold);top:20%;animation:sweep 2.2s ease-in-out infinite alternate}
+@keyframes sweep{to{top:80%}}
+.cam .msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;padding:30px;line-height:1.55;font-weight:600}
+.cam .msg .btn{margin-top:14px}
+.cam .torch{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:1.2rem}
+.cam .torch.on{background:var(--gold);color:var(--ink)}
+.hint{text-align:center;margin:12px 0 4px;font-weight:700}
+.hint small{display:block;color:var(--muted);font-weight:600;margin-top:2px}
+.row{display:flex;gap:8px;margin-top:12px}
+.row .btn{flex:1;height:46px}
+
+.kp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
+.kp .card{padding:10px 12px}
+.kp strong{display:block;font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.kp span{font-size:.74rem;color:var(--muted);font-weight:700}
+h2.sec{font-size:.74rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;display:flex;align-items:center;gap:8px}
+h2.sec .sp{flex:1}
+.log{display:grid;gap:8px}
+.lg{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-left:4px solid var(--line)}
+.lg.in{border-left-color:var(--in)} .lg.out{border-left-color:var(--out)} .lg.leave{opacity:.7}
+.lg .t{font-weight:800;font-variant-numeric:tabular-nums;font-size:.9rem}
+.lg b{font-size:.92rem;display:block;line-height:1.3}
+.lg small{display:block;color:var(--muted);font-size:.76rem;line-height:1.4}
+.tag{font-size:.7rem;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.tag.in{background:rgba(31,138,76,.14);color:var(--in)} .tag.out{background:rgba(198,47,47,.13);color:var(--out)} .tag.leave{background:var(--paper);color:var(--muted)}
+.tag.q{background:rgba(200,162,74,.18);color:#8A6A12}
+
+/* result */
+.res{position:fixed;inset:0;z-index:40;background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+.res .scroll{flex:1;overflow-y:auto;padding:0 0 12px}
+.vd{padding:calc(18px + env(safe-area-inset-top)) 18px 18px;color:#fff;display:flex;gap:14px;align-items:center}
+.vd.valid{background:var(--in)} .vd.bad{background:var(--out)} .vd.early{background:var(--early)} .vd.unknown{background:#5B4E6B}
+.vd .ic{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:1.9rem;font-weight:900;flex:none}
+.vd b{font-size:1.25rem;display:block;line-height:1.2}
+.vd small{opacity:.9;font-weight:600;font-size:.86rem}
+.vd .x{margin-left:auto;align-self:flex-start;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;font-size:1.2rem;flex:none}
+.det{margin:14px 14px 0;padding:4px 16px}
+.det .f{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.det .f:last-child{border-bottom:0}
+.det .f span{font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.det .f div{font-weight:700;line-height:1.4;word-break:break-word}
+.det .big{font-size:1.15rem}
+.note{margin:10px 14px 0;padding:11px 14px;border-radius:12px;font-size:.86rem;font-weight:700;line-height:1.45}
+.note.warn{background:rgba(192,122,18,.13);color:var(--warn)} .note.alert{background:rgba(192,57,43,.12);color:var(--alert)} .note.ok{background:rgba(46,139,87,.12);color:var(--ok)}
+.note.info{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.wk{margin:12px 14px 0;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.wk label{font-weight:800;flex:1;line-height:1.3}
+.wk label small{display:block;font-weight:600;color:var(--muted);font-size:.78rem}
+.wk button{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);font-size:1.4rem;font-weight:800;background:var(--surface)}
+.wk input{width:64px;height:46px;text-align:center;font-size:1.4rem;font-weight:800;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.acts{padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);display:grid;gap:10px}
+.acts .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.big-btn{height:84px;border-radius:18px;color:#fff;font-weight:900;font-size:1.15rem;letter-spacing:.02em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 6px 16px rgba(0,0,0,.14)}
+.big-btn small{font-size:.9rem;font-weight:700;opacity:.95}
+.big-btn.in{background:var(--in)} .big-btn.out{background:var(--out)}
+.big-btn:active{transform:scale(.98)}
+.big-btn.dim{opacity:.55}
+.acts .btn{height:44px}
+
+/* pick the request */
+.pick{display:grid;gap:8px;margin:12px 14px 0}
+.pk{padding:12px 14px;text-align:left;display:grid;grid-template-columns:62px 1fr;gap:10px;align-items:center;width:100%}
+.pk .t{font-weight:800;font-variant-numeric:tabular-nums}
+.pk b{display:block;line-height:1.3} .pk small{color:var(--muted);font-size:.78rem}
+
+/* reasons */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:10px 14px;border-radius:999px;border:1px solid var(--line);font-weight:700;font-size:.88rem;background:var(--surface)}
+.chip.on{background:var(--out);border-color:var(--out);color:#fff}
+.chip.on.g{background:var(--in);border-color:var(--in)}
+
+/* full-screen confirmation */
+.flash{position:fixed;inset:0;z-index:60;display:grid;place-items:center;color:#fff;text-align:center;animation:fl .18s ease-out}
+.flash.in{background:var(--in)} .flash.out{background:var(--out)} .flash.leave{background:#3C2D52}
+.flash .ic{font-size:6rem;font-weight:900;line-height:1}
+.flash b{display:block;font-size:1.7rem;margin-top:10px}
+.flash small{display:block;font-size:1.05rem;margin-top:6px;opacity:.92;padding:0 24px}
+@keyframes fl{from{opacity:0;transform:scale(1.04)}}
+@media (max-width:640px){ #sub{display:none} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>▣ Loading Gate <small id="sub"></small></h1>
+  <span id="net" class="net">Online</span>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap" id="main">
+  <div class="cam" id="cam">
+    <video id="vid" playsinline muted></video>
+    <div class="frame"></div><div class="line" id="sweep"></div>
+    <div class="msg" id="camMsg"><div>Starting the camera…</div></div>
+    <button class="torch hidden" id="torch" aria-label="Torch">💡</button>
+  </div>
+  <p class="hint">Point the camera at the contractor's QR code<small class="ar">وجّه الكاميرا نحو رمز الـ QR الخاص بالمتعهد</small></p>
+  <div class="row"><button class="btn ghost" id="bType">⌨ Type request number</button></div>
+  <div class="kp">
+    <div class="card"><strong id="kIn" style="color:var(--in)">0</strong><span>Approved in</span></div>
+    <div class="card"><strong id="kOut" style="color:var(--out)">0</strong><span>Rejected out</span></div>
+    <div class="card"><strong id="kW">0</strong><span>Workers in</span></div>
+  </div>
+  <h2 class="sec">Today at the gate <span class="sp"></span><button class="btn ghost small" id="bRef">↻</button></h2>
+  <div class="log" id="log"><div class="card empty">Loading…</div></div>
+  <p class="muted" style="font-size:.76rem;margin-top:14px;line-height:1.5">Every decision goes to the Shift Handover (Loading area gate) and to Contractors. Rejections notify the flagship. Without signal the decision is kept on this phone and sent when the connection is back.</p>
+</div>
+<div id="resBox"></div>
+<dialog id="dlg"></dialog>
+<canvas id="cv" hidden></canvas>
+
+<script src="common.js"></script>
+<script src="jsqr.min.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", DAY = null, R = null, busy = false;
+const hm = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" }) : "";
+const when = w => w && w.day ? `${D.fmt(w.day, { weekday: "short" })}${w.time ? " · " + w.time : ""}` : "—";
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+const PENDING_KEY = "hub.gate.pending";   /* decisions waiting to be sent — shown in the list until they reach the hub */
+const pendRead = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); } catch { return []; } };
+const pendWrite = l => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(l.slice(-60))); } catch {} };
+
+/* ---------- start ---------- */
+async function boot(){
+  netState(); addEventListener("online", netState); addEventListener("offline", netState);
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site; $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${site}`); loadDay(); });
+  } catch (e){ $("#main").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; return; }
+  $("#bType").onclick = typeBox;
+  $("#bRef").onclick = loadDay;
+  addEventListener("hub-synced", e => { if (/gate\/decide/.test(e.detail.path)){ pendWrite(pendRead().filter(x => x.clientId !== e.detail.body.clientId)); loadDay(); } });
+  loadDay(); startCam(); wake();
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible"){ wake(); if (!R) startCam(); loadDay(); } else stopCam(); });
+}
+function netState(){ const n = $("#net"); if (!n) return; n.textContent = navigator.onLine ? "Online" : "Offline"; n.classList.toggle("off", !navigator.onLine); }
+let lock = null;
+async function wake(){ try { if ("wakeLock" in navigator && !lock){ lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => lock = null); } } catch {} }
+
+/* ---------- today's log ---------- */
+async function loadDay(){
+  try { DAY = await api(`ops/gate/day?site=${site}`); } catch (e){ if (!DAY) DAY = { list: [], counts: { in: 0, out: 0, workers: 0 }, reasons: [] }; }
+  drawDay();
+}
+function drawDay(){
+  const sent = new Set((DAY.list || []).map(x => x.clientId).filter(Boolean));
+  const pend = pendRead().filter(x => x.site === site && !sent.has(x.clientId));
+  const L = [...pend.map(x => ({ ...x, queued: true })), ...(DAY.list || [])];
+  const n = d => L.filter(x => x.decision === d).length;
+  $("#kIn").textContent = n("in"); $("#kOut").textContent = n("out");
+  $("#kW").textContent = L.filter(x => x.decision === "in").reduce((a, x) => a + (x.workers || 0), 0);
+  const lab = { in: "Approved in", out: "Rejected", leave: "Left" };
+  $("#log").innerHTML = L.length ? L.slice(0, 40).map(x => `<div class="card lg ${x.decision}">
+      <div class="t">${hm(x.at)}</div>
+      <div><b>${esc(x.contractor || x.tenant || x.req || "Contractor")}</b><small>${esc([x.tenant && x.contractor ? x.tenant : "", x.req].filter(Boolean).join(" · ")) || "&nbsp;"}</small>
+        ${x.reason ? `<small style="color:${x.decision === "out" ? "var(--out)" : "var(--warn)"}">${x.override ? "Override: " : ""}${esc(x.reason)}</small>` : ""}</div>
+      <div style="text-align:right"><span class="tag ${x.decision}">${lab[x.decision]}</span>${x.queued ? `<br><span class="tag q" style="margin-top:4px;display:inline-block">Not sent yet</span>` : ""}${x.decision === "in" && x.workers ? `<small>${x.workers} workers</small>` : ""}</div></div>`).join("")
+    : `<div class="card empty">No QR scanned today yet.</div>`;
+}
+
+/* ---------- camera ---------- */
+let stream = null, loopT = 0, detector = null, lastCode = "", lastAt = 0;
+async function startCam(){
+  if (stream) return;
+  const msg = $("#camMsg");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ msg.innerHTML = `<div>This browser cannot open the camera.<br>Use <b>Type request number</b> below.</div>`; return; }
+  msg.innerHTML = `<div>Starting the camera…</div>`; msg.classList.remove("hidden");
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false });
+    const v = $("#vid"); v.srcObject = stream; await v.play();
+    msg.classList.add("hidden"); $("#sweep").classList.remove("hidden");
+    if ("BarcodeDetector" in window){ try { const f = await BarcodeDetector.getSupportedFormats(); if (f.includes("qr_code")) detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch {} }
+    const tr = stream.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
+    const tb = $("#torch");
+    if (caps.torch){ tb.classList.remove("hidden"); tb.onclick = async () => { const on = !tb.classList.contains("on"); try { await tr.applyConstraints({ advanced: [{ torch: on }] }); tb.classList.toggle("on", on); } catch {} }; }
+    loop();
+  } catch (e){
+    stream = null;
+    msg.innerHTML = `<div>${e.name === "NotAllowedError" ? "Camera access is blocked. Allow the camera for the hub in the phone settings." : "The camera could not start."}<br><button class="btn gold" id="camRetry">Try again</button></div>`;
+    $("#camRetry").onclick = startCam;
+  }
+}
+function stopCam(){ clearTimeout(loopT); if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; } $("#torch").classList.add("hidden"); $("#torch").classList.remove("on"); }
+async function loop(){
+  if (!stream || R || busy) return;
+  const v = $("#vid");
+  let code = "";
+  try {
+    if (v.readyState >= 2){
+      if (detector){ const r = await detector.detect(v); if (r && r[0]) code = r[0].rawValue; }
+      else if (window.jsQR){
+        const cv = $("#cv"), s = Math.min(v.videoWidth, v.videoHeight), side = Math.min(640, s);
+        cv.width = cv.height = side;
+        const c = cv.getContext("2d", { willReadFrequently: true });
+        c.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, side, side);
+        const img = c.getImageData(0, 0, side, side), q = jsQR(img.data, side, side, { inversionAttempts: "dontInvert" });
+        if (q) code = q.data;
+      }
+    }
+  } catch {}
+  if (code && !(code === lastCode && Date.now() - lastAt < 15000))   /* the same pass is ignored for 15 s after a decision */{ lastCode = code; lastAt = Date.now(); buzz(60); return scanned(code); }
+  loopT = setTimeout(loop, detector ? 140 : 180);
+}
+
+/* ---------- typed by hand ---------- */
+function typeBox(){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Type the request number</b><small>As printed under the QR code, e.g. REQ-0012345</small></div>
+    <div class="dlg-b"><input class="inp" id="tReq" inputmode="text" autocomplete="off" placeholder="REQ-…" style="width:100%;height:48px;font-size:1.1rem;text-transform:uppercase"></div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Find</button></div>`;
+  d.onclick = e => { const b = e.target.closest("[data-v]"); if (!b && e.target !== d) return; const v = $("#tReq").value.trim(); d.close(); if (b && b.dataset.v === "1" && v) scanned(/^req/i.test(v) ? v : "REQ-" + v.replace(/\D/g, "")); };
+  d.querySelector("#tReq").onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); d.querySelector('[data-v="1"]').click(); } };
+  d.showModal(); setTimeout(() => $("#tReq").focus(), 50);
+}
+
+/* ---------- scanned → look up ---------- */
+async function scanned(code, visitId){
+  busy = true;
+  R = { code, scannedAt: new Date().toISOString(), loading: true };
+  drawRes();
+  try { const r = await api("ops/gate/lookup", { site, code, visitId }); R = { ...R, ...r, loading: false, workers: (r.visit && r.visit.workers) || 1 }; }
+  catch (e){ R = { ...R, loading: false, offline: !e.status, error: e.status ? e.message : "", workers: 1 }; }
+  busy = false;
+  drawRes();
+}
+const VD = {
+  valid: ["valid", "✓", "Permit valid", "التصريح ساري"],
+  early: ["early", "!", "Permit not started yet", "التصريح لم يبدأ بعد"],
+  expired: ["bad", "✕", "Permit expired", "التصريح منتهي"],
+  "not-approved": ["bad", "✕", "Request not approved", "الطلب غير موافق عليه"],
+  blocked: ["bad", "✕", "Contractor blocked", "المتعهد محظور"],
+  unknown: ["unknown", "?", "Request not found", "الطلب غير موجود"]
+};
+function drawRes(){
+  const box = $("#resBox");
+  if (!R){ box.innerHTML = ""; document.body.style.overflow = ""; return; }
+  document.body.style.overflow = "hidden";
+  if (R.loading){ box.innerHTML = `<div class="res"><div class="vd unknown"><div class="ic">…</div><div><b>Checking the request…</b><small class="ar">جاري التحقق…</small></div></div></div>`; return; }
+  if (R.error){ box.innerHTML = `<div class="res"><div class="vd bad"><div class="ic">✕</div><div><b>${esc(R.error)}</b><small class="ar">رمز غير صالح</small></div><button class="x" id="rx">✕</button></div>
+      <div class="scroll"><div class="note info">Ask the contractor for the Tenant Connect pass, or type the request number.</div></div>
+      <div class="acts"><button class="btn ghost" id="rType">⌨ Type request number</button><button class="btn" id="rBack">Scan again</button></div></div>`;
+    $("#rx").onclick = $("#rBack").onclick = closeRes; $("#rType").onclick = () => { closeRes(); typeBox(); }; return; }
+
+  const I = R.info || {}, v = R.visit, vk = R.offline ? "unknown" : (R.verdict && R.verdict.code) || "unknown";
+  const [cls, ic, title, ar] = VD[vk] || VD.unknown;
+  const vc = R.verdict && R.verdict.code;
+  const sub = R.offline ? "Offline — the permit could not be checked" : vc === "valid" ? `Until ${when(I.to && I.to.day ? I.to : I.from)}`
+    : vc === "expired" ? `Ended ${when(I.to && I.to.day ? I.to : I.from)}` : vc === "early" ? `Starts ${when(I.from)}` : vc === "not-approved" ? `Status: ${I.status || "—"}` : (R.verdict && R.verdict.label) || "";
+  const needPick = !R.offline && !v && !(I.tenant || I.contractor);
+  const notes = [];
+  if (R.offline) notes.push(["warn", "No signal. Check the pass on the Tenant Connect screen; your decision is saved on this phone and sent later."]);
+  if (R.last) notes.push([R.last.decision === "out" ? "alert" : "info", `Scanned before today at ${hm(R.last.at)} — ${R.last.decision === "in" ? "approved in" : R.last.decision === "out" ? "rejected (" + esc(R.last.reason) + ")" : "left"} by ${esc(R.last.by)}.`]);
+  if (v && v.state === "onsite") notes.push(["ok", `Already on site since ${hm(v.inAt)}${v.workers ? ` · ${v.workers} workers` : ""}. Use <b>Leaving</b> when they go out.`]);
+  if (v && v.ins === "expired") notes.push(["alert", "The contractor's insurance has expired (Contractors register)."]);
+  if (R.sfError) notes.push(["info", `Salesforce: ${esc(R.sfError)} — showing what the hub knows.`]);
+  if (I.status && !/approv/i.test(I.status)) notes.push(["alert", `Salesforce status: <b>${esc(I.status)}</b>`]);
+  const f = (k, val, big) => val ? `<div class="f"><span>${k}</span><div class="${big ? "big" : ""}">${val}</div></div>` : "";
+
+  box.innerHTML = `<div class="res">
+    <div class="vd ${cls}"><div class="ic">${ic}</div><div><b>${title}</b><small>${esc(sub)}</small><br><small class="ar">${ar}</small></div><button class="x" id="rx" aria-label="Close">✕</button></div>
+    <div class="scroll">
+      ${notes.map(n => `<div class="note ${n[0]}">${n[1]}</div>`).join("")}
+      ${needPick ? pickHtml() : `<div class="card det">
+        ${f("Contractor", esc(I.contractor || "—"), true)}
+        ${f("Tenant", esc(I.tenant || "—"), true)}
+        ${f("Request", esc(I.req || (R.code && R.code.req) || "—"))}
+        ${f("Work", esc([I.work, I.desc].filter(Boolean).join(" — ")))}
+        ${f("From", esc(when(I.from)))}
+        ${f("To", esc(when(I.to)))}
+        ${f("Status", I.status ? esc(I.status) : "")}
+        ${f("Checked by", R.offline ? "" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
+      </div>`}
+      ${needPick || (v && v.state === "onsite") ? "" : `<div class="card wk"><label>Number of workers<small class="ar">عدد العمال</small></label>
+        <button id="wM">−</button><input id="wN" type="number" inputmode="numeric" min="0" max="99" value="${R.workers}"><button id="wP">+</button></div>`}
+    </div>
+    <div class="acts">
+      ${v && v.state === "onsite" ? `<button class="btn ghost" id="bLeave" style="height:52px">🚪 Leaving — check out <span class="ar" style="margin-left:6px">خروج</span></button>` : ""}
+      ${needPick ? `<button class="btn ghost" id="bManual">Not on the list — enter details</button>` : ""}
+      <div class="two">
+        <button class="big-btn in ${vk === "valid" || R.offline ? "" : "dim"}" id="bIn" ${needPick ? "disabled style='opacity:.35'" : ""}>APPROVED · IN<small class="ar">دخول مسموح</small></button>
+        <button class="big-btn out" id="bOut">REJECTED · OUT<small class="ar">رفض الدخول</small></button>
+      </div>
+    </div></div>`;
+  $("#rx").onclick = closeRes;
+  const wn = $("#wN"); if (wn){ $("#wM").onclick = () => { wn.value = Math.max(0, (+wn.value || 0) - 1); }; $("#wP").onclick = () => { wn.value = Math.min(99, (+wn.value || 0) + 1); }; }
+  $("#bIn").onclick = () => !needPick && decideIn();
+  $("#bOut").onclick = () => reasonBox("out");
+  const bl = $("#bLeave"); if (bl) bl.onclick = () => send("leave", "");
+  const bm = $("#bManual"); if (bm) bm.onclick = manualBox;
+  box.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => scanned(R.code.raw || R.code, Number(b.dataset.pick)));
+}
+function pickHtml(){
+  const C = R.candidates || [];
+  return `<div class="note info"><b>Which request is this?</b> This QR is not linked yet — tap the matching request once and the next scans will find it on their own.<br><span class="ar">اختر الطلب المطابق</span></div>
+    <div class="pick">${C.length ? C.map(x => `<button class="card pk" data-pick="${x.id}"><div class="t">${esc(x.timeFrom || "—")}</div>
+      <div><b>${esc(x.company)}</b><small>${esc(x.tenant)}${x.req ? " · " + esc(x.req) : ""}${x.work ? " · " + esc(x.work) : ""}${x.state === "onsite" ? " · on site" : x.state === "left" ? " · left" : ""}</small></div></button>`).join("")
+      : `<div class="card empty" style="padding:22px">No approved request on today's list.<br>The handover imports them from the Tenant Connect report.</div>`}</div>`;
+}
+function manualBox(){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Enter the details</b><small>From the Tenant Connect pass on the contractor's phone</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px">
+      <div><span class="lbl">Contractor company</span><input class="inp" id="mC" style="width:100%"></div>
+      <div><span class="lbl">Tenant</span><input class="inp" id="mT" style="width:100%"></div>
+      <div><span class="lbl">Request number</span><input class="inp" id="mR" placeholder="REQ-…" style="width:100%"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><span class="lbl">Valid to (date)</span><input class="inp" id="mD" type="date" value="${(ctx && ctx.today) || ""}" style="width:100%"></div><div><span class="lbl">Time</span><input class="inp" id="mH" type="time" style="width:100%"></div></div>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Continue</button></div>`;
+  d.onclick = e => {
+    const b = e.target.closest("[data-v]"); if (!b && e.target !== d) return;
+    if (b && b.dataset.v === "1"){
+      const c = $("#mC").value.trim(), t = $("#mT").value.trim(); if (!c && !t) return toast("Write the contractor or the tenant", true);
+      const today = (ctx && ctx.today) || "";
+      R.info = { contractor: c, tenant: t, req: $("#mR").value.trim().toUpperCase(), from: { day: today, time: "" }, to: { day: $("#mD").value || today, time: $("#mH").value || "" }, status: "" };
+      R.verdict = { code: "unknown", label: "Typed by hand — not checked", ok: false }; R.manual = true;
+    }
+    d.close(); drawRes();
+  };
+  d.showModal();
+}
+
+/* ---------- decisions ---------- */
+function decideIn(){
+  const ok = R.offline || (R.verdict && R.verdict.ok);
+  if (ok) return send("in", "");
+  reasonBox("in");
+}
+function reasonBox(kind){
+  const d = $("#dlg"), isOut = kind === "out";
+  const list = isOut ? (DAY && DAY.reasons && DAY.reasons.length ? DAY.reasons : ["Permit expired", "Permit not started yet", "Request not approved", "Wrong tenant / unit", "ID does not match", "Contractor blocked", "No insurance", "Unsafe / missing PPE", "Other"])
+    : ["Approved by the duty manager", "Permit extension in progress", "Emergency works", "Other"];
+  const pre = isOut && R.verdict ? ({ expired: "Permit expired", early: "Permit not started yet", "not-approved": "Request not approved", blocked: "Contractor blocked" })[R.verdict.code] : "";
+  let pick = pre || "";
+  d.innerHTML = `<div class="dlg-h"><b>${isOut ? "Why is the access rejected?" : "The permit is not valid now"}</b><small>${isOut ? '<span class="ar">سبب الرفض</span>' : "Letting them in is recorded as an override and the flagship is notified."}</small></div>
+    <div class="dlg-b"><div class="chips">${list.map(x => `<button class="chip ${isOut ? "" : "g"} ${x === pick ? "on" : ""}" data-r="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+      <textarea id="rNote" rows="2" placeholder="Note (optional)" style="margin-top:12px"></textarea></div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1" style="background:${isOut ? "var(--out)" : "var(--in)"}">${isOut ? "Reject access" : "Let in anyway"}</button></div>`;
+  d.onclick = e => {
+    const c = e.target.closest("[data-r]");
+    if (c){ pick = c.dataset.r; d.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); return; }
+    const b = e.target.closest("[data-v]"); if (!b && e.target !== d) return;
+    if (b && b.dataset.v === "1"){
+      const note = $("#rNote").value.trim();
+      if (!pick && !note) return toast("Choose a reason", true);
+      d.close(); send(kind, [pick, note].filter(Boolean).join(" — ")); return;
+    }
+    d.close();
+  };
+  d.showModal();
+}
+async function send(decision, reason){
+  if (busy) return; busy = true;
+  const wn = $("#wN"), workers = wn ? Math.max(0, +wn.value || 0) : 0;
+  const I = R.info || {};
+  const body = { site, clientId: uid(), code: (R.code && R.code.raw) || (typeof R.code === "string" ? R.code : ""), visitId: R.visit ? R.visit.id : 0,
+    decision, reason, workers, scannedAt: R.scannedAt, offline: !!R.offline, info: { req: I.req || (R.code && R.code.req) || "", tenant: I.tenant || "", contractor: I.contractor || "", work: I.work || "", desc: I.desc || "", status: I.status || "", from: I.from || null, to: I.to || null } };
+  const local = { clientId: body.clientId, site, decision, reason, workers: decision === "in" ? workers : 0, at: new Date().toISOString(), req: body.info.req, tenant: body.info.tenant, contractor: body.info.contractor };
+  pendWrite([...pendRead(), local]);
+  try {
+    const r = await api("ops/gate/decide", body);
+    if (r && r.queued){ flash(decision, "Saved on this phone — it will be sent when the signal is back"); }
+    else { pendWrite(pendRead().filter(x => x.clientId !== body.clientId)); if (r && r.list) DAY = { ...DAY, list: r.list, counts: r.counts }; flash(decision, [I.contractor || I.tenant, I.req].filter(Boolean).join(" · ")); }
+  } catch (e){
+    pendWrite(pendRead().filter(x => x.clientId !== body.clientId));
+    busy = false; toast(e.message, true); return;
+  }
+  busy = false;
+}
+function flash(decision, line){
+  const t = { in: ["✓", "APPROVED · IN", "دخول مسموح"], out: ["✕", "REJECTED · OUT", "رفض الدخول"], leave: ["→", "CHECKED OUT", "تم الخروج"] }[decision];
+  buzz(decision === "out" ? [120, 80, 120] : 90);
+  const el = document.createElement("div"); el.className = "flash " + decision;
+  el.innerHTML = `<div><div class="ic">${t[0]}</div><b>${t[1]}</b><small class="ar">${t[2]}</small>${line ? `<small>${esc(line)}</small>` : ""}</div>`;
+  document.body.append(el);
+  const done = () => { el.remove(); closeRes(); };
+  el.onclick = done; setTimeout(done, 1600);
+}
+function closeRes(){ R = null; busy = false; lastAt = Date.now(); drawRes(); drawDay(); if (stream) loop(); else startCam(); }
+
+boot();
+</script>
+</body>
+</html>

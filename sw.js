@@ -1,11 +1,13 @@
 /* ABC Operations Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v17";
+const CACHE = "abc-hub-v18";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
   "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png",
   /* works offline: the checklists and the handover open without signal once visited */
-  "./tools/common.js", "./tools/tools.css", "./tools/forms", "./tools/handover"];
+  "./tools/common.js", "./tools/tools.css", "./tools/forms", "./tools/handover",
+  /* Loading Gate: the scanner opens without signal and keeps the decisions until the connection is back */
+  "./tools/gate", "./tools/jsqr.min.js"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
