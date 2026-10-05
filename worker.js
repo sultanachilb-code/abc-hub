@@ -1748,11 +1748,16 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
     if (!isDay(b.day)) throw fail("Choose the handover date");
-    let id = Number(b.id) || 0;
-    const incoming = cleanHandover(b.doc || {});
-    if (id) {   // Loading Gate feature: a page opened before a scan must not wipe the gate's "✓ Attended / ✕ Refused" marks
-      const cur = await env.DB.prepare("SELECT doc FROM handovers WHERE id = ? AND site = ?").bind(id, site).first().catch(() => null);
-      if (cur) keepGateMarks(cleanHandover(JSON.parse(cur.doc || "{}")), incoming);
+    let id = Number(b.id) || 0, merged = false;
+    let incoming = cleanHandover(b.doc || {});
+    if (id) {
+      const cur = await env.DB.prepare("SELECT doc, updated_at FROM handovers WHERE id = ? AND site = ?").bind(id, site).first().catch(() => null);
+      if (cur) {
+        const C = cleanHandover(JSON.parse(cur.doc || "{}"));
+        /* Live handover: someone else (or the loading gate) saved since this page loaded it → merge line by line instead of overwriting */
+        if (b.base && b.baseDoc && cur.updated_at !== b.base) { incoming = mergeHandover(cleanHandover(b.baseDoc), C, incoming); merged = true; }
+        keepGateMarks(C, incoming);   // Loading Gate feature: a page opened before a scan must not wipe the gate's "✓ Attended / ✕ Refused" marks
+      }
     }
     const doc = JSON.stringify(incoming);
     if (doc.length > 60000) throw fail("This handover is too long — remove finished items");
@@ -1797,9 +1802,16 @@ async function opsRoute(env, me, p, method, b, url) {
         const L2 = JSON.parse((await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first()).handoffs || "[]");
         if (L2.length) { L2[L2.length - 1].mail = mail; await env.DB.prepare("UPDATE handovers SET handoffs = ? WHERE id = ?").bind(JSON.stringify(L2), id).run(); }
       }
-      return { id, saved: true, mail };
+      return { id, saved: true, mail, updatedAt: at, merged, doc: JSON.parse(doc) };
     }
-    return { id, saved: true };
+    return { id, saved: true, updatedAt: at, merged, doc: JSON.parse(doc) };   // the page takes the merged copy as its new base
+  }
+  /* Live handover: the open page asks every 15 s whether anything changed (cheap: no document unless it did) */
+  if (p === "handover/poll") {
+    const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
+    if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
+    if (h.updated_at === q("since") && String(h.handoffs || "").length === Number(q("hl") || -1)) return { changed: false };
+    return { changed: true, handover: handoverOut(h), hl: String(h.handoffs || "").length };
   }
   if (p === "handover/receive" && method === "POST") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(b.id) || 0).first();
@@ -1974,19 +1986,57 @@ function keepGateMarks(saved, incoming) {   // a page opened before a scan must 
     if (m && !GATE_MARK.test(x.text)) x.text = (x.text + m).slice(0, 500);
   }
 }
+/* Live handover: every line has an id so two people editing at once are merged line by line (see mergeHandover).
+   Lines saved before ids existed get a stable id from their text, so every reader computes the same one. */
+const hoHash = t => { let h = 2166136261; for (const c of String(t)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+const hoId = v => /^[\w-]{1,24}$/.test(String(v || "")) ? String(v) : "";
+function withIds(list, keyOf) {
+  const seen = new Map();
+  for (const x of list) {
+    if (x.id) continue;
+    const k = keyOf(x), n = (seen.get(k) || 0) + 1; seen.set(k, n);
+    x.id = "h" + hoHash(k) + (n > 1 ? "-" + n : "");
+  }
+  const used = new Set();   // two lines must never share an id
+  for (const x of list) { let id = x.id, i = 2; while (used.has(id)) id = x.id + "-" + i++; x.id = id; used.add(id); }
+  return list;
+}
+/* Three-way merge: base = what this page last loaded, cur = what is saved now (other people, the loading gate, the Outlook add-in),
+   mine = this page. Lines this page added, changed or removed win; everything else others did since is kept. */
+function mergeHandover(base, cur, mine) {
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const out = cleanHandover(cur);
+  for (const k of ["ongoing", "today", "tomorrow", "upcoming", "events", "docs"]) {
+    const B = new Map(base[k].map(x => [x.id, x])), M = new Map(mine[k].map(x => [x.id, x]));
+    let L = out[k].filter(x => !(B.has(x.id) && !M.has(x.id)));                       // removed here
+    L = L.map(x => { const m = M.get(x.id); return m && !same(m, B.get(x.id)) ? m : x; });   // changed here
+    const have = new Set(L.map(x => x.id));
+    for (const m of mine[k]) if (!B.has(m.id) && !have.has(m.id)) L.push(m);            // added here
+    out[k] = L;
+  }
+  const C = new Map(base.checklists.map(c => [c.name, c]));                              // checklists: by name, each field
+  for (const m of mine.checklists) {
+    const b0 = C.get(m.name) || {}, o = out.checklists.find(c => c.name === m.name);
+    if (!o) { if (!C.has(m.name)) out.checklists.push(m); continue; }
+    for (const f of ["am", "pm", "note"]) if (m[f] !== b0[f]) o[f] = m[f];
+  }
+  out.checklists = out.checklists.filter(c => !(C.has(c.name) && !mine.checklists.some(m => m.name === c.name)));
+  if (mine.notes !== base.notes) out.notes = mine.notes;
+  return cleanHandover(out);
+}
 function cleanHandover(d) {
-  const item = x => ({ text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "",
+  const item = x => ({ id: hoId(x.id), text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "",
     src: x.src === "portal" ? "portal" : "", req: /^REQ-?\d+$/i.test(x.req || "") ? String(x.req).toUpperCase() : "",
     ...(x.manual ? { manual: true } : {}),
     ...(x.cols && typeof x.cols === "object" ? { cols: { tenant: s(x.cols.tenant, 160), req: s(x.cols.req, 40), task: s(x.cols.task, 300), contractor: s(x.cols.contractor, 160), time: s(x.cols.time, 40), m: s(x.cols.m, 60) } } : {}) });   // Portal Handover table columns (import) and the team's own cells (m)   // src: portal = imported from Tenant Connect (black), else typed by the team (red)
   const out = blankHandover();
-  for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) out[k] = (Array.isArray(d[k]) ? d[k] : []).slice(0, 80).map(item).filter(x => x.text.trim());
-  out.events = (Array.isArray(d.events) ? d.events : []).slice(0, 40).map(e => ({ from: isDay(e.from) ? e.from : "", to: isDay(e.to) ? e.to : "",
-    name: s(e.name, 160), start: s(e.start, 5), end: s(e.end, 5) })).filter(e => e.name.trim());
+  for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) out[k] = withIds((Array.isArray(d[k]) ? d[k] : []).slice(0, 80).map(item).filter(x => x.text.trim()), x => k + "|" + x.text.replace(GATE_MARK, ""));
+  out.events = withIds((Array.isArray(d.events) ? d.events : []).slice(0, 40).map(e => ({ id: hoId(e.id), from: isDay(e.from) ? e.from : "", to: isDay(e.to) ? e.to : "",
+    name: s(e.name, 160), start: s(e.start, 5), end: s(e.end, 5) })).filter(e => e.name.trim()), e => "ev|" + e.name + "|" + e.from);
   out.checklists = (Array.isArray(d.checklists) ? d.checklists : []).slice(0, 30).map(c => ({ name: s(c.name, 120),
     am: ["Done", "Not done", "N/A", ""].includes(c.am) ? c.am : "", pm: ["Done", "Not done", "N/A", ""].includes(c.pm) ? c.pm : "", note: s(c.note, 200) })).filter(c => c.name.trim());
-  out.docs = (Array.isArray(d.docs) ? d.docs : []).slice(0, 40).map(x => ({ label: s(x.label, 160), url: s(x.url, 400), task: s(x.task, 80),
-    updated: isDay(x.updated) ? x.updated : "", comment: s(x.comment, 200) })).filter(x => x.label.trim() || x.url.trim());
+  out.docs = withIds((Array.isArray(d.docs) ? d.docs : []).slice(0, 40).map(x => ({ id: hoId(x.id), label: s(x.label, 160), url: s(x.url, 400), task: s(x.task, 80),
+    updated: isDay(x.updated) ? x.updated : "", comment: s(x.comment, 200) })).filter(x => x.label.trim() || x.url.trim()), x => "doc|" + x.label + "|" + x.url);
   out.notes = s(d.notes, 4000);
   return out;
 }
@@ -2018,7 +2068,7 @@ async function handoverShifts(env, site) {
 }
 const handoverOut = h => ({ id: h.id, site: h.site, day: h.day, shift: h.shift, status: h.status, doc: cleanHandover(JSON.parse(h.doc)),
   createdName: h.created_name, createdBy: h.created_by, submittedAt: h.submitted_at, receivedBy: h.received_by, receivedAt: h.received_at, updatedAt: h.updated_at,
-  updatedName: h.updated_name || "", handoffs: JSON.parse(h.handoffs || "[]") });
+  updatedName: h.updated_name || "", handoffs: JSON.parse(h.handoffs || "[]"), hl: String(h.handoffs || "").length });   // hl: live handover poll
 
 /* =====================================================================
    USAGE ANALYTICS (admin)
