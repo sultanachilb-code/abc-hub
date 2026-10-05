@@ -1,0 +1,10 @@
+{
+  /* ABC Loading Gate — the loading-area scanner on its own link (no hub account, no other hub tools).
+     It talks to the hub only through the service binding HUB, with the shared secret GATE_KEY
+     (Cloudflare → Workers → abc-loading-gate → Settings → Variables and Secrets → GATE_KEY, same value as on operations-hub). */
+  "name": "abc-loading-gate",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "not_found_handling": "none", "run_worker_first": true },   // worker first: every file gets the security headers
+  "services": [ { "binding": "HUB", "service": "operations-hub" } ]
+}

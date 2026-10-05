@@ -1,0 +1,14 @@
+{
+  "name": "ABC Loading Gate",
+  "short_name": "Loading Gate",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F4F9",
+  "theme_color": "#2A0F45",
+  "icons": [
+    { "src": "/icons/abc-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/abc-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

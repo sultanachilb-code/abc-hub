@@ -98,6 +98,10 @@ h2.sec .sp{flex:1}
 .flash small{display:block;font-size:1.05rem;margin-top:6px;opacity:.92;padding:0 24px}
 @keyframes fl{from{opacity:0;transform:scale(1.04)}}
 @media (max-width:640px){ #sub{display:none} }
+.ph{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px}
+.ph b{display:block;font-size:.95rem} .ph small{display:block;color:var(--muted);font-size:.78rem;line-height:1.45}
+.code{font-size:2rem;font-weight:900;letter-spacing:.14em;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0 2px}
+.qrbox{display:grid;place-items:center;margin:10px 0}.qrbox svg,.qrbox img{width:200px;height:200px}
 </style>
 </head>
 <body>
@@ -122,6 +126,7 @@ h2.sec .sp{flex:1}
   </div>
   <h2 class="sec">Today at the gate <span class="sp"></span><button class="btn ghost small" id="bRef">↻</button></h2>
   <div class="log" id="log"><div class="card empty">Loading…</div></div>
+  <div id="phones"></div>
   <p class="muted" style="font-size:.76rem;margin-top:14px;line-height:1.5">Every decision goes to the Shift Handover (Loading area gate) and to Contractors. Rejections notify the flagship. Without signal the decision is kept on this phone and sent when the connection is back.</p>
 </div>
 <div id="resBox"></div>
@@ -163,6 +168,50 @@ async function wake(){ try { if ("wakeLock" in navigator && !lock){ lock = await
 async function loadDay(){
   try { DAY = await api(`ops/gate/day?site=${site}`); } catch (e){ if (!DAY) DAY = { list: [], counts: { in: 0, out: 0, workers: 0 }, reasons: [] }; }
   drawDay();
+  if (DAY && DAY.canPair) loadPhones();
+}
+/* ---------- managers (hub only): loading-area phones on the separate Loading Gate link ---------- */
+async function loadPhones(){
+  const box = $("#phones"); if (!box) return;
+  let P; try { P = await api(`ops/gate/devices?site=${site}`); } catch (e){ box.innerHTML = ""; return; }
+  const ago = iso => iso ? `${D.fmt(iso.slice(0, 10))} ${hm(iso)}` : "never";
+  box.innerHTML = `<h2 class="sec">Loading-area phones <span class="sp"></span><button class="btn small" id="phAdd">+ Pair a phone</button></h2>
+    ${P.ready ? "" : `<div class="card note warn" style="margin:0 0 8px">The Loading Gate link is not switched on yet: add the secret <b>GATE_KEY</b> to both workers (see docs/FEATURE-gate.md).</div>`}
+    <div class="log">${P.list.length ? P.list.map(x => `<div class="card ph"><div><b>${esc(x.name)}</b>
+        <small>${x.paired ? `Paired · last used ${esc(ago(x.lastSeen))}${x.lastAgent ? ` · on duty: ${esc(x.lastAgent)}` : ""}` : x.pending ? `Waiting for pairing — code valid until ${hm(x.pairExp)}` : "Not paired — make a new code"}</small></div>
+        <div style="display:flex;gap:6px">${x.paired ? "" : `<button class="btn ghost small" data-new="${x.id}" data-name="${esc(x.name)}">New code</button>`}<button class="btn ghost small danger" data-rm="${x.id}" data-name="${esc(x.name)}">Remove</button></div></div>`).join("")
+      : `<div class="card empty" style="padding:20px">No phone yet. The loading-area agent uses its own link <b>${esc(P.gateUrl.replace(/^https:\/\//, ""))}</b> — no hub account. Pair the phone once here.</div>`}</div>`;
+  $("#phAdd").onclick = () => phoneName().then(n => n && newCode({ name: n }));
+  box.querySelectorAll("[data-new]").forEach(b => b.onclick = () => newCode({ id: +b.dataset.new, name: b.dataset.name }));
+  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+    const d = $("#dlg");
+    d.innerHTML = `<div class="dlg-h"><b>Remove ${esc(b.dataset.name)}?</b><small>The phone is cut off at once. To use it again, pair it with a new code.</small></div>
+      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1" style="background:var(--out)">Remove</button></div>`;
+    d.onclick = async e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return; d.close();
+      if (v && v.dataset.v === "1"){ try { await api("ops/gate/devices/revoke", { site, id: +b.dataset.rm, name: b.dataset.name }); toast("Phone removed"); loadPhones(); } catch (er){ toast(er.message, true); } } };
+    d.showModal();
+  });
+}
+function phoneName(){
+  return new Promise(res => {
+    const d = $("#dlg");
+    d.innerHTML = `<div class="dlg-h"><b>Pair a loading-area phone</b><small>Give it a name you will recognise.</small></div>
+      <div class="dlg-b"><input class="inp" id="phName" placeholder="e.g. Loading dock B1 phone" style="width:100%;height:46px"></div>
+      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Make the code</button></div>`;
+    d.onclick = e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return; const n = $("#phName").value.trim(); d.close(); res(v && v.dataset.v === "1" ? (n || "Loading area phone") : ""); };
+    d.showModal(); setTimeout(() => $("#phName").focus(), 50);
+  });
+}
+async function newCode(x){
+  let r; try { r = await api("ops/gate/devices/new", { site, ...x }); } catch (e){ return toast(e.message, true); }
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>${esc(r.name)}</b><small>On the loading-area phone, scan this QR with the camera, or open <b>${esc(r.gateUrl.replace(/^https:\/\//, ""))}</b> and type the code. Valid until ${hm(r.exp)}, one use only.</small></div>
+    <div class="dlg-b"><div class="qrbox" id="phQr"></div><div class="code">${esc(r.code)}</div></div>
+    <div class="dlg-f"><button class="btn" data-v="1">Done</button></div>`;
+  d.onclick = e => { if (e.target.closest("[data-v]") || e.target === d){ d.close(); loadPhones(); } };
+  d.showModal();
+  const draw = () => { try { const q = qrcode(0, "M"); q.addData(r.link); q.make(); $("#phQr").innerHTML = q.createSvgTag({ cellSize: 5, margin: 2 }); } catch {} };
+  if (window.qrcode) draw(); else { const sc = document.createElement("script"); sc.src = "/tools/qrcode.js"; sc.onload = draw; document.head.append(sc); }
 }
 function drawDay(){
   const sent = new Set((DAY.list || []).map(x => x.clientId).filter(Boolean));
@@ -176,7 +225,7 @@ function drawDay(){
       <div class="t">${hm(x.at)}</div>
       <div><b>${esc(x.contractor || x.tenant || x.req || "Contractor")}</b><small>${esc([x.tenant && x.contractor ? x.tenant : "", x.req].filter(Boolean).join(" · ")) || "&nbsp;"}</small>
         ${x.reason ? `<small style="color:${x.decision === "out" ? "var(--out)" : "var(--warn)"}">${x.override ? "Override: " : ""}${esc(x.reason)}</small>` : ""}</div>
-      <div style="text-align:right"><span class="tag ${x.decision}">${lab[x.decision]}</span>${x.queued ? `<br><span class="tag q" style="margin-top:4px;display:inline-block">Not sent yet</span>` : ""}${x.decision === "in" && x.workers ? `<small>${x.workers} workers</small>` : ""}</div></div>`).join("")
+      <div style="text-align:right"><span class="tag ${x.decision}">${lab[x.decision]}</span>${x.queued ? `<br><span class="tag q" style="margin-top:4px;display:inline-block">Not sent yet</span>` : ""}${x.decision === "in" && x.workers ? `<small>${x.workers} worker${x.workers === 1 ? "" : "s"}</small>` : ""}</div></div>`).join("")
     : `<div class="card empty">No QR scanned today yet.</div>`;
 }
 
