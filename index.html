@@ -1823,8 +1823,12 @@ async function loadBrief(fresh){
   renderBrief(false);
   renderHome();
 }
+/* Home by level: management and leadership see the brief; the operations team sees the Day to Day timeline instead */
+const SENIOR_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];
+const seniorView = () => !!(ME && ME.user && SENIOR_ROLES.includes(ME.user.role));
 function renderBrief(loading){
   const box = $("#brief");
+  if (!seniorView()){ box.innerHTML = ""; return; }   // operations team: no brief panel (its figures still feed the tile badges)
   const ids = APPS.filter(a => BRIEF ? BRIEF.systems && BRIEF.systems[a.id] : false).map(a => a.id);
   if (!loading && !ids.length){
     box.innerHTML = ME.user.role === "ADMIN" && BRIEF && BRIEF.keyMissing
@@ -1932,7 +1936,7 @@ const d2dApps = () => APPS.filter(a => a.group === DAY_GROUP && !a.hidden);
 const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 async function loadToday(){
-  if (!d2dApps().length) return;
+  if (!d2dApps().length || seniorView()) return;
   try { D2D.data = await api("ops/today" + (D2D.site ? "?site=" + encodeURIComponent(D2D.site) : "")); D2D.err = ""; }
   catch (e){ D2D.err = e.message; }
   paintD2D();
@@ -2151,7 +2155,7 @@ function renderHome(){
   let foldersDone = false;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
-    if (!q && g === DAY_GROUP){ html += d2dHtml(); continue; }   // Day to Day Operations: live timeline instead of tiles
+    if (!q && g === DAY_GROUP && !seniorView()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
     if (!q && FOLDER_GROUPS.includes(g)){
       if (foldersDone) continue; foldersDone = true;
       const tiles = FOLDER_GROUPS.map(folderTile).filter(Boolean).join("");

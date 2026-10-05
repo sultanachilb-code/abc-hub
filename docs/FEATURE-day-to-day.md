@@ -30,6 +30,10 @@ A home-screen section that sits above Leadership. It replaces the tiles of four 
 - Users with more than one flagship get a flagship picker. Each device remembers the choice.
 
 ## Rules
+- **Who sees what on the home screen:**
+  - Management and leadership (Manager, Advisor, Director, CDSO, Admin) see the Morning/Afternoon/Evening brief. They don't get the timeline; the four tools show as normal tiles under "Day to Day Operations".
+  - Everyone else (the operations team, Warehouse, Security) sees the Day to Day timeline and no brief panel. The brief's figures still drive the live counts on their tiles.
+  - The rule is `SENIOR_ROLES` in `index.html`.
 - Each card and lane follows the app's visibility. For example, Contractors appears only for Manager, Supervisor and Security roles; Advisor/Director/CDSO/Admin see all apps anyway.
 - Search still lists the four tools as normal tiles. The header tools menu still includes them, first in the list.
 
