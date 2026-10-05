@@ -198,9 +198,26 @@ const shName = c => (H && H.shiftNames && H.shiftNames[c]) || c;
 let LIVE = null;
 async function loadLive(){
   if (!H) return; const day = H.day;
-  try { const d = await api(`ops/handover/live?site=${CTX.site}&day=${day}`); if (H && H.day === day){ LIVE = d; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); const c = $("#calRows"); if (c && H.doc) c.innerHTML = calRowsHtml(H.doc); } }
+  try { const d = await api(`ops/handover/live?site=${CTX.site}&day=${day}`); if (H && H.day === day){ LIVE = d; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); const c = $("#calRows"); if (c && H.doc) c.innerHTML = calRowsHtml(H.doc); applyGateMarks(d.gateMarks); } }
   catch (e){ LIVE = { error: e.message }; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); }
 }
+/* Loading Gate feature: "— ✓ Attended 20:04 · 1 worker" written by the gate on the line of the same REQ.
+   The open page adds the marks to its own copy (so a save never removes them) and shows them; refreshed every minute. */
+const GATE_MARK_RE = /\s+— (✓ Attended|✕ Refused at gate|→ Left)[^\n]*$/;
+const reqKey = x => (String(x.req || "").replace(/\D/g, "") || ((String(x.text || "").match(/\bREQ-?(\d{3,})\b/i) || [])[1] || "")).replace(/^0+/, "");
+function applyGateMarks(marks){
+  if (!H || !H.doc || !marks || !Object.keys(marks).length) return;
+  let changed = false;
+  for (const k of ["today", "ongoing", "tomorrow"]) for (const x of H.doc[k] || []) {
+    const m = marks[reqKey(x)]; if (!m) continue;
+    const t = x.text.replace(GATE_MARK_RE, "") + m;
+    if (t !== x.text){ x.text = t; changed = true; }
+  }
+  const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable);
+  if (changed && !typing) render();
+}
+setInterval(() => { if (H && H.day === CTX.today && document.visibilityState === "visible") loadLive(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (H && document.visibilityState === "visible") loadLive(); });
 function ckCell(r){ return !r ? `<span class="nd">Not done</span>` : r.status === "submitted" ? `<span class="done">Done</span> <small class="muted">${esc(r.by)} · ${hm(r.at)}${r.issues ? ` · ${r.issues} ✗` : ""}</small>` : `<span class="pr">In progress ${r.done}/${r.total}</span> <small class="muted">${esc(r.by)}</small>`; }
 /* Operations Calendar: the day's marketing events come from the calendar (not typed twice) */
 function calEvents(d){ const have = new Set((d.events || []).map(e => String(e.name).trim().toLowerCase())); return (LIVE && !LIVE.error && LIVE.calendar || []).filter(e => !have.has(String(e.name).trim().toLowerCase())); }
