@@ -258,7 +258,7 @@ export async function twofaPublic(env, deps, path, method, b, request) {
     const chal = b64u(rand(32));
     await env.DB.prepare("UPDATE user_2fa SET reg_chal = ? WHERE email = ?").bind("P:" + chal, email).run();
     return { ok: true, data: { publicKey: { challenge: chal, rpId: new URL(request.url).hostname, userVerification: "required", timeout: 60000,
-      allowCredentials: pks.map(p => ({ type: "public-key", id: p.cred_id, transports: ["internal", "hybrid"] })) } } };
+      allowCredentials: pks.map(p => ({ type: "public-key", id: p.cred_id, transports: ["internal"] })) } } };   // this device only — no "scan a QR with your phone"
   }
   if (path === "login/2fa/pk" && method === "POST") {
     if (u.twofa_lock && u.twofa_lock > new Date().toISOString()) throw err(`Too many attempts. Try again after ${beirutTime(u.twofa_lock)}.`, 429);

@@ -21,6 +21,7 @@ import { projectsSchema, projectsRoute, projectsRun } from "./modules/projects.j
 import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";   // Contracts near ending — see docs/FEATURE-email-inbox.md
+import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
 import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";   // Contractors feature — see docs/FEATURE-contractors.md   // Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
@@ -369,6 +370,7 @@ export default {
       await emergencyRun(env, { raiseEvent, sendPush, now: nowIso, siteName }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
       await automationRun(env, { SITES, eodReport, relay, hubUrl: HUB_URL, canSite, isFull }).catch(e => console.error("automation", e && e.message));   // Automation feature
       await calendarRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("calendar", e && e.message));   // Operations Calendar feature
+      await schedMailRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent, SITES }).catch(e => console.error("schedmail", e && e.message));   // Weekly schedule email reminders
       await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
       await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
@@ -480,6 +482,7 @@ async function route(request, env, ctx, url) {
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     if (a === "mail-quota" && method === "GET") return ok(await mailQuota(env));   // Mail quota feature
+    if (a === "schedcc") return ok(await schedCcAdmin(env, method, body, SITES));   // Weekly schedule email: Cc per flagship
     if (a === "history" && method === "GET") return ok(await historyList(env, url));   // Change history feature
     /* Automation feature: backup download, backup status, End of Day email test */
     if (a === "covers") return ok(await coversAdmin(env, method, body, { me, SITES, now: nowIso }));
@@ -1180,6 +1183,17 @@ function opsSite(me, requested) {
   return list.includes(me.site_code) ? me.site_code : list[0];
 }
 const rankOf = p => (POSITIONS[p] ? POSITIONS[p].rank : TITLES[p] ? TITLES[p].rank : 9);
+/* Operations Schedule rows: the flagship's operations team in the order (and section) chosen on the schedule ("Arrange") */
+async function schedStaff(env, site) {
+  const staff = (await siteStaff(env, site)).filter(s => s.atSite && POSITIONS[s.position]);
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind("schedorder:" + site).first().catch(() => null);
+  let order = []; try { order = r ? JSON.parse(r.v) : []; } catch {}
+  const pos = new Map(order.map((o, i) => [o.email, { i, group: POSITIONS[o.group] ? o.group : "" }]));
+  const rank = s => { const o = pos.get(s.email); return o ? o.i : 1000 + (POSITIONS[s.position].rank || 9) * 100; };
+  return staff.map(s => { const o = pos.get(s.email); const g = o && o.group ? o.group : s.position;
+      return { ...s, title: s.positionLabel, position: g, positionLabel: POSITIONS[g].label }; })
+    .sort((a, b) => (POSITIONS[a.position].rank - POSITIONS[b.position].rank) || (rank(a) - rank(b)) || a.name.localeCompare(b.name));
+}
 async function siteStaff(env, site) {
   const { results } = await env.DB.prepare(
     "SELECT email, full_name, role, position, site_code, sites FROM users WHERE active = 1").all();
@@ -1435,6 +1449,8 @@ async function opsRoute(env, me, p, method, b, url) {
   const auditMe = (e, x) => audit(e, { me, ...x });
   if (p.startsWith("cal/")) return calendarRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
+  if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
+    relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
   if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
@@ -1529,8 +1545,15 @@ async function opsRoute(env, me, p, method, b, url) {
       env.DB.prepare("SELECT day, email, val FROM sched_cells WHERE site = ? AND day BETWEEN ? AND ?").bind(site, from, to).all(),
       env.DB.prepare("SELECT day, note FROM sched_notes WHERE site = ? AND day BETWEEN ? AND ?").bind(site, from, to).all()
     ]);
-    const staff = (await siteStaff(env, site)).filter(s => s.atSite && POSITIONS[s.position]);
-    return { site, staff, cells: cells.results || [], notes: notes.results || [], can };
+    const staff = await schedStaff(env, site);   // order and sections set with "Arrange"
+    return { site, staff, cells: cells.results || [], notes: notes.results || [], can, groups: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])) };
+  }
+  if (p === "schedule/order" && method === "POST") {   // Arrange: row order and section of each person (schedule only — the position in People & roles does not change)
+    if (!can.schedule) throw fail("Only the flagship's Manager or Senior Mall Supervisor can arrange the schedule", 403);
+    const ok = new Set((await siteStaff(env, site)).filter(s => s.atSite).map(s => s.email));
+    const list = (Array.isArray(b.order) ? b.order : []).filter(o => ok.has(o.email)).slice(0, 200).map(o => ({ email: o.email, group: POSITIONS[o.group] ? o.group : "" }));
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("schedorder:" + site, JSON.stringify(list)).run();
+    return { staff: await schedStaff(env, site) };
   }
   if (p === "schedule" && method === "POST") {
     if (!can.schedule) throw fail("Only the flagship's Manager or Senior Mall Supervisor can edit the schedule", 403);

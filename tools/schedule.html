@@ -56,6 +56,31 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
   .c-OFF,.c-VAC,.c-SICK,.c-DEATH,.c-UL,.c-HOLI,.c-TRAIN,.c-OTH,.s-am,.s-mid,.s-pm{-webkit-print-color-adjust:exact;print-color-adjust:exact} .ptitle{display:block!important} }
 @media (max-width:640px){ .grid .name{min-width:118px;padding:8px} .grid .name small{display:none} .legend{font-size:.72rem;gap:4px 10px} .weekbar .range{min-width:0;font-size:.92rem} }
 .ptitle{display:none;font-weight:800;font-size:16px;margin-bottom:8px}
+/* Weekly schedule email + WhatsApp */
+.sendbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.sendbar .st{flex:1;min-width:200px;font-size:.84rem;line-height:1.45}
+.sendbar .st b{display:block;font-size:.9rem}
+.sendbar .st small{color:var(--muted)}
+.sendbar.sent{border-color:rgba(46,139,87,.4);background:rgba(46,139,87,.06)} .sendbar.changed{border-color:rgba(192,122,18,.5);background:rgba(192,122,18,.07)}
+.btn.wa{background:#25D366;color:#073B1E} .btn.wa:hover{background:#1EBE5A}
+.btn.wa svg{width:16px;height:16px}
+dialog.mail{width:min(1040px,calc(100% - 20px));max-height:92dvh}
+.mail .mh{padding:16px 20px 10px;border-bottom:1px solid var(--line);font-size:.84rem;line-height:1.7}
+.mail .mh .sj{font-size:1.02rem;font-weight:800;line-height:1.35;margin-bottom:6px}
+.mail .mh span.k{display:inline-block;width:38px;color:var(--muted);font-weight:700}
+.mail .mh .cc{max-height:72px;overflow:auto;color:var(--muted);margin-bottom:4px;padding-right:6px}
+.mail iframe{width:100%;height:56dvh;border:0;background:#fff}
+@media print{ .sendbar{display:none!important} }
+/* Arrange names */
+dialog.arr{width:min(560px,calc(100% - 20px))}
+.arr .sec{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.arr .row{display:grid;grid-template-columns:22px 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;background:var(--surface)}
+.arr .row.drag{opacity:.4} .arr .row.over{border-color:var(--brand-2);box-shadow:inset 0 2px 0 var(--brand-2)}
+.arr .h{cursor:grab;color:var(--muted);font-size:1.1rem;text-align:center;user-select:none}
+.arr .row b{display:block;font-size:.9rem} .arr .row small{color:var(--muted);font-size:.74rem}
+.arr .mv{display:flex;gap:4px} .arr .mv button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);font-weight:800}
+.arr .mv button:disabled{opacity:.3}
+.arr select{height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:.8rem;padding:0 6px;max-width:150px}
 </style>
 </head>
 <body>
@@ -72,10 +97,12 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
     <button class="btn ghost small" id="todayBtn">This week</button>
     <span style="flex:1"></span>
     <span id="editTools" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost small" id="arrBtn" title="Change the order of the names and their section">⇅ Arrange names</button>
       <button class="btn ghost small" id="copyBtn">Copy last week</button>
       <button class="btn ghost small danger" id="clearBtn">Clear week</button>
     </span>
   </div>
+  <div class="sendbar hidden" id="sendbar"></div>
   <div class="legend" id="legend"></div>
   <div class="ptitle" id="ptitle"></div>
   <div id="board"></div>
@@ -117,6 +144,7 @@ async function load(){
   DATA.noteMap = Object.fromEntries(DATA.notes.map(n => [n.day, n.note]));
   $("#editTools").classList.toggle("hidden", !DATA.can.schedule);
   render();
+  loadSend();
 }
 function render(){
   const d = days(), can = DATA.can.schedule;
@@ -143,7 +171,7 @@ function render(){
         return `<td class="${cls}"><button class="cell ${can ? "" : "ro"} ${dirty}" data-e="${esc(p.email)}" data-d="${x}" ${can ? "" : "tabindex=-1"}>${inner}</button></td>`;
       }).join("");
       const tcls = total === TARGET ? "ok" : total > TARGET ? "over" : total ? "under" : "";
-      return `<tr class="${p.email === CTX.me.email ? "me" : ""}"><td class="name"><b>${esc(p.name)}</b><small>${esc(p.positionLabel)}</small></td>${cells}<td class="hrs ${tcls}">${total || "—"}</td></tr>`;
+      return `<tr class="${p.email === CTX.me.email ? "me" : ""}"><td class="name"><b>${esc(p.name)}</b><small>${esc(p.title || p.positionLabel)}</small></td>${cells}<td class="hrs ${tcls}">${total || "—"}</td></tr>`;
     }).join("")).join("");
   /* coverage: how many on shift in the morning and the evening of each day */
   const foot = `<tfoot><tr><td class="name">On duty</td>${d.map(x => {
@@ -201,6 +229,7 @@ $("#prev").onclick = move(-7); $("#next").onclick = move(7);
 $("#todayBtn").onclick = async () => { WEEK = D.monday(CTX.today); DIRTY.clear(); DIRTY_NOTES.clear(); await load(); };
 $("#printBtn").onclick = () => print();
 $("#discardBtn").onclick = () => { DIRTY.clear(); DIRTY_NOTES.clear(); render(); };
+$("#arrBtn").onclick = openArrange;
 $("#copyBtn").onclick = async () => {
   const d = days(), from = D.add(d[0], -7), to = D.add(d[6], -7);
   const prev = await api(`ops/schedule?site=${CTX.site}&from=${from}&to=${to}`);
@@ -226,6 +255,172 @@ $("#saveBtn").onclick = async () => {
 };
 addEventListener("beforeunload", e => { if (DIRTY.size || DIRTY_NOTES.size){ e.preventDefault(); e.returnValue = ""; } });
 boot().catch(e => { $("#board").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+
+/* =====================================================================
+   WEEKLY SCHEDULE EMAIL (Sunday) + WHATSAPP — see docs/FEATURE-schedule-email.md
+   ===================================================================== */
+let SEND = null;
+const WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
+async function loadSend(){
+  const bar = $("#sendbar");
+  try { SEND = await api(`ops/schedmail/status?site=${CTX.site}&week=${WEEK}`); } catch { bar.classList.add("hidden"); return; }
+  const d = days(), range = `${D.fmt(d[0])} – ${D.fmt(d[6], { year: "numeric" })}`;
+  const at = SEND.sent ? new Date(SEND.sent.at).toLocaleString("en-GB", { timeZone: "Asia/Beirut", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  const cls = SEND.sent ? (SEND.changed ? "changed" : "sent") : "";
+  bar.className = "sendbar " + cls;
+  bar.innerHTML = `<div class="st">${SEND.sent ? (SEND.changed ? `<b>⚠️ Changed since it was emailed</b><small>Sent ${esc(at)} by ${esc(SEND.sent.by)} — send the update so everyone has the latest version.</small>`
+      : `<b>✓ Emailed</b><small>${esc(at)} by ${esc(SEND.sent.by)}${SEND.sent.count > 1 ? ` · ${SEND.sent.count} versions` : ""}</small>`)
+      : `<b>Weekly schedule email · ${esc(range)}</b><small>${SEND.filled ? "Sent on Sunday to the Mall Manager and the flagship's teams." : "Fill the week first — it is emailed on Sunday."}</small>`}</div>
+    ${SEND.can.send ? `<button class="btn ${SEND.sent && !SEND.changed ? "ghost" : ""}" id="mailBtn" ${SEND.filled ? "" : "disabled"}>${SEND.sent ? (SEND.changed ? "Send update" : "Send again") : "Submit &amp; send"}</button>` : ""}
+    <button class="btn wa" id="waBtn" ${SEND.filled ? "" : "disabled"} title="Share the schedule picture to a WhatsApp group">${WA_ICON} WhatsApp</button>`;
+  const m = $("#mailBtn"); if (m) m.onclick = openMail;
+  $("#waBtn").onclick = shareWhatsApp;
+}
+async function openMail(){
+  if (DIRTY.size || DIRTY_NOTES.size) return toast("Save your changes first", true);
+  let P; try { P = await api(`ops/schedmail/preview?site=${CTX.site}&week=${WEEK}`); } catch (e){ return toast(e.message, true); }
+  let dl = $("#mailDlg"); if (!dl){ dl = document.createElement("dialog"); dl.id = "mailDlg"; dl.className = "mail"; document.body.append(dl); }
+  const L = list => list.map(x => esc(x.name ? `${x.name} <${x.email}>` : x.email)).join("; ");
+  dl.innerHTML = `<div class="mh"><div class="sj">${esc(P.subject)}</div>
+      <div><span class="k">To</span>${P.to.length ? L(P.to) : `<b style="color:var(--alert)">No Mall Manager set in People &amp; roles</b>`}</div>
+      <div class="cc"><span class="k">Cc</span>${L(P.cc) || "—"}</div>
+      <div><span class="k">From</span>ABC Operations Hub · replies come to you</div></div>
+    <iframe id="mailFrame" title="Email preview"></iframe>
+    <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" id="mailGo" ${P.to.length ? "" : "disabled"}>${P.sent ? "Send update" : "Send email"}</button></div>`;
+  dl.querySelector("#mailFrame").srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:14px">${P.html}</body>`;
+  dl.querySelector("[data-x]").onclick = () => dl.close();
+  dl.querySelector("#mailGo").onclick = async e => {
+    e.target.disabled = true; e.target.textContent = "Sending…";
+    try { await api("ops/schedmail/send", { site: CTX.site, week: WEEK }); dl.close(); toast("Schedule emailed ✓"); loadSend(); }
+    catch (er){ toast(er.message, true); e.target.disabled = false; e.target.textContent = "Send email"; }
+  };
+  dl.showModal();
+}
+
+/* the schedule as a picture (for WhatsApp) — drawn on a canvas, same colours as the email */
+function schedulePng(){
+  const d = days(), W = 230, CW = 128, TW = 70, RH = 50, HH = 52, S = 2;
+  let groups = [], last = null;
+  DATA.staff.forEach(p => { if (p.position !== last){ groups.push({ label: p.positionLabel, people: [] }); last = p.position; } groups[groups.length - 1].people.push(p); });
+  const rows = groups.reduce((n, g) => n + 1 + g.people.length, 0);
+  const width = W + CW * 7 + TW, top = 92, height = top + HH + 34 + rows * RH - groups.length * 18 + 40 + 46;
+  const c = document.createElement("canvas"); c.width = width * S; c.height = height * S;
+  const x = c.getContext("2d"); x.scale(S, S);
+  const F = (w, z) => `${w} ${z}px Calibri, "Segoe UI", Arial, sans-serif`;
+  x.fillStyle = "#fff"; x.fillRect(0, 0, width, height);
+  x.fillStyle = "#2A0F45"; x.fillRect(0, 0, width, 76);
+  x.fillStyle = "#C8A24A"; x.fillRect(0, 76, width, 4);
+  x.fillStyle = "#fff"; x.font = F("bold", 22); x.textBaseline = "middle";
+  x.fillText(`${(SEND && SEND.flag) || "ABC " + CTX.siteName} · Operations Weekly Schedule`, 18, 28);
+  x.font = F("", 15); x.fillStyle = "#E9DDF7"; x.fillText(`${D.long(d[0])} → ${D.long(d[6])}`, 18, 54);
+  let y = top;
+  const cellRect = (cx, cy, w, h, bg) => { x.fillStyle = bg; x.fillRect(cx, cy, w, h); x.strokeStyle = "#D9D2E3"; x.lineWidth = 1; x.strokeRect(cx + .5, cy + .5, w, h); };
+  const text = (t, cx, cy, font, color, align = "center") => { x.font = font; x.fillStyle = color; x.textAlign = align; x.fillText(t, cx, cy); x.textAlign = "left"; };
+  cellRect(0, y, W, HH, "#2A0F45"); text("Location & name", 12, y + HH / 2, F("bold", 14), "#fff", "left");
+  d.forEach((dd, i) => { cellRect(W + i * CW, y, CW, HH, "#2A0F45"); text(D.dow(dd), W + i * CW + CW / 2, y + 18, F("bold", 14), "#fff"); text(D.fmt(dd), W + i * CW + CW / 2, y + 36, F("", 12), "#E9DDF7"); });
+  cellRect(W + 7 * CW, y, TW, HH, "#2A0F45"); text("T.hrs", W + 7 * CW + TW / 2, y + HH / 2, F("bold", 14), "#fff");
+  y += HH;
+  cellRect(0, y, W, 34, "#D9E2F3"); text("Notes", 12, y + 17, F("bold", 13), "#6D6479", "left");
+  d.forEach((dd, i) => { cellRect(W + i * CW, y, CW, 34, "#D9E2F3"); let n = DATA.noteMap[dd] || "—"; x.font = F("", 11); while (x.measureText(n).width > CW - 8 && n.length > 3) n = n.slice(0, -2) + "…"; text(n, W + i * CW + CW / 2, y + 17, F("", 11), "#221A2E"); });
+  cellRect(W + 7 * CW, y, TW, 34, "#D9E2F3"); y += 34;
+  const CODE = { OFF: ["#E5484D", "#fff"], VAC: ["#FFC000", "#3B2A00"], SICK: ["#FFC000", "#3B2A00"], DEATH: ["#FFC000", "#3B2A00"], UL: ["#FFC000", "#3B2A00"], HOLI: ["#8E6BD8", "#fff"], TRAIN: ["#2F80ED", "#fff"], OTH: ["#1F9E8F", "#fff"] };
+  for (const g of groups){
+    cellRect(0, y, width, RH - 18, "#F3F0F7"); text(g.label.toUpperCase(), 12, y + (RH - 18) / 2, F("bold", 12), "#6D6479", "left"); y += RH - 18;
+    for (const p of g.people){
+      cellRect(0, y, W, RH, "#fff"); text(p.name, 12, y + 19, F("bold", 15), "#221A2E", "left"); text(p.title || p.positionLabel, 12, y + 36, F("", 12), "#6D6479", "left");
+      let tot = 0;
+      d.forEach((dd, i) => {
+        const v = DATA.map[key(p.email, dd)] || "", cx = W + i * CW;
+        if (v.includes("-")){ const [a, b] = v.split("-"); tot += hoursOf(v); const s0 = hm(a);
+          cellRect(cx, y, CW, RH, s0 < 10 ? "#E3EEFF" : s0 < 14 ? "#E1F5EA" : "#ECE3F6"); text(`${a}–${b}`, cx + CW / 2, y + 20, F("bold", 14), "#221A2E"); text(`${hoursOf(v)}h`, cx + CW / 2, y + 37, F("", 11), "#6D6479"); }
+        else if (v){ const [bg, fg] = CODE[v] || ["#eee", "#333"]; cellRect(cx, y, CW, RH, bg); text(v, cx + CW / 2, y + 20, F("bold", 14), fg); text(((CTX.codes[v] || {}).label || "").replace(/\s*\(.*\)/, ""), cx + CW / 2, y + 37, F("", 11), fg); }
+        else { cellRect(cx, y, CW, RH, "#fff"); text("—", cx + CW / 2, y + RH / 2, F("", 14), "#B9B0C6"); }
+      });
+      cellRect(W + 7 * CW, y, TW, RH, "#fff"); text(tot ? String(tot) : "—", W + 7 * CW + TW / 2, y + RH / 2, F("bold", 15), "#221A2E");
+      y += RH;
+    }
+  }
+  cellRect(0, y, W, 40, "#F3F0F7"); text("On duty", 12, y + 20, F("bold", 13), "#221A2E", "left");
+  d.forEach((dd, i) => { let am = 0, pm = 0; DATA.staff.forEach(p => { const v = DATA.map[key(p.email, dd)] || ""; if (!v.includes("-")) return; const [a, b] = v.split("-").map(hm); if (a < 12) am++; if (b >= 20 || b <= a) pm++; });
+    cellRect(W + i * CW, y, CW, 40, "#F3F0F7"); text(`${am} AM · ${pm} PM`, W + i * CW + CW / 2, y + 20, F("bold", 12), "#221A2E"); });
+  cellRect(W + 7 * CW, y, TW, 40, "#F3F0F7"); y += 40;
+  text(`ABC Operations Hub · shared by ${CTX.me.name} · ${new Date().toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, 12, y + 22, F("", 12), "#6D6479", "left");
+  return new Promise(res => c.toBlob(res, "image/png"));
+}
+async function shareWhatsApp(){
+  if (DIRTY.size || DIRTY_NOTES.size) return toast("Save your changes first", true);
+  const d = days();
+  const name = `Schedule ${CTX.siteName} ${d[0]} to ${d[6]}.png`;
+  const caption = `${CTX.siteName} — Operations Weekly Schedule ${D.fmt(d[0])} – ${D.fmt(d[6], { year: "numeric" })}`;
+  const blob = await schedulePng();
+  const file = new File([blob], name, { type: "image/png" });
+  /* phones (and Windows/Mac with WhatsApp installed): the share sheet → WhatsApp → pick the group */
+  if (navigator.canShare && navigator.canShare({ files: [file] })){
+    try { await navigator.share({ files: [file], text: caption }); return; } catch (e){ if (e.name === "AbortError") return; }
+  }
+  /* otherwise: picture copied → WhatsApp opens → choose the group → Ctrl+V */
+  let copied = false;
+  try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); copied = true; } catch {}
+  if (!copied && window.HubDL) HubDL.save(blob, name); else if (!copied){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); }
+  let dl = $("#waDlg"); if (!dl){ dl = document.createElement("dialog"); dl.id = "waDlg"; document.body.append(dl); }
+  dl.innerHTML = `<div class="dlg-h"><b>Share on WhatsApp</b></div>
+    <div class="dlg-b"><p class="muted" style="line-height:1.55">${copied ? "The schedule picture is <b>copied</b>. Open WhatsApp, choose the group and press <b>Ctrl+V</b> (or right-click → Paste), then Send."
+      : "The schedule picture is <b>saved</b> in your Downloads. Open WhatsApp, choose the group and attach it."}</p></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Close</button><a class="btn wa" href="whatsapp://send?text=${encodeURIComponent(caption)}" target="_top" data-x>${WA_ICON} Open WhatsApp</a>
+      <a class="btn ghost" href="https://web.whatsapp.com/" target="_blank" rel="noopener" data-x>WhatsApp Web</a></div>`;
+  dl.onclick = e => { if (e.target.closest("[data-x]") || e.target === dl) setTimeout(() => dl.close(), 50); };
+  dl.showModal();
+}
+
+/* =====================================================================
+   ARRANGE NAMES — order of the rows and the section each person shows under (schedule only;
+   the position in People & roles does not change). Saved per flagship for everyone.
+   ===================================================================== */
+let ARR = null;
+function openArrange(){
+  if (DIRTY.size || DIRTY_NOTES.size) return toast("Save your changes first", true);
+  ARR = DATA.staff.map(p => ({ email: p.email, name: p.name, title: p.title || p.positionLabel, group: p.position }));
+  let dl = $("#arrDlg"); if (!dl){ dl = document.createElement("dialog"); dl.id = "arrDlg"; dl.className = "arr"; document.body.append(dl); }
+  drawArr(); dl.showModal();
+}
+function drawArr(){
+  const dl = $("#arrDlg"), G = DATA.groups || {};
+  const order = Object.keys(G);
+  ARR.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));   // keep sections together, order inside each kept
+  let h = "";
+  for (const g of order){
+    const L = ARR.map((p, i) => [p, i]).filter(([p]) => p.group === g);
+    h += `<div class="sec">${esc(G[g])}</div><div class="list" data-g="${g}">` + (L.length ? L.map(([p, i], k) => `<div class="row" draggable="true" data-i="${i}">
+      <span class="h" title="Drag">⋮⋮</span><div><b>${esc(p.name)}</b><small>${esc(p.title)}</small></div>
+      <select data-gi="${i}" aria-label="Section">${order.map(x => `<option value="${x}" ${x === p.group ? "selected" : ""}>${esc(G[x])}</option>`).join("")}</select>
+      <span class="mv"><button data-up="${i}" ${k === 0 ? "disabled" : ""} aria-label="Up">↑</button><button data-dn="${i}" ${k === L.length - 1 ? "disabled" : ""} aria-label="Down">↓</button></span></div>`).join("")
+      : `<div class="muted" style="font-size:.8rem;padding:4px 2px 8px">Nobody — drop a name here or choose this section.</div>`) + `</div>`;
+  }
+  dl.innerHTML = `<div class="dlg-h"><b>Arrange names</b><small class="muted">Drag, or use ↑ ↓. The section only changes where the name shows on the schedule and in the email.</small></div>
+    <div class="dlg-b" style="max-height:62dvh;overflow:auto">${h}</div>
+    <div class="dlg-f"><button class="btn ghost" id="arrReset" style="margin-right:auto">Default order</button><button class="btn ghost" data-x>Cancel</button><button class="btn" id="arrSave">Save</button></div>`;
+  const swap = (i, j) => { const t = ARR[i]; ARR[i] = ARR[j]; ARR[j] = t; drawArr(); };
+  const sibling = (i, dir) => { for (let j = i + dir; j >= 0 && j < ARR.length; j += dir) if (ARR[j].group === ARR[i].group) return j; return -1; };
+  dl.querySelectorAll("[data-up]").forEach(b => b.onclick = () => { const i = +b.dataset.up, j = sibling(i, -1); if (j >= 0) swap(i, j); });
+  dl.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => { const i = +b.dataset.dn, j = sibling(i, 1); if (j >= 0) swap(i, j); });
+  dl.querySelectorAll("[data-gi]").forEach(s => s.onchange = () => { const p = ARR.splice(+s.dataset.gi, 1)[0]; p.group = s.value; ARR.push(p); drawArr(); });
+  let from = -1;
+  dl.querySelectorAll(".row").forEach(r => {
+    r.ondragstart = () => { from = +r.dataset.i; r.classList.add("drag"); };
+    r.ondragend = () => r.classList.remove("drag");
+    r.ondragover = e => { e.preventDefault(); r.classList.add("over"); };
+    r.ondragleave = () => r.classList.remove("over");
+    r.ondrop = e => { e.preventDefault(); const to = +r.dataset.i; if (from < 0 || from === to) return; const p = ARR.splice(from, 1)[0]; p.group = ARR[to > from ? to - 1 : to].group; ARR.splice(to > from ? to - 1 : to, 0, p); drawArr(); };
+  });
+  dl.querySelectorAll(".list").forEach(l => { l.ondragover = e => e.preventDefault(); l.ondrop = e => { if (e.target.closest(".row") || from < 0) return; const p = ARR.splice(from, 1)[0]; p.group = l.dataset.g; ARR.push(p); drawArr(); }; });
+  dl.querySelector("[data-x]").onclick = () => dl.close();
+  dl.querySelector("#arrReset").onclick = async () => { await saveArr([]); };
+  dl.querySelector("#arrSave").onclick = () => saveArr(ARR.map(p => ({ email: p.email, group: p.group })));
+}
+async function saveArr(order){
+  try { const r = await api("ops/schedule/order", { site: CTX.site, order }); DATA.staff = r.staff; $("#arrDlg").close(); render(); toast("Order saved"); loadSend(); }
+  catch (e){ toast(e.message, true); }
+}
 </script>
 </body>
 </html>

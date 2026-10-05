@@ -2203,6 +2203,21 @@ async function renderAdmin(){
   try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : admTab === "history" ? await adminHistory(body) : await adminAnnouncements(body); }
   catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
 }
+/* ----- Weekly schedule email: who receives the Sunday schedule (To = Mall Manager, Cc = this list) ----- */
+async function schedCcPanel(site){
+  const box = $("#scPanel"); if (!box) return;
+  let d; try { d = await api("admin/schedcc"); } catch (e){ box.querySelector(".pg-n").textContent = e.message; return; }
+  const mm = box.dataset.mm;
+  box.innerHTML = `<div class="pg-h"><h4>Weekly schedule email · Sunday</h4></div>
+    <p class="pg-n">The operations team presses <b>Submit &amp; send</b> in the Operations Schedule (reminders on Wednesday and Sunday).<br>
+      To: <b>${mm ? esc(mm) : `<span style="color:var(--alert)">no Mall Manager assigned</span>`}</b> <small>(Mall Manager)</small> · Cc: the list below. One address per line or separated by “;” — “Name &lt;email&gt;” is fine.</p>
+    <label class="field"><span>Cc</span><textarea id="scCc" rows="6" style="font-size:.84rem">${esc((d.cc[site] || "").split("; ").join(";\n"))}</textarea></label>
+    <div id="scMsg"></div><button class="btn ghost small" id="scSave">Save Cc list</button>`;
+  box.querySelector("#scSave").onclick = async () => {
+    try { await api("admin/schedcc", { site, cc: $("#scCc").value }); $("#scMsg").innerHTML = `<div class="msg okm">Saved.</div>`; }
+    catch (er){ $("#scMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+  };
+}
 /* ----- Change history feature (modules/history.js): who changed what, when — kept 12 months ----- */
 const HIST_TOOLS = { gla: "GLA", directory: "Tenants Directory", budget: "Budget", property: "Property details", handover: "Shift handover", reminders: "Reminders", people: "People & roles",
   calendar: "Operations Calendar", evacuation: "Evacuation plan", contractors: "Contractors", contracts: "Contracts near ending", projects: "Projects", mom: "MOM", feedback: "Tenant feedback", layouts: "Mall layouts",
@@ -2469,6 +2484,7 @@ async function adminUsers(body, editing){
         <p class="pg-n" style="margin-top:8px">To: <b>${og.emails.length ? esc(og.emails.join(", ")) : `<span style="color:var(--alert)">no group email yet</span>`}</b><br>
           Cc: ${[mm, om].filter(Boolean).map(u => `<b>${esc(u.name)}</b> <small>(${esc(u.positionLabel)})</small>`).join(" · ") || `<span style="color:var(--muted)">no Mall Manager or Operations Manager assigned</span>`}</p>
         <div id="ogMsg"></div><button class="btn ghost small" id="ogSave">Save group</button></div>`
+      + `<div class="pg og" id="scPanel" data-mm="${esc(mm ? mm.name : "")}"><div class="pg-h"><h4>Weekly schedule email · Sunday</h4></div><p class="pg-n">Loading…</p></div>`
       + `<div class="pg"><div class="pg-h"><h4>Flagship management</h4></div><p class="pg-n">${ACCESS_NOTE.MANAGER} One person in each position.</p>
         <div class="rows"><div class="slot-l">${esc(d.slots.MM)}</div>${slotBox("MM", "MM")}<div class="slot-l">${esc(d.slots.OM)}</div>${slotBox("OM", "OM")}
         ${extraMgr.length ? `<div class="slot-l">Management accounts without a position, or switched off</div>${extraMgr.map(row).join("")}` : ""}</div></div>`
@@ -2510,6 +2526,7 @@ async function adminUsers(body, editing){
       <div id="mMsg"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="mTest">Send me a test now</button><button class="btn ghost" id="eTest">End of Day report test</button></div>
     </div></div>`;
+  if ($("#scPanel")) schedCcPanel(pplTab);   // Weekly schedule email: Cc list per flagship
   $("#uRole").onchange = () => { const r = $("#uRole").value; $("#uNote").innerHTML = ACCESS_NOTE[r]; $("#uPosBox").innerHTML = posField(r); $("#uSiteBox").innerHTML = siteField(r); };
   body.onclick = async ev => {
     const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
