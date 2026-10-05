@@ -9,7 +9,7 @@
      group   section on the home screen (must match one of GROUPS)
      icon    clipboard | alert | qr | box | calendar | chart | bolt | truck
              | camera | shield | users | footfall | bug | book | megaphone | alarm | sun | moon | card | storeIn | storeOut | siren | wallet
-             | gauge | scale | handshake | scroll
+             | gauge | scale | handshake | scroll | exit | hardhat | target | download | pack
      color   tile colour
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
@@ -18,6 +18,7 @@
              (leave out = everyone; Admin, Property Advisor, Mall Directors and
              the Chief Department Store Operations Officer always see everything)
      sso     true = sign in automatically with the hub account
+     logo    picture shown on the tile instead of the icon (e.g. "/logos/jde.png", square, 256×256)
    Empty groups are hidden automatically.
    ===================================================================== */
 
@@ -104,6 +105,19 @@ window.HUB = {
       color: "#B0562A",
       url: "/tools/reminders"
     },
+    /* Operations Calendar feature — see docs/FEATURE-calendar.md */
+    { id: "calendar", name: "Operations Calendar", desc: "Marketing events, ops activities, MOM, objectives and expiry dates", group: "Operations Tools", icon: "calendar", color: "#C2185B", url: "/tools/calendar" },
+    /* Monthly operations pack feature — see docs/FEATURE-ops-pack.md */
+    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Data & Reporting", icon: "pack", color: "#2A0F45", url: "/tools/pack", roles: ["MANAGER", "SUPERVISOR"] },
+    /* Downloads feature — see docs/FEATURE-downloads.md */
+    { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Data & Reporting", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
+    /* Contractors feature — see docs/FEATURE-contractors.md */
+    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Operations Tools", icon: "hardhat", color: "#C07A12", url: "/tools/contractors", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
+    /* Projects feature — see docs/FEATURE-projects.md */
+    { id: "projects", name: "Operations Future Projects", desc: "Ideas and plans — from idea to approved", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects?view=future" },
+    { id: "project-tracker", name: "Project Tracker", desc: "Projects in progress — milestones, progress, budget vs spent", group: "Operations Projects and Budget", icon: "gauge", color: "#2E6B4F", url: "/tools/projects?view=tracker" },
+    /* Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md */
+    { id: "evacuation", name: "Tenant Evacuation Plan", desc: "Service corridor and assembly point for every active tenant", group: "Incidents & Security", icon: "exit", color: "#2E7D32", url: "/tools/evacuation" },
     /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */
     { id: "tenants", name: "Tenant Announcements", desc: "Opening, closure and relocation emails with photos", group: "Tenant Management", icon: "storeIn", color: "#2F6F73", url: "/tools/tenants" },
     {
@@ -121,6 +135,7 @@ window.HUB = {
     { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance" },
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
+    { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts", roles: ["MANAGER", "SUPERVISOR"] },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },
     { id: "directory", name: "Tenants Directory", desc: "Tenant contacts for reception — names, mobiles, emails", group: "Tenant Management", icon: "users", color: "#3C4F8A", url: "/tools/directory" },
     /* Property Overview & Info — more property references will join this section */
@@ -187,6 +202,7 @@ window.HUB = {
     },
     {
       id: "snaglist",
+      logo: "/logos/snaglist.png",   /* replace the file in /logos to change the picture */
       name: "Snaglist Manager",
       desc: "Log, assign and close site snags",
       group: "Inspections",
@@ -197,16 +213,19 @@ window.HUB = {
     },
     {
       id: "restroom",
+      logo: "/logos/restroom.png",   /* replace the file in /logos to change the picture */
       name: "Restroom Inspection Dashboard",
       desc: "Restroom QR inspection findings and reports",
       group: "Inspections",
       icon: "qr",
       color: "#2F6F73",
       url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/",
-      roles: ["MANAGER", "SUPERVISOR"]
+      roles: ["MANAGER", "SUPERVISOR"],
+      sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     {
       id: "incidents",
+      logo: "/logos/incidents.png",   /* replace the file in /logos to change the picture */
       name: "Incident Report System",
       desc: "Incident log, SLAs, blacklist and escalation",
       group: "Incidents & Security",
@@ -217,16 +236,19 @@ window.HUB = {
     },
     {
       id: "cleaner-qr",
+      logo: "/logos/cleaner-qr.png",   /* replace the file in /logos to change the picture */
       name: "Cleaner QR Access",
       desc: "Issue and manage loading area cleaner passes",
       group: "Incidents & Security",
       icon: "shield",
       color: "#3C4F8A",
       url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/",
-      roles: ["MANAGER", "SECURITY"]
+      roles: ["MANAGER", "SECURITY"],
+      sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     {
       id: "abc-connect",
+      logo: "/logos/abc-connect.png",   /* replace the file in /logos to change the picture */
       name: "ABC Connect",
       desc: "Employee portal (Salesforce)",
       group: "Enterprise Systems",
@@ -237,6 +259,7 @@ window.HUB = {
     },
     {
       id: "tenant-connect",
+      logo: "/logos/tenant-connect.png",   /* replace the file in /logos to change the picture */
       name: "Tenant Connect",
       desc: "Tenant portal (Salesforce) — requests and approvals",
       group: "Enterprise Systems",
@@ -247,6 +270,7 @@ window.HUB = {
     },
     {
       id: "jde",
+      logo: "/logos/jde.png",   /* replace the file in /logos to change the picture */
       name: "JD Edwards",
       desc: "Procurement — office network only",
       group: "Enterprise Systems",
@@ -258,6 +282,7 @@ window.HUB = {
     },
     {
       id: "archibus",
+      logo: "/logos/archibus.png",   /* replace the file in /logos to change the picture */
       name: "Archibus",
       desc: "Technical / maintenance — office network only",
       group: "Enterprise Systems",
@@ -269,6 +294,7 @@ window.HUB = {
     },
     {
       id: "pm-portal",
+      logo: "/logos/pm-portal.png",   /* replace the file in /logos to change the picture */
       name: "PM Portal",
       desc: "Company PM system — office network only",
       group: "Enterprise Systems",
@@ -279,6 +305,7 @@ window.HUB = {
     },
     {
       id: "successfactors",
+      logo: "/logos/successfactors.png",   /* replace the file in /logos to change the picture */
       name: "SAP SuccessFactors",
       desc: "HR — performance and people",
       group: "Enterprise Systems",
@@ -287,15 +314,18 @@ window.HUB = {
       url: "https://performancemanager8.successfactors.com/sf/home?bplte_company=abcsal",   /* company sign-in (SSO) */
       embed: false
     },
+    { id: "sign-in-help", name: "Sign-in help", desc: "Save company passwords safely in your browser — one-tap sign-in", group: "Enterprise Systems", icon: "shield", color: "#5A3E8A", url: "/tools/sign-in-help" },
     {
       id: "footfall",
+      logo: "/logos/footfall.png",   /* replace the file in /logos to change the picture */
       name: "Footfall Hub",
       desc: "Daily visitors and vehicles, year on year",
       group: "Data & Reporting",
       icon: "footfall",
       color: "#8A5A1F",
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/",
-      roles: ["MANAGER"]
+      roles: ["MANAGER"],
+      sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     /* Policies & Procedures — the three systems are placeholders until their content is built */
     { id: "pp-owner", name: "Owner", desc: "Owner policies and procedures", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies?s=owner" },

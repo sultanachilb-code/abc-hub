@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monthly Operations Pack · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Monthly operations pack feature — see docs/FEATURE-ops-pack.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.bar .sp{flex:1}
+.page{max-width:900px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.hero{background:linear-gradient(135deg,#2A0F45,#4A1F73);color:#fff;padding:22px 26px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.hero h2{font-size:1.5rem;font-weight:800;line-height:1.15}
+.hero small{display:block;opacity:.8;font-size:.82rem;margin-top:4px}
+.hero .lt{margin-left:auto;display:flex;gap:8px;align-items:center;font-weight:800;font-size:.82rem;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:999px}
+.hero .lt i{width:12px;height:12px;border-radius:50%}
+.sec{padding:16px 26px 6px}
+.sec h3{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px;display:flex;gap:8px;align-items:center}
+.sec h3::after{content:"";flex:1;height:1px;background:var(--line)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.t{border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.t span{display:block;font-size:.72rem;color:var(--muted);line-height:1.3;min-height:2.6em}
+.t b{display:block;font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:2px}
+.t small{display:flex;gap:4px;align-items:center;font-size:.72rem;font-weight:700;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.t small.up{color:var(--ok)} .t small.down{color:var(--alert)}
+.att{display:grid;gap:6px;margin-bottom:10px}
+.att div{padding:8px 12px;border-radius:10px;font-size:.84rem;background:rgba(192,122,18,.1);border-left:3px solid var(--warn)}
+.att div.alert{background:rgba(192,57,43,.1);border-left-color:var(--alert)}
+.sc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.sc .t b{font-size:1.6rem}
+.sc .t .gauge{height:6px;border-radius:6px;background:var(--line);margin-top:8px;overflow:hidden}
+.sc .t .gauge i{display:block;height:100%}
+.spark{display:flex;gap:3px;align-items:flex-end;height:54px;margin:4px 0 6px}
+.spark i{flex:1;background:var(--brand-2);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+.spark i.na{background:var(--line)}
+.foot{padding:12px 26px 18px;font-size:.74rem;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:8px}
+@media (max-width:700px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .sc{grid-template-columns:1fr} .hero,.sec,.foot{padding-left:16px;padding-right:16px} }
+@media print{
+  @page{size:A4;margin:10mm}
+  body{background:#fff;font-size:12px} .top,.bar{display:none!important} .wrap{padding:0;max-width:none}
+  .page{border:0;border-radius:0;max-width:none}
+  .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:14px 18px}
+  .sec{padding:10px 18px 2px;break-inside:avoid} .tiles{gap:6px} .t{padding:7px 9px} .t b{font-size:1.1rem}
+  .spark i,.gauge i,.att div{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>📊 Monthly Operations Pack <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap">
+  <div class="bar"><input class="inp" type="month" id="month"><span class="sp"></span><button class="btn" id="prn">Print / save as PDF</button></div>
+  <div id="app"><div class="empty">Loading…</div></div>
+</div>
+
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", month = UP.get("month") || "";
+const MONTH = m => new Date(m + "-01T12:00:00Z").toLocaleDateString("en-GB", { timeZone: "UTC", month: "long", year: "numeric" });
+const MSHORT = m => new Date(m + "-01T12:00:00Z").toLocaleDateString("en-GB", { timeZone: "UTC", month: "short" });
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site; $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; load(); });
+    $("#month").onchange = e => { month = e.target.value; load(); };
+    $("#prn").onclick = () => window.print();
+    load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){
+  $("#app").innerHTML = `<div class="empty">Building the pack…</div>`;
+  try {
+    const P = await api(`ops/pack?site=${site}${month ? `&month=${month}` : ""}`);
+    month = P.month; $("#month").value = month; $("#month").max = P.today.slice(0, 7);
+    history.replaceState(null, "", `?site=${site}&month=${month}`);
+    document.title = `${P.siteName} · Operations Pack ${MONTH(month)}`;
+    render(P);
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+/* tile: value now, last month, arrow coloured by whether up is good */
+function tile(label, now, before, opt = {}){
+  const f = v => v == null ? "—" : opt.pct ? v + "%" : opt.money ? "$" + Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 }) : Number(v).toLocaleString("en-US", { maximumFractionDigits: 1 });
+  let cmp = "";
+  if (before != null && now != null && !opt.noCmp){
+    const d = Math.round((now - before) * 10) / 10;
+    const good = opt.lowerBetter ? d < 0 : d > 0;
+    cmp = d === 0 ? `<small>= ${esc(MSHORT(P_.prev))}</small>` : `<small class="${opt.neutral ? "" : good ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${f(Math.abs(d)).replace("$", "$")} vs ${esc(MSHORT(P_.prev))} (${f(before)})</small>`;
+  } else if (!opt.noCmp) cmp = `<small>${esc(MSHORT(P_.prev))}: ${f(before)}</small>`;
+  return `<div class="t"><span>${esc(label)}</span><b>${f(now)}</b>${opt.sub ? `<small>${esc(opt.sub)}</small>` : cmp}</div>`;
+}
+let P_ = null;
+function render(P){
+  P_ = P;
+  const N = P.now, B = P.before, gN = N.gla || {}, gB = B.gla || {}, m = N.mtd || {}, mb = B.mtd || {};
+  const occ = g => g.occupancy == null ? null : Math.round(g.occupancy * 1000) / 10;
+  const sc = (k) => { const v = N.scores[k].score, w = B.scores[k].score, col = v == null ? "var(--line)" : v >= 85 ? "var(--ok)" : v >= 70 ? "var(--warn)" : "var(--alert)";
+    return `<div class="t"><span>${esc({ cleaning: "Cleaning", security: "Security", parking: "Parking · Liban Park" }[k])} score</span><b>${v == null ? "—" : v}</b>
+      <small class="${v != null && w != null ? (v >= w ? "up" : "down") : ""}">${w == null ? `${esc(MSHORT(P.prev))}: —` : v == null ? `${esc(MSHORT(P.prev))}: ${w}` : `${v !== w ? (v > w ? "▲" : "▼") : "="} ${esc(MSHORT(P.prev))}: ${w}`}</small>
+      <div class="gauge"><i style="width:${v || 0}%;background:${col}"></i></div></div>`; };
+  const tr = P.trend || [];
+  const light = { green: ["#2E8B57", "On track"], amber: ["#C07A12", "Watch"], red: ["#C0392B", "Needs attention"] }[N.light] || ["#999", ""];
+  $("#app").innerHTML = `<div class="page">
+    <div class="hero"><div><small style="margin:0 0 4px;opacity:.75;letter-spacing:.08em;text-transform:uppercase;font-weight:800">ABC · Monthly Operations Pack</small>
+      <h2>${esc(P.siteName)} — ${esc(MONTH(P.month))}</h2><small>${P.partial ? `Month to date (1 → ${esc(D.fmt(P.today))}) · ` : ""}compared with ${esc(MONTH(P.prev))}</small></div>
+      ${P.partial ? `<span class="lt"><i style="background:${light[0]}"></i>${esc(light[1])} today</span>` : ""}</div>
+    ${P.partial && N.attention && N.attention.length ? `<div class="sec"><h3>Needs attention</h3><div class="att">${N.attention.map(a => `<div class="${a.tone}">${esc(a.text)}</div>`).join("")}</div></div>` : ""}
+    <div class="sec"><h3>Property</h3><div class="tiles">
+      ${tile("Occupancy (leasing GLA)", occ(gN), null, { pct: true, sub: `${(gN.vacantArea || 0).toLocaleString("en-US")} m² vacant · ${gN.vacantUnits || 0} units` })}
+      ${tile("Open tenants", gN.active, null, { sub: `${gN.fitout || 0} fit-out · ${gN.reserved || 0} reserved` })}
+      ${tile("Openings", m.opened, mb.opened)}${tile("Closures", m.closed, mb.closed, { lowerBetter: true })}</div></div>
+    <div class="sec"><h3>Daily operations</h3><div class="tiles">
+      ${tile("AM + PM checklists submitted", m.checklists, mb.checklists, { pct: true })}${tile("Restroom inspections done", m.restroom, mb.restroom, { pct: true })}
+      ${tile("Handovers submitted", N.handovers.submitted, B.handovers.submitted)}${tile("Emergency alerts", N.emergencies, B.emergencies, { neutral: true })}</div>
+      ${tr.length ? `<div style="font-size:.72rem;color:var(--muted);font-weight:700">Restroom inspections · last 14 days</div><div class="spark">${tr.map(t => `<i class="${t.restroom == null ? "na" : ""}" style="height:${t.restroom == null ? 4 : Math.max(4, t.restroom)}%" title="${esc(D.fmt(t.day))}: ${t.restroom == null ? "no data" : t.restroom + "%"}"></i>`).join("")}</div>` : ""}</div>
+    <div class="sec"><h3>Incidents & tenants</h3><div class="tiles">
+      ${tile("Incidents reported", m.incidents, mb.incidents, { lowerBetter: true })}${tile("Tenant feedback logged", N.feedback, B.feedback, { neutral: true })}
+      ${tile("Tenant compliance (avg)", m.compliance, mb.compliance, { pct: true })}${tile("Compliance violations", m.violations, mb.violations, { lowerBetter: true })}</div></div>
+    <div class="sec"><h3>Soft services</h3><div class="sc">${sc("cleaning")}${sc("security")}${sc("parking")}</div></div>
+    <div class="sec"><h3>Planning & projects</h3><div class="tiles">
+      ${tile("MOM meetings", N.mom.meetings, B.mom.meetings)}${tile("MOM actions overdue", N.mom.overdue, B.mom.overdue, { lowerBetter: true })}
+      ${tile("Projects completed", N.projects.completed, B.projects.completed)}${tile("Projects in progress", N.projects.active, null, { sub: N.projects.late ? `${N.projects.late} late` : "none late" })}
+      ${tile("Marketing events", N.calendar.marketing, B.calendar.marketing, { neutral: true })}${tile("Ops activities planned", N.calendar.ops, B.calendar.ops, { neutral: true })}
+      ${tile("CAPEX budget (year)", m.capex ? m.capex.budget : null, null, { money: true, sub: m.capex && m.capex.landing ? `landing $${Math.round(m.capex.landing).toLocaleString("en-US")}` : "from Budget" })}
+      ${tile("Tenant announcements", m.announcements, mb.announcements, { neutral: true })}</div></div>
+    <div class="sec"><h3>Works, contractors & safety</h3><div class="tiles">
+      ${tile("Works forms received", N.works.received, B.works.received, { neutral: true })}${tile("Works forms completed", N.works.completed, B.works.completed)}
+      ${tile("Contractor check-ins", N.contractors.visits, B.contractors.visits, { neutral: true })}${tile("Contractor worker-days", N.contractors.workerDays, B.contractors.workerDays, { neutral: true })}
+      ${tile("Evacuation plan complete", P.evac.pct, null, { pct: true, sub: `${P.evac.done} of ${P.evac.tenants} active tenants` })}</div></div>
+    <div class="foot"><span>Generated ${esc(new Date(P.generatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }))} by ${esc(P.by)}</span>
+      <span>Sources: ABC Operations Hub (GLA, checklists, handover, MOM, feedback, calendar, projects, contractors), Restroom and Incident systems. Sales figures are not included.</span></div>
+  </div>`;
+}
+boot();
+</script>
+</body>
+</html>

@@ -7,6 +7,8 @@
   addEventListener("storage", e => { if (e.key === "hub.theme") apply(read(e.newValue)); });
 })();
 const $ = s => document.querySelector(s);
+/* Downloads feature: every file a tool gives you is also listed in Downloads (tools/hubdl.js) */
+(() => { if (window.HubDL) return; const sc = document.createElement("script"); sc.src = "/tools/hubdl.js"; document.head.append(sc); })();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const initials = s => String(s || "").split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 /* ---------- works offline ----------

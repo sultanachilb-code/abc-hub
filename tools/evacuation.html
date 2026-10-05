@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Evacuation Plan · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md -->
+<style>
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{padding:12px 14px}
+.kpi strong{display:block;font-size:1.45rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.76rem;color:var(--muted)}
+.kpi .pb{height:6px;border-radius:6px;background:var(--line);margin-top:8px;overflow:hidden}
+.kpi .pb i{display:block;height:100%;background:var(--ok)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.bar .sp{flex:1}
+.bar .inp{min-width:220px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+.panel{padding:14px 16px;margin-bottom:12px}
+.panel h3{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.panel h3 .sp{flex:1}
+.rt{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.rt:last-child{border-bottom:0}
+.rt small{color:var(--muted);font-size:.74rem;display:block}
+.rt .n{font-weight:800;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.8rem}
+.rt button{color:var(--muted);font-size:.8rem;font-weight:700}
+.rt button:hover{color:var(--brand-2)}
+table.t{width:100%;border-collapse:collapse;font-size:.86rem}
+.t th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
+.t td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.t tr.miss td:first-child{box-shadow:inset 3px 0 0 var(--alert)}
+.t tr.part td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.t tr.okr td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+.t .sel{height:34px;width:100%;min-width:150px}
+.t b{display:block;line-height:1.3}
+.t small{color:var(--muted);font-size:.74rem}
+.t input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+.grp{padding:10px 14px;font-weight:800;background:var(--paper);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.grp small{color:var(--muted);font-weight:700}
+.bulk{position:sticky;bottom:12px;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:var(--ink);color:#fff;border-radius:14px;margin-top:12px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.bulk .sel{height:34px;color:var(--text)}
+.bulk b{margin-right:auto}
+.lvl{font-weight:800;font-variant-numeric:tabular-nums}
+.cards{display:none}
+.tc{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.tc .hdr{display:flex;gap:10px;align-items:center}
+.tc .hdr b{flex:1}
+.tc .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tc .sel{width:100%;height:36px}
+@media (max-width:1000px){ .layout{grid-template-columns:1fr} }
+@media (max-width:700px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bar .inp{min-width:0;flex:1 1 100%}
+  .tbl{display:none} .cards{display:block}
+}
+@media print{
+  .top,.bar,.side,.bulk,.kpis,.noprint{display:none!important}
+  .layout{display:block} .wrap{padding:0}
+  .tbl{display:block!important} .cards{display:none!important}
+  .t th{position:static}
+  .t select{appearance:none;border:0;padding:0;height:auto}
+  .ph{display:block!important;margin-bottom:10px}
+}
+.ph{display:none}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🚪 Tenant Evacuation Plan <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", S = null, q = "", lvl = "", by = "tenant", only = "", picked = new Set();
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site; $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${v}`); picked.clear(); load(); });
+    await load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){ S = await api(`ops/evac/get?site=${site}`); render(); }
+
+const nameOf = (id, L) => (L.find(x => x.id === id) || {}).name || "";
+const stateOf = t => t.corridorId && t.assemblyId ? "okr" : t.corridorId || t.assemblyId ? "part" : "miss";
+function list(){
+  const s = q.toLowerCase();
+  return S.tenants.filter(t => (!lvl || t.level === lvl) && (!only || (only === "miss" ? stateOf(t) !== "okr" : stateOf(t) === "okr"))
+    && (!s || `${t.tenant} ${t.unit} ${t.category} ${nameOf(t.corridorId, S.corridors)} ${nameOf(t.assemblyId, S.assemblies)}`.toLowerCase().includes(s)));
+}
+function opts(L, v, ph){ return `<option value="0">${ph}</option>` + L.map(x => `<option value="${x.id}" ${x.id === v ? "selected" : ""}>${esc(x.name)}${x.level ? " · " + esc(x.level) : ""}</option>`).join(""); }
+
+function render(){
+  const T = S.tenants, done = T.filter(t => stateOf(t) === "okr").length, pct = T.length ? Math.round(done / T.length * 100) : 0;
+  const levels = [...new Set(T.map(t => t.level).filter(Boolean))];
+  const ed = S.can.edit;
+  const L = list();
+  let h = `<div class="kpis">
+      <div class="card kpi"><strong>${T.length}</strong><span>Active tenants (Open + Fit-out)</span></div>
+      <div class="card kpi"><strong style="color:var(--ok)">${pct}%</strong><span>${done} fully assigned</span><div class="pb"><i style="width:${pct}%"></i></div></div>
+      <div class="card kpi"><strong style="color:${T.length - done ? "var(--alert)" : "var(--ok)"}">${T.length - done}</strong><span>Missing corridor or assembly point</span></div>
+      <div class="card kpi"><strong>${S.corridors.length} · ${S.assemblies.length}</strong><span>Corridors · assembly points</span></div></div>
+    <div class="bar"><input class="inp" id="q" placeholder="Search tenant, unit, corridor…" value="${esc(q)}">
+      <select class="sel" id="lvl"><option value="">All levels</option>${levels.map(l => `<option ${l === lvl ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      <select class="sel" id="only"><option value="">All tenants</option><option value="miss" ${only === "miss" ? "selected" : ""}>Missing only</option><option value="ok" ${only === "ok" ? "selected" : ""}>Assigned only</option></select>
+      <span class="sp"></span>
+      <div class="tabs"><button data-by="tenant" class="${by === "tenant" ? "on" : ""}">By tenant</button><button data-by="corridor" class="${by === "corridor" ? "on" : ""}">By corridor</button><button data-by="assembly" class="${by === "assembly" ? "on" : ""}">By assembly point</button></div>
+      <button class="btn ghost small" id="prn">Print${lvl ? " " + esc(lvl) : ""}</button></div>
+    <div class="layout"><div>
+      <div class="ph"><h2>Tenant Evacuation Plan — ${esc(ctx.siteName)}${lvl ? " · " + esc(lvl) : ""}</h2><small>Printed ${esc(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }))}</small></div>
+      ${!S.corridors.length && !S.assemblies.length ? `<div class="card panel" style="border-color:var(--warn)"><b>Start here:</b> add the flagship's service corridors and assembly points on the ${innerWidth > 1000 ? "right" : "bottom"}, then assign them to each tenant.</div>` : ""}
+      ${by === "tenant" ? tenantTable(L, ed) : groupView(L)}
+      ${ed && picked.size ? `<div class="bulk"><b>${picked.size} selected</b>
+        <select class="sel" id="bC">${opts(S.corridors, -1, "Corridor — keep")}</select>
+        <select class="sel" id="bA">${opts(S.assemblies, -1, "Assembly — keep")}</select>
+        <button class="btn gold small" id="bGo">Apply</button><button class="btn small" id="bClr" style="background:transparent;border:1px solid rgba(255,255,255,.4)">Clear</button></div>` : ""}
+    </div>
+    <div class="side">${routesPanel("corridor", "Service corridors", S.corridors, ed)}${routesPanel("assembly", "Assembly points", S.assemblies, ed)}</div></div>`;
+  $("#app").innerHTML = h;
+  wire();
+}
+function tenantTable(L, ed){
+  if (!L.length) return `<div class="card empty">${S.tenants.length ? "No tenant matches." : "No active tenant in the GLA for this flagship."}</div>`;
+  const allOn = L.every(t => picked.has(t.unitId));
+  return `<div class="card tbl" style="overflow-x:auto"><table class="t"><thead><tr>${ed ? `<th class="noprint" style="width:34px"><input type="checkbox" id="pAll" ${allOn ? "checked" : ""}></th>` : ""}<th>Level</th><th>Tenant</th><th>Service corridor</th><th>Assembly point</th><th class="noprint">Note</th></tr></thead><tbody>
+    ${L.map(t => `<tr class="${stateOf(t)}"><td class="noprint" ${ed ? "" : "hidden"}><input type="checkbox" data-pk="${t.unitId}" ${picked.has(t.unitId) ? "checked" : ""}></td>
+      <td class="lvl">${esc(t.level)}</td>
+      <td><b>${esc(t.tenant)}</b><small>${esc(t.unit)}${t.status === "Fit-out" ? " · Fit-out" : ""}${t.category ? " · " + esc(t.category) : ""}</small></td>
+      <td>${ed ? `<select class="sel" data-u="${t.unitId}" data-f="corridorId">${opts(S.corridors, t.corridorId, "— choose —")}</select>` : esc(nameOf(t.corridorId, S.corridors)) || `<span class="pill alert">Missing</span>`}</td>
+      <td>${ed ? `<select class="sel" data-u="${t.unitId}" data-f="assemblyId">${opts(S.assemblies, t.assemblyId, "— choose —")}</select>` : esc(nameOf(t.assemblyId, S.assemblies)) || `<span class="pill alert">Missing</span>`}</td>
+      <td class="noprint"><small>${esc(t.note)}${t.updatedName ? `${t.note ? "<br>" : ""}${esc(t.updatedName)}` : ""}</small></td></tr>`).join("")}</tbody></table></div>
+    <div class="card cards">${L.map(t => `<div class="tc ${stateOf(t)}"><div class="hdr">${ed ? `<input type="checkbox" data-pk="${t.unitId}" ${picked.has(t.unitId) ? "checked" : ""} style="width:18px;height:18px">` : ""}<b>${esc(t.tenant)}</b><span class="pill ${stateOf(t) === "okr" ? "ok" : stateOf(t) === "part" ? "warn" : "alert"}">${esc(t.level)} · ${esc(t.unit)}</span></div>
+      ${ed ? `<div class="two"><select class="sel" data-u="${t.unitId}" data-f="corridorId">${opts(S.corridors, t.corridorId, "Corridor…")}</select><select class="sel" data-u="${t.unitId}" data-f="assemblyId">${opts(S.assemblies, t.assemblyId, "Assembly point…")}</select></div>`
+        : `<small>🚪 ${esc(nameOf(t.corridorId, S.corridors) || "Missing")} · 📍 ${esc(nameOf(t.assemblyId, S.assemblies) || "Missing")}</small>`}</div>`).join("")}</div>`;
+}
+function groupView(L){
+  const key = by === "corridor" ? "corridorId" : "assemblyId", R = by === "corridor" ? S.corridors : S.assemblies;
+  const groups = R.map(r => ({ r, L: L.filter(t => t[key] === r.id) })).concat([{ r: { name: "Not assigned", id: 0 }, L: L.filter(t => !t[key]) }]).filter(g => g.L.length);
+  if (!groups.length) return `<div class="card empty">No tenant matches.</div>`;
+  const other = by === "corridor" ? ["assemblyId", S.assemblies, "Assembly point"] : ["corridorId", S.corridors, "Corridor"];
+  return groups.map(g => `<div class="card" style="margin-bottom:12px;overflow:hidden"><div class="grp">${by === "corridor" ? "🚪" : "📍"} ${esc(g.r.name)}${g.r.level ? ` <small>· ${esc(g.r.level)}</small>` : ""}<span style="flex:1"></span><small>${g.L.length} tenant${g.L.length === 1 ? "" : "s"}</small></div>
+    <table class="t"><thead><tr><th>Level</th><th>Tenant</th><th>${other[2]}</th></tr></thead><tbody>${g.L.map(t => `<tr class="${stateOf(t)}"><td class="lvl">${esc(t.level)}</td><td><b>${esc(t.tenant)}</b><small>${esc(t.unit)}</small></td><td>${esc(nameOf(t[other[0]], other[1])) || `<span class="pill alert">Missing</span>`}</td></tr>`).join("")}</tbody></table></div>`).join("");
+}
+function routesPanel(kind, title, L, ed){
+  const key = kind === "corridor" ? "corridorId" : "assemblyId";
+  return `<div class="card panel"><h3>${kind === "corridor" ? "🚪" : "📍"} ${title}<span class="sp"></span>${ed ? `<button class="btn ghost small" data-new="${kind}">+ Add</button>` : ""}</h3>
+    ${L.length ? L.map(r => `<div class="rt"><div><b>${esc(r.name)}</b>${r.level || r.note ? `<small>${esc([r.level, r.note].filter(Boolean).join(" · "))}</small>` : ""}</div>
+      <span class="n">${S.tenants.filter(t => t[key] === r.id).length}</span>${ed ? `<button data-edit="${kind}:${r.id}">Edit</button>` : "<span></span>"}</div>`).join("")
+      : `<div class="hint muted" style="font-size:.8rem">None yet.</div>`}</div>`;
+}
+function wire(){
+  $("#q").oninput = e => { q = e.target.value; const pos = e.target.selectionStart; render(); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); };
+  $("#lvl").onchange = e => { lvl = e.target.value; render(); };
+  $("#only").onchange = e => { only = e.target.value; render(); };
+  $("#prn").onclick = () => window.print();
+  $("#app").querySelectorAll("[data-by]").forEach(b => b.onclick = () => { by = b.dataset.by; render(); });
+  $("#app").querySelectorAll("select[data-u]").forEach(s => s.onchange = async () => {
+    s.disabled = true;
+    try { S = { ...S, ...(await api("ops/evac/assign", { site, unitId: Number(s.dataset.u), [s.dataset.f]: Number(s.value) })) }; toast("Saved"); render(); }
+    catch (e){ toast(e.message, true); s.disabled = false; }
+  });
+  $("#app").querySelectorAll("[data-pk]").forEach(c => c.onchange = () => { const u = Number(c.dataset.pk); c.checked ? picked.add(u) : picked.delete(u); render(); });
+  const all = $("#pAll"); if (all) all.onchange = () => { list().forEach(t => all.checked ? picked.add(t.unitId) : picked.delete(t.unitId)); render(); };
+  const go = $("#bGo"); if (go) go.onclick = async () => {
+    const c = Number($("#bC").value), a = Number($("#bA").value);
+    if (c < 0 && a < 0) return toast("Choose a corridor or an assembly point", true);
+    const rows = [...picked].map(u => ({ unitId: u, ...(c >= 0 ? { corridorId: c } : {}), ...(a >= 0 ? { assemblyId: a } : {}) }));
+    try { const r = await api("ops/evac/assign", { site, rows }); S = { ...S, ...r }; picked.clear(); toast(`${r.saved} tenant${r.saved === 1 ? "" : "s"} updated`); render(); } catch (e){ toast(e.message, true); }
+  };
+  const clr = $("#bClr"); if (clr) clr.onclick = () => { picked.clear(); render(); };
+  $("#app").querySelectorAll("[data-new]").forEach(b => b.onclick = () => routeBox(b.dataset.new));
+  $("#app").querySelectorAll("[data-edit]").forEach(b => b.onclick = () => { const [k, id] = b.dataset.edit.split(":"); routeBox(k, (k === "corridor" ? S.corridors : S.assemblies).find(r => r.id === Number(id))); });
+}
+/* fix: the bulk selects use -1 as "keep" */
+const _opts = opts; opts = (L, v, ph) => v === -1 ? `<option value="-1">${ph}</option><option value="0">Clear</option>` + L.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("") : _opts(L, v, ph);
+
+function routeBox(kind, r){
+  r = r || { name: "", level: "", note: "" };
+  let d = $("#dR"); if (!d){ d = document.createElement("dialog"); d.id = "dR"; document.body.append(d); }
+  const nm = kind === "corridor" ? "service corridor" : "assembly point";
+  d.innerHTML = `<div class="dlg-h"><b>${r.id ? "Edit" : "Add"} ${nm}</b></div>
+    <div class="dlg-b"><label class="lbl">Name</label><input class="inp" id="rN" style="width:100%" maxlength="120" value="${esc(r.name)}" placeholder="${kind === "corridor" ? "e.g. SC-L1 East (behind Zara)" : "e.g. AP-2 · Main parking entrance"}">
+      <label class="lbl" style="margin-top:12px">Level</label><input class="inp" id="rL" style="width:100%" maxlength="20" value="${esc(r.level)}" placeholder="e.g. L1 (optional)">
+      <label class="lbl" style="margin-top:12px">Note</label><input class="inp" id="rT" style="width:100%" maxlength="300" value="${esc(r.note)}" placeholder="Exit door, stairs, landmarks (optional)">
+      <div id="rE" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
+    <div class="dlg-f">${r.id ? `<button class="btn ghost danger" id="rDel" style="margin-right:auto">Remove</button>` : ""}<button class="btn ghost" data-x>Cancel</button><button class="btn" id="rOk">Save</button></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  d.querySelector("#rOk").onclick = async () => {
+    try { S = { ...S, ...(await api("ops/evac/route", { site, kind, id: r.id, name: $("#rN").value, level: $("#rL").value, note: $("#rT").value })) }; d.close(); toast("Saved"); render(); }
+    catch (e){ $("#rE").textContent = e.message; }
+  };
+  const del = d.querySelector("#rDel"); if (del) del.onclick = async () => {
+    const n = S.tenants.filter(t => t[kind === "corridor" ? "corridorId" : "assemblyId"] === r.id).length;
+    d.close();
+    if (!await confirmBox(`Remove ${r.name}?`, n ? `${n} tenant${n === 1 ? "" : "s"} will need a new ${nm}.` : "No tenant uses it.", "Remove")) return;
+    try { S = { ...S, ...(await api("ops/evac/route", { site, kind, id: r.id, remove: true })) }; toast("Removed"); render(); } catch (e){ toast(e.message, true); }
+  };
+  d.showModal(); setTimeout(() => $("#rN").focus(), 30);
+}
+boot();
+</script>
+</body>
+</html>

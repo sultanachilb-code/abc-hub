@@ -11,9 +11,18 @@ import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./mod
 import { directorySchema, directoryRoute, directoryPublic } from "./modules/directory.js";
 import { worksSchema, worksInbox, worksFile, worksRoute } from "./modules/works.js";   // Tenant Works Forms feature — see docs/FEATURE-tenant-works.md   // Tenants Directory feature — see docs/FEATURE-directory.md
 import { profileSchema, profileRoute, coversAdmin } from "./modules/profile.js";
-import { twofaSchema, twofaGate, twofaPublic, twofaRoute, twofaAdmin, twofaClean, requiredRoles } from "./modules/twofa.js";   // Two-step login feature — see docs/FEATURE-two-step.md   // Profile feature — see docs/FEATURE-profile.md
+import { twofaSchema, twofaOn, twofaGate, twofaPublic, twofaRoute, twofaAdmin, twofaClean, requiredRoles } from "./modules/twofa.js";   // Two-step login feature — see docs/FEATURE-two-step.md   // Profile feature — see docs/FEATURE-profile.md
 import { leadershipRoute } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
 import { automationSchema, automationRun, backupData, eodEmailHtml } from "./modules/automation.js";   // Automation feature (EOD email, daily snapshot, weekly backup) — see docs/FEATURE-automation.md   // Tenant Management feature — see docs/FEATURE-tenant-management.md
+import { calendarSchema, calendarRoute, calendarRun, calendarDayEvents, CAL_KINDS, DOC_TYPES } from "./modules/calendar.js";   // Operations Calendar feature — see docs/FEATURE-calendar.md
+import { historySchema, makeAudit, historyClean, historyList, historyOf } from "./modules/history.js";   // Change history feature — see docs/FEATURE-history.md
+import { evacSchema, evacRoute } from "./modules/evac.js";   // Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md
+import { projectsSchema, projectsRoute, projectsRun } from "./modules/projects.js";   // Projects feature — see docs/FEATURE-projects.md
+import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
+import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
+import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";   // Contracts near ending — see docs/FEATURE-email-inbox.md
+import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
+import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";   // Contractors feature — see docs/FEATURE-contractors.md   // Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
@@ -22,7 +31,8 @@ import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report
    Static files (index.html, apps.js, icons…) are served as assets.
    ===================================================================== */
 
-emergencyDeps({ raiseEvent: (...a) => raiseEvent(...a), sendPush: (...a) => sendPush(...a), now: () => new Date().toISOString() });   // Emergency Alert feature
+const audit = makeAudit(() => new Date().toISOString());   // Change history feature
+emergencyDeps({ raiseEvent: (...a) => raiseEvent(...a), sendPush: (...a) => sendPush(...a), now: () => new Date().toISOString(), siteName: s => siteName(s) });   // Emergency Alert feature
 
 const SITES = {
   VRM: "Verdun Mall",
@@ -111,9 +121,29 @@ const CONNECTORS = {
     binding: "RESTROOM",
     stats: "/api/hubstats?site={site}",
     notify: "/api/hubnotify?site={site}&since={since}",
-    day: "/api/hubday?site={site}&date={date}"
-  }
+    day: "/api/hubday?site={site}&date={date}",
+    sso: "/api/sso?token={token}", probe: true   // automatic sign-in once connectors/hub-sso-connector.js is added to that system
+  },
+  "cleaner-qr": { base: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev", binding: "CLEANER", sso: "/api/sso?token={token}", probe: true },
+  footfall: { base: "https://footfall-hub.sultanachi-lb-61f.workers.dev", binding: "FOOTFALL", sso: "/api/sso?token={token}", probe: true }
 };
+/* SSO probe: a system answers /api/sso?probe=1 with {"ok":true,"sso":true} once its connector is in place —
+   until then the tile simply opens the system's own sign-in page. Cached 10 minutes. */
+const ssoProbeCache = new Map();
+async function ssoReady(env, id, c) {
+  if (!c.probe) return true;
+  const hit = ssoProbeCache.get(id);
+  if (hit && Date.now() - hit.at < 600e3) return hit.ok;
+  let okk = false;
+  try {
+    const target = c.base + "/api/sso?probe=1";
+    const r = c.binding && env[c.binding] ? await env[c.binding].fetch(target) : await fetch(target);
+    const j = await r.json().catch(() => null);
+    okk = !!(r.ok && j && j.ok && j.sso);
+  } catch {}
+  ssoProbeCache.set(id, { at: Date.now(), ok: okk });
+  return okk;
+}
 
 /* Systems the hub checks for the health dots (id = apps.js id).
    internal: true → on the office network, which the cloud cannot reach,
@@ -222,6 +252,13 @@ async function ensureSchema(env) {
   await tenantsSchema(env);   // Tenant Management feature
   await directorySchema(env);   // Tenants Directory feature
   await worksSchema(env);   // Tenant Works Forms feature
+  await calendarSchema(env);   // Operations Calendar feature
+  await historySchema(env);   // Change history feature
+  await evacSchema(env);   // Tenant Evacuation Plan feature
+  await contractorsSchema(env);   // Contractors feature
+  await projectsSchema(env);   // Projects feature
+  await addinSchema(env);   // Outlook add-in feature
+  await contractsSchema(env);   // Contracts near ending
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -329,9 +366,14 @@ export default {
       await ensureSchema(env);
       await taskReminders(env).catch(e => console.error("tasks", e && e.message));
       await remindersRun(env, { raiseEvent, pullDay, now: nowIso }).catch(e => console.error("reminders", e && e.message));   // Reminders feature
-      await emergencyRun(env, { raiseEvent, sendPush, now: nowIso }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
+      await emergencyRun(env, { raiseEvent, sendPush, now: nowIso, siteName }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
       await automationRun(env, { SITES, eodReport, relay, hubUrl: HUB_URL, canSite, isFull }).catch(e => console.error("automation", e && e.message));   // Automation feature
+      await calendarRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("calendar", e && e.message));   // Operations Calendar feature
+      await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
+      await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
+      if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
+      if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
     })());
@@ -355,10 +397,16 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("login/2fa/")) { const r = await twofaPublic(env, twofaDeps, path, method, body, request); return r instanceof Response ? r : json(r); }   // Two-step login feature
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   if (path === "setup" && method === "POST") return setup(env, body);
+  if (path === "inbox/mail" && method === "POST") return ok(await mailInbox(env, request, body, { SITES, canSite, isFull, now: nowIso, today: beirutToday, raiseEvent, audit }));   // Email inbox: MOM · calendar · contracts report
   if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
-  const me = await readSession(request, env);
+  if (path === "addin/pair" && method === "POST") return ok(await addinPair(env, body, request));   // Outlook add-in: email + 6-digit code → token
+  let me = await readSession(request, env);
+  if (!me) {   // Outlook add-in: the panel signs in with its own token (limited to /me, /ops/* and /addin/*)
+    me = await addinUser(env, request);
+    if (me && !addinAllowed(path)) throw fail("This is not available from Outlook — open the hub", 403);
+  }
   if (!me) {
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM users").first();
     throw fail("Not signed in", 401, { needsSetup: Number(n.n) === 0 });
@@ -366,9 +414,14 @@ async function route(request, env, ctx, url) {
 
   /* ----- signed-in routes ----- */
   if (path === "me") {
-    const [roles, st] = await Promise.all([requiredRoles(env), env.DB.prepare("SELECT totp_on, approve_on FROM user_2fa WHERE email = ?").bind(me.email).first().catch(() => null)]);
-    const on = !!(st && (st.totp_on || st.approve_on));
+    const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES });
+  }
+  if (path.startsWith("addin/")) {   // Outlook add-in feature
+    const r = await addinRoute(env, path, method, body, request, me, { context: u => ({ user: userOut(u), sites: sitesMap(u), today: beirutToday(),
+      feedback: { categories: FEEDBACK.categories, actions: FEEDBACK.actions }, calKinds: CAL_KINDS, docTypes: DOC_TYPES,
+      can: Object.fromEntries(sitesOf(u).map(c => [c, rights(u, c)])) }) });
+    if (r) return ok(r);
   }
   if (path.startsWith("2fa/")) { const r = await twofaRoute(env, twofaDeps, path, method, body, url, request, me); if (r) return ok(r); }   // Two-step login feature
   if (path === "profile" || path.startsWith("profile/")) {   // Profile feature
@@ -397,16 +450,26 @@ async function route(request, env, ctx, url) {
   if (path === "usage" && method === "POST") { await logUsage(env, me, String(body.app || "").slice(0, 40)); return ok({ logged: true }); }
   if (path === "ops/layouts/image") return layoutsImage(env, opsSite(me, url.searchParams.get("site")), url);   // Mall Layouts feature
   if (path === "ops/works/file") return worksFile(env, me, url, { canSite });   // Tenant Works Forms feature: the PDF
-  if (path.startsWith("ops/")) return ok(await opsRoute(env, me, path.slice(4), method, body, url));
+  if (path.startsWith("ops/")) {
+    const out = await opsRoute(env, me, path.slice(4), method, body, url);
+    if (method === "POST") await auditOps(env, me, path.slice(4), body || {}, out).catch(() => {});   // Change history feature
+    return ok(out);
+  }
 
   /* ----- admin ----- */
   if (path.startsWith("admin/")) {
     if (me.role !== "ADMIN") throw fail("Administrator access only", 403);
     const a = path.slice(6);
     if (a === "users" && method === "GET") return ok(await listUsers(env));
-    if (a === "users" && method === "POST") return ok(await saveUser(env, me, body));
-    if (a === "users/reset" && method === "POST") return ok(await resetUser(env, body));
-    if (a === "users/active" && method === "POST") return ok(await setActive(env, me, body));
+    if (a === "users" && method === "POST") {   // Change history: people & roles
+      const before = await env.DB.prepare("SELECT email, full_name AS name, role, site_code AS site, position FROM users WHERE email = ?").bind(String(body.email || "").trim().toLowerCase()).first().catch(() => null);
+      const r = await saveUser(env, me, body);
+      const after = await env.DB.prepare("SELECT email, full_name AS name, role, site_code AS site, position FROM users WHERE email = ?").bind(String(body.email || "").trim().toLowerCase()).first().catch(() => null);
+      await audit(env, { me, site: (after && after.site) || "", tool: "people", ref: (after || before || {}).email || "", label: (after || before || {}).name || "", action: before ? "edit" : "add", before, after });
+      return ok(r);
+    }
+    if (a === "users/reset" && method === "POST") { const r = await resetUser(env, body); await audit(env, { me, tool: "people", ref: String(body.email || ""), label: String(body.email || ""), action: "edit", changes: [{ field: "password", from: "", to: "reset" }] }); return ok(r); }
+    if (a === "users/active" && method === "POST") { const r = await setActive(env, me, body); await audit(env, { me, tool: "people", ref: String(body.email || ""), label: String(body.email || ""), action: "edit", changes: [{ field: "active", from: "", to: String(!!body.active) }] }); return ok(r); }
     if (a === "usage" && method === "GET") return ok(await usageReport(env, Number(url.searchParams.get("days")) || 30));
     if (a === "control" && method === "GET") return ok(await listControl(env));
     if (a === "control" && method === "POST") return ok(await saveControl(env, body));
@@ -417,6 +480,7 @@ async function route(request, env, ctx, url) {
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     if (a === "mail-quota" && method === "GET") return ok(await mailQuota(env));   // Mail quota feature
+    if (a === "history" && method === "GET") return ok(await historyList(env, url));   // Change history feature
     /* Automation feature: backup download, backup status, End of Day email test */
     if (a === "covers") return ok(await coversAdmin(env, method, body, { me, SITES, now: nowIso }));
     if (a.startsWith("2fa/")) { const r = await twofaAdmin(env, a, method, body); if (r) return ok(r); }   // Two-step login feature   // Profile feature: flagship covers
@@ -474,6 +538,7 @@ async function setup(env, b) {
 const twofaDeps = {
   hmac, cookieFor: t => cookieFor(t), makeSession: (env, e) => makeSession(env, e), userOut: u => userOut(u),
   sendPush: (env, sub, msg) => sendPush(env, sub, msg),
+  relay: (env, m) => relay(env, m),   // email sign-in codes
   checkPassword: async (me, p) => !!p && same(await derive(p, me.salt, me.iterations || ROUNDS), me.hash),
   alertAdmins: async (env, title, body) => {
     const { results } = await env.DB.prepare("SELECT p.* FROM push_subs p JOIN users u ON u.email = p.email WHERE u.role = 'ADMIN' AND u.active = 1").all();
@@ -670,6 +735,7 @@ async function ssoLink(env, me, appId) {
   const c = CONNECTORS[String(appId || "")];
   if (!c || !c.sso) throw fail("This system does not support hub sign-in yet", 404);
   if (!env.HUB_KEY) throw fail("HUB_KEY is not set on the hub", 500);
+  if (!(await ssoReady(env, String(appId), c))) throw fail("This system does not accept hub sign-in yet — opening its own sign-in page", 404);
   const payload = { e: me.email, n: me.full_name, aud: appId, site: me.site_code || "", iat: Date.now(),
     exp: Date.now() + SSO_SECONDS * 1000, nonce: randomId(9) };
   const body = b64url(enc.encode(JSON.stringify(payload)));
@@ -1066,7 +1132,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", projects: "Projects", contracts: "Contracts" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1191,6 +1257,34 @@ async function putSetting(env, site, k, v) {
 }
 const beirutToday = () => beirutDate();
 
+/* ----- Change history feature: one line per change in the tools that do not log their own details -----
+   Values are summarised from the request (short text fields only). Executive Report figures are never logged. */
+const AUDIT_OPS = {
+  "handover/save": b => b.submit ? ["handover", "submit", `${b.day || ""}${b.shift ? " · " + b.shift : ""}`] : null,
+  "handover/receive": b => ["handover", "edit", "Received"], "handover/delete": b => ["handover", "delete", "Handover"],
+  "mom/save": b => ["mom", b.id ? "edit" : "add", b.title || b.meetDate || "Meeting"], "mom/delete": b => ["mom", "delete", "Meeting"],
+  "feedback/save": b => ["feedback", b.id ? "edit" : "add", b.tenant || "Feedback"], "feedback/delete": b => ["feedback", "delete", "Feedback"], "feedback/import": b => ["feedback", "import", "Excel import"],
+  "budget/upload": b => ["budget", "import", `${String(b.kind || "").toUpperCase()} ${b.year || ""}`], "budget/use": b => ["budget", "add", b.topic || "Budget use"], "budget/uses/remove": b => ["budget", "delete", "Budget use"],
+  "property/save": b => ["property", "edit", b.section || b.key || "Property details"], "property/add": b => ["property", "add", b.label || b.name || "Property item"], "property/delete": b => ["property", "delete", "Property item"],
+  "reminders/save": b => ["reminders", b.id ? "edit" : "add", b.title || "Reminder"], "reminders/remove": b => ["reminders", "delete", "Reminder"],
+  "layouts/level": b => ["layouts", "edit", b.level || "Layout"], "layouts/pin": b => ["layouts", "edit", "Pin"], "layouts/delete": b => ["layouts", "delete", "Layout"],
+  "dir/save": b => ["directory", b.id ? "edit" : "add", b.tenant || b.employee || "Contact"], "dir/delete": b => ["directory", "delete", "Contact"], "dir/import": b => ["directory", "import", "Excel import"],
+  "tm/save": b => ["tenants", b.id ? "edit" : "add", b.tenant || b.kind || "Announcement"], "tm/recipients/save": b => ["tenants", "edit", "Recipients"], "fitout/save": b => ["fitout", "edit", b.tenant || "Fit-out"],
+  "forms/template/save": b => ["forms", "edit", `Template ${b.form || ""}`], "forms/remove": b => ["forms", "delete", b.form || "Checklist"], "forms/reopen": b => ["forms", "edit", "Reopened"],
+  "works/setup": b => ["works", "edit", "Setup"], "works/delete": b => ["works", "delete", "Form"], "works/sign": b => ["works", "sign", b.role || "Signature"],
+  "exec/save": b => ["exec", "edit", "Executive Report"], "handover/append": b => ["handover", "add", "Line from Outlook"], "handover/shifts": b => ["handover", "edit", "Shifts"]
+};
+const AUDIT_SKIP_KEYS = new Set(["site", "id", "submit", "doc", "rows", "points", "items", "data", "html", "image", "photo", "file", "base64", "signature", "sig", "password"]);
+async function auditOps(env, me, p, b, out) {
+  const f = AUDIT_OPS[p]; if (!f) return;
+  const r = f(b); if (!r) return;
+  const [tool, action, label] = r;
+  const changes = tool === "exec" ? [] : Object.entries(b).filter(([k, v]) => !AUDIT_SKIP_KEYS.has(k) && v != null && v !== "" && ["string", "number", "boolean"].includes(typeof v) && String(v).length <= 160)
+    .slice(0, 12).map(([k, v]) => ({ field: k, from: "", to: String(v) }));
+  const site = SITES[String(b.site || "").toUpperCase()] ? String(b.site).toUpperCase() : (me.site_code || "");
+  await audit(env, { me, site, tool, ref: String(b.id || (out && out.id) || ""), label: String(label).slice(0, 200), action, changes });
+}
+
 async function opsRoute(env, me, p, method, b, url) {
   const q = k => url.searchParams.get(k);
   const site = opsSite(me, method === "GET" ? q("site") : b.site);
@@ -1262,6 +1356,7 @@ async function opsRoute(env, me, p, method, b, url) {
         env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
           .bind(site, id, "update", eff, JSON.stringify(before), JSON.stringify(after), note, me.full_name, me.email, at)
       ]);
+      await audit(env, { me, site, tool: "gla", ref: id, label: `${next.code} · ${next.brand || cur.brand}`, action: "edit", before, after });   // Change history feature
       if (after.status && ["Terminated", "Closed", "Open", "Reserved"].includes(after.status)) await raiseEvent(env, { site, app: "gla", tone: after.status === "Terminated" ? "warn" : "info",
         title: `${next.brand || cur.brand || next.code} · ${after.status}`, body: `${siteName(site)} · ${next.level} ${next.code} · effective ${fmtDay(eff)} · by ${me.full_name}` });
       return { id, changed: true };
@@ -1273,6 +1368,7 @@ async function opsRoute(env, me, p, method, b, url) {
       .bind(site, next.level, next.code, next.brand, next.status, next.section, next.dept, next.area, next.contract_start, seq.n, at, me.full_name).run();
     await env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
       .bind(site, r.meta.last_row_id, "add", eff, "{}", JSON.stringify(next), note, me.full_name, me.email, at).run();
+    await audit(env, { me, site, tool: "gla", ref: r.meta.last_row_id, label: `${next.code} · ${next.brand}`, action: "add", after: next });   // Change history feature
     return { id: r.meta.last_row_id, added: true };
   }
   if (p === "gla/remove" && method === "POST") {
@@ -1285,6 +1381,7 @@ async function opsRoute(env, me, p, method, b, url) {
       env.DB.prepare(`INSERT INTO gla_events (site, unit_id, kind, eff_date, before, after, note, by_name, by_email, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
         .bind(site, cur.id, "remove", eff, JSON.stringify(glaUnitOut(cur)), "{}", s(b.note, 300), me.full_name, me.email, at)
     ]);
+    await audit(env, { me, site, tool: "gla", ref: cur.id, label: `${cur.code} · ${cur.brand}`, action: "delete", before: { level: cur.level, code: cur.code, brand: cur.brand, status: cur.status } });   // Change history feature
     return { removed: true };
   }
   if (p === "gla/history") {
@@ -1334,6 +1431,18 @@ async function opsRoute(env, me, p, method, b, url) {
   /* ----- Data Accuracy Score feature (modules/accuracy.js) ----- */
   /* ----- Tenants Directory feature (modules/directory.js) ----- */
   /* ----- Tenant Works Forms feature (modules/works.js) ----- */
+  /* ----- Operations Calendar · Evacuation Plan · Change history (modules/calendar.js, evac.js, history.js) ----- */
+  const auditMe = (e, x) => audit(e, { me, ...x });
+  if (p.startsWith("cal/")) return calendarRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });
+  if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
+  if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
+  if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
+  if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
+  if (p === "pack") return packRoute(env, p, method, b, url, { site, me, canSite, siteName, pullDay, today: beirutToday, now: nowIso });   // Monthly operations pack
+  if (p === "history") {
+    if (!canSite(me, site)) throw fail("No access to this flagship", 403);
+    return historyOf(env, String(q("tool")), String(q("ref")), site);
+  }
   if (p.startsWith("works/")) return worksRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, raiseEvent, SITES });
   if (p.startsWith("dir/")) return directoryRoute(env, p, method, b, url, { site, me, full: canSite(me, site) && isFull(me), sites: sitesOf(me),
     now: nowIso, siteName, origin: url.origin });
@@ -1534,6 +1643,28 @@ async function opsRoute(env, me, p, method, b, url) {
     return { handover: { id: 0, site, day, shift: "DAY", status: "draft", handoffs: [],
       doc: carryHandover(last ? JSON.parse(last.doc) : null, day), createdName: me.full_name, from: last ? { day: last.day } : null }, can, ...shiftInfo };
   }
+  /* Outlook add-in: add one line to the day's handover (creates the day's handover when there is none yet) */
+  if (p === "handover/append" && method === "POST") {
+    if (!can.handover) throw fail("Not allowed", 403);
+    const day = isDay(b.day) ? b.day : beirutToday();
+    const sec = ["today", "tomorrow", "ongoing", "upcoming"].includes(b.section) ? b.section : "today";
+    const text = s(b.text, 500).trim();
+    if (!text) throw fail("Write the handover line");
+    let h = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+    const at = nowIso();
+    const item = { text, cctv: !!b.cctv, done: false, date: sec === "upcoming" && isDay(b.date) ? b.date : "", src: "", req: "" };
+    if (h) {
+      const d = cleanHandover(JSON.parse(h.doc)); d[sec].push(item);
+      await env.DB.prepare("UPDATE handovers SET doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(JSON.stringify(cleanHandover(d)), at, me.full_name, h.id).run();
+    } else {
+      const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first();
+      const d = cleanHandover(carryHandover(last ? JSON.parse(last.doc) : null, day)); d[sec].push(item);
+      const r = await env.DB.prepare(`INSERT INTO handovers (site, day, shift, doc, status, created_by, created_name, created_at, updated_at, updated_name, handoffs)
+        VALUES (?,?,'DAY',?,'draft',?,?,?,?,?,'[]')`).bind(site, day, JSON.stringify(d), me.email, me.full_name, at, at, me.full_name).run();
+      h = { id: r.meta.last_row_id };
+    }
+    return { id: h.id, day, section: sec };
+  }
   if (p === "handover/get") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
     if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
@@ -1574,7 +1705,8 @@ async function opsRoute(env, me, p, method, b, url) {
         return { label: w.label, time: w.display || "", state: w.state, ops, ss, opsBy: [...by.ops], ssBy: [...by.ss] }; }),
         totals: rr.totals || null };
     }
-    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback };
+    const calendar = await calendarDayEvents(env, site, day).catch(() => []);   // Operations Calendar feature: the day's marketing events
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);

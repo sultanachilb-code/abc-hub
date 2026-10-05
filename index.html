@@ -84,6 +84,23 @@ button{background:none;border:0;cursor:pointer}
 .tf-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
 .tf-row .main{flex:1;min-width:0}.tf-row b{display:block;font-size:.92rem}.tf-row small{color:var(--muted);font-size:.8rem}
 .tf-on{font-size:.72rem;font-weight:800;color:var(--ok);background:rgba(46,139,87,.12);border-radius:999px;padding:2px 8px;margin-left:6px}
+.pf-mob{display:flex;gap:6px;align-items:center;justify-content:flex-end;min-width:0}
+.pf-mob input{height:34px;width:150px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);padding:0 10px;font:inherit;font-size:.86rem;text-align:right}
+.wl-hero{display:flex;gap:14px;align-items:center;padding:20px 22px;background:linear-gradient(135deg,#2A0F45,#4A1F73);color:#fff}
+.wl-hero img{width:46px;height:46px;object-fit:contain}
+.wl-hero b{display:block;font-size:1.12rem}
+.wl-hero small{display:block;opacity:.85;font-size:.82rem;line-height:1.45;margin-top:3px}
+.wl-row{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
+.wl-row.ok{background:rgba(46,139,87,.06);border-color:rgba(46,139,87,.3)}
+.wl-row .main{flex:1;min-width:0}.wl-row b{display:block;font-size:.92rem}.wl-row small{display:block;color:var(--muted);font-size:.78rem;line-height:1.4}
+.wl-ic{font-size:1.4rem;width:36px;text-align:center;flex:none}
+.wl-ok{color:var(--ok);font-weight:800;font-size:.84rem;white-space:nowrap}
+.wl-na{color:var(--muted);font-size:.74rem;max-width:120px;text-align:right}
+.tf-pk{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--paper);font-size:.84rem}
+.tf-pk small{grid-column:1;color:var(--muted);font-size:.74rem}
+.tf-pk .btn{grid-column:2;grid-row:1/3}
+.tf-big{width:100%;height:auto!important;min-height:52px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-direction:row;flex-wrap:wrap;font-size:.98rem}
+.tf-big small{flex-basis:100%;text-align:center}
 .tf-key{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.05rem;letter-spacing:.08em;background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:10px;text-align:center;margin:8px 0;word-break:break-all}
 .tf-qr{display:grid;place-items:center;margin:8px 0}.tf-qr img{width:168px;height:168px;image-rendering:pixelated;background:#fff;padding:6px;border-radius:10px}
 .tf-bc{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -265,7 +282,7 @@ button.bcard:hover{border-color:var(--brand-2)}
 .orbit.on .orbit-veil{opacity:1}
 .orbit-ring{position:absolute;border-radius:50%;border:2px dashed rgba(200,162,74,.55);transform:translate(-50%,-50%) scale(.2);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.3,1.2),opacity .3s}
 .orbit.on .orbit-ring{transform:translate(-50%,-50%) scale(1);opacity:1}
-.orbit-core{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:22px;display:grid;place-items:center;color:#fff;box-shadow:0 0 0 4px rgba(200,162,74,.8),0 18px 40px rgba(0,0,0,.4);transition:transform .45s cubic-bezier(.2,.9,.3,1.3)}
+.orbit-core{overflow:hidden;position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:22px;display:grid;place-items:center;color:#fff;box-shadow:0 0 0 4px rgba(200,162,74,.8),0 18px 40px rgba(0,0,0,.4);transition:transform .45s cubic-bezier(.2,.9,.3,1.3)}
 .orbit-core svg{width:32px;height:32px}
 .orbit.on .orbit-core{transform:rotate(-8deg)}
 .orbit-cap{position:absolute;transform:translateX(-50%);color:#fff;text-align:center;font-weight:800;white-space:nowrap}
@@ -275,6 +292,8 @@ button.bcard:hover{border-color:var(--brand-2)}
 .orbit.on .orbit-it{opacity:1;transform:translate(var(--x),var(--y)) rotate(0) scale(1)}
 .orbit-it .ico{width:62px;height:62px;border-radius:18px;box-shadow:0 0 0 3px rgba(255,255,255,.85),0 10px 24px rgba(0,0,0,.35)}
 .orbit-it .ico svg{width:26px;height:26px}
+.ico .logo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#fff;z-index:1}
+.ico .bdg,.ico .hd{z-index:2}
 .orbit-it b{color:#fff;font-size:.8rem;text-align:center;line-height:1.2;max-width:120px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
 .orbit-it.ph .ico{background:transparent!important;border:2px dashed rgba(255,255,255,.45);box-shadow:none}
 .orbit-it.ph b{opacity:.55;font-weight:600}
@@ -416,7 +435,7 @@ dialog.pf-sheet{width:min(520px,calc(100% - 20px));max-height:calc(100dvh - 24px
 
 /* ---------- iOS-style folders (Tenant Management, Policies & Procedures) ---------- */
 .fold .ico.fico{background:var(--surface);border:1px solid var(--line);display:grid;grid-template-columns:repeat(3,13px);grid-auto-rows:13px;gap:3px;padding:7px;align-content:center;justify-content:center;box-sizing:border-box}
-.fico .mi{width:13px;height:13px;border-radius:4px;display:grid;place-items:center;color:#fff}
+.fico .mi{position:relative;overflow:hidden;width:13px;height:13px;border-radius:4px;display:grid;place-items:center;color:#fff}
 .fico .mi svg{width:9px;height:9px;stroke-width:2.4}
 .folder-ov{position:fixed;inset:0;z-index:72;display:flex;align-items:center;justify-content:center;padding:16px;pointer-events:none}
 .folder-ov.on{pointer-events:auto}
@@ -487,6 +506,15 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .adm-tabs{max-width:1100px;margin:10px auto 0;display:flex;gap:4px}
 .adm-tabs button{padding:10px 14px;border-radius:10px 10px 0 0;font-weight:700;font-size:.9rem;color:#CDBFE0}
 .adm-tabs button.on{background:var(--paper);color:var(--text)}
+.hist-f{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.hist-f select,.hist-f input{height:36px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);padding:0 10px;font:inherit;font-size:.86rem;min-width:0}
+.hist-f input[placeholder]{width:150px}
+.hist-r .main{min-width:0}
+.hist-c{display:grid;gap:3px;margin-top:6px;font-size:.8rem;padding:8px 10px;border-radius:10px;background:var(--paper);overflow-wrap:anywhere}
+.hist-c span{display:inline-block;min-width:110px;color:var(--muted);font-weight:700;text-transform:capitalize;margin-right:6px}
+.hist-c s{color:var(--muted)}
+.hist-c b,.hist-c s{display:inline!important;font-size:inherit!important;margin:0!important}
+@media (max-width:640px){ .hist-f>*{flex:1 1 45%} .hist-f input[placeholder]{width:auto} .hist-c span{display:block;min-width:0} }
 .adm-quota{max-width:1100px;margin:0 auto;padding:18px 20px 0}
 .adm-quota:empty{display:none}
 .mq{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 16px}
@@ -687,6 +715,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <button data-t="control">Control sheet</button>
       <button data-t="backup">Backup</button>
       <button data-t="covers">Flagship covers</button>
+      <button data-t="history">Change history</button>
     </div>
   </div>
   <div class="adm-quota" id="admQuota"></div>
@@ -696,6 +725,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 <dialog id="sheet"></dialog>
 <div class="tip" id="tip"></div>
 
+<script src="tools/hubdl.js"></script>
 <script src="apps.js"></script>
 <script>
 (() => {
@@ -726,6 +756,11 @@ const P = {
   qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>',
   box:'<path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
   calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
+  exit:'<path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/><circle cx="8" cy="5" r="1.6"/><path d="m5 21 2-6 3 2v4M7 15l1-5 3 2 2-1M8 10 5 11l-1 3"/>',
+  hardhat:'<path d="M3 18h18M5 18v-3a7 7 0 0 1 14 0v3"/><path d="M10 8V5h4v3"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+  download:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/>',
+  pack:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
   chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
   truck:'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -750,12 +785,14 @@ const P = {
   scroll:'<path d="M7 4h11a2 2 0 0 1 2 2v2h-4"/><path d="M16 8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2h10"/><path d="M7 4a2 2 0 0 0-2 2v10"/><path d="M9 9h4M9 12h4"/>'
 };
 const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]||P.clipboard}</svg>`;
+/* system logo (apps.js "logo"): the picture covers the tile; if it cannot load, the drawn icon underneath shows */
+const appIcon = a => (a && a.logo ? `<img class="logo" src="${esc(a.logo)}" alt="" loading="lazy" onerror="this.remove()">` : "") + svg(a && a.icon);
 const badgeOf = a => BRIEF && BRIEF.systems && BRIEF.systems[a.id] && BRIEF.systems[a.id].ok ? BRIEF.systems[a.id].badge : null;
 const icoHTML = (a, withBadge) => {
   const b = withBadge ? badgeOf(a) : null;
   const h = withBadge && HEALTH && HEALTH.systems ? HEALTH.systems[a.id] : null;
   const hTip = !h ? "" : h.state === "up" ? `Up · responded in ${h.ms} ms` : h.state === "down" ? `Not responding${h.status ? " (HTTP " + h.status + ")" : ""}` : (h.note || "Not checked");
-  return `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${svg(a.icon)}${b && b.count ? `<span class="bdg ${b.tone === "warn" ? "warn" : ""}">${b.count > 99 ? "99+" : b.count}</span>` : ""}${h ? `<span class="hd ${h.state === "up" ? "up" : h.state === "down" ? "down" : ""}" title="${esc(hTip)}"></span>` : ""}</span>`;
+  return `<span class="ico" style="background:${esc(a.color||"#4A1F73")}">${appIcon(a)}${b && b.count ? `<span class="bdg ${b.tone === "warn" ? "warn" : ""}">${b.count > 99 ? "99+" : b.count}</span>` : ""}${h ? `<span class="hd ${h.state === "up" ? "up" : h.state === "down" ? "down" : ""}" title="${esc(hTip)}"></span>` : ""}</span>`;
 };
 
 /* ---------- helpers ---------- */
@@ -850,6 +887,71 @@ function startHub(){
   checkApprovals();
   route();
   setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
+  setTimeout(() => { if (!welcomeSeen()) welcomeSheet(); }, 900);   // Welcome feature: first sign-in on this device
+}
+
+/* =====================================================================
+   WELCOME — first sign-in on a device: what the hub needs, one tap each
+   (alerts, install, camera, passkey). Shown once per person and device;
+   reopen it from the account menu → "Set up this device".
+   ===================================================================== */
+const WKEY = () => "hub.welcome." + (ME && ME.user.email);
+let welcomeShownSession = false;
+function welcomeSeen(){ if (welcomeShownSession) return true; try { return !!localStorage.getItem(WKEY()); } catch { return false; } }
+function welcomeDone(){ welcomeShownSession = true; try { localStorage.setItem(WKEY(), new Date().toISOString()); } catch {} }
+async function welcomeState(){
+  const st = { push: "todo", install: isStandalone() ? "done" : "todo", camera: "todo", passkey: "todo" };
+  try { if (!pushSupported()) st.push = iOS && !isStandalone() ? "later" : "na"; else if (Notification.permission === "denied") st.push = "blocked"; else if (Notification.permission === "granted" && await currentSub()) st.push = "done"; } catch {}
+  try { const p = navigator.permissions && await navigator.permissions.query({ name: "camera" }); if (p && p.state === "granted") st.camera = "done"; else if (p && p.state === "denied") st.camera = "blocked"; } catch {}
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) st.camera = "na";
+  try { const t = await api("2fa/status"); if (t.passkeys && t.passkeys.length) st.passkey = "done"; } catch {}
+  if (!window.PublicKeyCredential) st.passkey = "na";
+  else try { if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) st.passkey = "na"; } catch {}
+  return st;
+}
+async function welcomeSheet(){
+  welcomeShownSession = true;
+  const first = esc(String(ME.user.name || "").split(" ")[0]);
+  const ICON = { push: "🔔", install: "📲", camera: "📷", passkey: "🔑" };
+  const ITEMS = [
+    ["push", "Alerts on this device", "Emergency alerts, reminders and handovers — even when the hub is closed.", "Allow"],
+    ["install", "Install the hub", "Opens like an app from your home screen or taskbar. Needed on iPhone for alerts.", "Install"],
+    ["camera", "Camera", "Photos in checklists, works forms and QR scanning.", "Allow"],
+    ["passkey", "Face ID / fingerprint / Windows Hello", "Sign in safely without a code — your second step on this device.", "Turn on"]
+  ];
+  const draw = async () => {
+    const st = await welcomeState();
+    const row = ([k, t, d, btn]) => { const v = st[k];
+      const right = v === "done" ? `<span class="wl-ok">✓ Done</span>` : v === "na" ? `<span class="wl-na">Not on this device</span>`
+        : v === "blocked" ? `<span class="wl-na" title="Allow it in the browser's site settings (padlock next to the address)">Blocked — allow in site settings</span>`
+        : v === "later" ? `<span class="wl-na">After installing</span>` : `<button class="btn small" data-w="${k}">${btn}</button>`;
+      return `<div class="wl-row ${v === "done" ? "ok" : ""}"><span class="wl-ic">${ICON[k]}</span><div class="main"><b>${esc(t)}</b><small>${esc(d)}</small></div>${right}</div>`; };
+    const left = ITEMS.filter(([k]) => st[k] === "todo").length;
+    sheet.classList.remove("pf-sheet");
+    sheet.innerHTML = `<div class="wl-hero"><img src="icons/abc-logo-white.png" alt="ABC"><div><b>Welcome to the hub, ${first}</b><small>Give this device what it needs — one tap each. You can change any of it later in Profile settings.</small></div></div>
+      <div class="sheet-body">${ITEMS.map(row).join("")}<div id="wlMsg"></div></div>
+      <div class="sheet-f"><button class="btn ghost" data-w="later">Later</button><button class="btn" data-w="done">${left ? "Done for now" : "All set"}</button></div>`;
+    if (!sheet.open) sheet.showModal();
+  };
+  sheet.onclick = async e => {
+    const b = e.target.closest("[data-w]"); if (!b) return;
+    const k = b.dataset.w, msg = t => { const m = $("#wlMsg"); if (m) m.innerHTML = t ? `<div class="msg err" style="margin-top:8px">${esc(t)}</div>` : ""; };
+    if (k === "later"){ welcomeShownSession = true; return sheet.close(); }
+    if (k === "done"){ welcomeDone(); return sheet.close(); }
+    b.disabled = true; msg("");
+    try {
+      if (k === "push") await pushOn("important");
+      if (k === "install"){
+        if (deferred){ deferred.prompt(); await deferred.userChoice; deferred = null; }
+        else if (iOS) { msg("In Safari, tap the Share button, then “Add to Home Screen”. Open the hub from the new icon, then turn on alerts."); b.disabled = false; return; }
+        else { msg("Use the browser menu → “Install ABC Operations Hub” (or “Add to Home screen”)."); b.disabled = false; return; }
+      }
+      if (k === "camera"){ const s2 = await navigator.mediaDevices.getUserMedia({ video: true }); s2.getTracks().forEach(t => t.stop()); }
+      if (k === "passkey") await addPasskey();
+      draw();
+    } catch (er){ b.disabled = false; msg(er.name === "NotAllowedError" ? "Not allowed — you can try again, or allow it later in the browser's site settings." : er.name === "InvalidStateError" ? "This device already has a passkey for your account." : er.message); }
+  };
+  draw();
 }
 
 /* ---------- account menu ---------- */
@@ -858,7 +960,9 @@ function paintAvatar(){ $("#avatar").innerHTML = avatarInner(); }
 const PM_IC = {
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
   admin: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m9 12 2 2 4-4"/>',
-  out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/>'
+  out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/>',
+  device: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
+  download: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/>'
 };
 const pmIcon = k => `<span class="pm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PM_IC[k]}</svg></span>`;
 function buildMenu(){
@@ -866,6 +970,8 @@ function buildMenu(){
   m.classList.add("pm");
   const paint = () => { m.innerHTML = `<div class="pm-head"><span class="pm-av">${avatarInner()}</span><div><b>${esc(ME.user.name)}</b><small>${esc(ME.user.email)}</small></div></div>
     <button data-a="profile" class="pm-i">${pmIcon("user")}<span>Profile settings<small>Picture, password, appearance, alerts</small></span></button>
+    <button data-a="welcome" class="pm-i">${pmIcon("device")}<span>Set up this device<small>Alerts, install, camera, Face ID / Windows Hello</small></span></button>
+    <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
   paint(); m._paint = paint;
@@ -881,6 +987,8 @@ function buildMenu(){
     m.classList.add("hidden");
     if (a === "admin") location.hash = "#/admin";
     if (a === "profile") profileSheet();
+    if (a === "welcome") welcomeSheet();
+    if (a === "downloads") launch(byId("downloads"));
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
 }
@@ -909,12 +1017,15 @@ async function profileSheet(focus){
       <div class="pf-rows">
         <div class="pf-row"><span>Name</span><b>${esc(ME.user.name)}</b></div>
         <div class="pf-row"><span>Email address</span><b>${esc(ME.user.email)}</b></div>
+        <div class="pf-row"><span>Mobile <small style="display:block;font-weight:500">for emergency calls</small></span><div class="pf-mob"><input id="pfMob" inputmode="tel" maxlength="30" placeholder="e.g. 03 123 456" value="${esc(P0.mobile || "")}"><button class="btn ghost small" id="pfMobGo">Save</button></div></div>
         <div class="pf-row"><span>Flagship</span><b>${esc(ME.user.siteName || "—")}</b></div>
         <div class="pf-row"><span>Flagships access</span><div class="pf-chips">${access ? `<i>${access}</i>` : (P0.access || []).map(x => `<i>${esc(x.name)}</i>`).join("") || "—"}</div></div>
       </div>
-      <p class="pf-note">Your name, email and flagships are set by the hub administrator. You can change your picture and password.</p>
+      <p class="pf-note">Your name, email and flagships are set by the hub administrator. You can change your picture, mobile and password.</p>
       <div class="set-label">Two-step login</div>
       <div id="tfBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
+      <div class="set-label">Outlook</div>
+      <div id="olBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Password</div>
       <div class="pf-pw" id="pfPw"><button class="btn ghost small" id="pwOpen">Change password</button></div>
       <div class="set-label">Appearance</div>
@@ -942,6 +1053,7 @@ async function profileSheet(focus){
     if (b){ store.set("hub.briefCollapsed", b.dataset.v === "1"); $("#segBrief").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); renderBrief(false); }
     if (e.target.id === "setClear"){ store.set("hub.recent", []); renderRail(); e.target.textContent = "Cleared ✓"; }
     if (e.target.id === "pfRm"){ try { await setPhoto(""); } catch (er){ msg(er.message); } }
+    if (e.target.id === "pfMobGo"){ try { await api("profile/mobile", { mobile: $("#pfMob").value }); e.target.textContent = "Saved ✓"; } catch (er){ msg(er.message); sheet.scrollTo({ top: 0, behavior: "smooth" }); } }
     if (e.target.id === "pwOpen"){
       $("#pfPw").innerHTML = `<label class="field"><span>Current password</span><input id="pwCur" type="password" autocomplete="current-password"></label>
         <label class="field"><span>New password (8+ characters)</span><input id="pwNew" type="password" autocomplete="new-password"></label>
@@ -965,6 +1077,7 @@ async function profileSheet(focus){
   if (!sheet.open){ sheet.showModal(); sheet.addEventListener("close", () => sheet.classList.remove("pf-sheet"), { once: true }); }
   renderPushBox();
   renderTwofaBox();
+  renderOutlookBox();
   if (focus === "alerts") setTimeout(() => $("#pfAlerts") && $("#pfAlerts").scrollIntoView({ block: "start", behavior: "smooth" }), 250);
 }
 /* the drawn cover: atrium rings, a gold arc like the hub's Recent line, a floor scale, a dot grid — then the logo and the flagship */
@@ -1041,23 +1154,31 @@ let tfPoll = 0;
 function twofaLogin(t, view){
   clearInterval(tfPoll);
   const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
-  const hasApprove = t.methods.includes("approve") && t.challenge, hasCode = t.methods.includes("code");
-  view = view || (hasApprove ? "approve" : hasCode ? "code" : "backup");
+  const has = m => t.methods.includes(m);
+  view = view || (has("passkey") ? "passkey" : has("approve") && t.challenge ? "approve" : has("code") ? "code" : "email");
   const trust = `<label class="tf-trust"><input type="checkbox" id="tfTrust"> Trust this device for 30 days</label>`;
-  const links = [view !== "approve" && hasApprove ? `<button data-v="approve">Approve on my phone instead</button>` : "",
-    view !== "code" && hasCode ? `<button data-v="code">Use a 6-digit code instead</button>` : "",
-    view !== "backup" ? `<button data-v="backup">Use a backup code</button>` : "",
+  const links = [view !== "passkey" && has("passkey") ? `<button data-v="passkey">Use Face ID / fingerprint / Windows Hello</button>` : "",
+    view !== "email" && has("email") ? `<button data-v="email">Email me a code instead</button>` : "",
+    view !== "approve" && has("approve") ? `<button data-v="approve">Approve on my phone instead</button>` : "",
+    view !== "code" && has("code") ? `<button data-v="code">Use the authenticator app</button>` : "",
+    view !== "backup" && has("backup") ? `<button data-v="backup">Use a backup code</button>` : "",
     `<button data-v="cancel">Cancel</button>`].join("");
   let body;
-  if (view === "approve"){
+  if (view === "passkey"){
+    body = `<h1>Confirm it's you</h1><p class="sub">Use Face ID, your fingerprint or Windows Hello on this device.</p>
+      <div id="aMsg"></div><button class="btn tf-big" id="tfPk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M7 11V8a5 5 0 0 1 10 0v3"/><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M12 15v2"/></svg>Continue with this device</button>
+      <p class="tf-note" style="text-align:center;margin-top:10px">New device or no Face ID? Choose “Email me a code” below.</p>${trust}`;
+  } else if (view === "approve"){
     body = `<h1>Approve on your phone</h1><p class="sub">We sent a request to your phone${t.challenge.pushed ? "" : " (if nothing arrives, open the hub on your phone)"}. Open it and pick this number:</p>
       <div class="tf-num" id="tfNum">${t.challenge.number}</div>
       <div class="tf-wait" id="tfWait"><span class="tf-spin"></span><span id="tfLeft">Waiting for your phone…</span></div><div id="aMsg"></div>
       ${window.PublicKeyCredential && /android|iphone|ipad/i.test(navigator.userAgent) ? `<button class="btn ghost" id="tfHere" style="height:auto;min-height:44px">This is my phone — confirm with Face ID / fingerprint</button>` : ""}${trust}`;
   } else {
-    body = `<h1>${view === "code" ? "Enter the code" : "Enter a backup code"}</h1><p class="sub">${view === "code" ? "Open your authenticator app and type the 6-digit code for ABC Operations Hub." : "Use one of the backup codes you saved when you turned on two-step login. Each code works once."}</p>
-      <div id="aMsg"></div><label class="field"><span>${view === "code" ? "6-digit code" : "Backup code"}</span><input id="tfCode" class="tf-code" ${view === "code" ? 'inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="––––––"' : 'maxlength="9" placeholder="XXXX-XXXX" style="text-transform:uppercase"'}></label>
-      <button class="btn" id="tfGo">Confirm</button>${trust}`;
+    const mail = view === "email";
+    body = `<h1>${mail ? "Check your email" : view === "code" ? "Enter the code" : "Enter a backup code"}</h1>
+      <p class="sub" id="tfSub">${mail ? (t.mail && t.mail.sent ? `We emailed a 6-digit code to <b>${esc(t.mail.to)}</b>. It works for ${t.mail.minutes} minutes.` : "Sending a 6-digit code to your work email…") : view === "code" ? "Open your authenticator app and type the 6-digit code for ABC Operations Hub." : "Use one of the backup codes you saved when you turned on two-step login. Each code works once."}</p>
+      <div id="aMsg"></div><label class="field"><span>${view === "backup" ? "Backup code" : "6-digit code"}</span><input id="tfCode" class="tf-code" ${view !== "backup" ? 'inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="––––––"' : 'maxlength="9" placeholder="XXXX-XXXX" style="text-transform:uppercase"'}></label>
+      <button class="btn" id="tfGo">Confirm</button>${mail ? `<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="tfResend" style="border:0;color:var(--brand-2)">Send a new code</button></div>` : ""}${trust}`;
   }
   show("auth");
   $("#authCard").innerHTML = `${logo}${body}<div class="tf-links">${links}</div>`;
@@ -1065,10 +1186,26 @@ function twofaLogin(t, view){
   $("#authCard").onclick = async e => {
     const v = e.target.closest("[data-v]"); if (!v) return;
     if (v.dataset.v === "cancel"){ clearInterval(tfPoll); return authScreen("login"); }
-    if (v.dataset.v === "resend"){ try { const r = await api("login/2fa/resend", {}); t.challenge = r.challenge; twofaLogin(t, "approve"); } catch (er){ msg(er.message); } return; }
+    if (v.dataset.v === "resend" || (v.dataset.v === "approve" && !t.challenge)){ try { const r = await api("login/2fa/resend", {}); t.challenge = r.challenge; twofaLogin(t, "approve"); } catch (er){ msg(er.message); } return; }
     twofaLogin(t, v.dataset.v);
   };
-  if (view === "approve"){
+  const sendMail = async () => { try { t.mail = await api("login/2fa/email", {}); const s2 = $("#tfSub"); if (s2) s2.innerHTML = `We emailed a 6-digit code to <b>${esc(t.mail.to)}</b>. It works for ${t.mail.minutes} minutes.`; msg(""); }
+    catch (er){ msg(er.message); if (er.status === 401) setTimeout(() => authScreen("login"), 1500); } };
+  if (view === "passkey"){
+    const go = async () => {
+      const b = $("#tfPk"); b.disabled = true; msg("");
+      try {
+        const pk = (await api("login/2fa/pk-options", {})).publicKey;
+        const cred = await navigator.credentials.get({ publicKey: { challenge: tfUnb64u(pk.challenge), rpId: pk.rpId, timeout: pk.timeout, userVerification: "required",
+          allowCredentials: pk.allowCredentials.map(c => ({ type: "public-key", id: tfUnb64u(c.id), transports: c.transports })) } });
+        const r = await api("login/2fa/pk", { trust: !!($("#tfTrust") || {}).checked, assertion: { id: tfB64u(cred.rawId), authenticatorData: tfB64u(cred.response.authenticatorData),
+          clientDataJSON: tfB64u(cred.response.clientDataJSON), signature: tfB64u(cred.response.signature) } });
+        if (r.signedIn){ b.outerHTML = `<div class="tf-tick">${TICK}</div>`; setTimeout(boot, 700); }
+      } catch (er){ b.disabled = false; msg(er.name === "NotAllowedError" ? "Cancelled, or this device has no passkey for your account yet. Try again, or use “Email me a code”." : er.message); }
+    };
+    $("#tfPk").onclick = go;
+    if (!window.PublicKeyCredential) msg("This browser cannot use passkeys — choose “Email me a code”.");
+  } else if (view === "approve"){
     const exp = Date.parse(t.challenge.expiresAt);
     const tick = async () => {
       const left = Math.max(0, Math.round((exp - Date.now()) / 1000));
@@ -1097,12 +1234,16 @@ function twofaLogin(t, view){
       } catch (er){ msg(er.name === "NotAllowedError" ? "Face ID / fingerprint was cancelled, or this is not the phone set up for approvals." : er.message); }
     };
   } else {
+    if (view === "email" && !(t.mail && t.mail.sent)) sendMail();
+    else if (view === "email" && t.mail && t.mail.error) msg(t.mail.error);
+    const rs = $("#tfResend"); if (rs) rs.onclick = sendMail;
     const go = async () => {
       const b = $("#tfGo"); b.disabled = true; msg("");
       try { const r = await api("login/2fa/code", { code: $("#tfCode").value, trust: !!$("#tfTrust").checked }); if (r.signedIn) boot(); }
       catch (er){ msg(er.message); b.disabled = false; if (er.status === 401 && /timed out/.test(er.message)) setTimeout(() => authScreen("login"), 1500); }
     };
     $("#tfGo").onclick = go; $("#tfCode").onkeydown = e => { if (e.key === "Enter") go(); };
+    $("#tfCode").oninput = e => { if (view !== "backup" && /^\d{6}$/.test(e.target.value)) go(); };
     setTimeout(() => $("#tfCode").focus(), 50);
   }
 }
@@ -1151,21 +1292,60 @@ async function renderTwofaBox(){
   const box = $("#tfBox"); if (!box) return;
   let st; try { st = await api("2fa/status"); } catch (e){ box.innerHTML = `<p class="brief-empty">${esc(e.message)}</p>`; return; }
   const wa = !!(window.PublicKeyCredential && navigator.credentials);
+  const anyOn = st.passkeys.length || st.emailOn || st.totpOn || st.approveOn;
+  const ago = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "never";
   box.innerHTML = `${st.required ? `<p class="tf-note" style="margin-bottom:8px">Required for your role — keep at least one way on.</p>` : ""}
-    <div class="tf-row"><div class="main"><b>Approve on phone${st.approveOn ? `<span class="tf-on">On</span>` : ""}</b><small>${st.approveOn ? esc(st.approveDevice) + " · pick the number, then Face ID / fingerprint" : "Get a notification, pick the number shown on the laptop, confirm with Face ID or fingerprint."}</small></div>
-      ${st.approveOn ? `<button class="btn ghost small" data-tf="offApprove">Turn off</button>` : wa ? `<button class="btn small" data-tf="setApprove">Use this phone</button>` : `<small>Not available in this browser</small>`}</div>
-    <div class="tf-row"><div class="main"><b>Authenticator app${st.totpOn ? `<span class="tf-on">On</span>` : ""}</b><small>6-digit code from Microsoft / Google Authenticator — works without signal.</small></div>
-      ${st.totpOn ? `<button class="btn ghost small" data-tf="offTotp">Turn off</button>` : `<button class="btn small" data-tf="setTotp">Set up</button>`}</div>
-    ${st.approveOn || st.totpOn ? `<div class="tf-row"><div class="main"><b>Backup codes</b><small>${st.backupLeft} left · for when the phone is lost</small></div><button class="btn ghost small" data-tf="newBackup">New codes</button></div>
-    <div class="tf-row"><div class="main"><b>Trusted devices</b><small>${st.trusted ? `${st.trusted} device${st.trusted === 1 ? "" : "s"} skip the second step for 30 days` : "None"}</small></div>${st.trusted ? `<button class="btn ghost small" data-tf="forget">Forget them</button>` : ""}</div>` : ""}
+    <div class="tf-row"><div class="main"><b>Passkeys${st.passkeys.length ? `<span class="tf-on">On</span>` : `<span class="tf-on" style="background:rgba(123,75,176,.14);color:var(--brand-2)">Recommended</span>`}</b>
+      <small>Face ID, fingerprint or Windows Hello on each device you use — no code to type. Add your laptop and your phone.</small>
+      ${st.passkeys.map(p => `<div class="tf-pk"><span>🔑 ${esc(p.label || "Device")}</span><small>added ${esc(ago(p.created))} · last used ${esc(ago(p.lastUsed))}</small><button class="btn ghost small" data-tf="pkDel" data-id="${esc(p.id)}">Remove</button></div>`).join("")}</div>
+      ${wa ? `<button class="btn small" data-tf="setPasskey">Add this device</button>` : `<small>Not available in this browser</small>`}</div>
+    <div class="tf-row"><div class="main"><b>Email code${st.emailOn || anyOn ? `<span class="tf-on">${st.emailOn ? "On" : "Backup"}</span>` : ""}</b>
+      <small>${anyOn ? `A 6-digit code to ${esc(st.email)} — always there as a backup when a device has no passkey.` : `A 6-digit code to ${esc(st.email)} at every sign-in — for devices without Face ID / fingerprint / Windows Hello.`}</small></div>
+      ${st.emailOn ? `<button class="btn ghost small" data-tf="emailOff">Turn off</button>` : st.passkeys.length ? "" : `<button class="btn ghost small" data-tf="emailOn">Use email only</button>`}</div>
+    <div class="tf-row"><div class="main"><b>Authenticator app${st.totpOn ? `<span class="tf-on">On</span>` : ""}</b><small>6-digit code from Microsoft / Google Authenticator — optional.</small></div>
+      ${st.totpOn ? `<button class="btn ghost small" data-tf="offTotp">Turn off</button>` : `<button class="btn ghost small" data-tf="setTotp">Set up</button>`}</div>
+    ${st.approveOn ? `<div class="tf-row"><div class="main"><b>Approve on phone<span class="tf-on">On</span></b><small>${esc(st.approveDevice)} · older method — passkeys replace it</small></div><button class="btn ghost small" data-tf="offApprove">Turn off</button></div>` : ""}
+    ${st.backupLeft ? `<div class="tf-row"><div class="main"><b>Backup codes</b><small>${st.backupLeft} left</small></div><button class="btn ghost small" data-tf="newBackup">New codes</button></div>` : ""}
+    ${anyOn ? `<div class="tf-row"><div class="main"><b>Trusted devices</b><small>${st.trusted ? `${st.trusted} device${st.trusted === 1 ? "" : "s"} skip the second step for 30 days` : "None"}</small></div>${st.trusted ? `<button class="btn ghost small" data-tf="forget">Forget them</button>` : ""}</div>` : ""}
     <div id="tfMsg2"></div>`;
-  box.onclick = e => { const b = e.target.closest("[data-tf]"); if (b) twofaAction(b.dataset.tf, box); };
+  box.onclick = e => { const b = e.target.closest("[data-tf]"); if (b) twofaAction(b.dataset.tf, box, null, b.dataset.id); };
+}
+/* ---- Outlook add-in: connect with a 6-digit code (Profile settings → Outlook) ---- */
+async function renderOutlookBox(){
+  const box = $("#olBox"); if (!box) return;
+  let d; try { d = await api("addin/list"); } catch (e){ box.innerHTML = `<p class="brief-empty">${esc(e.message)}</p>`; return; }
+  const dt = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "never";
+  box.innerHTML = `<div class="tf-row"><div class="main"><b>ABC Hub in Outlook${d.list.length ? `<span class="tf-on">Connected</span>` : ""}</b>
+      <small>Send attachments to Works Forms, add an email to the handover, log tenant feedback or put it in the calendar — from Outlook. Once IT installs the add-in, press “ABC Hub” in an email and enter the code shown here.</small>
+      ${d.list.map(t => `<div class="tf-pk"><span>📧 ${esc(t.label)}</span><small>connected ${esc(dt(t.created))} · last used ${esc(dt(t.lastUsed))}</small><button class="btn ghost small" data-olrm="${esc(t.id)}">Disconnect</button></div>`).join("")}
+      <div id="olCode"></div></div><button class="btn small" id="olGo">Connect Outlook</button></div>`;
+  box.onclick = async e => {
+    if (e.target.id === "olGo"){
+      try { const r = await api("addin/code", {});
+        $("#olCode").innerHTML = `<div class="tf-key" style="font-size:1.6rem;letter-spacing:.3em;margin-top:10px">${esc(r.code)}</div><small>Type it in Outlook with ${esc(r.email)} — valid ${r.minutes} minutes.</small>`; }
+      catch (er){ $("#olCode").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
+    }
+    const rm = e.target.closest("[data-olrm]"); if (rm){ await api("addin/remove", { id: rm.dataset.olrm }).catch(() => {}); renderOutlookBox(); }
+  };
+}
+/* add a passkey for this device (Face ID / fingerprint / Windows Hello) */
+async function addPasskey(){
+  if (!window.PublicKeyCredential) throw new Error("This browser cannot create passkeys.");
+  const o = (await api("2fa/pk/options", {})).publicKey;
+  const cred = await navigator.credentials.create({ publicKey: { ...o, challenge: tfUnb64u(o.challenge), user: { ...o.user, id: tfUnb64u(o.user.id) },
+    excludeCredentials: (o.excludeCredentials || []).map(c => ({ type: "public-key", id: tfUnb64u(c.id) })) } });
+  const spki = cred.response.getPublicKey && cred.response.getPublicKey();
+  if (!spki) throw new Error("This device cannot create a passkey here — use the email code instead.");
+  const r = await api("2fa/pk/register", { id: tfB64u(cred.rawId), publicKey: tfB64u(spki), alg: cred.response.getPublicKeyAlgorithm ? cred.response.getPublicKeyAlgorithm() : -7,
+    clientDataJSON: tfB64u(cred.response.clientDataJSON) });
+  if (ME) ME.user.twofa = Object.assign(ME.user.twofa || {}, { on: true, setupNeeded: false });
+  return r;
 }
 function tfBackupHtml(codes){
   return `<p class="tf-note" style="margin-top:12px"><b>Your backup codes</b> — each works once if you lose your phone. Save them somewhere safe (they are shown only now).</p>
     <div class="tf-bc">${codes.map(c => `<span>${esc(c)}</span>`).join("")}</div><button class="btn ghost small" data-copycodes="${esc(codes.join(" "))}">Copy codes</button>`;
 }
-async function twofaAction(a, box, onDone){
+async function twofaAction(a, box, onDone, id){
   const note = (t, ok) => { const m = box.querySelector("#tfMsg2") || box; m.insertAdjacentHTML("beforeend", ""); const x = box.querySelector("#tfMsg2"); if (x) x.innerHTML = t ? `<div class="msg ${ok ? "okm" : "err"}" style="margin-top:8px">${t}</div>` : ""; };
   const after = () => { if (!onDone) renderTwofaBox(); if (ME) ME.user.twofa = Object.assign(ME.user.twofa || {}, { on: true, setupNeeded: false }); };
   try {
@@ -1185,6 +1365,9 @@ async function twofaAction(a, box, onDone){
       else if (onDone) onDone(); else note("Approve on phone is on for this phone.", true);
       return;
     }
+    if (a === "setPasskey"){ const r = await addPasskey(); if (onDone) return onDone(); renderTwofaBox(); setTimeout(() => note(`Passkey added for ${esc(r.label)}. Next time, sign in with Face ID / fingerprint / Windows Hello.`, true), 300); return; }
+    if (a === "pkDel"){ if (!confirm("Remove this device's passkey?")) return; await api("2fa/pk/remove", { id }); renderTwofaBox(); return; }
+    if (a === "emailOn" || a === "emailOff"){ await api("2fa/email/on", { on: a === "emailOn" }); after(); if (onDone) return onDone(); return; }
     if (a === "setTotp") return twofaTotpSetup(box, onDone);
     if (a === "newBackup"){ const r = await api("2fa/backup/new", {}); twofaShowCodes(r.backup, "New backup codes"); return; }
     if (a === "forget"){ await api("2fa/trusted/clear", {}); renderTwofaBox(); return; }
@@ -1192,7 +1375,7 @@ async function twofaAction(a, box, onDone){
       const pw = prompt("Enter your password to turn this off"); if (!pw) return;
       await api("2fa/off", { what: a === "offApprove" ? "approve" : "totp", password: pw }); renderTwofaBox(); return;
     }
-  } catch (e){ note(esc(e.name === "NotAllowedError" ? "Face ID / fingerprint was cancelled." : e.message)); }
+  } catch (e){ note(esc(e.name === "NotAllowedError" ? "Face ID / fingerprint / Windows Hello was cancelled." : e.name === "InvalidStateError" ? "This device already has a passkey for your account." : e.message)); }
 }
 function twofaShowCodes(codes, title, then){
   sheet.classList.remove("pf-sheet");
@@ -1235,13 +1418,13 @@ async function twofaTotpSetup(box, onDone){
 /* required for the role and not set up yet: the hub opens only after one way is on */
 function twofaSetupScreen(){
   show("auth");
-  const wa = !!(window.PublicKeyCredential && navigator.credentials), phone = /android|iphone|ipad/i.test(navigator.userAgent);
+  const wa = !!(window.PublicKeyCredential && navigator.credentials);
   $("#authCard").innerHTML = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div><h1>Turn on two-step login</h1>
-    <p class="sub">Your administrator made two-step login required for your role. Choose one way to continue — you can add the other later in Profile settings.</p>
+    <p class="sub">Your administrator made two-step login required for your role. Choose one way to continue — you can add more later in Profile settings.</p>
     <div id="tfMsg2"></div>
-    ${wa && phone ? `<button class="btn" data-tf="setApprove" style="height:auto;min-height:48px;padding:10px 14px">Approve on this phone (Face ID / fingerprint)</button>` : ""}
-    <button class="btn ${wa && phone ? "ghost" : ""}" data-tf="setTotp" style="margin-top:8px;height:auto;min-height:48px;padding:10px 14px">Use an authenticator app (6-digit code)</button>
-    ${wa && !phone ? `<p class="tf-note" style="margin-top:12px">To approve sign-ins with your phone instead, open the hub on your phone and choose “Approve on this phone” there.</p>` : ""}
+    ${wa ? `<button class="btn tf-big" data-tf="setPasskey">Use Face ID / fingerprint / Windows Hello <small style="display:block;font-weight:600;opacity:.8">Recommended · nothing to install</small></button>` : ""}
+    <button class="btn ${wa ? "ghost" : ""}" data-tf="emailOn" style="margin-top:8px;height:auto;min-height:48px;padding:10px 14px;width:100%">Email me a code at each sign-in</button>
+    <button class="btn ghost" data-tf="setTotp" style="margin-top:8px;height:auto;min-height:44px;padding:10px 14px;width:100%">Use an authenticator app</button>
     <div class="tf-links"><button data-out>Sign out</button></div>`;
   const card = $("#authCard");
   card.onclick = async e => {
@@ -1415,7 +1598,7 @@ function buildToolsMenu(){
     const sub = s && s.count ? `<small class="hot">${s.count} ${esc(s.label)}${s.late ? ` · ${s.late} overdue` : ""}</small>` : `<small>${esc(a.desc || "")}</small>`;
     const badge = s && s.count ? `<span class="bdg ${s.late ? "" : "warn"}">${s.count}</span>` : "";
     return `<button class="tfab-it" data-id="${esc(a.id)}" tabindex="-1" style="--x0:${c - 25}px;--y0:${c - 25}px;--x:${Math.round(pt.x - 25)}px;--y:${Math.round(pt.y - 25)}px;transition-delay:0ms">
-      <span class="ico" style="background:${esc(a.color)}">${svg(a.icon)}${badge}</span><span class="lb"><b>${esc(a.name)}</b>${sub}</span></button>`;
+      <span class="ico" style="background:${esc(a.color)}">${appIcon(a)}${badge}</span><span class="lb"><b>${esc(a.name)}</b>${sub}</span></button>`;
   }).join("");
   const total = Object.values(TOOL_SUM).reduce((t, x) => t + (x.count || 0), 0);
   $("#tfabCnt").textContent = total > 99 ? "99+" : total;
@@ -1455,11 +1638,11 @@ function openOrbit(a, from){
   const fx = from ? from.x - cx : 0, fy = from ? from.y - cy : 0;
   const list = items.length ? items : [1, 2, 3, 4, 5, 6].map(i => ({ ph: true, name: i === 1 ? "Checklists coming soon" : "" }));
   o.innerHTML = `<div class="orbit-veil"></div><div class="orbit-ring" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px"></div>
-    <button class="orbit-core" style="left:${cx}px;top:${cy}px;background:${esc(a.color)}" aria-label="Close ${esc(a.name)}">${svg(a.icon)}</button>
+    <button class="orbit-core" style="left:${cx}px;top:${cy}px;background:${esc(a.color)}" aria-label="Close ${esc(a.name)}">${appIcon(a)}</button>
     <div class="orbit-cap" style="left:${cx}px;top:${cy + 48}px">${esc(a.name)}<small>${items.length ? `${items.length} checklist${items.length === 1 ? "" : "s"}` : "No checklists yet"}</small></div>
     ${list.map((x, k) => { const ang = -Math.PI / 2 + k * 2 * Math.PI / list.length, dx = Math.cos(ang) * R, dy = Math.sin(ang) * R;
       return `<button class="orbit-it ${x.ph ? "ph" : ""}" ${x.ph ? "disabled" : `data-id="${esc(x.id)}"`} style="left:${cx}px;top:${cy}px;--x0:${fx}px;--y0:${fy}px;--x:${dx}px;--y:${dy}px;transition-delay:${k * 60}ms">
-        <span class="ico" style="background:${esc(x.color || "#555")}">${x.ph ? "" : svg(x.icon)}</span><b>${esc(x.name || "")}</b></button>`; }).join("")}`;
+        <span class="ico" style="background:${esc(x.color || "#555")}">${x.ph ? "" : appIcon(x)}</span><b>${esc(x.name || "")}</b></button>`; }).join("")}`;
   o.setAttribute("aria-hidden", "false");
   requestAnimationFrame(() => requestAnimationFrame(() => o.classList.add("on")));
   const close = () => { o.classList.remove("on"); o.setAttribute("aria-hidden", "true"); setTimeout(() => { if (!o.classList.contains("on")) o.innerHTML = ""; }, 450); };
@@ -1559,7 +1742,7 @@ function folderTile(g){
   const list = folderApps(g); if (!list.length) return "";
   const n = list.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
   return `<button class="tile fold" data-folder="${esc(g)}" aria-haspopup="dialog">
-    <span class="ico fico">${list.slice(0, 9).map(a => `<span class="mi" style="background:${esc(a.color || "#4A1F73")}">${svg(a.icon)}</span>`).join("")}${n ? `<span class="bdg">${n > 99 ? "99+" : n}</span>` : ""}</span>
+    <span class="ico fico">${list.slice(0, 9).map(a => `<span class="mi" style="background:${esc(a.color || "#4A1F73")}">${appIcon(a)}</span>`).join("")}${n ? `<span class="bdg">${n > 99 ? "99+" : n}</span>` : ""}</span>
     <span><b>${esc(g)}</b><small>${list.length} tool${list.length === 1 ? "" : "s"} · ${esc(list.slice(0, 3).map(a => a.name).join(", "))}${list.length > 3 ? "…" : ""}</small></span></button>`;
 }
 function openFolder(g, fromEl){
@@ -1925,8 +2108,35 @@ async function renderAdmin(){
   mailQuotaBar();
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
-  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : await adminAnnouncements(body); }
+  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : admTab === "history" ? await adminHistory(body) : await adminAnnouncements(body); }
   catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
+}
+/* ----- Change history feature (modules/history.js): who changed what, when — kept 12 months ----- */
+const HIST_TOOLS = { gla: "GLA", directory: "Tenants Directory", budget: "Budget", property: "Property details", handover: "Shift handover", reminders: "Reminders", people: "People & roles",
+  calendar: "Operations Calendar", evacuation: "Evacuation plan", contractors: "Contractors", contracts: "Contracts near ending", projects: "Projects", mom: "MOM", feedback: "Tenant feedback", layouts: "Mall layouts",
+  tenants: "Tenant announcements", fitout: "Fit-out", forms: "Checklists", works: "Tenant Works Forms", exec: "Executive Report" };
+async function adminHistory(body, f){
+  f = f || adminHistory.f || { tool: "", site: "", who: "", from: "", to: "", q: "" }; adminHistory.f = f;
+  const qs = Object.entries(f).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+  const d = await api("admin/history" + (qs ? "?" + qs : ""));
+  const act = { add: ["Added", "live"], edit: ["Changed", ""], delete: ["Deleted", "off"], import: ["Imported", ""], submit: ["Submitted", "live"], sign: ["Signed", "live"] };
+  const when = iso => new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  body.innerHTML = `<div class="panel" style="grid-column:1/-1">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h3 style="margin:0">Change history</h3><span style="flex:1"></span><span class="muted" style="font-size:.8rem">Last 300 matching changes · kept 12 months</span></div>
+    <div class="hist-f">
+      <select id="hTool"><option value="">All tools</option>${Object.entries(HIST_TOOLS).map(([k, v]) => `<option value="${k}" ${f.tool === k ? "selected" : ""}>${esc(v)}${(d.tools.find(t => t.tool === k) || {}).n ? ` (${d.tools.find(t => t.tool === k).n})` : ""}</option>`).join("")}</select>
+      <select id="hSite">${siteOptions(f.site, "All flagships").replace('value="ALL"', 'value=""')}</select>
+      <input id="hWho" placeholder="Person" value="${esc(f.who)}"><input id="hQ" placeholder="Search text" value="${esc(f.q)}">
+      <input id="hFrom" type="date" value="${esc(f.from)}"><input id="hTo" type="date" value="${esc(f.to)}">
+      <button class="btn small" id="hGo">Filter</button><button class="btn small ghost" id="hClr">Clear</button></div>
+    <div class="rows">${d.rows.length ? d.rows.map(r => { const A = act[r.action] || [r.action, ""]; return `<div class="row-i hist-r"><div class="main">
+      <b>${esc(r.label || r.ref || "—")} <span class="badge ${A[1]}">${esc(A[0])}</span></b>
+      <small>${esc(HIST_TOOLS[r.tool] || r.tool)}${r.site ? " · " + esc(SITES[r.site] || r.site) : ""} · ${esc(r.byName || r.byEmail || "system")} · ${esc(when(r.at))}</small>
+      ${r.changes.length ? `<div class="hist-c">${r.changes.map(c => `<div><span>${esc(c.field.replace(/_/g, " "))}</span>${c.from !== "" ? `<s>${esc(c.from)}</s> → ` : ""}<b>${esc(c.to === "" ? "(empty)" : c.to)}</b></div>`).join("")}</div>` : ""}</div></div>`; }).join("")
+      : `<p class="brief-empty">No change recorded${qs ? " for this filter" : " yet"}.</p>`}</div></div>`;
+  const val = id => $("#" + id).value.trim();
+  $("#hGo").onclick = () => adminHistory(body, { tool: val("hTool"), site: val("hSite"), who: val("hWho"), q: val("hQ"), from: val("hFrom"), to: val("hTo") });
+  $("#hClr").onclick = () => adminHistory(body, { tool: "", site: "", who: "", from: "", to: "", q: "" });
 }
 async function adminAnnouncements(body, editing){
   const d = await api("admin/announcements");
@@ -2127,7 +2337,7 @@ async function adminUsers(body, editing){
   const last = ms && ms.last ? `Last sent ${esc(fmtLocal(ms.last.at))} to ${ms.last.sent} ${ms.last.sent === 1 ? "person" : "people"}${ms.last.failed ? ` · <span style="color:var(--alert)">${ms.last.failed} failed</span>` : ""}` : "Not sent yet";
   const U = d.users;
   const row = u => `<div class="row-i ${u.active ? "" : "off"}"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(u.name))}</span>
-      <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.positionLabel || u.roleLabel) : "Switched off"}</span>${tf.on[u.email] ? ` <span class="badge live" title="${tf.on[u.email].phone ? "Approves on phone" : ""}${tf.on[u.email].phone && tf.on[u.email].code ? " · " : ""}${tf.on[u.email].code ? "Authenticator app" : ""}">2-step on</span>` : tf.roles.includes(u.role) ? ` <span class="badge off">2-step not set up</span>` : ""}</b>
+      <div class="main"><b>${esc(u.name)} <span class="badge ${u.active ? "live" : "off"}">${u.active ? esc(u.positionLabel || u.roleLabel) : "Switched off"}</span>${tf.on[u.email] ? ` <span class="badge live" title="${esc([tf.on[u.email].passkeys ? tf.on[u.email].passkeys + " passkey" + (tf.on[u.email].passkeys > 1 ? "s" : "") : "", tf.on[u.email].email ? "Email code" : "", tf.on[u.email].phone ? "Approves on phone" : "", tf.on[u.email].code ? "Authenticator app" : ""].filter(Boolean).join(" · "))}">2-step on</span>` : tf.roles.includes(u.role) ? ` <span class="badge off">2-step not set up</span>` : ""}</b>
       <small>${esc(u.email)}${d.multiRoles.includes(u.role) ? " · " + esc(u.sitesLabel || "no flagship ticked") : ""}${u.lastLoginAt ? " · last in " + esc(fmtLocal(u.lastLoginAt)) : " · never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</small></div>
       <div class="acts"><button class="btn small ghost" data-edit="${esc(u.email)}">Edit</button>
         <button class="btn small ghost" data-reset="${esc(u.email)}">Reset</button>

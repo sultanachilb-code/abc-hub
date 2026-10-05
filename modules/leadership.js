@@ -56,7 +56,7 @@ function serviceScores(runs) {
 }
 
 /* ctx = { me, sitesOf, SITES, siteName, pullDay, today, now, can } */
-async function siteOverview(env, site, ctx, month) {
+export async function siteOverview(env, site, ctx, month) {
   const today = ctx.today(), [mFrom, mToFull] = monthBounds(month), mTo = mToFull < today ? mToFull : today;
   const q1 = (sql, ...b) => env.DB.prepare(sql).bind(...b).first().catch(() => null);
   const qa = (sql, ...b) => env.DB.prepare(sql).bind(...b).all().then(r => r.results || []).catch(() => []);
@@ -132,7 +132,7 @@ async function siteOverview(env, site, ctx, month) {
     emergencies: emg.map(e => ({ type: e.type, location: e.location, at: e.created_at })) };
 }
 
-async function scorecards(env, site, ctx, month) {
+export async function scorecards(env, site, ctx, month) {
   const [from, to] = monthBounds(month), today = ctx.today(), end = to < today ? to : today;
   const [runs, stats, emg] = await Promise.all([
     monthRuns(env, site, from, end),

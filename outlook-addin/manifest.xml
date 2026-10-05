@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ABC Operations Hub — Outlook add-in (mail, read mode). Install: see docs/FEATURE-outlook-addin.md
+     Hosted by the hub itself: https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/ -->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+           xsi:type="MailApp">
+  <Id>6f3b2a1e-8c4d-4e7a-9b1f-2d5c7a9e4b10</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>ABC Operations</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="ABC Operations Hub"/>
+  <Description DefaultValue="Send attachments to Tenant Works Forms, add an email to the shift handover, log tenant feedback or add it to the Operations Calendar."/>
+  <IconUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-128.png"/>
+  <SupportUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/"/>
+  <AppDomains>
+    <AppDomain>https://operations-hub.sultanachi-lb-61f.workers.dev</AppDomain>
+  </AppDomains>
+  <Hosts><Host Name="Mailbox"/></Hosts>
+  <Requirements><Sets><Set Name="Mailbox" MinVersion="1.8"/></Sets></Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/taskpane"/>
+        <RequestedHeight>450</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements><bt:Sets DefaultMinVersion="1.8"><bt:Set Name="Mailbox"/></bt:Sets></Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="abcHubGroup">
+                  <Label resid="groupLabel"/>
+                  <Control xsi:type="Button" id="abcHubOpen">
+                    <Label resid="btnLabel"/>
+                    <Supertip><Title resid="btnLabel"/><Description resid="btnDesc"/></Supertip>
+                    <Icon><bt:Image size="16" resid="icon16"/><bt:Image size="32" resid="icon32"/><bt:Image size="80" resid="icon80"/></Icon>
+                    <Action xsi:type="ShowTaskpane"><SourceLocation resid="paneUrl"/><SupportsPinning>true</SupportsPinning></Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+          <MobileFormFactor>
+            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
+              <Group id="abcHubMobile">
+                <Label resid="groupLabel"/>
+                <Control xsi:type="MobileButton" id="abcHubOpenMobile">
+                  <Label resid="btnLabel"/>
+                  <Icon xsi:type="bt:MobileIconList"><bt:Image size="25" scale="1" resid="icon32"/><bt:Image size="25" scale="2" resid="icon64"/><bt:Image size="25" scale="3" resid="icon80"/>
+                    <bt:Image size="32" scale="1" resid="icon32"/><bt:Image size="32" scale="2" resid="icon64"/><bt:Image size="32" scale="3" resid="icon128"/>
+                    <bt:Image size="48" scale="1" resid="icon64"/><bt:Image size="48" scale="2" resid="icon128"/><bt:Image size="48" scale="3" resid="icon128"/></Icon>
+                  <Action xsi:type="ShowTaskpane"><SourceLocation resid="paneUrl"/></Action>
+                </Control>
+              </Group>
+            </ExtensionPoint>
+          </MobileFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="icon16" DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-32.png"/>
+          <bt:Image id="icon64" DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-64.png"/>
+          <bt:Image id="icon80" DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-80.png"/>
+          <bt:Image id="icon128" DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-128.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="paneUrl" DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/taskpane"/>
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="groupLabel" DefaultValue="ABC Operations"/>
+          <bt:String id="btnLabel" DefaultValue="ABC Hub"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="btnDesc" DefaultValue="Send this email to the ABC Operations Hub: Works Forms, shift handover, tenant feedback or the Operations Calendar."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

@@ -1,3 +1,7 @@
+> **Update — passkeys and email code.** The main way is now a **passkey**: Face ID, fingerprint or Windows Hello on each device the person uses (Profile settings → Two-step login → *Add this device*; also offered in the welcome window). Nothing to install, no code to type. The **email code** (6 digits to the work email, 10 minutes) is always there as a backup, and can be the only way for people whose devices have no Face ID / fingerprint / Windows Hello (*Use email only*). The authenticator app, approve-on-phone and backup codes still work. Admin reset also removes passkeys.
+>
+> **Welcome window** — on the first sign-in on a device the hub asks, one tap each: alerts on this device, install the hub, camera, passkey. Reopen it any time: account menu → *Set up this device*.
+
 # Two-step login
 
 After the password, the hub asks for a second proof.

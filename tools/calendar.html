@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Calendar · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Operations Calendar feature — see docs/FEATURE-calendar.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.bar h2{font-size:1.35rem;font-weight:800;min-width:170px;text-align:center}
+.bar .sp{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:.8rem;color:var(--muted)}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.chip.on{color:var(--text);border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.chip b{font-variant-numeric:tabular-nums;opacity:.7}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+.side{display:grid;gap:12px}
+.panel{padding:14px 16px}
+.panel h3{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.panel h3 .sp{flex:1}
+.obj{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:12px;background:rgba(74,31,115,.07);margin-bottom:6px;cursor:pointer}
+.obj .pin{font-size:1rem;line-height:1.2}
+.obj b{font-size:.88rem;display:block;line-height:1.35}
+.obj small{font-size:.74rem;color:var(--muted)}
+.obj.done b{text-decoration:line-through;opacity:.6}
+.exp{display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.exp:last-child{border-bottom:0}
+.exp .d{text-align:center;border-radius:10px;padding:5px 0;font-weight:800;font-size:.95rem;line-height:1.1;background:var(--paper)}
+.exp .d small{display:block;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.exp.red .d{background:rgba(192,57,43,.14);color:var(--alert)} .exp.amb .d{background:rgba(192,122,18,.14);color:var(--warn)} .exp.past .d{background:var(--alert);color:#fff}
+.exp b{font-size:.85rem;display:block;line-height:1.3} .exp span{font-size:.74rem;color:var(--muted)}
+.grid{overflow:hidden}
+.dow,.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.dow div{padding:9px 8px;font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.day{min-height:118px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 5px 8px;cursor:pointer;position:relative;min-width:0}
+.day:nth-child(7n){border-right:0}
+.day.out{background:var(--paper)} .day.out .n{opacity:.45}
+.day:hover{background:rgba(123,75,176,.05)}
+.day.sel{box-shadow:inset 0 0 0 2px var(--brand-2)}
+.day .n{font-size:.8rem;font-weight:800;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;margin-bottom:3px}
+.day.today .n{background:var(--brand);color:#fff}
+.day.wk .n{color:var(--muted)}
+.ev{display:block;width:100%;text-align:left;font-size:.72rem;font-weight:700;line-height:1.25;padding:3px 6px;border-radius:6px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);border-left:3px solid var(--c)}
+.ev.cx{text-decoration:line-through;opacity:.6}
+.ev.dn{opacity:.55}
+.more{font-size:.7rem;font-weight:800;color:var(--muted);padding:2px 6px}
+.dots{display:none;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.dayList{margin-top:12px}
+.li{display:grid;grid-template-columns:4px 1fr auto;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.li:last-child{border-bottom:0}
+.li .bar4{align-self:stretch;border-radius:4px;background:var(--c)}
+.li b{font-size:.9rem;display:block;line-height:1.3}
+.li small{font-size:.76rem;color:var(--muted);line-height:1.45;display:block}
+.li .when{font-size:.78rem;font-weight:800;text-align:right;color:var(--muted);white-space:nowrap}
+.lhead{padding:10px 14px;font-size:.74rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--paper);border-bottom:1px solid var(--line)}
+dialog.wide{width:min(640px,calc(100% - 24px))}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.form .inp,.form .sel{width:100%}
+.kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.kinds button{padding:10px 6px;border-radius:12px;border:1px solid var(--line);font-weight:800;font-size:.78rem;line-height:1.25;display:grid;gap:4px;justify-items:center}
+.kinds button i{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.kinds button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c)}
+.plan{display:grid;gap:6px}
+.plan .pr{display:grid;grid-template-columns:22px 1fr 120px 132px 28px;gap:6px;align-items:center}
+.plan input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+.plan .x{color:var(--alert);font-weight:800;font-size:1.1rem}
+.hint{font-size:.78rem;color:var(--muted);line-height:1.5}
+.sw{display:flex;gap:8px;align-items:center;font-weight:700;font-size:.86rem}
+.sw input{width:18px;height:18px;accent-color:var(--brand)}
+.ro{padding:12px 14px;border-radius:12px;background:var(--paper);line-height:1.6;font-size:.88rem}
+@media (max-width:1000px){ .layout{grid-template-columns:1fr} .side{grid-template-columns:1fr 1fr} }
+@media (max-width:700px){
+  .side{grid-template-columns:1fr}
+  .bar h2{min-width:0;font-size:1.1rem;text-align:left}
+  .day{min-height:58px;padding:4px 2px;text-align:center}
+  .day .ev,.day .more{display:none}
+  .dots{display:flex}
+  .form{grid-template-columns:1fr}
+  .kinds{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .plan .pr{grid-template-columns:22px 1fr 28px}
+  .plan .pr .o,.plan .pr .du{grid-column:2/3}
+}
+@media print{ .top,.bar .btn,.chips,.side,.dayList{display:none!important} .wrap{padding:0} .day{min-height:90px} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>📅 Operations Calendar <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", M = null, month = UP.get("month") || "", sel = "", view = "month";
+const hidden = new Set();
+const KIND_ICON = { marketing: "🎉", ops: "🛠️", mom: "📝", objective: "📌", expiry: "⏳", contract: "📄" };
+const MON = m => new Date(m + "-01T12:00:00Z").toLocaleDateString("en-GB", { timeZone: "UTC", month: "long", year: "numeric" });
+const addMonth = (m, n) => { const t = new Date(m + "-01T12:00:00Z"); t.setUTCMonth(t.getUTCMonth() + n); return t.toISOString().slice(0, 7); };
+const col = k => (M.kinds[k] || {}).color || "#777";
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site;
+    $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; sync(); load(); });
+    await load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function sync(){ history.replaceState(null, "", `?site=${site}&month=${month}`); }
+async function load(){
+  try {
+    M = await api(`ops/cal/month?site=${site}${month ? `&month=${month}` : ""}`);
+    month = M.month; sync();
+    if (!sel || sel.slice(0, 7) !== month) sel = M.today.slice(0, 7) === month ? M.today : month + "-01";
+    render();
+    const id = UP.get("id"); if (id){ UP.delete("id"); openItem(Number(id)); }
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+function visible(){ return M.entries.filter(e => !hidden.has(e.kind)); }
+function onDay(day){ return visible().filter(e => e.start <= day && e.end >= day); }
+function evMeta(e){
+  const x = e.extra || {};
+  const parts = [];
+  if (e.from) parts.push(e.from + (e.to ? "–" + e.to : ""));
+  if (e.end && e.end !== e.start) parts.push(`${D.fmt(e.start)} → ${D.fmt(e.end)}`);
+  if (e.location) parts.push(e.location);
+  if (e.kind === "marketing" && x.status) parts.push(x.status);
+  if (e.kind === "marketing" && (e.plan || []).length) parts.push(`plan ${e.plan.filter(t => t.done).length}/${e.plan.length}`);
+  if (e.kind === "expiry") parts.push([e.category, x.provider, x.ref].filter(Boolean).join(" · "));
+  if ((e.kind === "ops") && e.category) parts.push(e.category);
+  if (e.repeat) parts.push("repeats " + e.repeat);
+  if (e.owner) parts.push(e.owner);
+  if (e.kind === "mom") parts.push(e.notes);
+  return parts.filter(Boolean).join(" · ");
+}
+
+function render(){
+  const counts = {}; M.entries.forEach(e => counts[e.kind] = (counts[e.kind] || 0) + 1);
+  counts.objective = M.objectives.length;
+  let h = `<div class="bar">
+      <button class="btn ghost small" id="prev" aria-label="Previous month">‹</button><h2>${esc(MON(month))}</h2><button class="btn ghost small" id="next" aria-label="Next month">›</button>
+      <button class="btn ghost small" id="tod">Today</button><span class="sp"></span>
+      <div class="tabs"><button data-v="month" class="${view === "month" ? "on" : ""}">Month</button><button data-v="list" class="${view === "list" ? "on" : ""}">List</button></div>
+      <button class="btn ghost small" id="prn">Print</button>
+      ${M.can.edit ? `<button class="btn" id="add">+ Add</button>` : ""}</div>
+    <div class="chips">${Object.entries(M.kinds).map(([k, v]) => `<button class="chip ${hidden.has(k) ? "" : "on"}" data-k="${k}" style="--c:${v.color}"><i></i>${esc(v.label)} <b>${counts[k] || 0}</b></button>`).join("")}</div>
+    <div class="layout"><div>${view === "month" ? gridHtml() + `<div class="card dayList" id="dayList">${dayListHtml()}</div>` : listHtml()}</div>
+    <div class="side">${objHtml()}${expHtml()}</div></div>`;
+  $("#app").innerHTML = h;
+  $("#prev").onclick = () => { month = addMonth(month, -1); load(); };
+  $("#next").onclick = () => { month = addMonth(month, 1); load(); };
+  $("#tod").onclick = () => { month = M.today.slice(0, 7); sel = M.today; load(); };
+  $("#prn").onclick = () => window.print();
+  const a = $("#add"); if (a) a.onclick = () => editor({ kind: "marketing", start: sel || M.today });
+  $("#app").querySelectorAll(".tabs [data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; render(); });
+  $("#app").querySelectorAll(".chip").forEach(b => b.onclick = () => { const k = b.dataset.k; hidden.has(k) ? hidden.delete(k) : hidden.add(k); render(); });
+  $("#app").onclick = e => {
+    const it = e.target.closest("[data-id]");
+    if (it){ e.stopPropagation(); return openEntry(it.dataset.id); }
+    const d = e.target.closest(".day");
+    if (d){ sel = d.dataset.d; $("#app").querySelectorAll(".day").forEach(x => x.classList.toggle("sel", x === d)); const L = $("#dayList"); if (L) L.innerHTML = dayListHtml();
+      if (d.classList.contains("out")){ month = sel.slice(0, 7); load(); } }
+  };
+  $("#app").ondblclick = e => { const d = e.target.closest(".day"); if (d && M.can.edit) editor({ kind: "marketing", start: d.dataset.d }); };
+}
+function gridHtml(){
+  const days = []; for (let d = M.from; d <= M.to; d = D.add(d, 1)) days.push(d);
+  const MAX = 3;
+  return `<div class="card grid"><div class="dow">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => `<div>${x}</div>`).join("")}</div>
+    <div class="days">${days.map(d => { const L = onDay(d), wk = [5, 6].includes((D.parse(d).getUTCDay() + 6) % 7);
+      return `<div class="day ${d.slice(0, 7) !== month ? "out" : ""} ${d === M.today ? "today" : ""} ${d === sel ? "sel" : ""} ${wk ? "wk" : ""}" data-d="${d}">
+        <span class="n">${Number(d.slice(8))}</span>
+        ${L.slice(0, MAX).map(e => `<button class="ev ${e.extra && e.extra.status === "Cancelled" ? "cx" : ""} ${e.done || (e.extra && e.extra.renewed) ? "dn" : ""}" style="--c:${col(e.kind)}" data-id="${e.id}" title="${esc(e.title + " · " + evMeta(e))}">${e.from && e.start === d ? `<small>${esc(e.from)}</small> ` : ""}${esc(e.title)}</button>`).join("")}
+        ${L.length > MAX ? `<div class="more">+${L.length - MAX} more</div>` : ""}
+        <div class="dots">${L.slice(0, 6).map(e => `<i style="--c:${col(e.kind)}"></i>`).join("")}</div></div>`; }).join("")}</div></div>`;
+}
+function rowHtml(e, showDay){
+  return `<div class="li" data-id="${e.id}" style="--c:${col(e.kind)}"><span class="bar4"></span>
+    <div><b>${KIND_ICON[e.kind] || ""} ${esc(e.title)}</b><small>${esc(M.kinds[e.kind].label)}${evMeta(e) ? " · " + esc(evMeta(e)) : ""}</small></div>
+    <div class="when">${showDay ? esc(D.fmt(e.start, { weekday: "short" })) : esc(e.from || "")}</div></div>`;
+}
+function dayListHtml(){
+  const L = onDay(sel);
+  return `<div class="lhead">${esc(D.long(sel))}${M.can.edit ? ` · <a href="#" id="addDay" style="color:var(--brand-2)">+ add on this day</a>` : ""}</div>
+    ${L.length ? L.map(e => rowHtml(e)).join("") : `<div class="empty" style="padding:22px">Nothing planned on this day.</div>`}`;
+}
+document.addEventListener("click", e => { if (e.target.id === "addDay"){ e.preventDefault(); editor({ kind: "marketing", start: sel }); } });
+function listHtml(){
+  const L = visible().filter(e => e.start.slice(0, 7) === month || e.end.slice(0, 7) === month);
+  if (!L.length) return `<div class="card empty">Nothing in ${esc(MON(month))} yet.</div>`;
+  const by = {}; L.forEach(e => (by[e.start] = by[e.start] || []).push(e));
+  return `<div class="card">${Object.keys(by).sort().map(d => `<div class="lhead">${esc(D.long(d))}</div>${by[d].map(e => rowHtml(e)).join("")}`).join("")}</div>`;
+}
+function objHtml(){
+  const O = hidden.has("objective") ? [] : M.objectives;
+  return `<div class="card panel"><h3>📌 Objectives · ${esc(MON(month).split(" ")[0])}<span class="sp"></span>${M.can.edit ? `<button class="btn ghost small" onclick="editor({kind:'objective',month})">+ Pin</button>` : ""}</h3>
+    ${O.length ? O.map(o => `<div class="obj ${o.done ? "done" : ""}" data-id="${o.id}"><span class="pin">${o.done ? "✅" : "📌"}</span><div><b>${esc(o.title)}</b>${o.owner || o.notes ? `<small>${esc([o.owner, o.notes].filter(Boolean).join(" · "))}</small>` : ""}</div></div>`).join("")
+      : `<div class="hint">No objective pinned for this month.</div>`}</div>`;
+}
+function expHtml(){
+  const E = M.expiries;
+  return `<div class="card panel"><h3>⏳ Expiring soon<span class="sp"></span>${M.can.edit ? `<button class="btn ghost small" onclick="editor({kind:'expiry',start:M.today})">+ Add</button>` : ""}</h3>
+    ${E.length ? E.map(x => `<div class="exp ${x.left < 0 ? "past" : x.left <= 7 ? "red" : x.left <= 30 ? "amb" : ""}" data-id="${x.id}">
+      <div class="d">${x.left < 0 ? "!" : x.left}<small>${x.left < 0 ? "expired" : x.left === 1 ? "day" : "days"}</small></div>
+      <div><b>${esc(x.title)}</b><span>${esc(D.fmt(x.start, { year: "numeric" }))}${x.category ? " · " + esc(x.category) : ""}${x.extra.provider ? " · " + esc(x.extra.provider) : ""}</span></div></div>`).join("")
+      : `<div class="hint">No document expires in the next 60 days. Reminders go out 30, 7 and 1 day before, and on the day.</div>`}</div>`;
+}
+
+/* ---------- open / edit ---------- */
+function openEntry(id){
+  if (String(id).startsWith("mom-")){ const e = M.entries.find(x => x.id === id); return momBox(e); }
+  if (String(id).startsWith("con-")){ const e = M.entries.find(x => x.id === id); return conBox(e); }
+  openItem(Number(id));
+}
+async function openItem(id){
+  try { const r = await api(`ops/cal/get?site=${site}&id=${id}`); r.can.edit ? editor(r.item) : viewBox(r.item); }
+  catch (e){ toast(e.message, true); }
+}
+function dlg(){ let d = $("#dCal"); if (!d){ d = document.createElement("dialog"); d.id = "dCal"; d.className = "wide"; document.body.append(d); } return d; }
+function momBox(e){
+  const d = dlg();
+  d.innerHTML = `<div class="dlg-h"><b>📝 ${esc(e.title)}</b><small class="muted">${esc(D.long(e.start))}</small></div>
+    <div class="dlg-b"><div class="ro">${e.location ? `📍 ${esc(e.location)}<br>` : ""}${esc(e.notes)}<br><span class="hint">MOM meetings come from Minutes of Meeting — edit them there.</span></div></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Close</button><a class="btn" href="/tools/mom?site=${site}&id=${e.momId}" target="_top">Open the minutes</a></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close(); d.showModal();
+}
+function conBox(e){
+  const d = dlg();
+  d.innerHTML = `<div class="dlg-h"><b>📄 ${esc(e.title)}</b><small class="muted">${esc(D.long(e.start))}</small></div>
+    <div class="dlg-b"><div class="ro">${esc(e.notes)}<br><span class="hint">From the daily contracts report — follow up in Contracts Near Ending.</span></div></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Close</button><a class="btn" href="/tools/contracts?site=${site}" target="_top">Open contracts</a></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close(); d.showModal();
+}
+function viewBox(it){
+  const d = dlg();
+  d.innerHTML = `<div class="dlg-h"><b>${KIND_ICON[it.kind]} ${esc(it.title)}</b><small class="muted">${esc(M.kinds[it.kind].label)}</small></div>
+    <div class="dlg-b"><div class="ro">${esc(evMeta(it)) || ""}${it.notes ? `<br><br>${esc(it.notes).replace(/\n/g, "<br>")}` : ""}
+      ${(it.plan || []).length ? `<br><br><b>Plan</b><br>${it.plan.map(t => `${t.done ? "✅" : "⬜"} ${esc(t.text)}${t.owner ? " · " + esc(t.owner) : ""}${t.due ? " · " + esc(D.fmt(t.due)) : ""}`).join("<br>")}` : ""}</div></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Close</button></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close(); d.showModal();
+}
+
+let E = null;
+function editor(it){
+  E = JSON.parse(JSON.stringify(Object.assign({ title: "", start: M.today, end: "", from: "", to: "", location: "", notes: "", category: "", repeat: "", owner: "", plan: [], extra: {}, done: false }, it)));
+  if (E.kind === "objective" && !E.month) E.month = month;
+  if (E.kind === "marketing" && !E.extra.status) E.extra.status = "Planned";
+  drawEditor();
+}
+function drawEditor(){
+  const d = dlg(), k = E.kind, x = E.extra || {};
+  const kinds = Object.entries(M.kinds).filter(([kk]) => kk !== "mom" && kk !== "contract");
+  const opt = (L, v) => L.map(o => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("");
+  let f = `<div class="full"><label class="lbl">Title</label><input class="inp" id="fTitle" maxlength="160" value="${esc(E.title)}" placeholder="${{ marketing: "e.g. Back-to-school activation", ops: "e.g. Quarterly fire drill", objective: "e.g. Close all snags older than 30 days", expiry: "e.g. Public liability insurance" }[k]}"></div>`;
+  if (k === "objective") f += `<div><label class="lbl">Month</label><input class="inp" type="month" id="fMonth" value="${esc(E.month)}"></div>
+      <div><label class="lbl">Owner</label><input class="inp" id="fOwner" maxlength="120" value="${esc(E.owner)}" placeholder="Who leads it"></div>
+      <div class="full"><label class="sw"><input type="checkbox" id="fDone" ${E.done ? "checked" : ""}> Achieved</label></div>`;
+  else if (k === "expiry") f += `<div><label class="lbl">Document type</label><select class="sel" id="fCat">${opt(M.docTypes, E.category || M.docTypes[0])}</select></div>
+      <div><label class="lbl">Expiry date</label><input class="inp" type="date" id="fStart" value="${esc(E.start)}"></div>
+      <div><label class="lbl">Provider / issuer</label><input class="inp" id="fProv" maxlength="160" value="${esc(x.provider || "")}" placeholder="e.g. insurance company, contractor"></div>
+      <div><label class="lbl">Policy / reference no.</label><input class="inp" id="fRef" maxlength="120" value="${esc(x.ref || "")}"></div>
+      <div><label class="lbl">Renews every</label><select class="sel" id="fRep"><option value="">Does not repeat</option>${[["yearly", "Year"], ["monthly", "Month"]].map(([v, l]) => `<option value="${v}" ${E.repeat === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div><label class="lbl">Responsible</label><input class="inp" id="fOwner" maxlength="120" value="${esc(E.owner)}"></div>
+      <div class="full"><label class="sw"><input type="checkbox" id="fRenew" ${x.renewed ? "checked" : ""}> Renewed — stop the reminders</label>
+      <div class="hint">The operations team is notified 30, 7 and 1 day before, and on the expiry day.</div></div>`;
+  else {
+    f += `<div><label class="lbl">From</label><input class="inp" type="date" id="fStart" value="${esc(E.start)}"></div>
+      <div><label class="lbl">To</label><input class="inp" type="date" id="fEnd" value="${esc(E.end && E.end !== E.start ? E.end : "")}"></div>
+      <div><label class="lbl">Start time</label><input class="inp" type="time" id="fFrom" value="${esc(E.from)}"></div>
+      <div><label class="lbl">End time</label><input class="inp" type="time" id="fTo" value="${esc(E.to)}"></div>
+      <div><label class="lbl">Location</label><input class="inp" id="fLoc" maxlength="160" value="${esc(E.location)}" placeholder="e.g. Ground floor atrium"></div>`;
+    if (k === "ops") f += `<div><label class="lbl">Activity</label><select class="sel" id="fCat">${opt(M.actTypes, E.category || M.actTypes[0])}</select></div>
+      <div><label class="lbl">Repeats</label><select class="sel" id="fRep"><option value="">Does not repeat</option>${[["weekly", "Every week"], ["monthly", "Every month"], ["yearly", "Every year"]].map(([v, l]) => `<option value="${v}" ${E.repeat === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div><label class="lbl">Owner</label><input class="inp" id="fOwner" maxlength="120" value="${esc(E.owner)}"></div>`;
+    else f += `<div><label class="lbl">Status</label><select class="sel" id="fStat">${opt(["Planned", "Confirmed", "Cancelled"], x.status)}</select></div>
+      <div><label class="lbl">Organiser / brand</label><input class="inp" id="fOrg" maxlength="120" value="${esc(x.organiser || "")}"></div>
+      <div><label class="lbl">Owner (ABC)</label><input class="inp" id="fOwner" maxlength="120" value="${esc(E.owner)}"></div>
+      <div><label class="lbl">Set-up</label><input class="inp" id="fSet" maxlength="120" value="${esc(x.setup || "")}" placeholder="e.g. 4 Oct after 22:00"></div>
+      <div><label class="lbl">Dismantle</label><input class="inp" id="fDis" maxlength="120" value="${esc(x.dismantle || "")}" placeholder="e.g. 12 Oct after closing"></div>
+      <div class="full"><label class="lbl">Plan · tasks before the event</label><div class="plan" id="plan">${E.plan.map((t, i) => `<div class="pr">
+        <input type="checkbox" data-pi="${i}" data-pf="done" ${t.done ? "checked" : ""}><input class="inp" data-pi="${i}" data-pf="text" value="${esc(t.text)}" placeholder="Task">
+        <input class="inp o" data-pi="${i}" data-pf="owner" value="${esc(t.owner)}" placeholder="Who"><input class="inp du" type="date" data-pi="${i}" data-pf="due" value="${esc(t.due)}">
+        <button class="x" data-prm="${i}" title="Remove">×</button></div>`).join("")}</div>
+        <button class="btn ghost small" id="pAdd" style="margin-top:6px">+ Task</button>
+        <div class="hint">Marketing events also appear in that day's shift handover.</div></div>`;
+  }
+  f += `<div class="full"><label class="lbl">Notes</label><textarea id="fNotes" rows="3" maxlength="2000">${esc(E.notes)}</textarea></div>`;
+  d.innerHTML = `<div class="dlg-h"><b>${E.id ? "Edit" : "Add to the calendar"}</b>${E.updatedName ? `<small class="muted">Last change by ${esc(E.updatedName)}</small>` : ""}</div>
+    <div class="dlg-b" style="max-height:70dvh;overflow:auto">${E.id ? "" : `<div class="kinds" id="kinds" style="margin-bottom:14px">${kinds.map(([kk, v]) => `<button data-k="${kk}" class="${kk === k ? "on" : ""}" style="--c:${v.color}"><i></i>${esc(v.label)}</button>`).join("")}</div>`}
+      <div class="form">${f}</div><div class="err" id="fErr" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
+    <div class="dlg-f">${E.id ? `<button class="btn ghost danger" id="fDel" style="margin-right:auto">Delete</button>` : ""}<button class="btn ghost" data-x>Cancel</button><button class="btn" id="fSave">Save</button></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  const K = d.querySelector("#kinds"); if (K) K.onclick = e => { const b = e.target.closest("[data-k]"); if (!b) return; read(); E.kind = b.dataset.k; if (E.kind === "objective" && !E.month) E.month = month; if (E.kind === "marketing" && !E.extra.status) E.extra.status = "Planned"; drawEditor(); };
+  const pa = d.querySelector("#pAdd"); if (pa) pa.onclick = () => { read(); E.plan.push({ text: "", owner: "", due: "", done: false }); drawEditor(); setTimeout(() => { const L = d.querySelectorAll('[data-pf="text"]'); L[L.length - 1].focus(); }, 0); };
+  d.querySelectorAll("[data-prm]").forEach(b => b.onclick = () => { read(); E.plan.splice(Number(b.dataset.prm), 1); drawEditor(); });
+  d.querySelector("#fSave").onclick = save;
+  const del = d.querySelector("#fDel"); if (del) del.onclick = async () => {
+    d.close();
+    if (!await confirmBox("Delete this entry?", `<b>${esc(E.title)}</b>${E.repeat ? "<br>All repeats are removed." : ""}`, "Delete")) return d.showModal();
+    try { await api("ops/cal/delete", { site, id: E.id }); toast("Deleted"); load(); } catch (e){ toast(e.message, true); }
+  };
+  if (!d.open) d.showModal();
+  setTimeout(() => { const t = d.querySelector("#fTitle"); if (t && !E.title) t.focus(); }, 30);
+}
+function read(){
+  const v = id => { const el = document.getElementById(id); return el ? (el.type === "checkbox" ? el.checked : el.value) : undefined; };
+  const set = (k, id) => { const x = v(id); if (x !== undefined) E[k] = x; };
+  set("title", "fTitle"); set("start", "fStart"); set("end", "fEnd"); set("from", "fFrom"); set("to", "fTo"); set("location", "fLoc");
+  set("category", "fCat"); set("repeat", "fRep"); set("owner", "fOwner"); set("notes", "fNotes"); set("month", "fMonth"); set("done", "fDone");
+  const ex = { status: "fStat", organiser: "fOrg", setup: "fSet", dismantle: "fDis", provider: "fProv", ref: "fRef", renewed: "fRenew" };
+  for (const [k, id] of Object.entries(ex)){ const x = v(id); if (x !== undefined) E.extra[k] = x; }
+  document.querySelectorAll("#plan [data-pi]").forEach(el => { const t = E.plan[Number(el.dataset.pi)]; if (t) t[el.dataset.pf] = el.type === "checkbox" ? el.checked : el.value; });
+}
+async function save(){
+  read();
+  const b = $("#fSave"); b.disabled = true;
+  try {
+    const r = await api("ops/cal/save", { site, ...E, end: E.end || E.start });
+    dlg().close(); toast("Saved");
+    if (r.item.kind !== "objective" && r.item.start) { month = r.item.start.slice(0, 7); sel = r.item.start; }
+    else if (r.item.month) month = r.item.month;
+    load();
+  } catch (e){ $("#fErr").textContent = e.message; b.disabled = false; }
+}
+boot();
+</script>
+</body>
+</html>

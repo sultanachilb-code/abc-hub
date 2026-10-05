@@ -17,6 +17,7 @@ export async function profileSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS site_covers (site TEXT PRIMARY KEY, data TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT '', updated_by TEXT NOT NULL DEFAULT '')`)
   ]);
   await env.DB.prepare("ALTER TABLE users ADD COLUMN photo_at TEXT NOT NULL DEFAULT ''").run().catch(() => {});
+  await env.DB.prepare("ALTER TABLE users ADD COLUMN mobile TEXT NOT NULL DEFAULT ''").run().catch(() => {});   // for emergency calls
 }
 
 function image(dataUrl, maxKb) {
@@ -36,8 +37,15 @@ function serve(dataUrl, v) {
 export async function profileRoute(env, path, method, b, url, { me, SITES, sitesOf, userOut, now }) {
   if (path === "profile") {
     const cover = me.site_code ? await env.DB.prepare("SELECT updated_at FROM site_covers WHERE site = ?").bind(me.site_code).first() : null;
-    return { ...userOut(me), photoAt: me.photo_at || "", coverAt: cover ? cover.updated_at : "",
+    return { ...userOut(me), photoAt: me.photo_at || "", coverAt: cover ? cover.updated_at : "", mobile: me.mobile || "",
       access: sitesOf(me).map(c => ({ code: c, name: SITES[c] })) };
+  }
+  /* mobile number — the emergency alert can ring it (phone call) and shows it on the alert board */
+  if (path === "profile/mobile" && method === "POST") {
+    const m = String(b.mobile || "").trim().slice(0, 30);
+    if (m && !/^[+\d][\d\s\-()]{5,}$/.test(m)) throw err("Write the mobile number with digits only, e.g. 03 123 456");
+    await env.DB.prepare("UPDATE users SET mobile = ? WHERE email = ?").bind(m, me.email).run();
+    return { mobile: m };
   }
   if (path === "profile/photo" && method === "GET") {
     const email = String(url.searchParams.get("u") || me.email).toLowerCase();

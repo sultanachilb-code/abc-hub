@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ABC Hub · Outlook</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="/tools/tools.css">
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<!-- Outlook add-in feature — see docs/FEATURE-outlook-addin.md -->
+<style>
+body{font-size:14px;background:var(--paper)}
+.hd{background:linear-gradient(135deg,#2A0F45,#4A1F73);color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.hd img{width:30px;height:30px}
+.hd b{font-size:.95rem;flex:1}
+.hd select{height:30px;border-radius:8px;border:0;padding:0 6px;font:inherit;font-size:.8rem;max-width:150px}
+.pad{padding:12px}
+.mail{padding:10px 12px;margin-bottom:10px}
+.mail b{display:block;font-size:.88rem;line-height:1.3;overflow-wrap:anywhere}
+.mail small{display:block;color:var(--muted);font-size:.74rem;margin-top:3px}
+.tabs2{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:10px}
+.tabs2 button{padding:8px 2px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:.72rem;line-height:1.2;display:grid;gap:3px;justify-items:center;color:var(--muted)}
+.tabs2 button span{font-size:1.1rem}
+.tabs2 button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.f{display:grid;gap:9px}
+.f label{display:grid;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.f .inp,.f .sel,.f textarea{width:100%;font-size:.88rem;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text)}
+.f textarea{min-height:84px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.att{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:.84rem}
+.att input{width:18px;height:18px;accent-color:var(--brand)}
+.att span{flex:1;overflow-wrap:anywhere}
+.att small{color:var(--muted)}
+.go{width:100%;height:42px;margin-top:4px}
+.msg{padding:9px 11px;border-radius:10px;font-size:.84rem;margin-top:8px;line-height:1.45}
+.msg.ok{background:rgba(46,139,87,.12);color:var(--ok)} .msg.err{background:rgba(192,57,43,.12);color:var(--alert)}
+.chk{display:flex!important;grid-auto-flow:column;gap:8px;align-items:center;text-transform:none!important;letter-spacing:0!important;font-size:.84rem!important;color:var(--text)!important}
+.chk input{width:18px;height:18px;accent-color:var(--brand)}
+.foot{font-size:.72rem;color:var(--muted);text-align:center;padding:10px 12px 16px}
+.foot a{color:var(--brand-2)}
+.code{font-size:1.4rem!important;letter-spacing:.3em!important;text-align:center}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt=""><b>ABC Operations Hub</b><select id="site" class="hidden" aria-label="Flagship"></select></div>
+<div class="pad" id="app"><div class="empty">Loading…</div></div>
+<div class="foot" id="foot"></div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const DEMO = new URLSearchParams(location.search).has("demo");
+let CTX = null, ITEM = null, tab = "works", site = "";
+
+/* ---------- token: kept in Outlook's roaming settings (follows the person to every Outlook), else this browser ---------- */
+const store = {
+  get(){ try { const r = Office.context.roamingSettings; const v = r && r.get("abchub"); if (v) return v; } catch {} try { return localStorage.getItem("abchub.token") || ""; } catch { return ""; } },
+  set(v){ try { localStorage.setItem("abchub.token", v || ""); } catch {}
+    try { const r = Office.context.roamingSettings; if (r){ v ? r.set("abchub", v) : r.remove("abchub"); r.saveAsync(); } } catch {} }
+};
+async function api(path, body){
+  const t = store.get();
+  const r = await fetch("/api/" + path, { method: body === undefined ? "GET" : "POST", credentials: "omit",
+    headers: { "content-type": "application/json", ...(t ? { authorization: "Bearer " + t } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+  let j = null; try { j = await r.json(); } catch {}
+  if (r.status === 401 && path !== "addin/pair"){ store.set(""); connect(); throw new Error("Please connect again."); }
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || `Error ${r.status}`);
+  return j.data;
+}
+
+/* ---------- the open email ---------- */
+function readItem(){
+  if (DEMO) return Promise.resolve({ subject: "RE: Approval to start on site — Zara L1-014", from: "Rami (RDM) <rami@rdm.com.lb>", fromName: "Rami (RDM)", fromEmail: "rami@rdm.com.lb",
+    date: new Date().toISOString(), body: "Dear team,\nPlease find attached the approval to start on site for Zara L1-014. Works start Monday 06:00.\nRegards",
+    atts: [{ id: "1", name: "Approval to start - Zara.pdf", size: 182000, pdf: true }, { id: "2", name: "logo.png", size: 4000, pdf: false }] });
+  return new Promise(res => {
+    const it = Office.context.mailbox.item;
+    const from = it.from || it.sender || {};
+    const base = { subject: it.subject || "", fromName: from.displayName || "", fromEmail: from.emailAddress || "", from: `${from.displayName || ""} <${from.emailAddress || ""}>`,
+      date: (it.dateTimeCreated || new Date()).toISOString(), atts: (it.attachments || []).filter(a => !a.isInline).map(a => ({ id: a.id, name: a.name, size: a.size,
+        pdf: /pdf/i.test(a.contentType || "") || /\.pdf$/i.test(a.name || "") })) };
+    it.body.getAsync(Office.CoercionType.Text, r => res({ ...base, body: r.status === "succeeded" ? String(r.value || "").replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim() : "" }));
+  });
+}
+function attachmentBase64(id){
+  if (DEMO) return Promise.resolve("JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nPj4KZW5kb2JqCnRyYWlsZXIKPDwvUm9vdCAxIDAgUj4+CiUlRU9G");
+  return new Promise((res, rej) => Office.context.mailbox.item.getAttachmentContentAsync(id, r => {
+    if (r.status !== "succeeded") return rej(new Error("Outlook could not read the attachment."));
+    if (r.value.format !== Office.MailboxEnums.AttachmentContentFormat.Base64) return rej(new Error("This attachment type cannot be sent."));
+    res(r.value.content);
+  }));
+}
+
+/* ---------- connect (email + 6-digit code from the hub) ---------- */
+function connect(msg){
+  $("#site").classList.add("hidden");
+  $("#app").innerHTML = `<div class="card mail"><b>Connect Outlook to the hub</b><small>In the hub: your picture → Profile settings → <strong>Outlook</strong> → <strong>Connect Outlook</strong>. Type the 6-digit code here.</small></div>
+    <div class="f"><label>Your work email<input class="inp" id="cE" type="email" autocomplete="username" value="${esc(DEMO ? "" : (Office.context.mailbox && Office.context.mailbox.userProfile ? Office.context.mailbox.userProfile.emailAddress : ""))}"></label>
+      <label>Code from the hub<input class="inp code" id="cC" inputmode="numeric" maxlength="6" placeholder="––––––"></label>
+      <button class="btn go" id="cGo">Connect</button><div id="cMsg">${msg ? `<div class="msg err">${esc(msg)}</div>` : ""}</div></div>`;
+  $("#cGo").onclick = async () => {
+    try { const r = await api("addin/pair", { email: $("#cE").value, code: $("#cC").value }); store.set(r.token); start(); }
+    catch (e){ $("#cMsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+  };
+  $("#foot").innerHTML = "";
+}
+
+async function start(){
+  if (!store.get()) return connect();
+  try { CTX = await api("addin/context"); } catch (e){ if (!store.get()) return; return connect(e.message); }
+  ITEM = await readItem();
+  const S = Object.entries(CTX.sites);
+  site = site || CTX.user.site || (S[0] || [])[0] || "";
+  const sel = $("#site"); sel.innerHTML = S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join(""); sel.classList.toggle("hidden", S.length < 2);
+  sel.onchange = () => { site = sel.value; draw(); };
+  $("#foot").innerHTML = `Signed in as ${esc(CTX.user.name)} · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
+  $("#dis").onclick = async e => { e.preventDefault(); await api("addin/disconnect", {}).catch(() => {}); store.set(""); connect(); };
+  draw();
+}
+const TABS = [["works", "📄", "Works form"], ["handover", "🔁", "Handover"], ["feedback", "💬", "Feedback"], ["calendar", "📅", "Calendar"]];
+function draw(){
+  const can = CTX.can[site] || {};
+  const pdfs = ITEM.atts.filter(a => a.pdf);
+  const short = String(ITEM.body || "").slice(0, 400);
+  let f = "";
+  if (tab === "works") f = pdfs.length ? `<div class="f">${pdfs.map(a => `<label class="att"><input type="checkbox" data-att="${esc(a.id)}" checked><span>${esc(a.name)}</span><small>${Math.round(a.size / 1024)} KB</small></label>`).join("")}
+      <button class="btn go" id="go">Send to Tenant Works Forms</button><div class="muted" style="font-size:.76rem">They open in the hub for you to pick the form and the tenant, then sign.</div></div>`
+    : `<div class="card empty" style="padding:22px">This email has no PDF attachment.</div>`;
+  if (tab === "handover") f = `<div class="f"><label>Section<select class="sel" id="hS"><option value="today">Today</option><option value="tomorrow">Tomorrow</option><option value="ongoing">Scheduled works (ongoing)</option></select></label>
+      <label>Handover line<textarea id="hT" maxlength="500">${esc(ITEM.fromName ? ITEM.fromName.split("<")[0].trim() + ": " : "")}${esc(ITEM.subject)}</textarea></label>
+      <label class="chk"><input type="checkbox" id="hC"> ATT CCTV</label>
+      <button class="btn go" id="go" ${can.handover ? "" : "disabled"}>Add to ${esc(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} handover</button></div>`;
+  if (tab === "feedback"){
+    const cats = Object.keys(CTX.feedback.categories);
+    f = `<div class="f"><label>Tenant<input class="inp" id="fT" list="fTl" placeholder="Start typing…"><datalist id="fTl"></datalist></label>
+      <div class="two"><label>Date<input class="inp" type="date" id="fD" value="${CTX.today}"></label><label>Time<input class="inp" type="time" id="fH" value="${new Date().toTimeString().slice(0, 5)}"></label></div>
+      <label>Type<select class="sel" id="fC">${cats.map(c => `<option ${c === "Operations Violation" ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+      <label>Description<select class="sel" id="fDe"></select></label>
+      <label>Action<select class="sel" id="fA">${CTX.feedback.actions.map(a => `<option ${a === "None" ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label>
+      <label>Details<textarea id="fX" maxlength="500">${esc(ITEM.subject)}${short ? "\n" + esc(short) : ""}</textarea></label>
+      <button class="btn go" id="go" ${can.feedback ? "" : "disabled"}>Log tenant feedback</button></div>`;
+  }
+  if (tab === "calendar") f = `<div class="f"><label>Add as<select class="sel" id="kK"><option value="marketing">Marketing event</option><option value="ops">Ops activity</option><option value="expiry">Expiry date (document)</option></select></label>
+      <label>Title<input class="inp" id="kT" maxlength="160" value="${esc(ITEM.subject.replace(/^(re|fw|fwd)\s*:\s*/i, ""))}"></label>
+      <div class="two"><label><span id="kDl">From</span><input class="inp" type="date" id="kS" value="${CTX.today}"></label><label id="kEl">To<input class="inp" type="date" id="kE"></label></div>
+      <label id="kDocL" class="hidden">Document type<select class="sel" id="kDoc">${CTX.docTypes.map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
+      <label>Notes<textarea id="kN" maxlength="2000">From: ${esc(ITEM.from)}\n${esc(short)}</textarea></label>
+      <button class="btn go" id="go">Add to the Operations Calendar</button></div>`;
+  $("#app").innerHTML = `<div class="card mail"><b>${esc(ITEM.subject || "(no subject)")}</b><small>${esc(ITEM.fromName || ITEM.fromEmail)} · ${esc(new Date(ITEM.date).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}${ITEM.atts.length ? ` · ${ITEM.atts.length} attachment${ITEM.atts.length === 1 ? "" : "s"}` : ""}</small></div>
+    <div class="tabs2">${TABS.map(([k, i, l]) => `<button data-t="${k}" class="${k === tab ? "on" : ""}"><span>${i}</span>${l}</button>`).join("")}</div>${f}<div id="out"></div>`;
+  $("#app").querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; draw(); });
+  if (tab === "feedback"){
+    const fill = () => { const L = CTX.feedback.categories[$("#fC").value] || []; $("#fDe").innerHTML = (L.length ? "" : `<option value="">—</option>`) + L.map(x => `<option>${esc(x)}</option>`).join(""); };
+    $("#fC").onchange = fill; fill();
+    api(`ops/feedback/tenants?site=${site}`).then(r => { $("#fTl").innerHTML = r.tenants.map(t => `<option value="${esc(t)}">`).join(""); }).catch(() => {});
+  }
+  if (tab === "calendar") $("#kK").onchange = e => { const x = e.target.value === "expiry"; $("#kEl").classList.toggle("hidden", x); $("#kDocL").classList.toggle("hidden", !x); $("#kDl").textContent = x ? "Expiry date" : "From"; };
+  const go = $("#go"); if (go) go.onclick = () => send(go);
+}
+async function send(btn){
+  const out = t => $("#out").innerHTML = t;
+  btn.disabled = true; const label = btn.textContent; btn.textContent = "Sending…";
+  try {
+    if (tab === "works"){
+      const ids = [...document.querySelectorAll("[data-att]:checked")].map(x => x.dataset.att);
+      if (!ids.length) throw new Error("Tick at least one PDF");
+      let n = 0;
+      for (const id of ids){ const a = ITEM.atts.find(x => x.id === id); const data = await attachmentBase64(id);
+        await api("ops/works/add", { site, name: a.name, data: "data:application/pdf;base64," + data }); n++; }
+      out(`<div class="msg ok">✓ ${n} form${n === 1 ? "" : "s"} sent to Tenant Works Forms. <a href="/tools/works?site=${site}" target="_blank">Open</a></div>`);
+    }
+    if (tab === "handover"){
+      const r = await api("ops/handover/append", { site, section: $("#hS").value, text: $("#hT").value, cctv: $("#hC").checked });
+      out(`<div class="msg ok">✓ Added to the ${esc(r.day)} handover. <a href="/tools/handover?site=${site}" target="_blank">Open</a></div>`);
+    }
+    if (tab === "feedback"){
+      const det = $("#fX").value;
+      await api("ops/feedback/save", { site, entry: { tenant: $("#fT").value, day: $("#fD").value, time: $("#fH").value, category: $("#fC").value, description: $("#fDe").value, action: $("#fA").value, actionDesc: det } });
+      out(`<div class="msg ok">✓ Tenant feedback logged.</div>`);
+    }
+    if (tab === "calendar"){
+      const kind = $("#kK").value;
+      const r = await api("ops/cal/save", { site, kind, title: $("#kT").value, start: $("#kS").value, end: kind === "expiry" ? "" : $("#kE").value, notes: $("#kN").value,
+        category: kind === "expiry" ? $("#kDoc").value : "", extra: kind === "expiry" ? { provider: ITEM.fromName || "" } : { status: "Planned" } });
+      out(`<div class="msg ok">✓ Added to the Operations Calendar. <a href="/tools/calendar?site=${site}&id=${r.item.id}" target="_blank">Open</a></div>`);
+    }
+  } catch (e){ out(`<div class="msg err">${esc(e.message)}</div>`); }
+  btn.disabled = false; btn.textContent = label;
+}
+if (DEMO || typeof Office === "undefined") { window.Office = window.Office || {}; start(); }
+else Office.onReady(() => { if (!Office.context || !Office.context.mailbox){ $("#app").innerHTML = `<div class="card empty">Open this panel from an email in Outlook (“ABC Hub” button).</div>`; return; } start(); if (Office.context.mailbox && Office.context.mailbox.addHandlerAsync) Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => { if (CTX) readItem().then(i => { ITEM = i; draw(); }); }); });
+</script>
+</body>
+</html>

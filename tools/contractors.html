@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contractors · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Contractors feature — see docs/FEATURE-contractors.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0 12px}
+.bar .sp{flex:1}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{padding:12px 14px;cursor:pointer;border:1px solid var(--line)}
+.kpi.on{border-color:var(--brand-2);box-shadow:inset 0 0 0 1px var(--brand-2)}
+.kpi strong{display:block;font-size:1.45rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.76rem;color:var(--muted)}
+.list{display:grid;gap:10px}
+.v{display:grid;grid-template-columns:86px 1fr auto;gap:14px;align-items:center;padding:13px 16px;border-left:4px solid var(--line)}
+.v.expected{border-left-color:var(--brand-2)} .v.onsite{border-left-color:var(--ok)} .v.left{opacity:.62} .v.over{border-left-color:var(--alert)}
+.v .tm{font-weight:800;font-variant-numeric:tabular-nums;font-size:1rem;line-height:1.2}
+.v .tm small{display:block;font-size:.72rem;color:var(--muted);font-weight:700}
+.v h3{font-size:.96rem;font-weight:800;line-height:1.3;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.v .meta{font-size:.79rem;color:var(--muted);margin-top:3px;line-height:1.45}
+.v .st{font-size:.76rem;margin-top:5px;font-weight:700}
+.v .acts{display:flex;gap:6px;align-items:center}
+.btn.in{background:var(--ok)} .btn.out{background:var(--ink)}
+table.h{width:100%;border-collapse:collapse;font-size:.85rem}
+.h th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 8px;border-bottom:1px solid var(--line)}
+.h td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.h tr.row{cursor:pointer} .h tr.row:hover{background:var(--paper)}
+.h td small{display:block;color:var(--muted);font-size:.74rem}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+.form .inp,.form .sel{width:100%}
+.stepper{display:flex;align-items:center;gap:10px;justify-content:center;margin:10px 0}
+.stepper button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);font-size:1.4rem;font-weight:800}
+.stepper input{width:90px;text-align:center;font-size:1.6rem;font-weight:800;height:52px}
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))} .kpis .kpi:nth-child(n+4){display:none}
+  .v{grid-template-columns:62px 1fr;gap:10px;padding:12px}
+  .v .acts{grid-column:1/-1;justify-content:flex-end}
+  .form{grid-template-columns:1fr}
+  .h .hm{display:none}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🦺 Contractors <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap">
+  <div class="tabs" id="tabs"><button data-t="day" class="on">On site</button><button data-t="reg">Register</button><button data-t="hist">History</button></div>
+  <div id="app"><div class="empty">Loading…</div></div>
+</div>
+<input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+
+<script src="common.js"></script>
+<script src="portal-requests.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", tab = UP.get("tab") || "day", day = "", DAY = null, REG = null, filt = "", q = "", hist = { from: "", to: "", q: "" };
+const hm = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" }) : "";
+const INS = { ok: ["ok", "Insured"], soon: ["warn", "Insurance expiring"], expired: ["alert", "Insurance expired"], none: ["", "No insurance on file"], unknown: ["", "Not in register"] };
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site; $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; REG = null; show(); });
+    $("#tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b){ tab = b.dataset.t; show(); } };
+    show();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function show(){
+  history.replaceState(null, "", `?site=${site}&tab=${tab}`);
+  $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === tab));
+  ({ day: loadDay, reg: loadReg, hist: loadHist })[tab]();
+}
+
+/* ---------- on site ---------- */
+async function loadDay(){
+  try { DAY = await api(`ops/con/day?site=${site}${day ? `&day=${day}` : ""}`); day = DAY.day; drawDay(); }
+  catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function drawDay(){
+  const C = DAY.counts, isToday = DAY.day === DAY.today;
+  const s = q.toLowerCase();
+  const L = DAY.list.filter(v => (!filt || (filt === "overdue" ? v.overdue : v.state === filt)) && (!s || `${v.company} ${v.tenant} ${v.work} ${v.req} ${v.desc}`.toLowerCase().includes(s)));
+  const k = (key, n, label, color) => `<div class="card kpi ${filt === key ? "on" : ""}" data-f="${key}"><strong style="${color ? "color:" + color : ""}">${n}</strong><span>${label}</span></div>`;
+  $("#app").innerHTML = `<div class="bar"><button class="btn ghost small" id="dPrev">‹</button><input class="inp" type="date" id="dDay" value="${DAY.day}"><button class="btn ghost small" id="dNext">›</button>
+      ${isToday ? "" : `<button class="btn ghost small" id="dToday">Today</button>`}<input class="inp" id="dQ" placeholder="Search contractor, tenant, REQ…" value="${esc(q)}" style="flex:1;min-width:180px">
+      ${DAY.can.edit ? `<button class="btn ghost" id="bImp" title="Tenant Connect Handover Report (.xlsx)">Import requests</button><button class="btn" id="bAdd">+ Add</button>` : ""}</div>
+    <div class="kpis">${k("", DAY.list.length, "Expected today")}${k("onsite", C.onsite, `On site · ${C.workers} workers`, "var(--ok)")}${k("expected", C.expected, "Not arrived yet", "var(--brand-2)")}${k("left", C.left, "Left")}${k("overdue", C.overdue, "Over permit time", C.overdue ? "var(--alert)" : "")}</div>
+    <div class="list">${L.length ? L.map(vHtml).join("") : `<div class="card empty">${DAY.list.length ? "Nothing matches." : `No contractor expected on ${esc(D.long(DAY.day))}.${DAY.can.edit ? "<br>Import the Tenant Connect Handover Report, or add one by hand." : ""}`}</div>`}</div>
+    <p class="muted" style="font-size:.78rem;margin-top:12px;line-height:1.5">Approved Tenant Connect requests come in automatically when the shift handover imports the Handover Report. Anyone still checked in 30 minutes after the permit ends raises an alert.</p>`;
+  $("#dDay").onchange = e => { day = e.target.value; loadDay(); };
+  $("#dPrev").onclick = () => { day = D.add(DAY.day, -1); loadDay(); };
+  $("#dNext").onclick = () => { day = D.add(DAY.day, 1); loadDay(); };
+  const t = $("#dToday"); if (t) t.onclick = () => { day = ""; loadDay(); };
+  $("#dQ").oninput = e => { q = e.target.value; const p = e.target.selectionStart; drawDay(); const n = $("#dQ"); n.focus(); n.setSelectionRange(p, p); };
+  $("#app").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { filt = filt === x.dataset.f ? "" : x.dataset.f; drawDay(); });
+  const a = $("#bAdd"); if (a) a.onclick = () => visitBox({ from: DAY.day });
+  const im = $("#bImp"); if (im) im.onclick = () => $("#impFile").click();
+  $("#app").querySelectorAll("[data-act]").forEach(b => b.onclick = () => act(Number(b.dataset.id), b.dataset.act));
+  $("#app").querySelectorAll("[data-ev]").forEach(b => b.onclick = () => visitBox(DAY.list.find(v => v.id === Number(b.dataset.ev))));
+}
+function vHtml(v){
+  const isToday = DAY.day === DAY.today, I = INS[v.ins] || INS.unknown;
+  const st = v.state === "onsite" ? `<span style="color:var(--ok)">● On site since ${hm(v.inAt)} · ${v.workers} worker${v.workers === 1 ? "" : "s"} · ${esc(v.inName)}</span>`
+    : v.state === "left" ? `✓ ${hm(v.inAt)} → ${hm(v.outAt)} · ${v.workers} worker${v.workers === 1 ? "" : "s"} · out by ${esc(v.outName)}`
+    : v.late ? `<span style="color:var(--warn)">Not arrived — expected ${esc(v.timeFrom)}</span>` : `Expected${v.timeFrom ? " " + esc(v.timeFrom) : ""}`;
+  const can = DAY.can.check && isToday;
+  return `<div class="card v ${v.state} ${v.overdue ? "over" : ""}">
+    <div class="tm">${esc(v.timeFrom || "—")}<small>${v.timeTo ? "to " + esc(v.timeTo) : ""}${v.multi ? `<br>${esc(D.fmt(v.from))} → ${esc(D.fmt(v.to))}` : ""}</small></div>
+    <div><h3>${esc(v.company)}${v.blocked ? ` <span class="pill alert">Blocked</span>` : ""}${v.overdue ? ` <span class="pill alert">Over time</span>` : ""}${v.ins !== "ok" && v.ins !== "unknown" ? ` <span class="pill ${I[0]}">${I[1]}</span>` : ""}</h3>
+      <div class="meta">for <b>${esc(v.tenant || "—")}</b>${v.work ? " · " + esc(v.work) : ""}${v.req ? " · " + esc(v.req) : " · added by hand"}${v.desc ? `<br>${esc(v.desc)}` : ""}</div>
+      <div class="st">${st}</div></div>
+    <div class="acts">${can ? (v.state === "expected" ? `<button class="btn in" data-act="in" data-id="${v.id}">Check in</button>`
+      : v.state === "onsite" ? `<button class="btn out" data-act="out" data-id="${v.id}">Check out</button>` : `<button class="btn ghost small" data-act="undo" data-id="${v.id}">Undo</button>`) : ""}
+      ${DAY.can.edit ? `<button class="btn ghost small" data-ev="${v.id}" aria-label="Edit">✎</button>` : ""}</div></div>`;
+}
+async function act(id, action){
+  const v = DAY.list.find(x => x.id === id);
+  let workers = v.workers, note = "";
+  if (action === "in"){
+    const r = await workersBox(v); if (!r) return; workers = r.workers; note = r.note;
+    if (v.blocked && !await confirmBox("This contractor is blocked", `${esc(v.company)} is marked <b>Blocked</b> in the register. Check them in anyway?`, "Check in")) return;
+  }
+  if (action === "undo" && !await confirmBox("Undo?", v.state === "left" ? "Put them back on site (cancel the check-out)." : "Cancel the check-in.", "Undo")) return;
+  try { const r = await api("ops/con/check", { site, id, day: DAY.day, action, workers, note }); Object.assign(v, r.visit); recount(); drawDay();
+    toast(action === "in" ? `${v.company} checked in` : action === "out" ? `${v.company} checked out` : "Undone"); }
+  catch (e){ toast(e.message, true); }
+}
+function recount(){ const L = DAY.list, n = s => L.filter(v => v.state === s).length;
+  DAY.counts = { expected: n("expected"), onsite: n("onsite"), left: n("left"), overdue: L.filter(v => v.overdue).length, workers: L.filter(v => v.state === "onsite").reduce((a, v) => a + (v.workers || 0), 0) }; }
+function workersBox(v){
+  return new Promise(res => {
+    let d = $("#dW"); if (!d){ d = document.createElement("dialog"); d.id = "dW"; document.body.append(d); }
+    d.innerHTML = `<div class="dlg-h"><b>Check in · ${esc(v.company)}</b><small class="muted">${esc(v.tenant)}${v.req ? " · " + esc(v.req) : ""}</small></div>
+      <div class="dlg-b"><label class="lbl" style="text-align:center">Number of workers</label>
+        <div class="stepper"><button data-s="-1">−</button><input class="inp" id="wN" type="number" min="0" max="500" value="${v.workers || 1}"><button data-s="1">+</button></div>
+        <label class="lbl">Note (optional)</label><input class="inp" id="wT" style="width:100%" maxlength="200" placeholder="e.g. IDs collected at the loading bay"></div>
+      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn in" data-v="1">Check in</button></div>`;
+    d.onclick = e => { const s = e.target.closest("[data-s]"); if (s){ const n = $("#wN"); n.value = Math.max(0, (Number(n.value) || 0) + Number(s.dataset.s)); return; }
+      const b = e.target.closest("[data-v]"); if (b || e.target === d){ const ok = b && b.dataset.v === "1"; const r = ok ? { workers: Number($("#wN").value) || 0, note: $("#wT").value } : null; d.close(); res(r); } };
+    d.showModal();
+  });
+}
+function visitBox(v){
+  v = Object.assign({ company: "", tenant: "", work: "", desc: "", from: DAY.day, to: "", timeFrom: "", timeTo: "" }, v);
+  let d = $("#dV"); if (!d){ d = document.createElement("dialog"); d.id = "dV"; document.body.append(d); }
+  d.innerHTML = `<div class="dlg-h"><b>${v.id ? "Edit visit" : "Add a contractor visit"}</b>${v.req ? `<small class="muted">${esc(v.req)} · from Tenant Connect</small>` : ""}</div>
+    <div class="dlg-b"><div class="form">
+      <div class="full"><label class="lbl">Contractor company</label><input class="inp" id="vC" list="regList" maxlength="160" value="${esc(v.company)}"><datalist id="regList"></datalist></div>
+      <div><label class="lbl">For tenant</label><input class="inp" id="vT" maxlength="160" value="${esc(v.tenant)}" placeholder="or Mall / ABC"></div>
+      <div><label class="lbl">Work</label><input class="inp" id="vW" maxlength="120" value="${esc(v.work)}" placeholder="e.g. Electrical"></div>
+      <div><label class="lbl">From</label><input class="inp" type="date" id="vF" value="${esc(v.from)}"></div>
+      <div><label class="lbl">To</label><input class="inp" type="date" id="vTo" value="${esc(v.to && v.to !== v.from ? v.to : "")}"></div>
+      <div><label class="lbl">Start</label><input class="inp" type="time" id="vS" value="${esc(v.timeFrom)}"></div>
+      <div><label class="lbl">End</label><input class="inp" type="time" id="vE" value="${esc(v.timeTo)}"></div>
+      <div class="full"><label class="lbl">Description</label><input class="inp" id="vD" maxlength="500" value="${esc(v.desc)}"></div></div>
+      <div id="vErr" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
+    <div class="dlg-f">${v.id ? `<button class="btn ghost danger" id="vDel" style="margin-right:auto">Remove</button>` : ""}<button class="btn ghost" data-x>Cancel</button><button class="btn" id="vOk">Save</button></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  (REG ? Promise.resolve(REG) : api(`ops/con/register?site=${site}`).then(r => REG = r)).then(r => { $("#regList").innerHTML = r.list.map(c => `<option value="${esc(c.company)}">`).join(""); }).catch(() => {});
+  d.querySelector("#vOk").onclick = async () => {
+    try { await api("ops/con/visit", { site, id: v.id, company: $("#vC").value, tenant: $("#vT").value, work: $("#vW").value, desc: $("#vD").value, from: $("#vF").value, to: $("#vTo").value, timeFrom: $("#vS").value, timeTo: $("#vE").value });
+      d.close(); toast("Saved"); REG = null; loadDay(); } catch (e){ $("#vErr").textContent = e.message; }
+  };
+  const del = d.querySelector("#vDel"); if (del) del.onclick = async () => { d.close(); if (!await confirmBox("Remove this visit?", esc(v.company), "Remove")) return;
+    try { await api("ops/con/visit", { site, id: v.id, remove: true }); toast("Removed"); loadDay(); } catch (e){ toast(e.message, true); } };
+  d.showModal();
+}
+$("#impFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    await xlsxReady();
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: true });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
+    const list = PortalRequests.readRequests(rows, ctx);
+    if (!list.length) throw new Error("No requests found in this sheet.");
+    const r = await api("ops/con/import", { site, rows: list });
+    toast(`${r.added} new · ${r.updated} updated${r.skipped ? ` · ${r.skipped} skipped (not approved or finished)` : ""}`);
+    REG = null; loadDay();
+  } catch (er){ toast(er.message, true); }
+});
+
+/* ---------- register ---------- */
+async function loadReg(){
+  try { REG = await api(`ops/con/register?site=${site}`); drawReg(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function drawReg(){
+  const s = q.toLowerCase(), L = REG.list.filter(c => !s || `${c.company} ${c.trade} ${c.contact} ${c.mobile}`.toLowerCase().includes(s));
+  const bad = REG.list.filter(c => c.ins === "expired" || c.ins === "soon").length;
+  $("#app").innerHTML = `<div class="bar"><input class="inp" id="rQ" placeholder="Search company, trade, contact…" value="${esc(q)}" style="flex:1;min-width:180px">
+      ${REG.can.edit ? `<button class="btn" id="rAdd">+ Contractor</button>` : ""}</div>
+    ${bad ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-color:var(--warn)"><b>${bad}</b> contractor${bad === 1 ? "" : "s"} with insurance expired or expiring within 30 days.</div>` : ""}
+    <div class="card" style="overflow-x:auto">${L.length ? `<table class="h"><thead><tr><th>Company</th><th>Trade</th><th class="hm">Contact</th><th>Insurance</th><th class="hm">Visits</th></tr></thead><tbody>
+      ${L.map(c => { const I = INS[c.ins]; return `<tr class="row" data-c="${c.id}"><td><b>${esc(c.company)}</b>${c.status === "Blocked" ? ` <span class="pill alert">Blocked</span>` : ""}<small>${esc(c.notes).slice(0, 80)}</small></td>
+        <td>${esc(c.trade)}</td><td class="hm">${esc(c.contact)}${c.mobile ? `<small><a href="tel:${esc(c.mobile)}">${esc(c.mobile)}</a></small>` : ""}</td>
+        <td>${c.insExpiry ? `<span class="pill ${I[0]}">${esc(D.fmt(c.insExpiry, { year: "numeric" }))}</span>` : `<span class="muted">—</span>`}</td>
+        <td class="hm">${c.visits}${c.last ? `<small>last ${esc(D.fmt(c.last))}</small>` : ""}</td></tr>`; }).join("")}</tbody></table>` : `<div class="empty">${REG.list.length ? "Nothing matches." : "No contractor yet. They are added automatically from the Tenant Connect import, or by hand."}</div>`}</div>`;
+  $("#rQ").oninput = e => { q = e.target.value; const p = e.target.selectionStart; drawReg(); const n = $("#rQ"); n.focus(); n.setSelectionRange(p, p); };
+  const a = $("#rAdd"); if (a) a.onclick = () => conBox({});
+  $("#app").querySelectorAll("[data-c]").forEach(r => r.onclick = () => conBox(REG.list.find(c => c.id === Number(r.dataset.c))));
+}
+function conBox(c){
+  c = Object.assign({ company: "", trade: "", contact: "", mobile: "", email: "", insExpiry: "", insRef: "", notes: "", status: "Active" }, c);
+  const ro = REG.can.edit ? "" : "disabled";
+  let d = $("#dC"); if (!d){ d = document.createElement("dialog"); d.id = "dC"; document.body.append(d); }
+  d.innerHTML = `<div class="dlg-h"><b>${c.id ? esc(c.company) : "Add a contractor"}</b>${c.updatedName ? `<small class="muted">Last change by ${esc(c.updatedName)}</small>` : ""}</div>
+    <div class="dlg-b"><div class="form">
+      <div class="full"><label class="lbl">Company</label><input class="inp" id="cC" maxlength="160" value="${esc(c.company)}" ${ro}></div>
+      <div><label class="lbl">Trade</label><select class="sel" id="cT" ${ro}><option value=""></option>${REG.trades.map(t => `<option ${t === c.trade ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+      <div><label class="lbl">Status</label><select class="sel" id="cS" ${ro}><option ${c.status === "Active" ? "selected" : ""}>Active</option><option ${c.status === "Blocked" ? "selected" : ""}>Blocked</option></select></div>
+      <div><label class="lbl">Contact person</label><input class="inp" id="cP" maxlength="120" value="${esc(c.contact)}" ${ro}></div>
+      <div><label class="lbl">Mobile</label><input class="inp" id="cM" maxlength="40" inputmode="tel" value="${esc(c.mobile)}" ${ro}></div>
+      <div class="full"><label class="lbl">Email</label><input class="inp" id="cE" maxlength="160" type="email" value="${esc(c.email)}" ${ro}></div>
+      <div><label class="lbl">Insurance expiry</label><input class="inp" type="date" id="cI" value="${esc(c.insExpiry)}" ${ro}></div>
+      <div><label class="lbl">Policy no.</label><input class="inp" id="cR" maxlength="120" value="${esc(c.insRef)}" ${ro}></div>
+      <div class="full"><label class="lbl">Notes</label><textarea id="cN" rows="2" maxlength="1000" ${ro}>${esc(c.notes)}</textarea></div></div>
+      <p class="muted" style="font-size:.78rem;margin-top:8px">Reminders go out 30 and 7 days before the insurance expires, and on the day.</p>
+      <div id="cErr" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
+    <div class="dlg-f">${c.id && REG.can.edit ? `<button class="btn ghost danger" id="cDel" style="margin-right:auto">Delete</button>` : ""}${c.id ? `<button class="btn ghost" id="cHist">Visits</button>` : ""}<button class="btn ghost" data-x>Close</button>${REG.can.edit ? `<button class="btn" id="cOk">Save</button>` : ""}</div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  const ok = d.querySelector("#cOk"); if (ok) ok.onclick = async () => {
+    try { await api("ops/con/save", { site, id: c.id, company: $("#cC").value, trade: $("#cT").value, status: $("#cS").value, contact: $("#cP").value, mobile: $("#cM").value, email: $("#cE").value, insExpiry: $("#cI").value, insRef: $("#cR").value, notes: $("#cN").value });
+      d.close(); toast("Saved"); loadReg(); } catch (e){ $("#cErr").textContent = e.message; }
+  };
+  const del = d.querySelector("#cDel"); if (del) del.onclick = async () => { d.close(); if (!await confirmBox("Delete this contractor?", `${esc(c.company)} — past visits stay in the history.`, "Delete")) return;
+    try { await api("ops/con/delete", { site, id: c.id }); toast("Deleted"); loadReg(); } catch (e){ toast(e.message, true); } };
+  const h = d.querySelector("#cHist"); if (h) h.onclick = () => { d.close(); hist = { from: D.add(new Date().toISOString().slice(0, 10), -365), to: "", q: "", contractor: c.id, name: c.company }; tab = "hist"; show(); };
+  d.showModal();
+}
+
+/* ---------- history ---------- */
+async function loadHist(){
+  try {
+    const r = await api(`ops/con/history?site=${site}&from=${hist.from || ""}&to=${hist.to || ""}&q=${encodeURIComponent(hist.q || "")}${hist.contractor ? `&contractor=${hist.contractor}` : ""}`);
+    hist.from = r.from; hist.to = r.to;
+    $("#app").innerHTML = `<div class="bar"><label class="muted" style="font-size:.8rem">From</label><input class="inp" type="date" id="hF" value="${r.from}"><label class="muted" style="font-size:.8rem">to</label><input class="inp" type="date" id="hT" value="${r.to}">
+        <input class="inp" id="hQ" placeholder="Search…" value="${esc(hist.q || "")}" style="flex:1;min-width:160px"><button class="btn ghost" id="hGo">Show</button>
+        ${hist.contractor ? `<span class="pill brand">${esc(hist.name)} <a href="#" id="hX" style="color:inherit">×</a></span>` : ""}</div>
+      <div class="card" style="overflow-x:auto">${r.rows.length ? `<table class="h"><thead><tr><th>Day</th><th>Contractor</th><th class="hm">Tenant · work</th><th>In → out</th><th>Workers</th></tr></thead><tbody>
+        ${r.rows.map(x => `<tr><td>${esc(D.fmt(x.day, { weekday: "short" }))}</td><td><b>${esc(x.company)}</b><small>${esc(x.req)}</small></td><td class="hm">${esc(x.tenant)}<small>${esc(x.work)}</small></td>
+          <td>${hm(x.inAt)} → ${x.outAt ? hm(x.outAt) : `<span class="pill warn">not out</span>`}<small>${esc(x.inName)}${x.outName && x.outName !== x.inName ? " / " + esc(x.outName) : ""}</small></td><td>${x.workers}</td></tr>`).join("")}</tbody></table>`
+        : `<div class="empty">No check-in in this period.</div>`}</div>`;
+    $("#hGo").onclick = () => { hist.from = $("#hF").value; hist.to = $("#hT").value; hist.q = $("#hQ").value; loadHist(); };
+    const x = $("#hX"); if (x) x.onclick = e => { e.preventDefault(); hist.contractor = 0; loadHist(); };
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+boot();
+</script>
+</body>
+</html>

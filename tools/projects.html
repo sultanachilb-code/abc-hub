@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Projects feature (Operations Future Projects + Project Tracker) — see docs/FEATURE-projects.md -->
+<style>
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0 12px}
+.bar .sp{flex:1}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{padding:12px 14px}
+.kpi strong{display:block;font-size:1.4rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.76rem;color:var(--muted)}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.colm{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;min-height:160px}
+.colm.drop{border-color:var(--brand-2);background:rgba(123,75,176,.06)}
+.colm h3{font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 6px 10px;display:flex;gap:8px}
+.colm h3 b{margin-left:auto;font-variant-numeric:tabular-nums}
+.pc{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.pc:hover{border-color:var(--brand-2)}
+.pc b{display:block;font-size:.9rem;line-height:1.3}
+.pc small{display:block;font-size:.75rem;color:var(--muted);margin-top:4px;line-height:1.4}
+.pc .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.prio-High{color:var(--alert)!important}
+.trk{display:grid;gap:10px}
+.tp{display:grid;grid-template-columns:6px 1fr 190px 140px;gap:14px;align-items:center;padding:13px 16px 13px 0;cursor:pointer;overflow:hidden}
+.tp .rag{align-self:stretch;border-radius:0 4px 4px 0;background:var(--line)}
+.tp .rag.green{background:var(--ok)} .tp .rag.amber{background:var(--warn)} .tp .rag.red{background:var(--alert)}
+.tp h3{font-size:.96rem;font-weight:800;line-height:1.3;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tp .meta{font-size:.78rem;color:var(--muted);margin-top:3px;line-height:1.45}
+.pg{height:8px;border-radius:8px;background:var(--line);overflow:hidden}
+.pg i{display:block;height:100%;background:var(--brand-2)}
+.tp .pgw small{font-size:.74rem;color:var(--muted);display:flex;justify-content:space-between;margin-top:5px}
+.tp .money{text-align:right;font-size:.82rem;font-variant-numeric:tabular-nums}
+.tp .money b{display:block;font-size:.95rem}
+.tp .money small{color:var(--muted)}
+.tl{margin-bottom:14px;padding:14px 16px;overflow-x:auto}
+.tl .row{display:grid;grid-template-columns:200px 1fr;gap:10px;align-items:center;height:28px}
+.tl .row .nm{font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl .track{position:relative;height:16px;min-width:540px}
+.tl .seg{position:absolute;top:2px;height:12px;border-radius:6px;background:var(--brand-2);opacity:.85}
+.tl .seg.red{background:var(--alert)} .tl .seg.amber{background:var(--warn)} .tl .seg.done{background:var(--ok)}
+.tl .now{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--gold)}
+.tl .months{display:grid;grid-template-columns:200px 1fr;gap:10px;font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.tl .months div:last-child{display:flex;min-width:540px}
+.tl .months span{flex:1;border-left:1px solid var(--line);padding-left:4px}
+dialog.wide{width:min(720px,calc(100% - 24px))}
+.form{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1} .form .two{grid-column:span 2}
+.form .inp,.form .sel{width:100%}
+.ms{display:grid;gap:6px}
+.ms .r{display:grid;grid-template-columns:22px 1fr 140px 28px;gap:6px;align-items:center}
+.ms input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+.ms .x{color:var(--alert);font-weight:800;font-size:1.1rem}
+.log{display:grid;gap:8px;max-height:220px;overflow:auto}
+.log div{font-size:.82rem;line-height:1.45;padding:8px 10px;border-radius:10px;background:var(--paper)}
+.log small{display:block;color:var(--muted);font-size:.72rem}
+.det .ms .r{grid-template-columns:22px 1fr 110px}
+@media (max-width:900px){ .board{grid-template-columns:1fr} .colm{min-height:0} .tp{grid-template-columns:6px 1fr;padding-right:14px} .tp .pgw,.tp .money{grid-column:2} .tp .money{text-align:left} }
+@media (max-width:640px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .form{grid-template-columns:1fr} .form .two{grid-column:auto} .ms .r{grid-template-columns:22px 1fr 28px} .ms .r .du{grid-column:2} .tl .row,.tl .months{grid-template-columns:110px 1fr} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>🎯 Projects <small id="sub"></small></h1>
+  <span id="sitePick"></span>
+</div>
+<div class="wrap">
+  <div class="tabs" id="tabs"><button data-v="future">Operations Future Projects</button><button data-v="tracker">Project Tracker</button></div>
+  <div id="app"><div class="empty">Loading…</div></div>
+</div>
+
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", view = UP.get("view") === "tracker" ? "tracker" : "future", P = null, showDone = false, q = "";
+const money = (v, c) => v == null ? "—" : (c === "LBP" ? "LBP " : "$") + Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    site = ctx.site; $("#sub").textContent = ctx.siteName;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; load(); });
+    $("#tabs").onclick = e => { const b = e.target.closest("[data-v]"); if (b){ view = b.dataset.v; render(); } };
+    await load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){ P = await api(`ops/proj/list?site=${site}`); render(); const id = Number(UP.get("id")); if (id){ UP.delete("id"); const p = P.list.find(x => x.id === id); if (p) detail(p); } }
+function render(){
+  history.replaceState(null, "", `?site=${site}&view=${view}`);
+  $("#tabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === view));
+  const s = q.toLowerCase(), match = p => !s || `${p.title} ${p.owner} ${p.contractor} ${p.category} ${p.location}`.toLowerCase().includes(s);
+  const bar = `<div class="bar"><input class="inp" id="q" placeholder="Search projects…" value="${esc(q)}" style="flex:1;min-width:180px">
+    ${view === "tracker" ? `<label class="muted" style="font-size:.84rem;display:flex;gap:6px;align-items:center"><input type="checkbox" id="sd" ${showDone ? "checked" : ""}> Show completed</label>` : ""}
+    ${P.can.edit ? `<button class="btn" id="add">+ ${view === "future" ? "Project idea" : "Project"}</button>` : ""}</div>`;
+  $("#app").innerHTML = bar + (view === "future" ? futureHtml(P.list.filter(p => p.future && match(p))) : trackerHtml(P.list.filter(p => !p.future && p.stage !== "Cancelled" && (showDone || p.stage !== "Completed") && match(p))));
+  $("#q").oninput = e => { q = e.target.value; const pos = e.target.selectionStart; render(); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); };
+  const sd = $("#sd"); if (sd) sd.onchange = () => { showDone = sd.checked; render(); };
+  const a = $("#add"); if (a) a.onclick = () => editor({ stage: view === "future" ? "Idea" : "In progress" });
+  $("#app").querySelectorAll("[data-p]").forEach(x => x.onclick = () => detail(P.list.find(p => p.id === Number(x.dataset.p))));
+  if (view === "future" && P.can.edit) dnd();
+}
+function futureHtml(L){
+  const total = L.reduce((a, p) => a + (p.budget || 0), 0);
+  return `<div class="kpis"><div class="card kpi"><strong>${L.filter(p => p.stage === "Idea").length}</strong><span>Ideas</span></div>
+      <div class="card kpi"><strong>${L.filter(p => p.stage === "Planned").length}</strong><span>Planned</span></div>
+      <div class="card kpi"><strong style="color:var(--ok)">${L.filter(p => p.stage === "Approved").length}</strong><span>Approved — ready to start</span></div>
+      <div class="card kpi"><strong>${money(total)}</strong><span>Estimated budget</span></div></div>
+    <div class="board">${P.future.map(st => { const C = L.filter(p => p.stage === st);
+      return `<div class="colm" data-stage="${st}"><h3>${esc(st)}<b>${C.length}</b></h3>${C.map(p => `<div class="pc" data-p="${p.id}" draggable="${P.can.edit}">
+        <b>${esc(p.title)}</b><small>${[p.category, p.owner, p.due ? "target " + D.fmt(p.due, { month: "short", year: "numeric" }) : ""].filter(Boolean).map(esc).join(" · ")}</small>
+        <div class="tags"><span class="pill prio-${p.priority}">${esc(p.priority)}</span>${p.budget != null ? `<span class="pill">${money(p.budget, p.currency)}</span>` : ""}${p.budgetLine ? `<span class="pill brand">CAPEX ${p.budgetYear}</span>` : ""}</div></div>`).join("")
+        || `<div class="muted" style="font-size:.8rem;padding:6px">${P.can.edit && st === "Idea" ? "Add an idea, then drag it along as it moves forward." : "Nothing here."}</div>`}</div>`; }).join("")}</div>
+    <p class="muted" style="font-size:.78rem;margin-top:12px">When work starts, open the project and set the stage to <b>In progress</b> — it moves to the Project Tracker.</p>`;
+}
+function dnd(){
+  let drag = 0;
+  $("#app").querySelectorAll(".pc").forEach(c => { c.ondragstart = e => { drag = Number(c.dataset.p); e.dataTransfer.effectAllowed = "move"; }; });
+  $("#app").querySelectorAll(".colm").forEach(c => {
+    c.ondragover = e => { e.preventDefault(); c.classList.add("drop"); };
+    c.ondragleave = () => c.classList.remove("drop");
+    c.ondrop = async e => { e.preventDefault(); c.classList.remove("drop"); const p = P.list.find(x => x.id === drag); if (!p || p.stage === c.dataset.stage) return;
+      try { await api("ops/proj/stage", { site, id: p.id, stage: c.dataset.stage }); toast(`Moved to ${c.dataset.stage}`); load(); } catch (er){ toast(er.message, true); } };
+  });
+}
+function trackerHtml(L){
+  const act = L.filter(p => p.stage !== "Completed");
+  const bud = L.reduce((a, p) => a + ((p.budgetLine && p.budgetLine.budget) ?? p.budget ?? 0), 0), sp = L.reduce((a, p) => a + (p.spent || 0), 0);
+  const kp = `<div class="kpis"><div class="card kpi"><strong>${act.length}</strong><span>In progress / on hold</span></div>
+    <div class="card kpi"><strong style="color:${act.filter(p => p.rag === "red").length ? "var(--alert)" : "var(--ok)"}">${act.filter(p => p.rag === "red").length}</strong><span>Late</span></div>
+    <div class="card kpi"><strong>${act.length ? Math.round(act.reduce((a, p) => a + p.progress, 0) / act.length) : 0}%</strong><span>Average progress</span></div>
+    <div class="card kpi"><strong>${money(sp)}</strong><span>Spent${bud ? " of " + money(bud) : ""}</span></div></div>`;
+  if (!L.length) return kp + `<div class="card empty">No project in progress.${P.can.edit ? " Add one, or move an approved idea to <b>In progress</b>." : ""}</div>`;
+  return kp + timeline(L) + `<div class="trk">${L.map(p => { const B = (p.budgetLine && p.budgetLine.budget) ?? p.budget;
+    return `<div class="card tp" data-p="${p.id}"><span class="rag ${p.rag}"></span>
+      <div><h3>${esc(p.title)} ${p.stage !== "In progress" ? `<span class="pill ${p.stage === "Completed" ? "ok" : "warn"}">${esc(p.stage)}</span>` : ""}${p.late ? `<span class="pill alert">Overdue</span>` : p.msLate ? `<span class="pill warn">${p.msLate} milestone${p.msLate === 1 ? "" : "s"} late</span>` : ""}</h3>
+        <div class="meta">${[...[p.owner, p.contractor, p.location].filter(Boolean).map(esc), p.due ? `due <b>${esc(D.fmt(p.due, { year: "numeric" }))}</b>` : ""].filter(Boolean).join(" · ")}</div></div>
+      <div class="pgw"><div class="pg"><i style="width:${p.progress}%"></i></div><small><span>${p.progress}%</span><span>${p.milestones.length ? `${p.milestones.filter(m => m.done).length}/${p.milestones.length} milestones` : ""}</span></small></div>
+      <div class="money"><b>${money(p.spent, p.currency)}</b><small>of ${money(B, p.currency)}${p.budgetLine ? " · CAPEX" : ""}</small></div></div>`; }).join("")}</div>`;
+}
+function timeline(L){
+  const D0 = L.filter(p => p.start || p.due);
+  if (!D0.length) return "";
+  const first = D0.map(p => p.start || p.due).sort()[0].slice(0, 7), last = D0.map(p => p.due || p.start).sort().pop().slice(0, 7);
+  const months = []; for (let m = first; m <= last && months.length < 24; ){ months.push(m); const t = new Date(m + "-01T12:00:00Z"); t.setUTCMonth(t.getUTCMonth() + 1); m = t.toISOString().slice(0, 7); }
+  const a = D.parse(months[0] + "-01"), e = D.parse(months[months.length - 1] + "-01"); e.setUTCMonth(e.getUTCMonth() + 1);
+  const span = e - a, pos = d => Math.max(0, Math.min(100, (D.parse(d) - a) / span * 100));
+  const nowP = pos(P.today);
+  return `<div class="card tl"><div class="months"><div></div><div>${months.map(m => `<span>${esc(new Date(m + "-01T12:00:00Z").toLocaleDateString("en-GB", { timeZone: "UTC", month: "short", year: "2-digit" }))}</span>`).join("")}</div></div>
+    ${D0.map(p => { const s = pos(p.start || p.due), f = pos(p.due || p.start); return `<div class="row" data-p="${p.id}" style="cursor:pointer"><div class="nm" title="${esc(p.title)}">${esc(p.title)}</div>
+      <div class="track"><span class="seg ${p.stage === "Completed" ? "done" : p.rag}" style="left:${s}%;width:${Math.max(1.2, f - s)}%"></span><span class="now" style="left:${nowP}%"></span></div></div>`; }).join("")}</div>`;
+}
+
+/* ---------- detail ---------- */
+function dlg(){ let d = $("#dP"); if (!d){ d = document.createElement("dialog"); d.id = "dP"; d.className = "wide"; document.body.append(d); } return d; }
+function detail(p){
+  const d = dlg(), ed = P.can.edit, B = (p.budgetLine && p.budgetLine.budget) ?? p.budget;
+  d.innerHTML = `<div class="dlg-h"><b>${esc(p.title)}</b><small class="muted">${esc(p.stage)}${p.category ? " · " + esc(p.category) : ""} · ${esc(p.priority)} priority${p.updatedName ? ` · last change ${esc(p.updatedName)}` : ""}</small></div>
+    <div class="dlg-b det" style="max-height:70dvh;overflow:auto">
+      <div class="form" style="margin-bottom:12px">
+        <div><label class="lbl">Owner</label>${esc(p.owner) || "—"}</div><div><label class="lbl">Contractor</label>${esc(p.contractor) || "—"}</div><div><label class="lbl">Location</label>${esc(p.location) || "—"}</div>
+        <div><label class="lbl">Start</label>${p.start ? esc(D.fmt(p.start, { year: "numeric" })) : "—"}</div><div><label class="lbl">Due</label>${p.due ? `<span class="${p.late ? "pill alert" : ""}">${esc(D.fmt(p.due, { year: "numeric" }))}</span>` : "—"}</div>
+        <div><label class="lbl">Budget · spent</label>${money(B, p.currency)} · ${money(p.spent, p.currency)}</div>
+        ${p.budgetLine ? `<div class="full"><label class="lbl">CAPEX line ${p.budgetYear}</label>${esc(p.budgetLine.title)} <span class="muted">· ${esc(p.budgetLine.co3 || "")} · budget ${money(p.budgetLine.budget)}</span></div>` : ""}
+        ${p.desc ? `<div class="full"><label class="lbl">Description</label><div style="white-space:pre-wrap;line-height:1.5">${esc(p.desc)}</div></div>` : ""}</div>
+      <label class="lbl">Progress · ${p.progress}%</label><div class="pg" style="margin-bottom:14px"><i style="width:${p.progress}%"></i></div>
+      ${p.milestones.length ? `<label class="lbl">Milestones</label><div class="ms" style="margin-bottom:14px">${p.milestones.map((m, i) => `<div class="r"><input type="checkbox" data-mi="${i}" ${m.done ? "checked" : ""} ${ed ? "" : "disabled"}>
+        <span style="${m.done ? "text-decoration:line-through;opacity:.6" : ""}">${esc(m.text)}</span><small class="${!m.done && m.due && m.due < P.today ? "pill alert" : "muted"}">${m.due ? esc(D.fmt(m.due)) : ""}${m.done && m.doneAt ? " ✓ " + esc(D.fmt(m.doneAt)) : ""}</small></div>`).join("")}</div>` : ""}
+      ${ed && !p.future ? `<label class="lbl">Add an update</label><textarea id="nT" rows="2" maxlength="1000" placeholder="What happened since the last update?"></textarea>
+        <div style="display:flex;gap:8px;margin:8px 0 14px;flex-wrap:wrap">${p.autoProgress ? "" : `<input class="inp" id="nP" type="number" min="0" max="100" placeholder="Progress %" style="width:130px">`}<input class="inp" id="nS" type="number" min="0" placeholder="Spent so far" style="width:150px"><button class="btn small" id="nGo">Post update</button></div>` : ""}
+      ${p.updates.length ? `<label class="lbl">Updates</label><div class="log">${p.updates.map(u => `<div>${esc(u.text)}<small>${esc(u.by)} · ${esc(new Date(u.at).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></div>`).join("")}</div>` : ""}
+    </div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Close</button>${ed ? `<button class="btn" id="dEd">Edit</button>` : ""}</div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  const e2 = d.querySelector("#dEd"); if (e2) e2.onclick = () => editor(p);
+  d.querySelectorAll("[data-mi]").forEach(c => c.onchange = async () => { try { await api("ops/proj/milestone", { site, id: p.id, index: Number(c.dataset.mi), done: c.checked }); await load(); detail(P.list.find(x => x.id === p.id)); } catch (er){ toast(er.message, true); } });
+  const g = d.querySelector("#nGo"); if (g) g.onclick = async () => { try { await api("ops/proj/note", { site, id: p.id, text: $("#nT").value, progress: $("#nP") ? $("#nP").value : "", spent: $("#nS").value }); toast("Update posted"); await load(); detail(P.list.find(x => x.id === p.id)); } catch (er){ toast(er.message, true); } };
+  if (!d.open) d.showModal();
+}
+let E = null;
+function editor(p){
+  E = JSON.parse(JSON.stringify(Object.assign({ title: "", stage: "Idea", category: "", priority: "Medium", owner: "", contractor: "", location: "", start: "", due: "", budget: null, spent: null, currency: "USD", budgetYear: 0, budgetKey: "", progress: 0, desc: "", milestones: [] }, p)));
+  draw();
+}
+function draw(){
+  const d = dlg(), opt = (L, v) => L.map(o => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("");
+  const lines = P.budgetLines;
+  d.innerHTML = `<div class="dlg-h"><b>${E.id ? "Edit project" : "New project"}</b></div>
+    <div class="dlg-b" style="max-height:72dvh;overflow:auto"><div class="form">
+      <div class="full"><label class="lbl">Project</label><input class="inp" id="pT" maxlength="160" value="${esc(E.title)}" placeholder="e.g. LED lighting replacement — parking B2"></div>
+      <div><label class="lbl">Stage</label><select class="sel" id="pS">${opt(P.stages, E.stage)}</select></div>
+      <div><label class="lbl">Category</label><select class="sel" id="pC"><option value=""></option>${opt(P.cats, E.category)}</select></div>
+      <div><label class="lbl">Priority</label><select class="sel" id="pPr">${opt(P.prio, E.priority)}</select></div>
+      <div><label class="lbl">Owner</label><input class="inp" id="pO" maxlength="120" value="${esc(E.owner)}"></div>
+      <div><label class="lbl">Contractor</label><input class="inp" id="pCo" maxlength="160" value="${esc(E.contractor)}"></div>
+      <div><label class="lbl">Location</label><input class="inp" id="pL" maxlength="160" value="${esc(E.location)}"></div>
+      <div><label class="lbl">Start</label><input class="inp" type="date" id="pSt" value="${esc(E.start)}"></div>
+      <div><label class="lbl">Due</label><input class="inp" type="date" id="pDu" value="${esc(E.due)}"></div>
+      <div><label class="lbl">Currency</label><select class="sel" id="pCu">${opt(["USD", "LBP"], E.currency)}</select></div>
+      <div><label class="lbl">Budget (estimate)</label><input class="inp" type="number" min="0" id="pB" value="${E.budget ?? ""}"></div>
+      <div><label class="lbl">Spent so far</label><input class="inp" type="number" min="0" id="pSp" value="${E.spent ?? ""}"></div>
+      <div><label class="lbl">Progress %</label><input class="inp" type="number" min="0" max="100" id="pPg" value="${E.progress}" ${E.milestones.length ? "disabled title='Calculated from the milestones'" : ""}></div>
+      <div class="full"><label class="lbl">Linked CAPEX line (Budget)</label><select class="sel" id="pBL"><option value="">— not linked —</option>${lines.map(l => `<option value="${l.year}|${esc(l.key)}" ${E.budgetYear === l.year && E.budgetKey === l.key ? "selected" : ""}>${l.year} · ${esc(l.title)}${l.budget != null ? " · " + money(l.budget) : ""}</option>`).join("")}</select>
+        ${lines.length ? "" : `<div class="muted" style="font-size:.76rem;margin-top:4px">No CAPEX sheet uploaded in Budget (CAPEX / OPEX) for this flagship yet.</div>`}</div>
+      <div class="full"><label class="lbl">Description</label><textarea id="pD" rows="3" maxlength="3000">${esc(E.desc)}</textarea></div>
+      <div class="full"><label class="lbl">Milestones</label><div class="ms" id="ms">${E.milestones.map((m, i) => `<div class="r"><input type="checkbox" data-i="${i}" data-f="done" ${m.done ? "checked" : ""}>
+        <input class="inp" data-i="${i}" data-f="text" value="${esc(m.text)}" placeholder="Milestone"><input class="inp du" type="date" data-i="${i}" data-f="due" value="${esc(m.due)}"><button class="x" data-rm="${i}">×</button></div>`).join("")}</div>
+        <button class="btn ghost small" id="msAdd" style="margin-top:6px">+ Milestone</button></div></div>
+      <div id="pErr" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
+    <div class="dlg-f">${E.id ? `<button class="btn ghost danger" id="pDel" style="margin-right:auto">Delete</button>` : ""}<button class="btn ghost" data-x>Cancel</button><button class="btn" id="pOk">Save</button></div>`;
+  d.querySelector("[data-x]").onclick = () => d.close();
+  d.querySelector("#msAdd").onclick = () => { read(); E.milestones.push({ text: "", due: "", done: false }); draw(); };
+  d.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { read(); E.milestones.splice(Number(b.dataset.rm), 1); draw(); });
+  d.querySelector("#pOk").onclick = async () => { read();
+    try { const r = await api("ops/proj/save", { site, ...E }); d.close(); toast("Saved");
+      if (!["Idea", "Planned", "Approved"].includes(E.stage) && view === "future") { view = "tracker"; } else if (["Idea", "Planned", "Approved"].includes(E.stage)) view = "future";
+      await load(); } catch (er){ $("#pErr").textContent = er.message; } };
+  const del = d.querySelector("#pDel"); if (del) del.onclick = async () => { d.close(); if (!await confirmBox("Delete this project?", esc(E.title), "Delete")) return;
+    try { await api("ops/proj/delete", { site, id: E.id }); toast("Deleted"); load(); } catch (er){ toast(er.message, true); } };
+  if (!d.open) d.showModal();
+}
+function read(){
+  const v = id => $("#" + id).value;
+  Object.assign(E, { title: v("pT"), stage: v("pS"), category: v("pC"), priority: v("pPr"), owner: v("pO"), contractor: v("pCo"), location: v("pL"), start: v("pSt"), due: v("pDu"),
+    currency: v("pCu"), budget: v("pB"), spent: v("pSp"), progress: v("pPg"), desc: v("pD") });
+  const bl = v("pBL"); E.budgetYear = bl ? Number(bl.split("|")[0]) : 0; E.budgetKey = bl ? bl.slice(bl.indexOf("|") + 1) : "";
+  document.querySelectorAll("#ms [data-i]").forEach(el => { const m = E.milestones[Number(el.dataset.i)]; if (m) m[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value; });
+}
+boot();
+</script>
+</body>
+</html>

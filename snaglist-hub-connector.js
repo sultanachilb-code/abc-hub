@@ -98,3 +98,37 @@ async function hubSignIn(context, url) {
     return toLogin();
   }
 }
+
+/* ===================== ADDED FOR THE END OF DAY REPORT =====================
+   Paste this function at the end of Snaglist's worker.js (after hubNotify), and add
+   this line in handleApi next to the other hub lines:
+
+       if (method === "GET" && url.searchParams.get("hubsv") === "1") return hubSiteVisits(context, url);
+*/
+/* Every finding still pending from posted site visits at one flagship — the consolidated
+   view of the site-visit user's points, for the hub's End of Day report. */
+async function hubSiteVisits(context, url) {
+  const { request, env } = context;
+  if (!env.HUB_KEY || request.headers.get("x-hub-key") !== env.HUB_KEY) throw fail("Not authorised", 403);
+  const site = String(url.searchParams.get("site") || "").toUpperCase();
+  if (!SITES[site]) throw fail("Choose a flagship");
+  const { results } = await env.DB.prepare(
+    `SELECT l.list_id, l.list_name, l.submitted_at, l.closed_at, l.created_by, u.full_name AS by_name,
+            i.item_id, i.seq, i.location, i.issue, i.item_status, i.comment, i.flagged, i.updated_at
+       FROM lists l JOIN items i ON i.list_id = l.list_id AND i.deleted = 0
+       LEFT JOIN users u ON u.email = l.created_by
+      WHERE l.deleted = 0 AND l.kind = 'site_visit' AND IFNULL(l.submitted_at,'') != '' AND l.site = ?
+        AND IFNULL(i.item_status,'') != 'Solved'
+      ORDER BY l.submitted_at DESC, i.seq LIMIT 600`).bind(site).all();
+  const visits = [];
+  for (const r of results || []) {
+    let v = visits.find(x => x.listId === r.list_id);
+    if (!v) visits.push(v = { listId: r.list_id, name: r.list_name, postedAt: r.submitted_at, closedAt: r.closed_at || "", by: r.by_name || r.created_by,
+      daysOpen: Math.max(0, Math.round((Date.now() - new Date(r.submitted_at)) / 86400000)), items: [] });
+    v.items.push({ seq: r.seq, location: r.location, issue: String(r.issue || "").slice(0, 300), status: r.item_status || "Pending",
+      comment: String(r.comment || "").slice(0, 200), flagged: !!r.flagged, updatedAt: r.updated_at });
+  }
+  const count = s => visits.reduce((a, v) => a + v.items.filter(i => i.status === s).length, 0);
+  return json({ ok: true, data: { site, visits, total: visits.reduce((a, v) => a + v.items.length, 0),
+    pending: count("Pending"), inProgress: visits.reduce((a, v) => a + v.items.filter(i => i.status !== "Pending").length, 0) } });
+}

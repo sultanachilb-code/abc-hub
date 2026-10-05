@@ -198,10 +198,13 @@ const shName = c => (H && H.shiftNames && H.shiftNames[c]) || c;
 let LIVE = null;
 async function loadLive(){
   if (!H) return; const day = H.day;
-  try { const d = await api(`ops/handover/live?site=${CTX.site}&day=${day}`); if (H && H.day === day){ LIVE = d; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); } }
+  try { const d = await api(`ops/handover/live?site=${CTX.site}&day=${day}`); if (H && H.day === day){ LIVE = d; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); const c = $("#calRows"); if (c && H.doc) c.innerHTML = calRowsHtml(H.doc); } }
   catch (e){ LIVE = { error: e.message }; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); }
 }
 function ckCell(r){ return !r ? `<span class="nd">Not done</span>` : r.status === "submitted" ? `<span class="done">Done</span> <small class="muted">${esc(r.by)} · ${hm(r.at)}${r.issues ? ` · ${r.issues} ✗` : ""}</small>` : `<span class="pr">In progress ${r.done}/${r.total}</span> <small class="muted">${esc(r.by)}</small>`; }
+/* Operations Calendar: the day's marketing events come from the calendar (not typed twice) */
+function calEvents(d){ const have = new Set((d.events || []).map(e => String(e.name).trim().toLowerCase())); return (LIVE && !LIVE.error && LIVE.calendar || []).filter(e => !have.has(String(e.name).trim().toLowerCase())); }
+function calRowsHtml(d){ return calEvents(d).map(x => `<tr class="calrow"><td>${esc(D.fmt(x.from))}</td><td>${esc(D.fmt(x.to))}</td><td><b>${esc(x.name)}</b> <small class="muted">📅 calendar${x.location ? " · " + esc(x.location) : ""}</small></td><td>${esc(x.start)}</td><td>${esc(x.end)}</td><td></td></tr>`).join(""); }
 function liveHtml(){
   if (!LIVE) return `<div class="emptyrow" style="padding:8px 10px">Loading today's incidents, tenant feedback, checklists and restroom inspections…</div>`;
   if (LIVE.error) return `<div class="emptyrow" style="padding:8px 10px">${esc(LIVE.error)}</div>`;
@@ -260,12 +263,13 @@ function render(){
 
     <div class="hd">Marketing events<span class="sp"></span>${ro ? "" : `<button class="add" data-add="events">+ Add row</button>`}</div>
     <table class="t"><tr><th>From</th><th>To</th><th>Event / activation</th><th>Start</th><th>End</th><th></th></tr>
+      <tbody id="calRows">${calRowsHtml(d)}</tbody>
       ${d.events.map((x, i) => `<tr><td><input type="date" data-k="events" data-i="${i}" data-f="from" value="${esc(x.from)}" ${ro}></td>
         <td><input type="date" data-k="events" data-i="${i}" data-f="to" value="${esc(x.to)}" ${ro}></td>
         <td><input type="text" data-k="events" data-i="${i}" data-f="name" value="${esc(x.name)}" placeholder="e.g. L'Oréal booth" ${ro}></td>
         <td><input type="time" data-k="events" data-i="${i}" data-f="start" value="${esc(x.start)}" ${ro}></td>
         <td><input type="time" data-k="events" data-i="${i}" data-f="end" value="${esc(x.end)}" ${ro}></td>
-        <td class="xx">${ro ? "" : `<button class="x" data-rm="events" data-i="${i}">×</button>`}</td></tr>`).join("") || `<tr><td colspan="6" class="emptyrow" style="padding:8px">No events.</td></tr>`}</table>
+        <td class="xx">${ro ? "" : `<button class="x" data-rm="events" data-i="${i}">×</button>`}</td></tr>`).join("") || (calEvents(d).length ? "" : `<tr><td colspan="6" class="emptyrow" style="padding:8px">No events — add them in the Operations Calendar or here.</td></tr>`)}</table>
 
 
   </div>
@@ -461,6 +465,7 @@ $("#impFile").addEventListener("change", async e => {
     const list = readRequests(rows);
     if (!list.length) throw new Error("No requests found in this sheet.");
     IMP = planImport(list);
+    api("ops/con/import", { site: CTX.site, rows: list }).catch(() => {});   // Contractors feature: approved requests fill the on-site list
     const n = IMP.today.length + IMP.tomorrow.length + IMP.upcoming.length;
     const grp = (title, L, dated) => L.length ? `<p class="lbl" style="margin:12px 0 4px">${title} · ${L.length}</p><ul class="impl">${L.map(q => `<li>${dated ? `<b>${esc(D.fmt(q.from.day, { weekday: "short" }))}</b> · ` : ""}${esc(reqText(q))}</li>`).join("")}</ul>` : "";
     const d = $("#dImp");
@@ -528,7 +533,7 @@ function mailHtml(){
     ${head("Coming up")}${items(d.upcoming, true)}
     ${head("Incidents & tenant feedback")}${incM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Not available.</td></tr>`}
     ${head("Daily operations checklist tracker")}${liveM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Live checklist status not available.</td></tr>`}
-    ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], d.events.map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
+    ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], calEvents(d).concat(d.events).map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
   </table>
   <p style="${F}font-size:14px">Best regards,<br>${esc(CTX.me.name)}</p></div>` };
 }

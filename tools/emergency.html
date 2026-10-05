@@ -42,6 +42,8 @@ table.h{width:100%;border-collapse:collapse;font-size:.86rem}
 .h th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .h tr.row{cursor:pointer}.h tr.row:hover td{background:rgba(198,40,40,.05)}
 .sec{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.acts2{display:flex;gap:6px;align-items:center;flex:none}
+.btn.call{background:#2E7D32;text-decoration:none}
 @media (max-width:560px){ .types{grid-template-columns:repeat(2,minmax(0,1fr))} .stats{grid-template-columns:repeat(3,minmax(0,1fr))} }
 </style>
 </head>
@@ -145,10 +147,12 @@ function showBoard(r){
     <div class="card stat"><b>${R.filter(x => !x.devices && !x.ackAt).length}</b><span>No device — call</span></div></div>`;
   if (open && meta.can.send) h += `<div class="acts" style="margin-bottom:12px"><button class="btn ghost" id="bRe">Re-alert everyone not acknowledged</button><button class="btn" id="bClear" style="background:#2E7D32">All clear</button></div>`;
   h += `<div class="rows">${R.map(x => `<div class="card r"><div><b>${esc(x.name)}</b><small>${esc(x.why)}</small>
-      <small>${x.ackAt ? `Acknowledged at ${esc(t(x.ackAt))}` : `Alerted ${x.sends}× · last ${esc(t(x.lastAt))}${x.devices ? ` · ${x.delivered} delivered` : ""}`}</small></div>
-      ${x.ackAt ? `<span class="pill ok">On it</span>` : x.devices ? `<span class="pill alert">Waiting</span>` : `<span class="pill warn">No device — call</span>`}</div>`).join("")
+      <small>${x.ackAt ? `Acknowledged at ${esc(t(x.ackAt))}` : `Alerted ${x.sends}× · last ${esc(t(x.lastAt))}${x.devices ? ` · ${x.delivered} delivered` : ""}${x.calls ? ` · 📞 phoned ${x.calls}×${x.callError ? " (failed)" : ""}` : ""}`}</small></div>
+      <span class="acts2">${!x.ackAt && open && x.tel ? `<a class="btn small call" href="tel:${esc(x.tel)}" title="${esc(x.mobile)}">📞 Call</a>` : ""}
+      ${x.ackAt ? `<span class="pill ok">On it</span>` : x.devices ? `<span class="pill alert">Waiting</span>` : `<span class="pill warn">${x.tel ? "No device" : "No device — no mobile"}</span>`}</span></div>`).join("")
       || `<div class="card empty">Nobody was on shift when the alert was sent.</div>`}</div>
-    ${open ? `<p class="muted" style="font-size:.8rem;margin-top:10px;line-height:1.5">Everyone who has not acknowledged gets a fresh alarm every 10 seconds — sound and vibration each time — until they tap it, for up to 60 minutes. It keeps going even if this page is closed.</p>` : ""}`;
+    ${open ? `<p class="muted" style="font-size:.8rem;margin-top:10px;line-height:1.5">Everyone who has not acknowledged gets a fresh alarm every 10 seconds — sound and vibration each time — until they tap it, for up to 60 minutes. It keeps going even if this page is closed.
+      ${r.phoneCalls ? " Anyone still not acknowledged after 1 minute also gets a <b>phone call</b> that reads the alert out loud (again after 5 minutes)." : " Tap <b>📞 Call</b> to ring anyone who has not answered (each person adds their mobile in Profile settings)."}</p>` : ""}`;
   $("#app").innerHTML = h;
   $("#back").onclick = () => { history.replaceState(null, "", `?site=${site}`); home(); };
   const a = $("#bAck"); if (a) a.onclick = async () => { try { await api("ops/emergency/ack", { site, id: e.id }); toast("Acknowledged — the manager can see you are on it"); openBoard(e.id);

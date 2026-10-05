@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-in help · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Downloads & sign-in feature — see docs/FEATURE-downloads.md -->
+<style>
+.w{max-width:860px;margin:0 auto}
+.intro{padding:18px 20px;line-height:1.6;font-size:.92rem;margin-bottom:14px}
+.intro b{color:var(--brand)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.c{padding:16px 18px}
+.c h3{font-size:1rem;font-weight:800;margin-bottom:10px;display:flex;gap:8px;align-items:center}
+.c ol{padding-left:20px;display:grid;gap:7px;font-size:.88rem;line-height:1.5}
+.c .tip{margin-top:10px;font-size:.8rem;color:var(--muted);line-height:1.5;padding:8px 10px;background:var(--paper);border-radius:10px}
+.tbl{width:100%;border-collapse:collapse;font-size:.86rem}
+.tbl th{text-align:left;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line)}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.ar{font-size:.84rem;line-height:1.5}
+@media (max-width:700px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="top"><h1>🔐 Sign-in help <small>saved passwords · قسم المساعدة</small></h1></div>
+<div class="wrap"><div class="w">
+  <div class="card intro">The hub <b>does not keep your passwords</b> for other systems — that would put every password in one place. Instead:
+    <br>• <b>Our own systems</b> (Snaglist, Incident Report System, Restroom Inspections, Cleaner QR, Footfall) open from the hub <b>already signed in</b> with your hub account.
+    <br>• <b>Company systems</b> (ABC Connect, Tenant Connect, JD Edwards, Archibus, PM Portal, SuccessFactors) — let your browser remember the password once; next time it fills it in for you.
+    <p class="ar" dir="rtl" style="margin-top:10px">الهب لا يحفظ كلمات السر للأنظمة الأخرى. أنظمتنا تفتح مباشرة بحساب الهب، وأنظمة الشركة: دع المتصفح يحفظ كلمة السر مرة واحدة ويملؤها تلقائياً بعد ذلك.</p></div>
+
+  <div class="grid">
+    <div class="card c"><h3>💻 Laptop · Microsoft Edge</h3><ol>
+      <li>Open the system (from the hub tile — it opens in its own window) and sign in normally.</li>
+      <li>Edge asks <b>“Save password?”</b> → press <b>Save</b>.</li>
+      <li>Next time, click the username box → pick your account → Edge fills the password.</li>
+      <li>To check or change saved passwords: <b>Settings → Profiles → Passwords</b> (or type <code>edge://wallet/passwords</code>).</li></ol>
+      <div class="tip">Sign in to Edge with your work account so the passwords follow you to your other laptop. Turn on <b>“Require device password before filling”</b> for extra safety.</div></div>
+    <div class="card c"><h3>💻 Laptop · Google Chrome</h3><ol>
+      <li>Sign in to the system normally.</li>
+      <li>Chrome asks <b>“Save password?”</b> → <b>Save</b>.</li>
+      <li>Next time, click the username box → choose your account.</li>
+      <li>Manage them in <b>Google Password Manager</b>: <code>chrome://password-manager</code>.</li></ol>
+      <div class="tip">On a shared office PC, do <b>not</b> save passwords — use the hub's own sign-in and log out at the end of the shift.</div></div>
+    <div class="card c"><h3>📱 iPhone</h3><ol>
+      <li><b>Settings → Passwords → Password Options</b> → turn on <b>AutoFill Passwords</b>.</li>
+      <li>Sign in to the system once in Safari → tap <b>Save Password</b>.</li>
+      <li>Next time, tap the username box → the key / account appears above the keyboard → Face ID.</li></ol>
+      <div class="tip">Using Microsoft Authenticator? It can also store and fill passwords: Settings → Passwords → Password Options → tick <b>Authenticator</b>.</div></div>
+    <div class="card c"><h3>📱 Android</h3><ol>
+      <li><b>Settings → Passwords & accounts → Autofill service</b> → Google (or Microsoft Authenticator).</li>
+      <li>Sign in once in Chrome → <b>Save</b>.</li>
+      <li>Next time, tap the username box → choose the account → fingerprint.</li></ol>
+      <div class="tip">Office-network systems (JD Edwards, Archibus, PM Portal) only open on the office Wi-Fi or VPN.</div></div>
+  </div>
+
+  <div class="card" style="overflow-x:auto"><table class="tbl"><thead><tr><th>System</th><th>How you sign in from the hub</th></tr></thead><tbody>
+    <tr><td><b>Snaglist · Incident Report System</b></td><td>Automatic — already signed in with your hub account</td></tr>
+    <tr><td><b>Restroom Inspections · Cleaner QR · Footfall</b></td><td>Automatic once the hub sign-in is switched on in each system (being rolled out); until then its own sign-in page — let the browser save it</td></tr>
+    <tr><td><b>ABC Connect · Tenant Connect</b></td><td>Company Salesforce sign-in — browser saves it</td></tr>
+    <tr><td><b>SAP SuccessFactors</b></td><td>Company sign-in (Microsoft) — usually no password if you are signed in to Outlook in the same browser</td></tr>
+    <tr><td><b>JD Edwards · Archibus · PM Portal</b></td><td>Office network only — browser saves it</td></tr>
+  </tbody></table></div>
+  <p class="muted" style="font-size:.8rem;margin-top:12px;line-height:1.5">Never send a password by WhatsApp or email, and never write it in a hub note. Forgot the hub password? Ask your administrator to reset it. Lost your phone? The administrator can reset your two-step login.</p>
+</div></div>
+<script src="common.js"></script>
+</body>
+</html>

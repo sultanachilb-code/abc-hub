@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Downloads · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Downloads feature — see docs/FEATURE-downloads.md -->
+<style>
+.wrapd{max-width:860px;margin:0 auto}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.bar .inp{flex:1;min-width:200px}
+.day{font-size:.78rem;font-weight:800;color:var(--muted);margin:18px 4px 8px}
+.f{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:12px 14px;margin-bottom:8px}
+.f .ic{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:.7rem;color:#fff;letter-spacing:.04em}
+.f b{display:block;font-size:.92rem;line-height:1.3;overflow-wrap:anywhere;cursor:pointer;color:var(--brand-2)}
+.f b:hover{text-decoration:underline}
+.f small{display:block;font-size:.76rem;color:var(--muted);margin-top:3px}
+.f .acts{display:flex;gap:6px;align-items:center}
+.f .x{width:32px;height:32px;border-radius:8px;color:var(--muted);font-size:1.1rem}
+.f .x:hover{background:var(--paper);color:var(--alert)}
+.note{font-size:.78rem;color:var(--muted);line-height:1.5;margin-top:14px}
+@media (max-width:600px){ .f{grid-template-columns:38px 1fr;gap:10px} .f .ic{width:38px;height:38px} .f .acts{grid-column:1/-1;justify-content:flex-end} }
+</style>
+</head>
+<body>
+<div class="top"><h1>⤓ Downloads <small id="sub">on this device</small></h1></div>
+<div class="wrap"><div class="wrapd">
+  <div class="bar"><input class="inp" id="q" placeholder="Search downloads"><button class="btn ghost" id="clr">Clear all</button></div>
+  <div id="app"><div class="empty">Loading…</div></div>
+  <p class="note">Every file you get from the hub — Excel exports, handover and announcement emails (.eml), Tenant Works Forms PDFs, CSV files — is listed here and kept on this device (last 80 files). Nothing is uploaded: other devices and other people have their own list.</p>
+</div></div>
+<script src="common.js"></script>
+<script>
+const KIND = n => { const e = (String(n).split(".").pop() || "").toLowerCase();
+  return { xlsx: ["XLS", "#1D6F42"], xls: ["XLS", "#1D6F42"], csv: ["CSV", "#2E6B4F"], pdf: ["PDF", "#C0392B"], eml: ["EML", "#1B5E9E"], png: ["IMG", "#7B4BB0"], jpg: ["IMG", "#7B4BB0"], jpeg: ["IMG", "#7B4BB0"], json: ["JSON", "#555"], zip: ["ZIP", "#8A5A1F"] }[e] || [e.slice(0, 4).toUpperCase() || "FILE", "#6D6479"]; };
+const size = b => b < 1024 ? b + " B" : b < 1048576 ? (b / 1024).toFixed(0) + " KB" : (b / 1048576).toFixed(1) + " MB";
+const dayLabel = iso => { const d = new Date(iso), t = new Date(); const k = x => x.toLocaleDateString("en-CA");
+  const y = new Date(t); y.setDate(t.getDate() - 1);
+  return k(d) === k(t) ? "Today" : k(d) === k(y) ? "Yesterday" : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); };
+let L = [], q = "";
+const ready = () => new Promise(res => { const w = () => window.HubDL ? res() : setTimeout(w, 50); w(); });
+async function load(){ await ready(); try { L = await HubDL.list(); } catch (e){ $("#app").innerHTML = `<div class="card empty">Downloads cannot be kept in this browser (private mode or storage blocked).</div>`; return; } draw(); }
+function draw(){
+  const s = q.toLowerCase(), F = L.filter(f => !s || `${f.name} ${f.tool}`.toLowerCase().includes(s));
+  if (!F.length){ $("#app").innerHTML = `<div class="card empty">${L.length ? "No download matches." : "No downloads yet. Files you export or download in the hub appear here."}</div>`; return; }
+  let h = "", last = "";
+  for (const f of F){
+    const dl = dayLabel(f.at); if (dl !== last){ h += `<div class="day">${esc(dl)}</div>`; last = dl; }
+    const [k, c] = KIND(f.name);
+    h += `<div class="card f"><span class="ic" style="background:${c}">${esc(k)}</span>
+      <div><b data-open="${f.id}" title="Open">${esc(f.name)}</b><small>${esc(size(f.size))} · ${esc(f.tool)} · ${esc(new Date(f.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }))}</small></div>
+      <div class="acts"><button class="btn ghost small" data-save="${f.id}">Save again</button>${navigator.share ? `<button class="btn ghost small" data-share="${f.id}">Share</button>` : ""}<button class="x" data-rm="${f.id}" title="Remove from list">✕</button></div></div>`;
+  }
+  $("#app").innerHTML = h;
+}
+$("#q").oninput = e => { q = e.target.value; draw(); };
+$("#clr").onclick = async () => { if (!L.length) return; if (!await confirmBox("Clear all downloads?", "The list and the copies kept on this device are removed. Files already saved on your computer stay.", "Clear all")) return; await HubDL.clear(); load(); };
+$("#app").onclick = async e => {
+  const id = (e.target.closest("[data-open],[data-save],[data-rm],[data-share]") || {}).dataset; if (!id) return;
+  if (id.rm){ await HubDL.remove(id.rm); return load(); }
+  const f = await HubDL.get(id.open || id.save || id.share); if (!f) return load();
+  if (id.share){ try { await navigator.share({ files: [new File([f.blob], f.name, { type: f.type })], title: f.name }); } catch {} return; }
+  const url = URL.createObjectURL(f.blob);
+  if (id.open && /pdf|image|text\/plain/.test(f.type)) { window.open(url, "_blank"); }
+  else { const a = document.createElement("a"); a.href = url; a.download = f.name; a._hubKept = true; document.body.append(a); a.click(); a.remove(); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+};
+load();
+</script>
+</body>
+</html>

@@ -3,6 +3,9 @@
    See docs/FEATURE-two-step.md
 
    After the password, the hub asks for a second proof — one of:
+     • Passkey (main) .......... Face ID / fingerprint / Windows Hello on the device you are signing in on —
+                                  add one per device (laptop, phone); nothing to install, no code to type
+     • Email code (backup) ..... 6-digit code sent to the person's work email, valid 10 minutes
      • Approve on your phone ... a notification on the phone chosen at setup; the person picks the number shown
                                   on the laptop and confirms with Face ID / fingerprint / phone PIN (WebAuthn)
      • Authenticator app ....... 6-digit code (TOTP, any app: Microsoft / Google Authenticator, Authy)
@@ -10,7 +13,7 @@
    "Trust this device for 30 days" skips the second step on that device.
    Admins choose which roles must use it and can reset a person who lost the phone.
 
-   Tables : user_2fa · login_challenges · trusted_devices   (+ users.twofa_fail / twofa_lock)
+   Tables : user_2fa · login_challenges · trusted_devices · user_passkeys   (+ users.twofa_fail / twofa_lock)
    Routes : public   /api/login/2fa/status · /api/login/2fa/code · /api/login/2fa/resend
             signed in /api/2fa/*   ·   admin /api/admin/2fa/*
    ===================================================================== */
@@ -43,6 +46,10 @@ export async function twofaSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS trusted_devices (hash TEXT PRIMARY KEY, email TEXT NOT NULL, ua TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL, expires_at TEXT NOT NULL)`)
   ]);
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS user_passkeys (cred_id TEXT PRIMARY KEY, email TEXT NOT NULL, pubkey TEXT NOT NULL, alg INTEGER NOT NULL DEFAULT -7,
+    label TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, last_used TEXT NOT NULL DEFAULT '')`).run();
+  for (const c of ["email_on INTEGER NOT NULL DEFAULT 0", "email_code TEXT NOT NULL DEFAULT ''", "email_exp TEXT NOT NULL DEFAULT ''", "email_sent TEXT NOT NULL DEFAULT ''", "email_tries INTEGER NOT NULL DEFAULT 0"])
+    await env.DB.prepare(`ALTER TABLE user_2fa ADD COLUMN ${c}`).run().catch(() => {});
   await env.DB.prepare("ALTER TABLE users ADD COLUMN twofa_fail INTEGER NOT NULL DEFAULT 0").run().catch(() => {});
   await env.DB.prepare("ALTER TABLE users ADD COLUMN twofa_lock TEXT NOT NULL DEFAULT ''").run().catch(() => {});
 }
@@ -101,6 +108,44 @@ async function verifyAssertion(st, a, expectChallenge, origin, rpId) {
     ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, k, derToRaw(sig), data);
   }
   if (!ok) throw err("Face ID / fingerprint confirmation could not be verified");
+}
+
+/* passkeys: any of the person's devices */
+async function passkeysOf(env, email) { const { results } = await env.DB.prepare("SELECT * FROM user_passkeys WHERE email = ? ORDER BY created_at").bind(email).all(); return results || []; }
+/* is two-step on for this person (any way)? */
+export async function twofaOn(env, email) {
+  const [st, pk] = await Promise.all([env.DB.prepare("SELECT totp_on, approve_on, email_on FROM user_2fa WHERE email = ?").bind(email).first().catch(() => null),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM user_passkeys WHERE email = ?").bind(email).first().catch(() => null)]);
+  return !!((st && (st.totp_on || st.approve_on || st.email_on)) || (pk && Number(pk.n)));
+}
+const maskEmail = e => String(e).replace(/^(.)(.*)(.@.*)$/, (m, a, b, c) => a + "•".repeat(Math.min(6, b.length)) + c);
+const EMAIL_MIN = 10, EMAIL_GAP_S = 45;
+function emailCodeHtml(name, code) {
+  return `<div style="font-family:Arial,sans-serif;max-width:460px;margin:0 auto;padding:24px;border:1px solid #E3DCEC;border-radius:14px">
+    <div style="font-size:13px;color:#6D6479">ABC Operations Hub · sign-in</div>
+    <p style="font-size:15px;color:#221A2E">Hello ${String(name || "").replace(/[<>&]/g, "")},<br><br>Your sign-in code is:</p>
+    <div style="font-size:34px;font-weight:bold;letter-spacing:8px;color:#2A0F45;background:#F6F4F9;border-radius:12px;padding:14px 0;text-align:center">${code}</div>
+    <p style="font-size:13px;color:#6D6479;line-height:1.5">It works for ${EMAIL_MIN} minutes. If you did not try to sign in, ignore this email and tell your administrator — your password may be known to someone else.</p></div>`;
+}
+async function sendEmailCode(env, deps, u) {
+  await ensureRow(env, u.email);
+  const st = await stateOf(env, u.email);
+  if (st.email_sent && Date.now() - Date.parse(st.email_sent) < EMAIL_GAP_S * 1000) throw err(`A code was just sent — wait ${EMAIL_GAP_S} seconds before asking for another.`, 429);
+  if (!deps.relay) throw err("Email is not set up on the hub.", 500);
+  const code = String(100000 + (new DataView(rand(4).buffer).getUint32(0) % 900000));
+  const r = await deps.relay(env, { to: [u.email], subject: `${code} is your ABC Operations Hub sign-in code`, html: emailCodeHtml(u.full_name.split(" ")[0], code) });
+  if (!r.ok) throw err("The code could not be emailed right now. Try another way, or ask your administrator.", 502);
+  const now = new Date();
+  await env.DB.prepare("UPDATE user_2fa SET email_code = ?, email_exp = ?, email_sent = ?, email_tries = 0 WHERE email = ?")
+    .bind(hex(await sha256(`${u.email}|mail|${code}`)), new Date(now.getTime() + EMAIL_MIN * 60e3).toISOString(), now.toISOString(), u.email).run();
+  return { sent: true, to: maskEmail(u.email), minutes: EMAIL_MIN };
+}
+async function checkEmailCode(env, st, email, code) {
+  if (!st.email_code || !st.email_exp || st.email_exp < new Date().toISOString() || st.email_tries >= 5) return false;
+  const ok = eqs(hex(await sha256(`${email}|mail|${code}`)), st.email_code);
+  if (ok) await env.DB.prepare("UPDATE user_2fa SET email_code = '', email_exp = '' WHERE email = ?").bind(email).run();
+  else await env.DB.prepare("UPDATE user_2fa SET email_tries = email_tries + 1 WHERE email = ?").bind(email).run();
+  return ok;
 }
 
 /* ---------- small helpers ---------- */
@@ -170,7 +215,8 @@ async function newChallenge(env, deps, request, u, st) {
 /* ---------- called by login() after the password is right ---------- */
 export async function twofaGate(env, deps, request, u, b) {
   const st = await stateOf(env, u.email);
-  const enrolled = st && (st.totp_on || st.approve_on);
+  const pks = await passkeysOf(env, u.email);
+  const enrolled = (st && (st.totp_on || st.approve_on || st.email_on)) || pks.length;
   if (!enrolled) return null;                                       // not set up → normal sign-in (setup is asked inside the hub if required)
   const trust = readCookie(request, "hub_trust");
   if (trust) {
@@ -178,11 +224,14 @@ export async function twofaGate(env, deps, request, u, b) {
     if (t && t.expires_at > new Date().toISOString()) return null;   // trusted device
   }
   if (u.twofa_lock && u.twofa_lock > new Date().toISOString()) throw err(`Too many wrong codes. Try again after ${beirutTime(u.twofa_lock)}.`, 429);
-  const methods = [...(st.approve_on ? ["approve"] : []), ...(st.totp_on ? ["code"] : []), "backup"];
-  const challenge = st.approve_on ? await newChallenge(env, deps, request, u, st) : null;
+  const methods = [...(pks.length ? ["passkey"] : []), ...(st && st.approve_on ? ["approve"] : []), ...(st && st.totp_on ? ["code"] : []), "email",
+    ...(st && JSON.parse(st.backup || "[]").length ? ["backup"] : [])];
+  const challenge = st && st.approve_on && !pks.length ? await newChallenge(env, deps, request, u, st) : null;   // with a passkey, the phone request is sent only when asked
+  /* nothing but the email code: send it straight away */
+  const mail = methods[0] === "email" ? await sendEmailCode(env, deps, u).catch(e => ({ error: e.message })) : null;
   const h = new Headers({ "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   h.append("set-cookie", cookie("hub_pre", await makePre(env, deps, u.email), PRE_MIN * 60));
-  return new Response(JSON.stringify({ ok: true, data: { twofa: { methods, challenge, name: u.full_name.split(" ")[0] } } }), { status: 200, headers: h });
+  return new Response(JSON.stringify({ ok: true, data: { twofa: { methods, challenge, mail, email: maskEmail(u.email), name: u.full_name.split(" ")[0] } } }), { status: 200, headers: h });
 }
 
 async function fail2(env, email) {
@@ -199,8 +248,32 @@ export async function twofaPublic(env, deps, path, method, b, request) {
   if (!email) throw err("Your sign-in has timed out. Enter your email and password again.", 401);
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
   if (!u || !u.active) throw err("This account is switched off.", 403);
+  await ensureRow(env, email);
   const st = await stateOf(env, email);
-  if (!st) throw err("Two-step login is not set up for this account.", 400);
+
+  /* passkey on this device (Face ID / fingerprint / Windows Hello) */
+  if (path === "login/2fa/pk-options" && method === "POST") {
+    const pks = await passkeysOf(env, email);
+    if (!pks.length) throw err("No passkey is set up for this account.");
+    const chal = b64u(rand(32));
+    await env.DB.prepare("UPDATE user_2fa SET reg_chal = ? WHERE email = ?").bind("P:" + chal, email).run();
+    return { ok: true, data: { publicKey: { challenge: chal, rpId: new URL(request.url).hostname, userVerification: "required", timeout: 60000,
+      allowCredentials: pks.map(p => ({ type: "public-key", id: p.cred_id, transports: ["internal", "hybrid"] })) } } };
+  }
+  if (path === "login/2fa/pk" && method === "POST") {
+    if (u.twofa_lock && u.twofa_lock > new Date().toISOString()) throw err(`Too many attempts. Try again after ${beirutTime(u.twofa_lock)}.`, 429);
+    if (!String(st.reg_chal).startsWith("P:")) throw err("Start again.");
+    const a = b.assertion || {};
+    const pk = await env.DB.prepare("SELECT * FROM user_passkeys WHERE cred_id = ? AND email = ?").bind(String(a.id || ""), email).first();
+    if (!pk) { await fail2(env, email); throw err("This device's passkey is not registered for your account — use the email code."); }
+    const url = new URL(request.url);
+    try { await verifyAssertion({ cred_id: pk.cred_id, cred_key: pk.pubkey, cred_alg: pk.alg }, a, st.reg_chal.slice(2), url.origin, url.hostname); }
+    catch (e) { await fail2(env, email); throw e; }
+    await env.DB.batch([env.DB.prepare("UPDATE user_2fa SET reg_chal = '' WHERE email = ?").bind(email),
+      env.DB.prepare("UPDATE user_passkeys SET last_used = ? WHERE cred_id = ?").bind(new Date().toISOString(), pk.cred_id)]);
+    return finish(env, deps, request, email, !!b.trust);
+  }
+  if (path === "login/2fa/email" && method === "POST") return { ok: true, data: await sendEmailCode(env, deps, u) };
 
   if (path === "login/2fa/status") {
     const c = await env.DB.prepare("SELECT * FROM login_challenges WHERE id = ? AND email = ?").bind(String(b.id || ""), email).first();
@@ -236,8 +309,9 @@ export async function twofaPublic(env, deps, path, method, b, request) {
   if (path === "login/2fa/code" && method === "POST") {
     if (u.twofa_lock && u.twofa_lock > new Date().toISOString()) throw err(`Too many wrong codes. Try again after ${beirutTime(u.twofa_lock)}.`, 429);
     const raw = String(b.code || "").trim().toUpperCase().replace(/\s/g, "");
-    if (/^\d{6}$/.test(raw) && st.totp_on) {
-      const step = await totpCheck(await unseal(env, st.totp), raw, st.last_step);
+    if (/^\d{6}$/.test(raw)) {
+      if (await checkEmailCode(env, st, email, raw)) return finish(env, deps, request, email, !!b.trust);
+      const step = st.totp_on ? await totpCheck(await unseal(env, st.totp), raw, st.last_step) : 0;
       if (step) { await env.DB.prepare("UPDATE user_2fa SET last_step = ? WHERE email = ?").bind(step, email).run(); return finish(env, deps, request, email, !!b.trust); }
     } else if (/^[A-Z2-7]{4}-?[A-Z2-7]{4}$/.test(raw)) {
       const h = hex(await sha256(`${email}|${raw.replace(/-/g, "")}`)), list = JSON.parse(st.backup || "[]");
@@ -261,7 +335,9 @@ export async function twofaRoute(env, deps, path, method, b, url, request, me) {
 
   if (path === "2fa/status") {
     const trusted = await env.DB.prepare("SELECT COUNT(*) AS n FROM trusted_devices WHERE email = ? AND expires_at > ?").bind(me.email, new Date().toISOString()).first();
-    return { required, totpOn: !!(st && st.totp_on), approveOn: !!(st && st.approve_on), approveDevice: st ? deviceLabel(st.approve_device) : "",
+    const pks = await passkeysOf(env, me.email);
+    return { required, passkeys: pks.map(p => ({ id: p.cred_id, label: p.label, created: p.created_at, lastUsed: p.last_used })), emailOn: !!(st && st.email_on), email: maskEmail(me.email),
+      totpOn: !!(st && st.totp_on), approveOn: !!(st && st.approve_on), approveDevice: st ? deviceLabel(st.approve_device) : "",
       backupLeft: st ? JSON.parse(st.backup || "[]").length : 0, trusted: Number(trusted.n || 0) };
   }
   if (path === "2fa/pending") {   /* the phone opens the hub: is a sign-in waiting for my approval? */
@@ -269,6 +345,49 @@ export async function twofaRoute(env, deps, path, method, b, url, request, me) {
     const c = await env.DB.prepare("SELECT id FROM login_challenges WHERE email = ? AND status = 'pending' AND expires_at > ? ORDER BY created_at DESC LIMIT 1")
       .bind(me.email, new Date().toISOString()).first();
     return { id: c ? c.id : "" };
+  }
+  /* passkey on this device */
+  if (path === "2fa/pk/options" && method === "POST") {
+    await ensureRow(env, me.email);
+    const chal = b64u(rand(32)), pks = await passkeysOf(env, me.email);
+    await env.DB.prepare("UPDATE user_2fa SET reg_chal = ? WHERE email = ?").bind("R:" + chal, me.email).run();
+    return { publicKey: { challenge: chal, rp: { name: ISSUER, id: rpId }, user: { id: b64u(await sha256(me.email)), name: me.email, displayName: me.full_name },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }], timeout: 60000, attestation: "none",
+      excludeCredentials: pks.map(p => ({ type: "public-key", id: p.cred_id })),
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" } } };
+  }
+  if (path === "2fa/pk/register" && method === "POST") {
+    const fresh = await stateOf(env, me.email);
+    if (!fresh || !String(fresh.reg_chal).startsWith("R:")) throw err("Start the setup again.");
+    const cd = JSON.parse(td.decode(unb64u(b.clientDataJSON)));
+    if (cd.type !== "webauthn.create" || cd.challenge !== fresh.reg_chal.slice(2) || cd.origin !== origin) throw err("The passkey could not be verified — try again.");
+    const alg = Number(b.alg) === -257 ? -257 : -7;
+    try { await crypto.subtle.importKey("spki", unb64u(b.publicKey), alg === -257 ? { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" } : { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]); }
+    catch { throw err("This device's key type is not supported — use the email code instead."); }
+    if ((await passkeysOf(env, me.email)).length >= 6) throw err("Six devices at most — remove an old one first.");
+    const label = String(b.label || deviceLabel(request.headers.get("user-agent"))).slice(0, 60);
+    await env.DB.batch([
+      env.DB.prepare("INSERT OR REPLACE INTO user_passkeys (cred_id, email, pubkey, alg, label, created_at) VALUES (?,?,?,?,?,?)").bind(String(b.id), me.email, String(b.publicKey), alg, label, new Date().toISOString()),
+      env.DB.prepare("UPDATE user_2fa SET reg_chal = '', updated_at = ? WHERE email = ?").bind(new Date().toISOString(), me.email)
+    ]);
+    return { on: true, label };
+  }
+  if (path === "2fa/pk/remove" && method === "POST") {
+    const pks = await passkeysOf(env, me.email);
+    const left = pks.filter(p => p.cred_id !== b.id).length + (st && (st.totp_on || st.approve_on || st.email_on) ? 1 : 0);
+    if (required && !left) throw err("Two-step login is required for your role — keep at least one way on.");
+    await env.DB.prepare("DELETE FROM user_passkeys WHERE cred_id = ? AND email = ?").bind(String(b.id || ""), me.email).run();
+    return { removed: true };
+  }
+  /* email code only (for people whose devices have no Face ID / fingerprint / Windows Hello) */
+  if (path === "2fa/email/on" && method === "POST") {
+    await ensureRow(env, me.email);
+    if (!b.on && required) {
+      const pks = await passkeysOf(env, me.email);
+      if (!pks.length && !(st && (st.totp_on || st.approve_on))) throw err("Two-step login is required for your role — keep at least one way on.");
+    }
+    await env.DB.prepare("UPDATE user_2fa SET email_on = ?, updated_at = ? WHERE email = ?").bind(b.on ? 1 : 0, new Date().toISOString(), me.email).run();
+    return { emailOn: !!b.on };
   }
   /* authenticator app */
   if (path === "2fa/totp/start" && method === "POST") {
@@ -352,10 +471,12 @@ export async function twofaRoute(env, deps, path, method, b, url, request, me) {
     if (!st) return { off: true };
     if (!(await deps.checkPassword(me, String(b.password || "")))) throw err("Your password is not right.", 401);
     const what = b.what === "approve" ? "approve" : b.what === "totp" ? "totp" : "all";
-    const left = (what === "approve" ? st.totp_on : what === "totp" ? st.approve_on : 0);
+    const others = (await passkeysOf(env, me.email)).length + (st.email_on ? 1 : 0);
+    const left = (what === "approve" ? st.totp_on : what === "totp" ? st.approve_on : 0) + (what === "all" ? 0 : others);
     if (required && !left) throw err("Two-step login is required for your role — keep at least one way on.");
     if (what === "all" || !left) {
       await env.DB.prepare("DELETE FROM user_2fa WHERE email = ?").bind(me.email).run();
+      await env.DB.prepare("DELETE FROM user_passkeys WHERE email = ?").bind(me.email).run();
       await env.DB.prepare("DELETE FROM trusted_devices WHERE email = ?").bind(me.email).run();
     } else if (what === "approve") await env.DB.prepare("UPDATE user_2fa SET approve_on = 0, cred_id = '', cred_key = '', approve_ep = '' WHERE email = ?").bind(me.email).run();
     else await env.DB.prepare("UPDATE user_2fa SET totp_on = 0, totp = '' WHERE email = ?").bind(me.email).run();
@@ -371,12 +492,17 @@ export async function twofaAdmin(env, a, method, b) {
       const roles = (Array.isArray(b.roles) ? b.roles : []).map(String).filter(r => /^[A-Z]{2,12}$/.test(r));
       await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('twofa:required', ?)").bind(JSON.stringify(roles)).run();
     }
-    const { results } = await env.DB.prepare("SELECT email, totp_on, approve_on FROM user_2fa WHERE totp_on = 1 OR approve_on = 1").all();
-    return { roles: await requiredRoles(env), on: Object.fromEntries((results || []).map(r => [r.email, { code: !!r.totp_on, phone: !!r.approve_on }])) };
+    const { results } = await env.DB.prepare("SELECT email, totp_on, approve_on, email_on FROM user_2fa").all();
+    const pk = await env.DB.prepare("SELECT email, COUNT(*) AS n FROM user_passkeys GROUP BY email").all();
+    const on = {};
+    for (const r of results || []) if (r.totp_on || r.approve_on || r.email_on) on[r.email] = { code: !!r.totp_on, phone: !!r.approve_on, email: !!r.email_on, passkeys: 0 };
+    for (const r of pk.results || []) (on[r.email] = on[r.email] || { code: false, phone: false, email: false, passkeys: 0 }).passkeys = Number(r.n);
+    return { roles: await requiredRoles(env), on };
   }
   if (a === "2fa/reset" && method === "POST") {
     const email = String(b.email || "").toLowerCase();
     await env.DB.prepare("DELETE FROM user_2fa WHERE email = ?").bind(email).run();
+    await env.DB.prepare("DELETE FROM user_passkeys WHERE email = ?").bind(email).run();
     await env.DB.prepare("DELETE FROM trusted_devices WHERE email = ?").bind(email).run();
     await env.DB.prepare("UPDATE users SET twofa_fail = 0, twofa_lock = '' WHERE email = ?").bind(email).run();
     return { reset: true };

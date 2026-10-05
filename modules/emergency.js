@@ -15,7 +15,10 @@
    vibrates SOS and repeats every ~45 s until the person taps "I'm on it".
    Anyone with the hub open gets a full-screen red alert with a siren.
    The sender watches a live board and ends it with "All clear".
-   No outside service, no cost.
+   Phone calls (optional): with a voice provider set up (Twilio secrets TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM),
+   anyone who has not acknowledged after 60 s gets a real phone call that reads the alert out loud —
+   it rings like a normal call, also when the phone is on silent for apps. Called again after 5 minutes (twice at most).
+   Without the secrets: the board shows each person's mobile with a one-tap "Call" button.
 
    Tables : emergencies · emergency_recips
    Routes : /api/ops/emergency/*   Cron: emergencyRun(env, deps)
@@ -62,6 +65,8 @@ export async function emergencySchema(env) {
       why TEXT NOT NULL DEFAULT '', devices INTEGER NOT NULL DEFAULT 0, sends INTEGER NOT NULL DEFAULT 0, delivered INTEGER NOT NULL DEFAULT 0,
       first_at TEXT, last_at TEXT, ack_at TEXT NOT NULL DEFAULT '', PRIMARY KEY (emergency_id, email))`)
   ]);
+  for (const c of ["mobile TEXT NOT NULL DEFAULT ''", "calls INTEGER NOT NULL DEFAULT 0", "called_at TEXT NOT NULL DEFAULT ''", "call_error TEXT NOT NULL DEFAULT ''"])
+    await env.DB.prepare(`ALTER TABLE emergency_recips ADD COLUMN ${c}`).run().catch(() => {});
 }
 
 /* ---------- who is on shift right now ---------- */
@@ -104,6 +109,47 @@ export async function onShiftNow(env, site, withManagers) {
   return { at: t.hm, list: [...out.values()].sort((a, b) => a.name.localeCompare(b.name)) };
 }
 
+/* ---------- phone calls (optional voice provider) ---------- */
+const CALL_AFTER_S = 60, CALL_AGAIN_S = 300, MAX_CALLS = 2;
+export const callsReady = env => !!(env.TWILIO_SID && env.TWILIO_TOKEN && env.TWILIO_FROM);
+/* Lebanese numbers: 03 123 456 · 71-123456 · 00961… · +961… → +9613123456 */
+export function e164(m) {
+  let d = String(m || "").replace(/[^\d+]/g, "");
+  if (!d) return "";
+  if (d.startsWith("+")) return /^\+\d{8,15}$/.test(d) ? d : "";
+  if (d.startsWith("00")) return "+" + d.slice(2);
+  if (d.startsWith("961")) return "+" + d;
+  if (d.startsWith("0")) d = d.slice(1);
+  return d.length >= 7 && d.length <= 8 ? "+961" + d : "";
+}
+const xml = s => String(s).replace(/[<>&"']/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]));
+async function placeCall(env, to, e, siteName) {
+  const say = `Emergency at ${siteName || e.site}. ${e.type}. ${e.location}. ${e.note || ""} Open the ABC Operations Hub and tap I am on it.`;
+  const twiml = `<Response><Pause length="1"/><Say voice="alice" language="en-GB" loop="3">${xml(say)}</Say></Response>`;
+  const body = new URLSearchParams({ To: to, From: env.TWILIO_FROM, Twiml: twiml, Timeout: "40" });
+  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Calls.json`, { method: "POST", body,
+    headers: { authorization: "Basic " + btoa(`${env.TWILIO_SID}:${env.TWILIO_TOKEN}`), "content-type": "application/x-www-form-urlencoded" } });
+  if (r.ok) return { ok: true };
+  let j = {}; try { j = await r.json(); } catch {}
+  return { ok: false, error: String(j.message || r.status).slice(0, 200) };
+}
+async function callRound(env, deps, e) {
+  if (!callsReady(env)) return;
+  const now = Date.now();
+  if (now - new Date(e.created_at).getTime() > REPEAT_FOR_MIN * 60e3) return;   // same window as the repeating alarm
+  const { results } = await env.DB.prepare("SELECT * FROM emergency_recips WHERE emergency_id = ? AND ack_at = '' AND mobile != '' AND calls < ?").bind(e.id, MAX_CALLS).all();
+  for (const r of results || []) {
+    if (now - new Date(r.first_at).getTime() < CALL_AFTER_S * 1000) continue;
+    if (r.called_at && now - new Date(r.called_at).getTime() < CALL_AGAIN_S * 1000) continue;
+    const to = e164(r.mobile); if (!to) continue;
+    /* claim first, so two pager runs never call twice */
+    const claim = await env.DB.prepare("UPDATE emergency_recips SET calls = calls + 1, called_at = ? WHERE emergency_id = ? AND email = ? AND calls = ?").bind(deps.now(), e.id, r.email, r.calls).run();
+    if (!claim.meta || claim.meta.changes !== 1) continue;
+    const res = await placeCall(env, to, e, deps.siteName ? deps.siteName(e.site) : "").catch(x => ({ ok: false, error: String(x.message || x) }));
+    if (!res.ok) await env.DB.prepare("UPDATE emergency_recips SET call_error = ? WHERE emergency_id = ? AND email = ?").bind(res.error, e.id, r.email).run();
+  }
+}
+
 /* ---------- sending ---------- */
 const SOS = [300, 120, 300, 120, 300, 360, 700, 160, 700, 160, 700, 360, 300, 120, 300, 120, 300];
 function payload(e, repeat) {
@@ -130,8 +176,9 @@ async function alertRound(env, deps, e, force) {
     const r = have.get(p.email);
     if (!r) {
       const res = await pushTo(env, deps, p.email, payload(e, 0));
-      await env.DB.prepare(`INSERT OR IGNORE INTO emergency_recips (emergency_id, email, name, why, devices, sends, delivered, first_at, last_at) VALUES (?,?,?,?,?,1,?,?,?)`)
-        .bind(e.id, p.email, p.name, p.why, res.devices, res.ok, iso, iso).run();
+      const mob = await env.DB.prepare("SELECT mobile FROM users WHERE email = ?").bind(p.email).first().catch(() => null);
+      await env.DB.prepare(`INSERT OR IGNORE INTO emergency_recips (emergency_id, email, name, why, devices, sends, delivered, first_at, last_at, mobile) VALUES (?,?,?,?,?,1,?,?,?,?)`)
+        .bind(e.id, p.email, p.name, p.why, res.devices, res.ok, iso, iso, (mob && mob.mobile) || "").run();
       await deps.raiseEvent(env, { site: e.site, app: "emergency", email: p.email, tone: "alert", title: `EMERGENCY · ${e.type}`, body: `${e.location} · sent by ${e.created_name}` });
       sent++;
     }
@@ -151,7 +198,7 @@ async function alertRound(env, deps, e, force) {
 /* cron (every 2 minutes) — keeps repeating even if the sender closed the board */
 export async function emergencyRun(env, deps, fromPager) {
   const { results } = await env.DB.prepare("SELECT * FROM emergencies WHERE status = 'active'").all();
-  for (const e of results || []) await alertRound(env, deps, e, false);
+  for (const e of results || []) { await alertRound(env, deps, e, false); await callRound(env, deps, e).catch(() => {}); }
   if ((results || []).length && !fromPager) await startPager(env);   // the cron also restarts the pager if it ever stopped
   return (results || []).length;
 }
@@ -159,7 +206,8 @@ export async function emergencyRun(env, deps, fromPager) {
 async function board(env, e) {
   const { results } = await env.DB.prepare("SELECT * FROM emergency_recips WHERE emergency_id = ? ORDER BY (ack_at = '') DESC, name").bind(e.id).all();
   return { emergency: out(e), recipients: (results || []).map(r => ({ email: r.email, name: r.name, why: r.why, devices: r.devices,
-    sends: r.sends, delivered: r.delivered, firstAt: r.first_at, lastAt: r.last_at, ackAt: r.ack_at })) };
+    sends: r.sends, delivered: r.delivered, firstAt: r.first_at, lastAt: r.last_at, ackAt: r.ack_at, mobile: r.mobile || "", tel: e164(r.mobile),
+    calls: r.calls || 0, calledAt: r.called_at || "", callError: r.call_error || "" })), phoneCalls: callsReady(env) };
 }
 const out = e => ({ id: e.id, site: e.site, type: e.type, location: e.location, note: e.note, status: e.status, managers: !!e.managers,
   createdBy: e.created_by, createdName: e.created_name, createdAt: e.created_at, closedAt: e.closed_at, closedName: e.closed_name, closeNote: e.close_note });
@@ -190,7 +238,7 @@ export async function emergencyRoute(env, p, method, b, url, ctx) {
     return { alerts: (mine.results || []).map(out), open: (open.results || []).map(out) };
   }
   if (p === "emergency/meta") {
-    return { types: TYPES, can: { send: !!can.emergency }, site };
+    return { types: TYPES, can: { send: !!can.emergency }, site, phoneCalls: callsReady(env) };
   }
   if (p === "emergency/preview") {
     if (!can.emergency) throw err("Only managers, the senior mall supervisor and administrators can send an emergency alert", 403);

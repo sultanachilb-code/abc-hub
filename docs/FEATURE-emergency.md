@@ -1,3 +1,6 @@
+> **Update — ringing the phone.** Each person adds their **mobile** in Profile settings. On the live board, anyone who has not acknowledged shows a green **📞 Call** button (rings them from your phone).
+> **Automatic phone calls (optional):** add three Cloudflare Secrets on the hub — `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM` (a Twilio voice number). Then anyone still not acknowledged **after 60 seconds** gets a real phone call that reads the alert out loud (type, location, note), and again after 5 minutes (two calls at most, during the first hour). A call rings like any call, also when notifications are silenced. Cost is per call (Twilio's rate to Lebanon). Without the secrets nothing is called and nothing changes.
+
 # Feature record — Emergency Alert
 
 Added: September 2026 · Status: live · Owner: Sultan Al Achi · Cost: none (no outside service)
