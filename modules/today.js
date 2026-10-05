@@ -14,6 +14,7 @@ const first = s => String(s || "").trim().split(/\s+/)[0] || "";
 
 /* Daily deadlines shown on the timeline (Beirut time) */
 export const DEADLINES = { amCheck: "11:00", pmCheck: "22:45", amHandover: "15:00", pmHandover: "22:50" };
+export const MALL_CLOSE = "22:00";   // a tenant's final operating day ends at mall closing
 const AM_FROM = "11:00", PM_FROM = "18:00";   // hand-overs 11:00–18:00 count as the AM hand-over, after 18:00 as the PM one (earlier ones are the night → morning hand-over)
 /* Restroom windows when the Restroom system cannot be reached (same as Reminders) */
 const RR_WINDOWS = [["Window 1", "10:00", "11:00"], ["Window 2", "12:30", "13:30"], ["Window 3", "14:30", "15:30"], ["Window 4", "16:30", "17:30"], ["Window 5", "18:30", "19:30"], ["Window 6", "20:30", "21:30"]];
@@ -45,7 +46,7 @@ export async function todayRoute(env, d) {
   const seeCon = full || ["SUPERVISOR", "SECURITY", "MANAGER"].includes(me.role);
   const seeRR = full || ["SUPERVISOR", "MANAGER"].includes(me.role);
 
-  const [staff, cells, hov, momToday, calToday, acts, cons, runs, restroom] = await Promise.all([
+  const [staff, cells, hov, momToday, calToday, acts, cons, runs, restroom, closeAnn, closeCon] = await Promise.all([
     d.schedStaff(env, site),
     env.DB.prepare("SELECT day, email, val FROM sched_cells WHERE site = ? AND day IN (?, ?)").bind(site, day, yday).all(),
     env.DB.prepare("SELECT id, day, status, created_name, submitted_at, received_by, received_at, handoffs FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first(),
@@ -55,8 +56,15 @@ export async function todayRoute(env, d) {
       FROM mom_actions a JOIN mom_meetings m ON m.id = a.meeting_id WHERE a.site = ? AND m.status = 'published' AND a.status = 'Open'`).bind(day, site).first(),
     seeCon ? dayList(env, site, day, day).catch(() => []) : Promise.resolve(null),
     env.DB.prepare("SELECT form, status, submitted_at, submitted_name, created_name FROM form_runs WHERE site = ? AND day = ? AND form IN ('am','pm') ORDER BY id").bind(site, day).all().catch(() => ({ results: [] })),
-    seeRR ? restroomDay(d, env, site, day) : Promise.resolve(null)
+    seeRR ? restroomDay(d, env, site, day) : Promise.resolve(null),
+    env.DB.prepare("SELECT brand, unit, level, type FROM tm_announcements WHERE site = ? AND eff_date = ? AND type IN ('close','reloc')").bind(site, day).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT tenant, account FROM contracts_ending WHERE site = ? AND active = 1 AND departure_day = ?").bind(site, day).all().catch(() => ({ results: [] }))
   ]);
+  /* tenants closing today (closure / relocation announcement, or the contracts report's departure date) */
+  const nb = x => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const closing = [];
+  for (const a of closeAnn.results || []) closing.push({ brand: a.brand, unit: [a.level, a.unit].filter(Boolean).join(" "), why: a.type === "reloc" ? "Relocating — last day in the current unit" : "Final operating day", at: MALL_CLOSE });
+  for (const c of closeCon.results || []) { const b = c.tenant || c.account; if (b && !closing.some(x => nb(x.brand) === nb(b))) closing.push({ brand: b, unit: "", why: "Final operating day (contract departure)", at: MALL_CLOSE }); }
 
   /* ----- shifts: today's cells, plus last night's shift that runs past midnight ----- */
   const C = new Map((cells.results || []).map(c => [c.day + "|" + c.email, c.val]));
@@ -101,7 +109,7 @@ export async function todayRoute(env, d) {
   return {
     site, siteName: d.siteName(site), day, now: d.hm(),
     shifts, off,
-    handover, reminders, restroom,
+    handover, reminders, restroom, closing,
     meetings, events: items.filter(x => x.kind !== "mom"),
     actions: { open: Number(acts && acts.n || 0), late: Number(acts && acts.late || 0) },
     contractors: cons && cons.map(v => ({ id: v.id, company: v.company || v.tenant, tenant: v.tenant, work: v.work, from: v.timeFrom, to: v.timeTo,

@@ -249,6 +249,16 @@ main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1e
 .d2d-dl.soon{--dc:var(--warn);animation:d2dW 1.6s infinite} .d2d-dl.over{--dc:#fff;background:var(--alert);border-color:var(--alert)}
 .d2d-hl{position:absolute;top:30px;bottom:0;border-left:2px dashed var(--gold);z-index:2;pointer-events:none}
 .d2d-hl b{position:absolute;top:-10px;left:12px;font-size:.62rem;font-weight:800;color:var(--gold);white-space:nowrap;background:var(--paper);padding:0 4px;border-radius:4px}
+.d2d-dot{position:absolute;top:5px;height:20px;display:flex;align-items:center;gap:6px;margin-left:-10px;white-space:nowrap;cursor:pointer;background:none;padding:0}
+.d2d-dot i{width:20px;height:20px;border-radius:50%;background:var(--dc);border:3px solid var(--surface);box-shadow:0 0 0 1.5px var(--dc);display:grid;place-items:center;font-style:normal;font-size:.6rem;font-weight:800;color:#fff;flex:none}
+.d2d-dot span{font-size:.68rem;font-weight:700;color:var(--muted)}
+.d2d-dot:hover span{color:var(--text)} .d2d-dot.nolbl span{display:none}
+.d2d-dot.on{--dc:#C07A12} .d2d-dot.exp{--dc:#C07A12} .d2d-dot.exp i{background:var(--surface);color:#C07A12} .d2d-dot.left{--dc:#8C8398} .d2d-dot.left span{opacity:.7}
+.d2d-dot.over{--dc:var(--alert)} .d2d-dot.over span{color:var(--alert)}
+.d2d-dl.close{--dc:#8E2B2B;background:rgba(142,43,43,.1)}
+.d2d-plist{max-height:260px;overflow:auto;margin-top:8px;display:grid;gap:8px}
+.d2d-plist>div{border:1px solid var(--line);border-radius:12px;padding:8px 10px}.d2d-plist b{font-size:.84rem}.d2d-plist p{margin:2px 0 4px}
+.d2d-c .ico{position:relative}.d2d-c .lv{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--surface);animation:d2dP 2s infinite}
 .d2d-now{position:absolute;top:0;bottom:0;width:2px;background:var(--gold);z-index:5;pointer-events:none}
 .d2d-now b{position:absolute;bottom:5px;left:5px;font-size:.6rem;font-weight:800;color:var(--gold);white-space:nowrap;background:var(--paper);padding:0 3px;border-radius:4px}
 .d2d-leg{display:flex;gap:14px;flex-wrap:wrap;margin:10px 2px 14px;font-size:.72rem;color:var(--muted);font-weight:600}
@@ -1826,6 +1836,7 @@ async function loadBrief(fresh){
 /* Home by level: management and leadership see the brief; the operations team sees the Day to Day timeline instead */
 const SENIOR_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];
 const seniorView = () => !!(ME && ME.user && SENIOR_ROLES.includes(ME.user.role));
+const showD2D = () => !!(ME && ME.user) && (ME.user.role === "ADMIN" || !seniorView());   // Admin sees both the brief and the timeline
 function renderBrief(loading){
   const box = $("#brief");
   if (!seniorView()){ box.innerHTML = ""; return; }   // operations team: no brief panel (its figures still feed the tile badges)
@@ -1936,7 +1947,7 @@ const d2dApps = () => APPS.filter(a => a.group === DAY_GROUP && !a.hidden);
 const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 async function loadToday(){
-  if (!d2dApps().length || seniorView()) return;
+  if (!d2dApps().length || !showD2D()) return;
   try { D2D.data = await api("ops/today" + (D2D.site ? "?site=" + encodeURIComponent(D2D.site) : "")); D2D.err = ""; }
   catch (e){ D2D.err = e.message; }
   paintD2D();
@@ -1981,10 +1992,17 @@ function d2dHtml(){
   let ci = 0;
   const shiftBars = [...groups.values()].sort((a, b) => hmM(a.from) - hmM(b.from)).map(g => ({ t: "shift", from: g.from, to: g.to, carry: g.carry, g,
     c: SH_COL[g.carry ? 2 : (ci++ % SH_COL.length)], label: `${g.carry ? "→ " + g.to : g.from + "–" + (g.to === "24:00" ? "00:00" : g.to)} · ${g.people.map(p => p.first).join(", ")}` }));
-  const conBars = has("contractors") && D.contractors ? D.contractors.map(v => { let to = v.to && hmM(v.to) > hmM(v.from || "08:00") ? v.to : "18:00";
-    if (v.state === "onsite" && hmM(now) > hmM(to)) to = now;   // still on site after the permit: the bar runs to now
-    return { t: "con", v, from: v.from || "08:00", to, live: v.state === "onsite",
-    c: "#C07A12", cls: v.overdue ? "alert" : v.state === "expected" ? "exp" : "", label: `${v.company}${v.workers ? " · " + v.workers : ""}` }; }) : [];
+  /* contractors: one dot at the time each permit ends ("Tenant - Contractor"); several at the same time share one dot */
+  const conG = new Map();
+  if (has("contractors") && D.contractors) for (const v of D.contractors){ const t = v.to || "18:00"; if (!conG.has(t)) conG.set(t, []); conG.get(t).push(v); }
+  const mm0 = m => `${String(Math.min(23, Math.floor(m / 60))).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const conDots = [...conG.entries()].map(([t, L]) => ({ t: "cdot", at: t, L, from: t, lbl: L.length > 1 ? 14 : `${L[0].tenant || ""} - ${L[0].company}`.length,
+    st: L.some(v => v.overdue) ? "over" : L.some(v => v.state === "onsite") ? "on" : L.every(v => v.state === "left") ? "left" : "exp",
+    label: L.length > 1 ? `${L.length} contractors` : `${L[0].tenant && L[0].tenant !== L[0].company ? L[0].tenant + " - " : ""}${L[0].company}` }))
+    .map(d => ({ ...d, to: mm0(Math.min(1439, hmM(d.at) + 25 + d.lbl * 9)) }));   // room for the label (≈9 min a letter on a phone)
+  const conBars = [];
+  /* tenants on their final operating day — a flag at mall closing */
+  const tcBars = (D.closing || []).map(c => ({ t: "tc", c, st: "close", from: mm0(Math.max(0, hmM(c.at) - 200)), to: c.at, label: `${c.brand} · final operating day ${c.at}` }));
   const timed = [...(has("mom") ? D.meetings : []), ...D.events].filter(x => x.from);
   const mm = m => `${String(Math.min(23, Math.floor(m / 60))).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   const evBars = timed.map(x => ({ t: "ev", x, from: x.from, to: mm(Math.max(hmM(x.from) + 150, x.to && hmM(x.to) > hmM(x.from) ? hmM(x.to) : 0)),   // at least 2½ h wide so the title reads
@@ -2015,7 +2033,9 @@ function d2dHtml(){
   if (rrBars.length) lanes += lane([rrBars], false);
   if (dlBars.length) lanes += d2dPack(dlBars, 3).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl ${b.st}" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">${esc(b.label)}</button>`; }).join("")}</div>`).join("");
   if (has("schedule")) lanes += lane(d2dPack(shiftBars, 4), !!lanes);
-  if (conBars.length) lanes += lane(d2dPack(conBars, 3), true);
+  if (conDots.length) lanes += d2dPack(conDots, 3).map((r, k) => `<div class="d2d-ln ${k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b);
+    return `<button class="d2d-dot ${b.st} ${b.over ? "nolbl" : ""}" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>${b.L.length > 1 ? b.L.length : ""}</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
+  if (tcBars.length) lanes += d2dPack(tcBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl close" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">🏁 ${esc(b.label)}</button>`; }).join("")}</div>`).join("");
   if (evBars.length) lanes += lane(d2dPack(evBars, 2), true);
   if (!lanes) lanes = `<div class="d2d-ln"></div>`;
   const pins = has("handover") && D.handover ? D.handover.handoffs.map((h, k) => { BARS.push({ t: "pin", h });
@@ -2029,7 +2049,7 @@ function d2dHtml(){
   return `<section class="d2d" id="d2d">${head}${chips ? `<div class="d2d-day">${chips}</div>` : ""}
     <div class="d2d-sc"><div class="d2d-tr" style="--n:${h1 - h0};--mw:${(h1 - h0) * 46}px"><div class="d2d-hr">${hours}</div>${lanes}${pins}${empty}
       <div class="d2d-now" style="left:${X(now)}"><b>NOW ${esc(now)}</b></div></div></div>
-    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${conBars.length ? `<span><i style="background:#C07A12"></i>Contractors</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
+    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#C07A12"></i>Contractor permit ends</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
     ${d2dCards(apps, D, nm)}</section>`;
 }
 function d2dCards(apps, D, nm){
@@ -2060,10 +2080,11 @@ function d2dCards(apps, D, nm){
       if (!D || !D.contractors) return ["…", ""];
       const L = D.contractors, n = s => L.filter(v => v.state === s).length, over = L.filter(v => v.overdue).length, late = L.filter(v => v.late).length;
       if (!L.length) return ["No contractors booked today", `<em class="ok">Clear</em>`];
-      return [`${n("onsite")} on site · ${n("expected")} expected · ${n("left")} left`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
+      const w = L.filter(v => v.state === "onsite").reduce((a, v) => a + (v.workers || 0), 0);
+      return [`${n("onsite")} in the mall now${w ? " · " + w + " workers" : ""} · ${n("expected")} expected`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
     } };
-  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (line[a.id] || (() => [a.desc, ""]))();
-    return `<button class="d2d-c" data-id="${esc(a.id)}"><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}</span><span class="tx"><b>${esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
+  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (line[a.id] || (() => [a.desc, ""]))(); const live = a.id === "contractors";
+    return `<button class="d2d-c" data-id="${esc(a.id)}" ${live ? "data-live" : ""}><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}${live ? `<span class="lv"></span>` : ""}</span><span class="tx"><b>${live ? "Live contractor access" : esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
 }
 function d2dPop(b, el){
   $("#d2dPop") && $("#d2dPop").remove();
@@ -2080,6 +2101,14 @@ function d2dPop(b, el){
   else if (b.t === "dl"){ const r = b.r; app = r.app;
     h = `<h4>${esc(r.label)}</h4><p>Due by <b style="color:var(--text)">${esc(r.due)}</b></p>${r.done ? `<p>${r.app === "handover" ? "Handed over" : "Submitted"} at ${esc(r.at)} by ${esc(r.by)}${r.receivedBy ? " · received by " + esc(r.receivedBy) : ""}</p>` : r.started ? `<p>Started by ${esc(r.by)} — not submitted yet</p>` : ""}
       <p><em class="${{ done: "ok", late: "warn", over: "al", soon: "warn" }[b.st] || "mu"}">${{ done: "Done on time", late: "Done late", over: "Overdue", soon: "Due within the hour", next: "Upcoming" }[b.st]}</em></p>`; }
+  else if (b.t === "cdot"){ app = "contractors";
+    const tag = v => v.overdue ? `<em class="al">Over permit time</em>` : v.state === "onsite" ? `<em class="ok">In the mall since ${esc(v.inAt)}</em>` : v.state === "left" ? `<em class="mu">Left ${esc(v.outAt)}</em>` : v.late ? `<em class="warn">Late — not checked in</em>` : `<em class="mu">Expected</em>`;
+    h = `<h4>${b.L.length > 1 ? b.L.length + " contractors · permits end " : "Permit ends "}${esc(b.at)}</h4><div class="d2d-plist">${b.L.map(v => `<div><b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b>
+      <p>${esc([v.work, (v.from || "—") + " – " + (v.to || "—"), v.workers ? v.workers + " workers" : ""].filter(Boolean).join(" · "))}</p>${tag(v)}</div>`).join("")}</div>`; }
+  else if (b.t === "tc"){ const c = b.c; app = "tenants"; h = `<h4>${esc(c.brand)}</h4><p>${esc(c.why)}${c.unit ? " · " + esc(c.unit) : ""}</p><p>Closes at <b style="color:var(--text)">${esc(c.at)}</b> — check the unit is handed back after closing.</p>`; }
+  else if (b.t === "live"){ app = "contractors"; const L = b.L;
+    h = `<h4>Live contractor access</h4><p>${L.length ? `${L.length} contractor${L.length === 1 ? "" : "s"} in the mall now · ${L.reduce((a, v) => a + (v.workers || 0), 0)} workers` : "No contractors in the mall right now."}</p>
+      ${L.length ? `<div class="d2d-plist">${L.map(v => `<div><b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b><p>${esc([v.work, "in since " + v.inAt, "permit until " + (v.to || "—"), v.workers ? v.workers + " workers" : ""].filter(Boolean).join(" · "))}</p>${v.overdue ? `<em class="al">Over permit time</em>` : ""}</div>`).join("")}</div>` : ""}`; }
   else if (b.t === "pin"){ const x = b.h; app = "handover"; h = `<h4>Handover at ${esc(x.at)}</h4><p>Handed over by <b style="color:var(--text)">${esc(x.by)}</b></p><p>${x.receivedBy ? "Received by " + esc(x.receivedBy) + " at " + esc(x.receivedAt) : "<em class=\"warn\">Not received yet</em>"}</p>`; }
   const a = byId(app);
   const p = document.createElement("div"); p.className = "d2d-pop"; p.id = "d2dPop"; p.setAttribute("role", "dialog");
@@ -2087,15 +2116,17 @@ function d2dPop(b, el){
   box.append(p);
   const r = el.getBoundingClientRect(), br = box.getBoundingClientRect();
   p.style.left = Math.max(12, Math.min(br.width - p.offsetWidth - 12, r.left - br.left + r.width / 2 - p.offsetWidth / 2)) + "px";
-  p.style.top = (r.bottom - br.top + 8) + "px";
+  const below = r.bottom - br.top + 8;
+  p.style.top = (below + p.offsetHeight > br.height + 40 && r.top - br.top - p.offsetHeight - 8 > 0 ? r.top - br.top - p.offsetHeight - 8 : below) + "px";   // open upwards near the bottom
 }
 document.addEventListener("click", e => {
   const pop = $("#d2dPop");
-  if (pop && !e.target.closest("#d2dPop") && !e.target.closest(".d2d-b,.d2d-pin,.d2d-dl")) pop.remove();
+  if (pop && !e.target.closest("#d2dPop") && !e.target.closest(".d2d-b,.d2d-pin,.d2d-dl,.d2d-dot,.d2d-c[data-live]")) pop.remove();
   if (!e.target.closest("#d2d")) return;
   const o = e.target.closest("[data-open]"); if (o){ pop && pop.remove(); return launch(byId(o.dataset.open)); }
   if (e.target.closest("[data-x]")) return pop && pop.remove();
-  const b = e.target.closest(".d2d-b,.d2d-pin,.d2d-dl"); if (b) return d2dPop(D2D.bars[+b.dataset.b], b);
+  const lv = e.target.closest(".d2d-c[data-live]"); if (lv){ if (!D2D.data || !D2D.data.contractors) return launch(byId("contractors")); return d2dPop({ t: "live", L: D2D.data.contractors.filter(v => v.state === "onsite") }, lv); }
+  const b = e.target.closest(".d2d-b,.d2d-pin,.d2d-dl,.d2d-dot"); if (b) return d2dPop(D2D.bars[+b.dataset.b], b);
   const c = e.target.closest(".d2d-c"); if (c) launch(byId(c.dataset.id));
 });
 document.addEventListener("change", e => { if (e.target.id === "d2dSite"){ D2D.site = e.target.value; store.set("hub.d2dSite", D2D.site); D2D.data = null; D2D.scrolled = false; paintD2D(); loadToday(); } });
@@ -2155,7 +2186,7 @@ function renderHome(){
   let foldersDone = false;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
-    if (!q && g === DAY_GROUP && !seniorView()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
+    if (!q && g === DAY_GROUP && showD2D()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
     if (!q && FOLDER_GROUPS.includes(g)){
       if (foldersDone) continue; foldersDone = true;
       const tiles = FOLDER_GROUPS.map(folderTile).filter(Boolean).join("");

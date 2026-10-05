@@ -5,11 +5,10 @@ A home-screen section that sits above Leadership. It replaces the tiles of four 
 ## What it shows (one flagship, today, refreshed every minute)
 - **Timeline 06:00 → 24:00** with a gold "NOW" line. It starts earlier if something begins before 06:00, and it scrolls sideways on phones.
   - **Team on shift**: one bar per shift time, with first names. The shift on now is outlined, shifts that have ended fade, and last night's shift shows striped.
-  - **Contractors**: one bar per permit.
-    - Expected: dashed outline.
-    - On site: solid.
-    - Left: faded.
-    - Over permit time: red, and the bar runs to now.
+  - **Contractors**: a dot at the time each permit ends, labelled "Tenant - Contractor" (for example "Fashmore - Cool Tech").
+    - Several permits ending at the same time share one dot showing the count ("2 contractors"). Tap it to list them all.
+    - Dot colours: filled amber = on site, hollow = expected, grey = left, red = over permit time.
+  - **Tenant closing**: a 🏁 flag ending at mall closing (22:00), for example "Sport Expert · final operating day 22:00". It comes from a closure or relocation announcement in Tenant Announcements with today's date, or a departure date of today in the Contracts Near Ending report.
   - **Meetings & events**: MOM meetings and ops activities from the calendar that have a start time.
   - **Handover pins** (gold) at each hand-off time. The latest one pulses while it waits to be received.
   - **Restroom windows** use the window times from the Restroom system, with the rooms done by Operations (for example "W2 · 2/3"). Green means all rooms are done, amber means the window is open now, red means rooms were missed, and a dashed outline means the window is still to come. Only Manager and Supervisor roles see them.
@@ -22,6 +21,7 @@ A home-screen section that sits above Leadership. It replaces the tiles of four 
   - **Handed-over line**: each time someone presses Submit on the Shift Handover, a gold dashed vertical line runs down the whole timeline from that time. Its label reads "Handed over 13:30 · Mazen → Mohamad".
   - All-day items (a marketing event, a MOM with no time) and staff who are off show as chips above the timeline.
 - **Tap any bar or pin** to see details and a button that opens the tool.
+- The Contractors card is now **Live contractor access** (with a green live dot). Tapping it shows the contractors in the mall right now: tenant, company, work, time in, permit end and workers, with a button to open Contractors.
 - **Four cards** under the timeline, each with a live line and a status pill:
   - Schedule: on duty now, next person in.
   - MOM: next meeting, open and overdue actions.
@@ -31,14 +31,15 @@ A home-screen section that sits above Leadership. It replaces the tiles of four 
 
 ## Rules
 - **Who sees what on the home screen:**
-  - Management and leadership (Manager, Advisor, Director, CDSO, Admin) see the Morning/Afternoon/Evening brief. They don't get the timeline; the four tools show as normal tiles under "Day to Day Operations".
+  - Admin sees both the brief and the timeline.
+  - Management and leadership (Manager, Advisor, Director, CDSO) see the Morning/Afternoon/Evening brief. They don't get the timeline; the four tools show as normal tiles under "Day to Day Operations".
   - Everyone else (the operations team, Warehouse, Security) sees the Day to Day timeline and no brief panel. The brief's figures still drive the live counts on their tiles.
   - The rule is `SENIOR_ROLES` in `index.html`.
 - Each card and lane follows the app's visibility. For example, Contractors appears only for Manager, Supervisor and Security roles; Advisor/Director/CDSO/Admin see all apps anyway.
 - Search still lists the four tools as normal tiles. The header tools menu still includes them, first in the list.
 
 ## Changing the deadlines
-Edit `DEADLINES` at the top of `modules/today.js`.
+Edit `DEADLINES` (and `MALL_CLOSE` for tenant closing) at the top of `modules/today.js`.
 
 ## Technical
 - `GET /api/ops/today?site=XX` is served by `modules/today.js`. It is read-only.
