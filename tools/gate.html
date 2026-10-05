@@ -83,11 +83,6 @@ h2.sec .sp{flex:1}
 .big-btn.dim{opacity:.55}
 .acts .btn{height:44px}
 
-/* pick the request */
-.pick{display:grid;gap:8px;margin:12px 14px 0}
-.pk{padding:12px 14px;text-align:left;display:grid;grid-template-columns:62px 1fr;gap:10px;align-items:center;width:100%}
-.pk .t{font-weight:800;font-variant-numeric:tabular-nums}
-.pk b{display:block;line-height:1.3} .pk small{color:var(--muted);font-size:.78rem}
 
 /* reasons */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -254,7 +249,9 @@ const VD = {
   valid: ["valid", "✓", "Permit valid", "التصريح ساري"],
   early: ["early", "!", "Permit not started yet", "التصريح لم يبدأ بعد"],
   expired: ["bad", "✕", "Permit expired", "التصريح منتهي"],
-  "not-approved": ["bad", "✕", "Request not approved", "الطلب غير موافق عليه"],
+  rejected: ["bad", "✕", "REJECTED", "الطلب مرفوض"],
+  "not-approved": ["early", "!", "Not approved yet", "الطلب غير موافق عليه بعد"],
+  check: ["unknown", "?", "Check the pass", "تحقق من التصريح"],
   blocked: ["bad", "✕", "Contractor blocked", "المتعهد محظور"],
   unknown: ["unknown", "?", "Request not found", "الطلب غير موجود"]
 };
@@ -268,97 +265,92 @@ function drawRes(){
       <div class="acts"><button class="btn ghost" id="rType">⌨ Type request number</button><button class="btn" id="rBack">Scan again</button></div></div>`;
     $("#rx").onclick = $("#rBack").onclick = closeRes; $("#rType").onclick = () => { closeRes(); typeBox(); }; return; }
 
-  const I = R.info || {}, v = R.visit, vk = R.offline ? "unknown" : (R.verdict && R.verdict.code) || "unknown";
+  const I = R.info || {}, v = R.visit;
+  /* no live status (Salesforce not connected, or no signal): the agent reads the pass and says what it shows */
+  R.noLive = !!(R.offline || !I.status);
+  const vk = R.noLive && !(R.verdict && R.verdict.ok) ? "check" : (R.verdict && R.verdict.code) || "unknown";
   const [cls, ic, title, ar] = VD[vk] || VD.unknown;
   const vc = R.verdict && R.verdict.code;
-  const sub = R.offline ? "Offline — the permit could not be checked" : vc === "valid" ? `Until ${when(I.to && I.to.day ? I.to : I.from)}`
-    : vc === "expired" ? `Ended ${when(I.to && I.to.day ? I.to : I.from)}` : vc === "early" ? `Starts ${when(I.from)}` : vc === "not-approved" ? `Status: ${I.status || "—"}` : (R.verdict && R.verdict.label) || "";
-  const needPick = !R.offline && !v && !(I.tenant || I.contractor);
+  const sub = vk === "check" ? (R.offline ? "No signal — open the pass on the contractor's phone" : "Open the pass and look at the stamp: Approved or Rejected")
+    : vc === "valid" ? (I.to && I.to.day ? `Approved · valid until ${when(I.to)}` : "Approved in Salesforce")
+    : vc === "rejected" ? `Salesforce status: ${I.status}` : vc === "expired" ? `Approved, but the permit ended ${when(I.to && I.to.day ? I.to : I.from)}` : vc === "early" ? `Approved, but the permit starts ${when(I.from)}`
+    : vc === "not-approved" ? `Salesforce status: ${I.status || "—"}` : (R.verdict && R.verdict.label) || "";
+  const passUrl = /^https:\/\/[\w.-]+\.(my\.)?site\.com\//.test((R.code && R.code.raw) || "") ? R.code.raw : "";
   const notes = [];
-  if (R.offline) notes.push(["warn", "No signal. Check the pass on the Tenant Connect screen; your decision is saved on this phone and sent later."]);
+  if (R.offline) notes.push(["warn", "No signal. Your decision is saved on this phone and sent when the signal is back."]);
+  else if (vk === "check" && !R.sfError) notes.push(["info", "Live Salesforce check is not connected yet — open the pass to see Approved / Rejected."]);
   if (R.last) notes.push([R.last.decision === "out" ? "alert" : "info", `Scanned before today at ${hm(R.last.at)} — ${R.last.decision === "in" ? "approved in" : R.last.decision === "out" ? "rejected (" + esc(R.last.reason) + ")" : "left"} by ${esc(R.last.by)}.`]);
   if (v && v.state === "onsite") notes.push(["ok", `Already on site since ${hm(v.inAt)}${v.workers ? ` · ${v.workers} workers` : ""}. Use <b>Leaving</b> when they go out.`]);
   if (v && v.ins === "expired") notes.push(["alert", "The contractor's insurance has expired (Contractors register)."]);
   if (R.sfError) notes.push(["info", `Salesforce: ${esc(R.sfError)} — showing what the hub knows.`]);
-  if (I.status && !/approv/i.test(I.status)) notes.push(["alert", `Salesforce status: <b>${esc(I.status)}</b>`]);
+
   const f = (k, val, big) => val ? `<div class="f"><span>${k}</span><div class="${big ? "big" : ""}">${val}</div></div>` : "";
 
   box.innerHTML = `<div class="res">
     <div class="vd ${cls}"><div class="ic">${ic}</div><div><b>${title}</b><small>${esc(sub)}</small><br><small class="ar">${ar}</small></div><button class="x" id="rx" aria-label="Close">✕</button></div>
     <div class="scroll">
       ${notes.map(n => `<div class="note ${n[0]}">${n[1]}</div>`).join("")}
-      ${needPick ? pickHtml() : `<div class="card det">
-        ${f("Contractor", esc(I.contractor || "—"), true)}
-        ${f("Tenant", esc(I.tenant || "—"), true)}
-        ${f("Request", esc(I.req || (R.code && R.code.req) || "—"))}
+      ${passUrl && vk === "check" && !R.offline ? `<a class="btn gold" href="${esc(passUrl)}" target="_blank" rel="noopener" style="display:flex;margin:12px 14px 0;height:52px;font-size:1rem">Open the pass in Salesforce ↗</a>` : ""}
+      ${I.contractor || I.tenant || I.req || I.sender ? `<div class="card det">
+        ${f("Request", esc(I.req || (R.code && R.code.req) || "—"), true)}
+        ${f("Contractor", esc(I.contractor), true)}
+        ${f("Tenant", esc(I.tenant))}
+        ${f("Sender", esc(I.sender))}
         ${f("Work", esc([I.work, I.desc].filter(Boolean).join(" — ")))}
         ${f("From", esc(when(I.from)))}
         ${f("To", esc(when(I.to)))}
         ${f("Status", I.status ? esc(I.status) : "")}
         ${f("Checked by", R.offline ? "" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
-      </div>`}
-      ${needPick || (v && v.state === "onsite") ? "" : `<div class="card wk"><label>Number of workers<small class="ar">عدد العمال</small></label>
+      </div>` : ""}
+      ${R.sfFields && R.sfFields.length ? `<details class="card" style="margin:12px 14px 0;padding:10px 14px"><summary style="font-weight:800;font-size:.84rem;cursor:pointer">Salesforce fields read <span class="muted" style="font-weight:600">· managers only</span></summary>
+        <div style="font-size:.78rem;line-height:1.5;margin-top:8px;word-break:break-word">${R.sfFields.map(x => `<div><b>${esc(x[0])}</b> <span class="muted">${esc(x[1])}</span></div>`).join("")}</div></details>` : ""}
+      ${v && v.state === "onsite" ? "" : `<div class="card wk"><label>Number of workers<small class="ar">عدد العمال</small></label>
         <button id="wM">−</button><input id="wN" type="number" inputmode="numeric" min="0" max="99" value="${R.workers}"><button id="wP">+</button></div>`}
     </div>
     <div class="acts">
       ${v && v.state === "onsite" ? `<button class="btn ghost" id="bLeave" style="height:52px">🚪 Leaving — check out <span class="ar" style="margin-left:6px">خروج</span></button>` : ""}
-      ${needPick ? `<button class="btn ghost" id="bManual">Not on the list — enter details</button>` : ""}
       <div class="two">
-        <button class="big-btn in ${vk === "valid" || R.offline ? "" : "dim"}" id="bIn" ${needPick ? "disabled style='opacity:.35'" : ""}>APPROVED · IN<small class="ar">دخول مسموح</small></button>
-        <button class="big-btn out" id="bOut">REJECTED · OUT<small class="ar">رفض الدخول</small></button>
+        <button class="big-btn in ${vk === "valid" || vk === "check" ? "" : "dim"}" id="bIn">APPROVED · IN<small class="ar">دخول مسموح</small></button>
+        <button class="big-btn out ${vk === "valid" ? "dim" : ""}" id="bOut">REJECTED · OUT<small class="ar">رفض الدخول</small></button>
       </div>
     </div></div>`;
   $("#rx").onclick = closeRes;
   const wn = $("#wN"); if (wn){ $("#wM").onclick = () => { wn.value = Math.max(0, (+wn.value || 0) - 1); }; $("#wP").onclick = () => { wn.value = Math.min(99, (+wn.value || 0) + 1); }; }
-  $("#bIn").onclick = () => !needPick && decideIn();
-  $("#bOut").onclick = () => reasonBox("out");
+  $("#bIn").onclick = decideIn;
+  $("#bOut").onclick = decideOut;
   const bl = $("#bLeave"); if (bl) bl.onclick = () => send("leave", "");
-  const bm = $("#bManual"); if (bm) bm.onclick = manualBox;
-  box.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => scanned(R.code.raw || R.code, Number(b.dataset.pick)));
 }
-function pickHtml(){
-  const C = R.candidates || [];
-  return `<div class="note info"><b>Which request is this?</b> This QR is not linked yet — tap the matching request once and the next scans will find it on their own.<br><span class="ar">اختر الطلب المطابق</span></div>
-    <div class="pick">${C.length ? C.map(x => `<button class="card pk" data-pick="${x.id}"><div class="t">${esc(x.timeFrom || "—")}</div>
-      <div><b>${esc(x.company)}</b><small>${esc(x.tenant)}${x.req ? " · " + esc(x.req) : ""}${x.work ? " · " + esc(x.work) : ""}${x.state === "onsite" ? " · on site" : x.state === "left" ? " · left" : ""}</small></div></button>`).join("")
-      : `<div class="card empty" style="padding:22px">No approved request on today's list.<br>The handover imports them from the Tenant Connect report.</div>`}</div>`;
-}
-function manualBox(){
-  const d = $("#dlg");
-  d.innerHTML = `<div class="dlg-h"><b>Enter the details</b><small>From the Tenant Connect pass on the contractor's phone</small></div>
-    <div class="dlg-b" style="display:grid;gap:10px">
-      <div><span class="lbl">Contractor company</span><input class="inp" id="mC" style="width:100%"></div>
-      <div><span class="lbl">Tenant</span><input class="inp" id="mT" style="width:100%"></div>
-      <div><span class="lbl">Request number</span><input class="inp" id="mR" placeholder="REQ-…" style="width:100%"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><span class="lbl">Valid to (date)</span><input class="inp" id="mD" type="date" value="${(ctx && ctx.today) || ""}" style="width:100%"></div><div><span class="lbl">Time</span><input class="inp" id="mH" type="time" style="width:100%"></div></div>
-    </div>
-    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Continue</button></div>`;
-  d.onclick = e => {
-    const b = e.target.closest("[data-v]"); if (!b && e.target !== d) return;
-    if (b && b.dataset.v === "1"){
-      const c = $("#mC").value.trim(), t = $("#mT").value.trim(); if (!c && !t) return toast("Write the contractor or the tenant", true);
-      const today = (ctx && ctx.today) || "";
-      R.info = { contractor: c, tenant: t, req: $("#mR").value.trim().toUpperCase(), from: { day: today, time: "" }, to: { day: $("#mD").value || today, time: $("#mH").value || "" }, status: "" };
-      R.verdict = { code: "unknown", label: "Typed by hand — not checked", ok: false }; R.manual = true;
-    }
-    d.close(); drawRes();
-  };
-  d.showModal();
-}
-
 /* ---------- decisions ---------- */
+/* Approved in: one tap when Salesforce says approved. Going against a rejected / not-valid request needs a reason.
+   Without a live status the agent first says what the pass shows. */
 function decideIn(){
-  const ok = R.offline || (R.verdict && R.verdict.ok);
-  if (ok) return send("in", "");
+  if (R.verdict && R.verdict.ok) return send("in", "");
+  if (R.noLive) return statusBox(st => { if (st === "Approved") send("in", "", st); else reasonBox("in", st); });
   reasonBox("in");
 }
-function reasonBox(kind){
+/* Rejected out: one tap when Salesforce already says rejected / not valid; a reason when the request is approved */
+function decideOut(){
+  if (R.noLive) return statusBox(st => st === "Rejected" ? send("out", "Rejected on the pass", st) : reasonBox("out", st));
+  if (R.verdict && !R.verdict.ok) return send("out", R.verdict.code === "rejected" ? "Rejected in Salesforce" : R.verdict.label || "Not valid");
+  reasonBox("out");
+}
+function statusBox(done){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>What does the pass show?</b><small class="ar">ماذا يظهر على التصريح؟</small></div>
+    <div class="dlg-b" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="big-btn in" data-s="Approved" style="height:70px">APPROVED<small class="ar">موافق عليه</small></button>
+      <button class="big-btn out" data-s="Rejected" style="height:70px">REJECTED<small class="ar">مرفوض</small></button></div>
+    <div class="dlg-f"><button class="btn ghost" data-s="">Cancel</button></div>`;
+  d.onclick = e => { const b = e.target.closest("[data-s]"); if (!b && e.target !== d) return; d.close(); if (b && b.dataset.s) done(b.dataset.s); };
+  d.showModal();
+}
+function reasonBox(kind, seen){
   const d = $("#dlg"), isOut = kind === "out";
   const list = isOut ? (DAY && DAY.reasons && DAY.reasons.length ? DAY.reasons : ["Permit expired", "Permit not started yet", "Request not approved", "Wrong tenant / unit", "ID does not match", "Contractor blocked", "No insurance", "Unsafe / missing PPE", "Other"])
-    : ["Approved by the duty manager", "Permit extension in progress", "Emergency works", "Other"];
+    : ["Approved by the duty manager", "Approved by operations by phone", "Permit extension in progress", "Emergency works", "Other"];
   const pre = isOut && R.verdict ? ({ expired: "Permit expired", early: "Permit not started yet", "not-approved": "Request not approved", blocked: "Contractor blocked" })[R.verdict.code] : "";
   let pick = pre || "";
-  d.innerHTML = `<div class="dlg-h"><b>${isOut ? "Why is the access rejected?" : "The permit is not valid now"}</b><small>${isOut ? '<span class="ar">سبب الرفض</span>' : "Letting them in is recorded as an override and the flagship is notified."}</small></div>
+  d.innerHTML = `<div class="dlg-h"><b>${isOut ? "This request is approved — why reject?" : "This request is not approved — why let them in?"}</b><small>${isOut ? '<span class="ar">سبب الرفض</span>' : 'Saved as an override and the flagship is notified. <span class="ar">سبب السماح بالدخول</span>'}</small></div>
     <div class="dlg-b"><div class="chips">${list.map(x => `<button class="chip ${isOut ? "" : "g"} ${x === pick ? "on" : ""}" data-r="${esc(x)}">${esc(x)}</button>`).join("")}</div>
       <textarea id="rNote" rows="2" placeholder="Note (optional)" style="margin-top:12px"></textarea></div>
     <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1" style="background:${isOut ? "var(--out)" : "var(--in)"}">${isOut ? "Reject access" : "Let in anyway"}</button></div>`;
@@ -369,18 +361,18 @@ function reasonBox(kind){
     if (b && b.dataset.v === "1"){
       const note = $("#rNote").value.trim();
       if (!pick && !note) return toast("Choose a reason", true);
-      d.close(); send(kind, [pick, note].filter(Boolean).join(" — ")); return;
+      d.close(); send(kind, [pick, note].filter(Boolean).join(" — "), seen); return;
     }
     d.close();
   };
   d.showModal();
 }
-async function send(decision, reason){
+async function send(decision, reason, seen){
   if (busy) return; busy = true;
   const wn = $("#wN"), workers = wn ? Math.max(0, +wn.value || 0) : 0;
   const I = R.info || {};
   const body = { site, clientId: uid(), code: (R.code && R.code.raw) || (typeof R.code === "string" ? R.code : ""), visitId: R.visit ? R.visit.id : 0,
-    decision, reason, workers, scannedAt: R.scannedAt, offline: !!R.offline, info: { req: I.req || (R.code && R.code.req) || "", tenant: I.tenant || "", contractor: I.contractor || "", work: I.work || "", desc: I.desc || "", status: I.status || "", from: I.from || null, to: I.to || null } };
+    decision, reason, workers, scannedAt: R.scannedAt, offline: !!R.offline, seen: seen || "", info: { req: I.req || (R.code && R.code.req) || "", tenant: I.tenant || "", contractor: I.contractor || "", sender: I.sender || "", work: I.work || "", desc: I.desc || "", status: I.status || "", from: I.from || null, to: I.to || null } };
   const local = { clientId: body.clientId, site, decision, reason, workers: decision === "in" ? workers : 0, at: new Date().toISOString(), req: body.info.req, tenant: body.info.tenant, contractor: body.info.contractor };
   pendWrite([...pendRead(), local]);
   try {
@@ -389,7 +381,10 @@ async function send(decision, reason){
     else { pendWrite(pendRead().filter(x => x.clientId !== body.clientId)); if (r && r.list) DAY = { ...DAY, list: r.list, counts: r.counts }; flash(decision, [I.contractor || I.tenant, I.req].filter(Boolean).join(" · ")); }
   } catch (e){
     pendWrite(pendRead().filter(x => x.clientId !== body.clientId));
-    busy = false; toast(e.message, true); return;
+    busy = false;
+    if (/write why you let them in/.test(e.message)) return reasonBox("in", seen);   // e.g. approved on the pass but the permit time has passed
+    if (/choose the reason for the rejection/.test(e.message)) return reasonBox("out", seen);
+    toast(e.message, true); return;
   }
   busy = false;
 }

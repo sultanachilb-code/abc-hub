@@ -3,17 +3,17 @@
    See docs/FEATURE-gate.md
 
    The loading agent scans the contractor's Tenant Connect QR code (a Salesforce link with ?recordId=…).
-   The hub finds the request, shows tenant / contractor / permit window and whether it is valid now,
-   and the agent presses  APPROVED · IN  (green)  or  REJECTED · OUT  (red).
+   The hub asks Salesforce live and shows the request status (APPROVED / REJECTED stamp), REQ number,
+   contractor, tenant, sender and permit window. The agent presses  APPROVED · IN  (green)  or  REJECTED · OUT  (red).
 
-   • Approved in  → the contractor is checked in on the Contractors list (Day to Day timeline shows "On site")
-   • Rejected out → logged with the reason, and a notification goes to the flagship
-   • Every decision appears live in the Shift Handover ("Loading area gate") and in the handover email
+   • Approved request → one tap to let in.     Rejected request → one tap to refuse.
+   • Letting in a rejected / not-approved / out-of-time request needs a reason (override → the flagship is notified).
+   • Refusing an approved request needs a reason too.
+   • Approved in → the contractor is checked in on Contractors (Day to Day timeline shows "On site").
+   • Every decision appears live in the Shift Handover ("Loading area gate") and in the handover email.
 
-   Finding the request (first match wins):
-     1. a contractor visit already linked to this QR (sf_id)
-     2. Salesforce, when the SF_* settings exist (Connected App, client-credentials flow) → REQ number → visit
-     3. otherwise the agent picks the request from today's list once — the QR is linked for the next scans
+   Salesforce is reached with a Connected App (client-credentials flow, SF_* settings — docs/FEATURE-gate.md).
+   Without it, or without signal, the agent opens the pass and says what the stamp shows (Approved / Rejected).
 
    Tables : gate_scans  (+ column sf_id on contractor_visits)
    Routes : /api/ops/gate/lookup · gate/decide · gate/day      Page : /tools/gate
@@ -93,7 +93,17 @@ async function sfRecord(env, id) {
   if (r.status === 401) { t = await sfToken(env, true); r = await get(t); }
   if (r.status === 404) throw new Error("This QR code is not a Tenant Connect request");
   if (!r.ok) throw new Error(`Salesforce answered ${r.status}`);
-  return sfMap(await r.json(), env);
+  const rec = await r.json();
+  let m = sfMap(rec, env);
+  /* the page layout can leave out the status stamp or the dates — read every field of the record once more */
+  if ((!m.status || !m.from) && rec.apiName) {
+    const all = await fetch(`${t.inst}/services/data/v61.0/sobjects/${rec.apiName}/${id}`, { headers: { authorization: `Bearer ${t.token}` } }).then(x => x.ok ? x.json() : null).catch(() => null);
+    if (all) {
+      for (const [k, v] of Object.entries(all)) if (k !== "attributes" && !(k in rec.fields) && (v == null || typeof v !== "object")) rec.fields[k] = { value: v, displayValue: null };
+      m = sfMap(rec, env);
+    }
+  }
+  return m;
 }
 /* turn the record into { req, tenant, contractor, work, desc, status, from:{day,time}, to:{day,time} } */
 function sfWhen(v) {
@@ -102,6 +112,18 @@ function sfWhen(v) {
   if (isDay(s)) return { day: s, time: "" };
   return null;
 }
+/* a formula IMAGE field (the APPROVED / REJECTED stamp) comes as <img src=… alt=…> — read its alt text or file name */
+const STATUS_RE = /\b(approved|rejected|declined|cancell?ed|pending|submitted|in progress|draft|closed|expired)\b/i;
+function plain(v) {
+  const s = String(v == null ? "" : v);
+  if (!/<[a-z]/i.test(s)) return s;
+  const alt = (s.match(/\balt\s*=\s*["']([^"']+)["']/i) || [])[1] || "";
+  const src = (s.match(/\bsrc\s*=\s*["']([^"']+)["']/i) || [])[1] || "";
+  const txt = s.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  const hit = (alt.match(STATUS_RE) || src.match(STATUS_RE) || txt.match(STATUS_RE) || [])[1];
+  return txt || (hit ? hit[0].toUpperCase() + hit.slice(1).toLowerCase() : alt);
+}
+const SYS = /^(Id|OwnerId|IsDeleted|CreatedDate|CreatedById|LastModifiedDate|LastModifiedById|SystemModstamp|LastActivityDate|LastViewedDate|LastReferencedDate|RecordTypeId)$/;
 export function sfMap(rec, env = {}) {
   const flat = [];   // [apiName, text, rawValue]
   const walk = (fields, prefix) => {
@@ -113,7 +135,7 @@ export function sfMap(rec, env = {}) {
         if (!prefix) walk(v.fields, k + ".");
       } else {
         const idLike = typeof v === "string" && /^[a-zA-Z0-9]{18}$/.test(v) && !f.displayValue;
-        if (!idLike) flat.push([prefix + k, f && f.displayValue != null ? String(f.displayValue) : v == null ? "" : String(v), v]);
+        if (!idLike) flat.push([prefix + k, plain(f && f.displayValue != null ? f.displayValue : v), v]);
       }
     }
   };
@@ -135,7 +157,10 @@ export function sfMap(rec, env = {}) {
     contractor: txt(find("contractor", /contractor/i, /supplier|vendor|company/i)),
     work: txt(find("work", /sub_?maint/i, /work_?type|category|type_of/i)),
     desc: txt(find("desc", /notes|description/i)),
-    status: txt(find("status", /approval_?status/i, /^status/i, /status/i)),
+    sender: txt(find("sender", /sender/i, /requester|requested_?by/i)),
+    status: txt(find("status", /approval_?status/i, /^status/i, /status/i, /stamp|approv|reject/i)
+      || top.find(x => !SYS.test(x[0]) && STATUS_RE.test(String(x[1])) && String(x[1]).trim().split(/\s+/).length <= 3)),
+    fields: top.filter(x => !SYS.test(x[0]) && String(x[1]).trim()).slice(0, 60).map(x => [x[0], clip(x[1], 80)]),   // shown to managers to check the mapping
     from: fromH ? sfWhen(fromH[2] || fromH[1]) : null, to: toH ? sfWhen(toH[2] || toH[1]) : null
   };
 }
@@ -143,8 +168,9 @@ export function sfMap(rec, env = {}) {
 /* ---------- is the permit valid right now? ---------- */
 export function verdictOf(info, now) {
   if (!info) return { code: "unknown", label: "Request not found", ok: false };
+  if (info.status && /reject|declin|cancel/i.test(info.status)) return { code: "rejected", label: /^rejected$/i.test(info.status) ? "Rejected" : `Rejected · ${info.status}`, ok: false };
   if (info.status && !/approv/i.test(info.status)) return { code: "not-approved", label: `Not approved · ${info.status}`, ok: false };
-  if (!info.from || !info.from.day) return { code: "unknown", label: "No permit time on the request", ok: false };
+  if (!info.from || !info.from.day) return info.status ? { code: "valid", label: "Approved", ok: true } : { code: "unknown", label: "Status not checked", ok: false };
   const to = info.to && info.to.day ? info.to : { day: info.from.day, time: "" };
   const n = key(now);
   if (n < addMin({ day: info.from.day, time: info.from.time || "00:00" }, -EARLY_MIN)) return { code: "early", label: "Permit not started yet", ok: false };
@@ -205,11 +231,11 @@ export async function gateRoute(env, p, method, b, url, d) {
   if (p === "gate/lookup") {
     const c = parseCode(b.code);
     if (!c.sfId && !c.req && !b.visitId) throw err("This QR code is not a Tenant Connect pass");
-    let info = null, source = "none", sfError = "";
-    let { v, list } = await findVisit(env, site, today, today, { ...c, visitId: b.visitId });
+    let info = null, source = "none", sfError = "", sfFields = null;
+    let { v } = await findVisit(env, site, today, today, { ...c, visitId: b.visitId });
     if (v) { source = "hub"; info = visitInfo(v); }
     if (c.sfId && sfOn(env)) {   // Salesforce is asked every time: the request may have been cancelled since the import
-      try { const s = await sfRecord(env, c.sfId); info = { ...(info || {}), ...Object.fromEntries(Object.entries(s).filter(([, x]) => x)) }; source = "salesforce";
+      try { const { fields, ...s } = await sfRecord(env, c.sfId); sfFields = fields; info = { ...(info || {}), ...Object.fromEntries(Object.entries(s).filter(([, x]) => x)) }; source = "salesforce";
         if (!v && s.req) ({ v } = await findVisit(env, site, today, today, { req: s.req })); }
       catch (e) { sfError = e.message; }
     }
@@ -221,7 +247,7 @@ export async function gateRoute(env, p, method, b, url, d) {
     return { code: c, source, sfError, salesforce: sfOn(env), info, verdict, now,
       visit: v ? { id: v.id, state: v.state || "expected", inAt: v.inAt || "", workers: v.workers || 0, notToday: !!v.notToday, blocked: !!v.blocked, ins: v.ins || "" } : null,
       last: last ? scanOut(last) : null,
-      candidates: v ? [] : [...list].sort((a, z) => (a.state === "expected" ? 0 : 1) - (z.state === "expected" ? 0 : 1)).map(x => ({ id: x.id, req: x.req, tenant: x.tenant, company: x.company, work: x.work, timeFrom: x.timeFrom, timeTo: x.timeTo, state: x.state })) };
+      sfFields: d.full ? sfFields : null };   // managers see the raw Salesforce fields, to check what the gate reads
   }
 
   if (p === "gate/decide") {
@@ -238,7 +264,9 @@ export async function gateRoute(env, p, method, b, url, d) {
     const when = late ? beirut(sc) : now;
     const at = late ? sc.toISOString() : d.now(), day = when.day;
     const cl = b.info || {};
-    let info = { req: clip(cl.req, 40), tenant: clip(cl.tenant, 160), contractor: clip(cl.contractor, 160), work: clip(cl.work, 120), desc: clip(cl.desc, 500), status: clip(cl.status, 60),
+    /* seen = what the agent read on the pass when Salesforce is not connected (Approved / Rejected) */
+    const seen = ["Approved", "Rejected"].includes(b.seen) ? b.seen : "";
+    let info = { req: clip(cl.req, 40), tenant: clip(cl.tenant, 160), contractor: clip(cl.contractor, 160), work: clip(cl.work, 120), desc: clip(cl.desc, 500), status: clip(cl.status, 60) || seen,
       from: cl.from && isDay(cl.from.day) ? { day: cl.from.day, time: isHM(cl.from.time) ? cl.from.time : "" } : null,
       to: cl.to && isDay(cl.to.day) ? { day: cl.to.day, time: isHM(cl.to.time) ? cl.to.time : "" } : null };
     let { v } = await findVisit(env, site, day, today, { sfId: c.sfId, req: info.req || c.req, visitId: b.visitId });
@@ -247,12 +275,13 @@ export async function gateRoute(env, p, method, b, url, d) {
       info = { ...vi, ...Object.fromEntries(Object.entries(info).filter(([, x]) => x)) };
       if (c.sfId) await env.DB.prepare("UPDATE contractor_visits SET sf_id = ? WHERE id = ? AND sf_id = ''").bind(c.sfId, v.id).run();   // link the QR for next time
     }
-    const verdict = verdictOf(info.from ? info : null, when);
+    const verdict = verdictOf(info.from || info.status ? info : null, when);
     let reason = clip(b.reason, 200);
-    const override = decision === "in" && !verdict.ok;
-    if (decision === "out" && !reason) throw err("Choose the reason for the rejection");
+    const override = (decision === "in" && !verdict.ok) || (decision === "out" && verdict.ok);
+    if (decision === "out" && !reason && verdict.ok) throw err("This request is approved — choose the reason for the rejection");
+    if (decision === "out" && !reason) reason = verdict.code === "rejected" ? "Rejected in Salesforce" : verdict.label;
     if (override && !reason && b.offline) reason = "Offline — permit not checked at the gate";
-    if (override && !reason) throw err("The permit is not valid now — write why you let them in");
+    if (override && !reason) throw err("This request is not approved or not valid now — write why you let them in");
     const workers = Math.max(0, Math.min(500, Number(b.workers) || 0));
 
     /* approved in without a visit on today's list → add it, so it shows on Contractors and the Day to Day timeline */
@@ -279,14 +308,19 @@ export async function gateRoute(env, p, method, b, url, d) {
     }
     const w = x => x ? `${x.day}${x.time ? " " + x.time : ""}` : "";
     const res = await env.DB.prepare(`INSERT INTO gate_scans (site, day, at, client_id, decision, reason, override, verdict, sf_id, req, tenant, contractor, work, valid_from, valid_to, workers, visit_id, by_name, by_email, scanned_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, day, at, clientId, decision, reason, override ? 1 : 0, verdict.code, c.sfId, clip(info.req || c.req, 40),
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, day, at, clientId, decision, reason, override ? 1 : 0, verdict.code + (seen && !cl.status ? ":pass" : ""), c.sfId, clip(info.req || c.req, 40),
       info.tenant, info.contractor, info.work, w(info.from), w(info.to), decision === "in" ? workers : 0, v && v.id || 0, me.full_name, me.email || "", clip(b.scannedAt, 30)).run();
 
     const who = [info.contractor, info.tenant && `for ${info.tenant}`].filter(Boolean).join(" ") || info.req || "Contractor";
     if (decision === "out" && d.raiseEvent) await d.raiseEvent(env, { site, app: "gate", tone: "warn", title: `Refused at loading gate · ${info.contractor || info.tenant || info.req || "contractor"}`,
       body: `${who}${info.req ? " · " + info.req : ""} — ${reason} · ${me.full_name}` }).catch(() => {});
-    if (override && d.raiseEvent) await d.raiseEvent(env, { site, app: "gate", tone: "warn", title: `Let in outside the permit · ${info.contractor || info.tenant || info.req || "contractor"}`,
+    if (override && decision === "in" && d.raiseEvent) await d.raiseEvent(env, { site, app: "gate", tone: "warn", title: `Let in against Salesforce · ${info.contractor || info.tenant || info.req || "contractor"}`,
       body: `${verdict.label} — ${reason} · ${me.full_name}` }).catch(() => {});
+    /* the Shift Handover line of the same REQ gets the outcome: ✓ Attended · ✕ Refused at gate · → left */
+    const hhmm = (when.time || "").slice(0, 5), reqN = info.req || c.req;
+    const mark = decision === "in" ? `✓ Attended ${hhmm}${workers ? ` · ${workers} worker${workers === 1 ? "" : "s"}` : ""}${override ? ` · override: ${reason}` : ""}`
+      : decision === "out" ? `✕ Refused at gate ${hhmm} · ${reason}` : `→ Left ${hhmm}`;
+    if (d.markHandover && reqN) await d.markHandover(env, site, day, reqN, mark).catch(() => false);
     const row = await env.DB.prepare("SELECT * FROM gate_scans WHERE id = ?").bind(res.meta.last_row_id).first();
     return { scan: scanOut(row), ...(await gateDay(env, site, day)) };
   }
