@@ -38,7 +38,11 @@
 5. A full-screen ✓ / ✕ confirms, and the scanner is ready for the next pass.
 
 **Salesforce not connected yet, or no signal:** the banner says **Check the pass**, with a button that opens the pass in Salesforce.
-When the agent presses a button he first answers **What does the pass show? Approved / Rejected** and types the **request number** printed on the pass ("Request Name", e.g. REQ-008936) — that number puts the decision on the right handover line. The QR is then linked to that request, so the next scans of the same pass know it by themselves.
+When the agent presses a button he first answers **What does the pass show? Approved / Rejected** — nothing to type.
+
+**Which handover line?** The line is found by its REQ number. The hub gets it from Salesforce (connector), or straight from the QR when
+the pass QR carries it: in Salesforce, add `&req=` + the request name to the URL inside the QR formula, e.g.
+`…/ABCQRCode/s/?recordId={!Id}&req={!Name}` → `…?recordId=a0G…&req=REQ-008936`. Once a QR has been matched, the hub remembers it.
 Decisions taken without signal are kept on the phone ("Not sent yet") and sent automatically when the connection is back.
 
 ## Shift Handover

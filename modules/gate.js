@@ -62,7 +62,7 @@ export function parseCode(raw) {
   const m = t.match(/[?&#](?:recordId|id)=([a-zA-Z0-9]{15,18})\b/);
   if (m) sfId = m[1];
   else if (/^[a-zA-Z0-9]{15,18}$/.test(t) && !/^REQ/i.test(t)) sfId = t;
-  const r = t.match(/\bREQ[-\s]?(\d{3,})\b/i);
+  const r = t.match(/\bREQ[-\s]?(\d{3,})\b/i) || t.match(/[?&#]req=(?:REQ-?)?(\d{3,})\b/i);   // the pass QR can carry the REQ number: …?recordId=a0G…&req=REQ-008936
   if (r) req = "REQ-" + r[1];
   else if (/^\d{4,}$/.test(t)) req = "REQ-" + t;   // typed by hand: just the number
   return { raw: t, sfId, req };
