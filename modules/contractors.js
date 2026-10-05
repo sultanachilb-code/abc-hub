@@ -112,8 +112,8 @@ export async function contractorsRun(env, deps) {
 
 export async function contractorsRoute(env, p, method, b, url, d) {
   const { site, me } = d;
-  const team = d.canSite(me, site) && (d.full || me.role === "SUPERVISOR" || me.role === "SECURITY");
-  const editReg = d.canSite(me, site) && (d.full || me.role === "SUPERVISOR");
+  const team = d.canSite(me, site) && (d.full || (me.role === "SUPERVISOR" && me.position !== "WH") || me.role === "SECURITY");
+  const editReg = d.canSite(me, site) && (d.full || (me.role === "SUPERVISOR" && me.position !== "WH"));
   const q = k => (url.searchParams.get(k) || "").trim();
   const today = d.today();
   if (!d.canSite(me, site)) throw err("No access to this flagship", 403);

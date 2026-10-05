@@ -135,7 +135,7 @@ export async function calendarDayEvents(env, site, day) {
 export async function calendarRoute(env, p, method, b, url, d) {
   const { site, me } = d;
   const mine = d.canSite(me, site);
-  const team = mine && (d.full || me.role === "SUPERVISOR");
+  const team = mine && (d.full || (me.role === "SUPERVISOR" && me.position !== "WH"));
   const one = async id => {
     const r = await env.DB.prepare("SELECT * FROM cal_items WHERE id = ? AND deleted = 0").bind(Number(id) || 0).first();
     if (!r || !d.canSite(me, r.site)) throw err("Not found", 404);

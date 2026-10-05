@@ -139,7 +139,7 @@ const out = (r, today) => { const key = r.departure_day || r.end_day;
 export async function contractsRoute(env, p, method, b, url, d) {
   const { site, me } = d;
   if (!d.canSite(me, site)) throw err("No access to this flagship", 403);
-  const team = d.full || me.role === "SUPERVISOR";
+  const team = d.full || (me.role === "SUPERVISOR" && me.position !== "WH");
   const today = d.today();
   if (p === "contracts/list") {
     const [{ results }, last, units] = await Promise.all([

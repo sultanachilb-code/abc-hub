@@ -34,6 +34,23 @@ export function parseList(s) {
   }).filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x.email));
 }
 const fmtList = L => L.map(x => x.name ? `${x.name} <${x.email}>` : x.email).join("; ");
+async function toFor(env, site) {   // custom To list; empty = the flagship's Mall Manager
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'schedto'").first().catch(() => null);
+  let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
+  return parseList(g[site] || "");
+}
+async function saveList(env, k, site, list) {
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k).first().catch(() => null);
+  let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
+  g[site] = fmtList(list);
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, JSON.stringify(g)).run();
+}
+const checkList = (raw, label) => {
+  const list = parseList(raw);
+  const bad = String(raw || "").split(/[;,\n]+/).map(x => x.trim()).filter(Boolean).length - list.length;
+  if (bad > 0) throw err(`${label}: ${bad} address${bad === 1 ? " is" : "es are"} not valid — check the list`);
+  return list;
+};
 export async function ccFor(env, site) {
   const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'schedcc'").first().catch(() => null);
   let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
@@ -105,9 +122,10 @@ const FLAG_NAME = site => FLAG[site] || "ABC";
 
 async function compose(env, site, monday, me, d, update) {
   const W = await weekData(env, site, monday, d);
-  const to = W.managers.map(m => ({ name: m.name, email: m.email }));
+  const custom = await toFor(env, site);
+  const to = custom.length ? custom : W.managers.map(m => ({ name: m.name, email: m.email }));
   const cc = await ccFor(env, site);
-  const first = to.length ? to.map(x => x.name.split(" ")[0]).join(" and ") : "All";
+  const first = to.length && to.length <= 2 && to.every(x => x.name) ? to.map(x => x.name.split(" ")[0]).join(" and ") : "All";
   const subject = `${update ? "UPDATED: " : ""}${FLAG[site] || "ABC " + d.siteName(site)}: Operations Weekly Schedule ${longDay(W.monday)} till ${longDay(W.sunday)}, ${W.sunday.slice(0, 4)}`;
   const html = scheduleHtml(W, { siteName: d.siteName(site), codes: d.SHIFT_CODES, greeting: `Dear ${first}`, update,
     sender: { name: me.full_name, position: d.posLabel(me.position) || d.ROLES[me.role] || "", site } });
@@ -122,7 +140,7 @@ async function sentOf(env, site, monday) {
 export async function schedMailRoute(env, p, method, b, url, d) {
   const { site, me } = d;
   if (!d.canSite(me, site)) throw err("No access to this flagship", 403);
-  const team = d.isFull(me) || me.role === "SUPERVISOR";
+  const team = d.isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH");
   const wk = url.searchParams.get("week") || b.week;
   const monday = isDay(wk) ? mondayOf(wk) : mondayOf(addDays(d.today(), 1));
   const sent = await sentOf(env, site, monday);
@@ -130,6 +148,18 @@ export async function schedMailRoute(env, p, method, b, url, d) {
     const W = await weekData(env, site, monday, d);
     const sig = await hashOf(W.sig);
     return { monday, sent, changed: !!(sent && sent.sig !== sig), filled: W.filled, people: W.people.length, flag: FLAG[site] || "ABC " + d.siteName(site), can: { send: team } };
+  }
+  /* recipients of this flagship's weekly email — the operations team keeps them up to date */
+  if (p === "schedmail/recipients") {
+    if (method === "POST") {
+      if (!team) throw err("Only the flagship's operations team can change the recipients", 403);
+      const to = checkList(b.to, "To"), cc = checkList(b.cc, "Cc");
+      const before = { to: fmtList(await toFor(env, site)), cc: fmtList(await ccFor(env, site)) };
+      await saveList(env, "schedto", site, to); await saveList(env, "schedcc", site, cc);
+      if (d.audit) await d.audit(env, { me, site, tool: "schedule", ref: "recipients", label: "Weekly schedule email recipients", action: "edit", before, after: { to: fmtList(to), cc: fmtList(cc) } });
+    }
+    const W = await weekData(env, site, monday, d);
+    return { to: fmtList(await toFor(env, site)), cc: fmtList(await ccFor(env, site)), managers: fmtList(W.managers.map(m => ({ name: m.name, email: m.email }))), can: { edit: team } };
   }
   if (p === "schedmail/preview") {
     const c = await compose(env, site, monday, me, d, !!sent);
@@ -139,7 +169,7 @@ export async function schedMailRoute(env, p, method, b, url, d) {
     if (!team) throw err("Only the flagship's operations team can send the schedule", 403);
     const c = await compose(env, site, monday, me, d, !!sent);
     if (!c.W.filled) throw err("This week is empty — fill the schedule first");
-    if (!c.to.length) throw err("No Mall Manager is set for this flagship in People & roles");
+    if (!c.to.length) throw err("Nobody in To — add the recipients (Recipients button) or set the Mall Manager in People & roles");
     const r = await d.relay(env, { to: c.to.map(x => x.email), cc: c.cc.map(x => x.email), replyTo: me.email, subject: c.subject, html: c.html });
     if (!r.ok) throw err("The email could not be sent: " + (r.error || "mail relay error"), 502);
     const rec = { at: d.now(), by: me.full_name, email: me.email, sig: await hashOf(c.W.sig), count: ((sent && sent.count) || 0) + 1, subject: c.subject };

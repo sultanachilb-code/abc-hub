@@ -66,8 +66,10 @@ const ALL_SITE_ROLES = ["ADMIN", "ADVISOR"];                              // eve
 const POSITIONS = {
   SMS: { label: "Senior Mall Supervisor", rank: 1 },
   MS:  { label: "Mall Supervisor", rank: 2 },
-  MO:  { label: "Mall Officer", rank: 3 }
+  MO:  { label: "Mall Officer", rank: 3 },
+  WH:  { label: "Warehouse", rank: 4, viewOnly: true }   // linked to a flagship, sees its data, not on the schedule, changes nothing
 };
+const isWarehouse = u => !!u && u.role === "SUPERVISOR" && u.position === "WH";
 /* Flagship management titles. Each flagship has one person per slot. */
 const TITLES = {
   SMM: { label: "Senior Mall Manager", slot: "MM", rank: -4 },
@@ -606,7 +608,7 @@ async function saveUser(env, me, b) {
       if (!TITLES[pos]) throw fail("Choose the position: Mall Manager, Senior Mall Manager, Operations Manager or Deputy Operations Manager");
       position = pos;
     } else if (role === "SUPERVISOR") {
-      if (!POSITIONS[pos]) throw fail("Choose the position: Mall Officer, Mall Supervisor or Senior Mall Supervisor");
+      if (!POSITIONS[pos]) throw fail("Choose the position: Mall Officer, Mall Supervisor, Senior Mall Supervisor or Warehouse");
       position = pos;
     }
   }
@@ -1185,10 +1187,10 @@ function opsSite(me, requested) {
 const rankOf = p => (POSITIONS[p] ? POSITIONS[p].rank : TITLES[p] ? TITLES[p].rank : 9);
 /* Operations Schedule rows: the flagship's operations team in the order (and section) chosen on the schedule ("Arrange") */
 async function schedStaff(env, site) {
-  const staff = (await siteStaff(env, site)).filter(s => s.atSite && POSITIONS[s.position]);
+  const staff = (await siteStaff(env, site)).filter(s => s.atSite && POSITIONS[s.position] && !POSITIONS[s.position].viewOnly);   // Warehouse is not on the schedule
   const r = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind("schedorder:" + site).first().catch(() => null);
   let order = []; try { order = r ? JSON.parse(r.v) : []; } catch {}
-  const pos = new Map(order.map((o, i) => [o.email, { i, group: POSITIONS[o.group] ? o.group : "" }]));
+  const pos = new Map(order.map((o, i) => [o.email, { i, group: POSITIONS[o.group] && !POSITIONS[o.group].viewOnly ? o.group : "" }]));
   const rank = s => { const o = pos.get(s.email); return o ? o.i : 1000 + (POSITIONS[s.position].rank || 9) * 100; };
   return staff.map(s => { const o = pos.get(s.email); const g = o && o.group ? o.group : s.position;
       return { ...s, title: s.positionLabel, position: g, positionLabel: POSITIONS[g].label }; })
@@ -1212,18 +1214,19 @@ function rights(me, site) {
   const mine = canSite(me, site);
   const full = mine && isFull(me);
   const opsLead = full || (mine && me.role === "SUPERVISOR" && me.position === "SMS");
-  const team = full || (mine && me.role === "SUPERVISOR");
+  const wh = isWarehouse(me);   // Warehouse: sees the flagship's data, changes nothing
+  const team = full || (mine && me.role === "SUPERVISOR" && !wh);
   return {
     schedule: opsLead,
     mom: team,
-    handover: mine && me.role !== "SECURITY",
-    feedback: mine,                 // anyone at the flagship can log tenant feedback
+    handover: mine && me.role !== "SECURITY" && !wh,
+    feedback: mine && !wh,                 // anyone at the flagship can log tenant feedback
     feedbackAdmin: opsLead,         // edit anyone's entries, import history
     gla: team,                      // keep the GLA up to date
     layouts: opsLead,               // Mall Layouts feature: upload plans, adjust pins
     property: full,                 // Property Details feature: update the values
     reminders: full,                // Reminders feature: choose which reminders run
-    formsFill: mine && me.role !== "SECURITY",   // Operations Forms feature: fill the checklists
+    formsFill: mine && me.role !== "SECURITY" && !wh,   // Operations Forms feature: fill the checklists
     formsLead: opsLead,             // Operations Forms feature: reopen, delete, upload the Areeba list
     emergency: opsLead,             // Emergency Alert feature: send an alert, end it with All clear
     budget: team,                   // Budget feature: see the CAPEX / OPEX lines and prepare JDE requests
@@ -1546,12 +1549,12 @@ async function opsRoute(env, me, p, method, b, url) {
       env.DB.prepare("SELECT day, note FROM sched_notes WHERE site = ? AND day BETWEEN ? AND ?").bind(site, from, to).all()
     ]);
     const staff = await schedStaff(env, site);   // order and sections set with "Arrange"
-    return { site, staff, cells: cells.results || [], notes: notes.results || [], can, groups: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])) };
+    return { site, staff, cells: cells.results || [], notes: notes.results || [], can, groups: Object.fromEntries(Object.entries(POSITIONS).filter(([, v]) => !v.viewOnly).map(([k, v]) => [k, v.label])) };
   }
   if (p === "schedule/order" && method === "POST") {   // Arrange: row order and section of each person (schedule only — the position in People & roles does not change)
     if (!can.schedule) throw fail("Only the flagship's Manager or Senior Mall Supervisor can arrange the schedule", 403);
     const ok = new Set((await siteStaff(env, site)).filter(s => s.atSite).map(s => s.email));
-    const list = (Array.isArray(b.order) ? b.order : []).filter(o => ok.has(o.email)).slice(0, 200).map(o => ({ email: o.email, group: POSITIONS[o.group] ? o.group : "" }));
+    const list = (Array.isArray(b.order) ? b.order : []).filter(o => ok.has(o.email)).slice(0, 200).map(o => ({ email: o.email, group: POSITIONS[o.group] && !POSITIONS[o.group].viewOnly ? o.group : "" }));
     await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("schedorder:" + site, JSON.stringify(list)).run();
     return { staff: await schedStaff(env, site) };
   }

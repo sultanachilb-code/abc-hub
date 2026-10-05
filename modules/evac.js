@@ -43,7 +43,7 @@ async function state(env, site) {
 
 export async function evacRoute(env, p, method, b, url, d) {
   const { site, me } = d;
-  const team = d.canSite(me, site) && (d.full || me.role === "SUPERVISOR");
+  const team = d.canSite(me, site) && (d.full || (me.role === "SUPERVISOR" && me.position !== "WH"));
   if (p === "evac/get") return { ...(await state(env, site)), can: { edit: team } };
   if (method !== "POST") throw err("Unknown request", 404);
   if (!team) throw err("Only the operations team can change the evacuation plan", 403);

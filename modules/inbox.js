@@ -109,7 +109,7 @@ export async function mailInbox(env, request, body, d) {
     }
     const site = String(body.site || "").toUpperCase();
     if (!d.SITES[site]) return { accepted: false, reason: "Unknown flagship in the address" };
-    if (!d.canSite(u, site) || !(d.isFull(u) || u.role === "SUPERVISOR")) return { accepted: false, reason: `${u.full_name} cannot add to ${d.SITES[site]} — ignored` };
+    if (!d.canSite(u, site) || !(d.isFull(u) || (u.role === "SUPERVISOR" && u.position !== "WH"))) return { accepted: false, reason: `${u.full_name} cannot add to ${d.SITES[site]} — ignored` };
     const today = d.today(), sent = isDay(String(body.date || "").slice(0, 10)) ? String(body.date).slice(0, 10) : today;
     const ics = (Array.isArray(body.ics) ? body.ics : []).map(parseIcs).find(Boolean) || null;
     const subject = clip(body.subject, 300).replace(/^\s*((re|fw|fwd|tr|إعادة توجيه)\s*:\s*)+/i, "");

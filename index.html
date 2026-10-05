@@ -2469,7 +2469,7 @@ async function adminUsers(body, editing){
     const slotBox = (slot, title) => { const u = inSlot(slot); return u ? row(u) : vacant(d.slots[slot], { role: "MANAGER", site, position: title }); };
     const extraMgr = mgr.filter(u => !(u.active && (inSlot("MM") === u || inSlot("OM") === u)));
     const team = at.filter(u => u.role === "SUPERVISOR");
-    const rankP = { SMS: 1, MS: 2, MO: 3 };
+    const rankP = { SMS: 1, MS: 2, MO: 3, WH: 4 };
     team.sort((a, b) => (rankP[a.position] || 9) - (rankP[b.position] || 9) || a.name.localeCompare(b.name));
     const sec = at.filter(u => u.role === "SECURITY"), adm = at.filter(u => u.role === "ADMIN");
     const leaders = U.filter(u => u.active && (d.allSiteRoles.includes(u.role) || d.multiRoles.includes(u.role)) && (u.sites || []).includes(site));

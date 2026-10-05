@@ -272,9 +272,11 @@ async function loadSend(){
       : `<b>✓ Emailed</b><small>${esc(at)} by ${esc(SEND.sent.by)}${SEND.sent.count > 1 ? ` · ${SEND.sent.count} versions` : ""}</small>`)
       : `<b>Weekly schedule email · ${esc(range)}</b><small>${SEND.filled ? "Sent on Sunday to the Mall Manager and the flagship's teams." : "Fill the week first — it is emailed on Sunday."}</small>`}</div>
     ${SEND.can.send ? `<button class="btn ${SEND.sent && !SEND.changed ? "ghost" : ""}" id="mailBtn" ${SEND.filled ? "" : "disabled"}>${SEND.sent ? (SEND.changed ? "Send update" : "Send again") : "Submit &amp; send"}</button>` : ""}
+    <button class="btn ghost" id="rcpBtn" title="Who receives the weekly email">✉️ Recipients</button>
     <button class="btn wa" id="waBtn" ${SEND.filled ? "" : "disabled"} title="Share the schedule picture to a WhatsApp group">${WA_ICON} WhatsApp</button>`;
   const m = $("#mailBtn"); if (m) m.onclick = openMail;
   $("#waBtn").onclick = shareWhatsApp;
+  $("#rcpBtn").onclick = openRecipients;
 }
 async function openMail(){
   if (DIRTY.size || DIRTY_NOTES.size) return toast("Save your changes first", true);
@@ -297,6 +299,27 @@ async function openMail(){
   dl.showModal();
 }
 
+/* recipients of this flagship's weekly email (To / Cc) — kept per flagship, changed by the operations team */
+async function openRecipients(){
+  let R; try { R = await api(`ops/schedmail/recipients?site=${CTX.site}&week=${WEEK}`); } catch (e){ return toast(e.message, true); }
+  let dl = $("#rcpDlg"); if (!dl){ dl = document.createElement("dialog"); dl.id = "rcpDlg"; dl.style.width = "min(640px,calc(100% - 20px))"; document.body.append(dl); }
+  const lines = v => esc((v || "").split("; ").filter(Boolean).join(";\n"));
+  const ro = R.can.edit ? "" : "readonly";
+  dl.innerHTML = `<div class="dlg-h"><b>Weekly schedule email · recipients</b><small class="muted">${esc(CTX.siteName)} — used every Sunday</small></div>
+    <div class="dlg-b">
+      <label class="lbl">To</label><textarea id="rcpTo" rows="3" ${ro} placeholder="Empty = the Mall Manager${R.managers ? ": " + esc(R.managers) : " (none set in People & roles)"}">${lines(R.to)}</textarea>
+      <p class="muted" style="font-size:.76rem;margin:4px 0 12px">Leave empty to send to the Mall Manager from People &amp; roles${R.managers ? ` (${esc(R.managers)})` : ""}.</p>
+      <label class="lbl">Cc</label><textarea id="rcpCc" rows="8" ${ro}>${lines(R.cc)}</textarea>
+      <p class="muted" style="font-size:.76rem;margin-top:4px">One per line, or separated by “;”. Copy them straight from Outlook — “Name &lt;email&gt;” is fine.</p>
+      <div id="rcpErr" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>${R.can.edit ? "Cancel" : "Close"}</button>${R.can.edit ? `<button class="btn" id="rcpSave">Save</button>` : ""}</div>`;
+  dl.querySelector("[data-x]").onclick = () => dl.close();
+  const sv = dl.querySelector("#rcpSave"); if (sv) sv.onclick = async () => {
+    try { await api("ops/schedmail/recipients", { site: CTX.site, week: WEEK, to: $("#rcpTo").value, cc: $("#rcpCc").value }); dl.close(); toast("Recipients saved"); }
+    catch (e){ $("#rcpErr").textContent = e.message; }
+  };
+  dl.showModal();
+}
 /* the schedule as a picture (for WhatsApp) — drawn on a canvas, same colours as the email */
 function schedulePng(){
   const d = days(), W = 230, CW = 128, TW = 70, RH = 50, HH = 52, S = 2;

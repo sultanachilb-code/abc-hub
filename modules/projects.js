@@ -93,7 +93,7 @@ function clean(b, me, now, cur) {
 export async function projectsRoute(env, p, method, b, url, d) {
   const { site, me } = d;
   if (!d.canSite(me, site)) throw err("No access to this flagship", 403);
-  const team = d.full || me.role === "SUPERVISOR";
+  const team = d.full || (me.role === "SUPERVISOR" && me.position !== "WH");
   const today = d.today();
   const one = async id => { const r = await env.DB.prepare("SELECT * FROM projects WHERE id = ? AND site = ? AND deleted = 0").bind(Number(id) || 0, site).first(); if (!r) throw err("Not found", 404); return r; };
 

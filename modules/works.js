@@ -134,7 +134,7 @@ export async function worksFile(env, me, url, d) {
 export async function worksRoute(env, p, method, b, url, d) {
   const { site, me } = d;
   const mine = d.canSite(me, site);
-  const team = mine && (d.full || me.role === "SUPERVISOR");          // supervisors and managers sign for Operations
+  const team = mine && (d.full || (me.role === "SUPERVISOR" && me.position !== "WH"));          // supervisors and managers sign for Operations
   const canDelete = mine && d.full;
   const one = async id => {
     const r = await env.DB.prepare("SELECT * FROM works_forms WHERE id = ? AND deleted = 0").bind(Number(id) || 0).first();
