@@ -1976,7 +1976,9 @@ function keepGateMarks(saved, incoming) {   // a page opened before a scan must 
 }
 function cleanHandover(d) {
   const item = x => ({ text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "",
-    src: x.src === "portal" ? "portal" : "", req: /^REQ-?\d+$/i.test(x.req || "") ? String(x.req).toUpperCase() : "" });   // src: portal = imported from Tenant Connect (black), else typed by the team (red)
+    src: x.src === "portal" ? "portal" : "", req: /^REQ-?\d+$/i.test(x.req || "") ? String(x.req).toUpperCase() : "",
+    ...(x.manual ? { manual: true } : {}),
+    ...(x.cols && typeof x.cols === "object" ? { cols: { tenant: s(x.cols.tenant, 160), req: s(x.cols.req, 40), task: s(x.cols.task, 300), contractor: s(x.cols.contractor, 160), time: s(x.cols.time, 40), m: s(x.cols.m, 60) } } : {}) });   // Portal Handover table columns (import) and the team's own cells (m)   // src: portal = imported from Tenant Connect (black), else typed by the team (red)
   const out = blankHandover();
   for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) out[k] = (Array.isArray(d[k]) ? d[k] : []).slice(0, 80).map(item).filter(x => x.text.trim());
   out.events = (Array.isArray(d.events) ? d.events : []).slice(0, 40).map(e => ({ from: isDay(e.from) ? e.from : "", to: isDay(e.to) ? e.to : "",

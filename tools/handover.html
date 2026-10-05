@@ -68,6 +68,25 @@ dialog.wide{width:min(760px,calc(100% - 20px))}
 :root[data-theme="dark"] .it.manual textarea{color:#FF8A80} :root[data-theme="dark"] .it.portal textarea{color:#EFEAF5}
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .it.manual textarea{color:#FF8A80} :root:not([data-theme="light"]) .it.portal textarea{color:#EFEAF5} }
 @media print{ .it.manual textarea{color:#C00000!important} .it.portal textarea{color:#000!important} .shifts,.vtabs{display:none!important} }
+/* Portal Handover (Today) as a table: imported text black, typed cells red, loading-area feedback green (in) / yellow (refused) */
+.ptw{overflow-x:auto;margin:4px 0 6px}
+.t.pt{table-layout:fixed;width:100%;min-width:900px}
+.t.pt th{white-space:normal;vertical-align:bottom}
+.t.pt td{vertical-align:top}
+.t.pt td textarea{width:100%;border:0;background:transparent;padding:7px 8px;outline:none;font:inherit;font-size:.86rem;line-height:1.35;resize:none;color:#111;min-width:0;display:block}
+.t.pt td textarea.man{color:#C00000}
+.t.pt td.fb{padding:7px 8px;font-size:.84rem;font-weight:800;overflow-wrap:anywhere}
+.t.pt td.fb.in{color:#1E7B45}.t.pt td.fb.out{color:#B58900}
+.t.pt td.acts{padding:4px}
+.t.pt td.acts .ac{display:grid;grid-template-columns:1fr 26px;gap:4px;align-items:center}
+.t.pt td.acts .tg{margin:0;width:100%;font-size:.68rem;padding:0 4px}
+.t.pt td.acts .x{grid-row:1 / span 2;grid-column:2}
+.t.pt tr.done textarea{text-decoration:line-through;opacity:.7}
+.t.pt tr.cctv textarea{font-weight:800}
+.t.pt .emptyrow{padding:8px}
+:root[data-theme="dark"] .t.pt td textarea{color:#EFEAF5} :root[data-theme="dark"] .t.pt td textarea.man{color:#FF8A80} :root[data-theme="dark"] .t.pt td.fb.in{color:#5FD08A} :root[data-theme="dark"] .t.pt td.fb.out{color:#F2C94C}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .t.pt td textarea{color:#EFEAF5} :root:not([data-theme="light"]) .t.pt td textarea.man{color:#FF8A80} :root:not([data-theme="light"]) .t.pt td.fb.in{color:#5FD08A} :root:not([data-theme="light"]) .t.pt td.fb.out{color:#F2C94C} }
+@media print{ .t.pt td textarea{color:#000!important} .t.pt td textarea.man{color:#C00000!important} .t.pt td.fb.in{color:#1E7B45!important} .t.pt td.fb.out{color:#B58900!important} .t.pt td.acts,.t.pt th.acts{display:none} .ptw{overflow:visible} .t.pt{min-width:0} }
 .grp-h{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.86rem;color:#2F5597;padding:6px 2px 2px}
 .grp-h .sp{flex:1}
 .grp-h + .emptyrow{padding-left:22px}
@@ -302,17 +321,58 @@ function render(){
     ${H.can.handover ? `<button class="btn ghost" id="saveBtn">Save</button>` : ""}
 
   </div>`;
-  app.querySelectorAll(".it textarea").forEach(grow);
+  app.querySelectorAll(".it textarea, .t.pt textarea").forEach(grow);
 }
 /* ---------- the day's shifts: AM / Mid / PM … each submitted once; the next one is highlighted ---------- */
 const SPLIT = ["today", "tomorrow"];   // these two show Operations Handover (red) and Portal Handover (black)
 function splitItems(k, ro){
   const grp = (src, label) => {
     const L = H.doc[k].map((x, i) => [x, i]).filter(([x]) => (x.src === "portal") === (src === "portal"));
+    const table = src === "portal" && k === "today";   // Today's Portal Handover is a table; Tomorrow stays a list (it moves into Today after midnight)
     return `<div class="grp"><div class="grp-h" style="${src === "portal" ? "color:var(--text)" : "color:#C00000"}">${label}<span class="sp"></span>${ro ? "" : `<button class="add" data-add="${k}" data-src="${src}">+ Add row</button>`}</div>
-      ${L.length ? L.map(([x, i]) => itemRow(k, x, i, ro)).join("") : `<div class="emptyrow">Nothing yet.</div>`}</div>`;
+      ${table ? portalTable(k, L, ro) : L.length ? L.map(([x, i]) => itemRow(k, x, i, ro)).join("") : `<div class="emptyrow">Nothing yet.</div>`}</div>`;
   };
   return grp("", "Operations Handover:") + grp("portal", "Portal Handover:");
+}
+/* ---------- Portal Handover table: Tenant name | Request Number | Task | Contractor | Time From – Time To | Loading area feedback ----------
+   Imported rows carry their columns (x.cols, set by the import); older lines are split from their text.
+   The loading gate writes its mark at the end of the line text ("— ✓ Attended 20:13 · …"); the table shows it in its own column.
+   Anything typed by the team (a new row, or a cell changed by hand) is red; imported text is black. */
+const PCOLS = [["tenant", "Tenant name"], ["req", "Request Number"], ["task", "Task"], ["contractor", "Contractor"], ["time", "Time From – Time To"]];
+const pSpan = (f, t, tDay) => f || t ? `${f || "—"}–${tDay ? tDay + " " : ""}${t || "—"}` : "";
+function portalCols(x){
+  if (x.cols) return x.cols;
+  const body = String(x.text || "").replace(GATE_MARK_RE, "").trim();
+  /* import line: "Phil & Joe : Electrical job by Dany from 01/10/2026 06:00 to 02/10/2026 09:45 [Checking UPS Issue] (REQ-008717)" */
+  let m = body.match(/^(.*?)\s+:\s+(.*?)(?:\s+job)?(?:\s+by\s+(.*?))?\s+from\s+(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{1,2}:\d{2}))?(?:\s+to\s+(?:(\d{2}\/\d{2}\/\d{4})\s*)?(\d{1,2}:\d{2})?)?(?:\s+\[(.*)\])?\s*\((REQ-?\d+)\)$/i);
+  if (m) return { tenant: m[1], req: m[9].toUpperCase(), task: [m[8], m[2] === "Job" ? "" : m[2]].filter(Boolean).join(" · "), contractor: m[3] || "",
+    time: pSpan(m[5], m[7], m[6] && m[6] !== m[4] ? m[6].slice(0, 5) : "") };
+  /* "SIOM — Clean split unit · Mechanical HVAC · Tannoury platform · 08:00–23:00 · REQ-008935" */
+  m = body.match(/^(.*?)\s+—\s+(.*)$/);
+  if (m){
+    let parts = m[2].split(" · ").map(p => p.trim()).filter(Boolean);
+    const req = (parts.find(p => /^REQ-?\d+$/i.test(p)) || x.req || "").toUpperCase();
+    parts = parts.filter(p => !/^REQ-?\d+$/i.test(p));
+    const ti = parts.findIndex(p => /^\d{1,2}:\d{2}\s*[–-]/.test(p)), time = ti >= 0 ? parts.splice(ti, 1)[0] : "";
+    const contractor = parts.length > 1 ? parts.pop() : "";
+    return { tenant: m[1], req, task: parts.join(" · "), contractor, time };
+  }
+  const req = (x.req || (body.match(/REQ-?\d+/i) || [""])[0]).toUpperCase();
+  return { tenant: "", req, task: body.replace(/\(?\bREQ-?\d+\b\)?/i, "").trim(), contractor: "", time: "" };
+}
+const pCompose = c => `${c.tenant || ""} — ${[c.task, c.contractor, c.time, c.req].filter(Boolean).join(" · ")}`.replace(/^ — /, "").replace(/ — $/, "");
+const pManual = (x, f) => !!x.manual || String((x.cols && x.cols.m) || "").split(",").includes(f);
+function pFeedback(x){
+  const m = (String(x.text || "").match(GATE_MARK_RE) || [""])[0].replace(/^\s+—\s+/, "");
+  return { text: m, cls: !m ? "" : /^✕/.test(m) ? "out" : "in" };
+}
+function portalTable(k, L, ro){
+  if (!L.length) return `<div class="emptyrow">Nothing yet.</div>`;
+  return `<div class="ptw"><table class="t pt"><colgroup><col style="width:12%"><col style="width:13%"><col style="width:24%"><col style="width:13%"><col style="width:13%"><col style="width:25%">${ro ? "" : `<col style="width:118px">`}</colgroup><tr>${PCOLS.map(([, h]) => `<th>${h}</th>`).join("")}<th>Loading area feedback</th>${ro ? "" : `<th class="acts"></th>`}</tr>
+    ${L.map(([x, i]) => { const c = portalCols(x), fb = pFeedback(x);
+      return `<tr class="${x.done ? "done" : ""} ${x.cctv ? "cctv" : ""}">${PCOLS.map(([f]) => `<td><textarea rows="1" class="${pManual(x, f) ? "man" : ""}" data-pc="${f}" data-k="${k}" data-i="${i}" ${ro}>${esc(c[f] || "")}</textarea></td>`).join("")}
+        <td class="fb ${fb.cls}">${esc(fb.text)}</td>
+        ${ro ? "" : `<td class="acts"><div class="ac"><button class="tg c ${x.cctv ? "on" : ""}" data-tg="cctv" data-k="${k}" data-i="${i}">ATT CCTV</button><button class="tg d ${x.done ? "on" : ""}" data-tg="done" data-k="${k}" data-i="${i}">Done</button><button class="x" data-rm="${k}" data-i="${i}" title="Remove">×</button></div></td>`}</tr>`; }).join("")}</table></div>`;
 }
 function shiftTable(){
   const S = H.shifts || ["AM", "PM"], L = H.handoffs || [], can = H.can.handover;
@@ -364,6 +424,13 @@ app.addEventListener("input", e => {
   const t = e.target, k = t.dataset.k;
   if (t.id === "notes"){ H.doc.notes = t.value; return touch(); }
   if (t.id === "hDay"){ H.day = t.value; return touch(); }
+  if (k && t.dataset.pc){   // Portal Handover table cell: the change is the team's own input (red); the line text is rebuilt, keeping the gate mark
+    const x = H.doc[k][+t.dataset.i], f = t.dataset.pc, c = { ...portalCols(x) };
+    c[f] = t.value; const m = new Set(String(c.m || "").split(",").filter(Boolean)); m.add(f); c.m = [...m].join(",");
+    x.cols = c; if (f === "req" && /^REQ-?\d+$/i.test(t.value.trim())) x.req = t.value.trim().toUpperCase();
+    x.text = (pCompose(c) + (String(x.text || "").match(GATE_MARK_RE) || [""])[0]).slice(0, 500);
+    t.classList.add("man"); grow(t); return touch();
+  }
   if (k){ H.doc[k][+t.dataset.i][t.dataset.f] = t.value; if (t.tagName === "TEXTAREA") grow(t); if (t.tagName === "SELECT") t.className = t.value === "Done" ? "done" : t.value === "Not done" ? "nd" : ""; touch(); }
 });
 app.addEventListener("change", e => { if (H && e.target.id === "hDay"){ LIVE = null; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); loadLive(); } });
@@ -377,7 +444,8 @@ app.addEventListener("click", async e => {
   if (t.id === "liveRef"){ LIVE = null; $("#liveBox").innerHTML = liveHtml(); return loadLive(); }
   if (t.id === "impBtn") return $("#impFile").click();
   if (t.id === "mailBtn") return mailDialog();
-  const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add; H.doc[k].push({ ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}) }); touch(); render();
+  const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add;
+    H.doc[k].push({ ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}), ...(add.dataset.src === "portal" && k === "today" ? { manual: true, cols: { tenant: "", req: "", task: "", contractor: "", time: "", m: "" } } : {}) }); touch(); render();
     const last = app.querySelectorAll(`[data-k="${k}"][data-i="${H.doc[k].length - 1}"]`); const f = [...last].find(x => x.tagName === "TEXTAREA" || x.type === "text"); f && f.focus(); return; }
   const rm = t.closest("[data-rm]"); if (rm){ H.doc[rm.dataset.rm].splice(+rm.dataset.i, 1); touch(); return render(); }
   const tg = t.closest("[data-tg]"); if (tg){ const x = H.doc[tg.dataset.k][+tg.dataset.i]; x[tg.dataset.tg] = !x[tg.dataset.tg]; touch(); return render(); }
@@ -501,7 +569,9 @@ $("#impFile").addEventListener("change", async e => {
       <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button>${n ? `<button class="btn gold" data-v="1">Add ${n} to the handover</button>` : ""}</div>`;
     d.onclick = ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; d.close();
       if (b && b.dataset.v === "1"){
-        const mk = (q, dated) => ({ text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "", src: "portal", req: q.req });
+        const mk = (q, dated) => ({ text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "", src: "portal", req: q.req,
+          cols: { tenant: nice(q.tenant), req: q.req, task: [q.desc, q.sub].filter(Boolean).join(" · "), contractor: q.contractor || "",
+            time: pSpan(q.from.time, q.to && q.to.time, q.to && q.to.day !== q.from.day ? dmyDay(q.to.day).slice(0, 5) : ""), m: "" } });
         IMP.today.forEach(q => H.doc.today.push(mk(q)));
         IMP.tomorrow.forEach(q => H.doc.tomorrow.push(mk(q)));
         IMP.upcoming.forEach(q => H.doc.upcoming.push(mk(q, true)));
@@ -531,9 +601,15 @@ function mailHtml(){
   const head = (t, sub) => `<tr><td style="${F}background:#8EAADB;color:#10203F;font-weight:bold;font-size:15px;padding:6px 10px;border-top:1.5px solid #2F3B52">${esc(t)}${sub ? ` <span style="font-weight:normal;font-size:12px">· ${esc(sub)}</span>` : ""}</td></tr>`;
   const items = (L, dated) => `<tr><td style="${F}padding:4px 10px 8px">${L.length ? `<ul style="margin:0;padding-left:20px">${L.map(x => `<li style="color:${x.src === "portal" ? "#000000" : "#C00000"};font-size:14px;margin:2px 0;${x.cctv ? "font-weight:bold;" : ""}${x.done ? "text-decoration:line-through;" : ""}">${dated && x.date ? `<b>${esc(D.fmt(x.date, { weekday: "short" }))}:</b> ` : ""}${esc(x.text)}${x.cctv ? ` <span style="background:#E5484D;color:#fff;font-size:11px;padding:1px 5px">ATT CCTV</span>` : ""}${x.done ? " ✓" : ""}</li>`).join("")}</ul>` : `<span style="color:#777;font-size:13px">Nothing.</span>`}</td></tr>`;
   /* Today / Tomorrow: Operations Handover (typed, red) then Portal Handover (Tenant Connect, black) */
-  const split = L => { const ops = L.filter(x => x.src !== "portal"), por = L.filter(x => x.src === "portal");
+  const split = (L, asTable) => { const ops = L.filter(x => x.src !== "portal"), por = L.filter(x => x.src === "portal");
     const sub = (t, c) => `<tr><td style="${F}padding:6px 10px 0;font-size:14px;font-weight:bold;color:${c}">${t}</td></tr>`;
-    return sub("Operations Handover:", "#C00000") + items(ops) + sub("Portal Handover:", "#000000") + items(por); };
+    return sub("Operations Handover:", "#C00000") + items(ops) + sub("Portal Handover:", "#000000") + (asTable ? portalMail(por) : items(por)); };
+  /* Today's Portal Handover: the same table as on screen — black text, typed cells red, gate feedback green / yellow */
+  const portalMail = L => !L.length ? items(L) : `<tr><td style="padding:4px 10px 8px"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
+    <tr>${[...PCOLS.map(([, h]) => h), "Loading area feedback"].map(h => `<th style="${F}background:#D9E2F3;font-size:13px;text-align:left;padding:5px 8px;border:1px solid #BFBFBF">${esc(h)}</th>`).join("")}</tr>
+    ${L.map(x => { const c = portalCols(x), fb = pFeedback(x), deco = `${x.done ? "text-decoration:line-through;" : ""}${x.cctv ? "font-weight:bold;" : ""}`;
+      return `<tr>${PCOLS.map(([f], j) => `<td style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF;vertical-align:top;color:${pManual(x, f) ? "#C00000" : "#000000"};${deco}">${esc(c[f] || "")}${j === 0 && x.cctv ? ` <span style="background:#E5484D;color:#fff;font-size:11px;padding:1px 5px;font-weight:normal">ATT CCTV</span>` : ""}${j === 0 && x.done ? " ✓" : ""}</td>`).join("")}
+        <td style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF;vertical-align:top;font-weight:bold;color:${fb.cls === "out" ? "#B58900" : "#1E7B45"}">${esc(fb.text)}</td></tr>`; }).join("")}</table></td></tr>`;
   const tbl = (cols, rows) => `<tr><td style="padding:0"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
     <tr>${cols.map(c => `<th style="${F}background:#D9E2F3;font-size:13px;text-align:left;padding:5px 8px;border:1px solid #BFBFBF">${esc(c)}</th>`).join("")}</tr>
     ${rows.length ? rows.map(r => `<tr>${r.map(v => `<td style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF">${v}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length}" style="${F}font-size:13px;padding:5px 8px;border:1px solid #BFBFBF;color:#777">None.</td></tr>`}</table></td></tr>`;
@@ -554,7 +630,7 @@ function mailHtml(){
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:900px;${B}">
     <tr><td style="${F}background:#2A0F45;color:#fff;font-weight:bold;font-size:16px;padding:8px 10px">${esc(title)}</td></tr>
     ${head("Scheduled works", "Ongoing follow-up until solved")}${items(d.ongoing)}
-    ${head("Today")}${split(d.today)}
+    ${head("Today")}${split(d.today, true)}
     ${head("Tomorrow")}${split(d.tomorrow)}
     ${head("Coming up")}${items(d.upcoming, true)}
     ${head("Incidents & tenant feedback")}${incM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Not available.</td></tr>`}
