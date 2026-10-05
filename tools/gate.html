@@ -327,11 +327,11 @@ function drawRes(){
   const passUrl = /^https:\/\/[\w.-]+\.(my\.)?site\.com\//.test((R.code && R.code.raw) || "") ? R.code.raw : "";
   const notes = [];
   if (R.offline) notes.push(["warn", "No signal. Your decision is saved on this phone and sent when the signal is back."]);
-  else if (vk === "check" && !R.sfError) notes.push(["info", "Live Salesforce check is not connected yet — open the pass to see Approved / Rejected."]);
+  else if (vk === "check" && !R.sfError) notes.push(["info", "The pass could not be read automatically — open it to see Approved / Rejected."]);
   if (R.last) notes.push([R.last.decision === "out" ? "alert" : "info", `Scanned before today at ${hm(R.last.at)} — ${R.last.decision === "in" ? "approved in" : R.last.decision === "out" ? "rejected (" + esc(R.last.reason) + ")" : "left"} by ${esc(R.last.by)}.`]);
   if (v && v.state === "onsite") notes.push(["ok", `Already on site since ${hm(v.inAt)}${v.workers ? ` · ${v.workers} workers` : ""}. Use <b>Leaving</b> when they go out.`]);
   if (v && v.ins === "expired") notes.push(["alert", "The contractor's insurance has expired (Contractors register)."]);
-  if (R.sfError) notes.push(["info", `Salesforce: ${esc(R.sfError)} — showing what the hub knows.`]);
+  if (R.sfError) notes.push(["info", `${esc(R.sfError)} — open the pass to check it.`]);
 
   const f = (k, val, big) => val ? `<div class="f"><span>${k}</span><div class="${big ? "big" : ""}">${val}</div></div>` : "";
 
@@ -349,7 +349,7 @@ function drawRes(){
         ${f("From", esc(when(I.from)))}
         ${f("To", esc(when(I.to)))}
         ${f("Status", I.status ? esc(I.status) : "")}
-        ${f("Checked by", R.offline ? "" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
+        ${f("Checked by", R.offline ? "" : R.source === "pass" ? "Tenant Connect pass · live" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
       </div>` : ""}
       ${R.sfFields && R.sfFields.length ? `<details class="card" style="margin:12px 14px 0;padding:10px 14px"><summary style="font-weight:800;font-size:.84rem;cursor:pointer">Salesforce fields read <span class="muted" style="font-weight:600">· managers only</span></summary>
         <div style="font-size:.78rem;line-height:1.5;margin-top:8px;word-break:break-word">${R.sfFields.map(x => `<div><b>${esc(x[0])}</b> <span class="muted">${esc(x[1])}</span></div>`).join("")}</div></details>` : ""}
@@ -384,29 +384,15 @@ function decideOut(){
   reasonBox("out");
 }
 function statusBox(done){
-  /* no live Salesforce answer: the agent reads the pass — its stamp, and the "Request Name" (REQ number),
-     so the decision lands on the right line of the Shift Handover */
-  const I = R.info || (R.info = {}), known = I.req || (R.code && R.code.req) || "";
+  /* no live Salesforce answer: the agent says what the stamp on the pass shows — nothing to type */
   const d = $("#dlg");
   d.innerHTML = `<div class="dlg-h"><b>What does the pass show?</b><small class="ar">ماذا يظهر على التصريح؟</small></div>
-    <div class="dlg-b">
-      ${known ? "" : `<span class="lbl">Request number on the pass <span class="ar" style="text-transform:none">رقم الطلب</span></span>
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px"><span style="font-weight:800;font-size:1.15rem">REQ-</span>
-        <input class="inp" id="sReq" inputmode="numeric" autocomplete="off" placeholder="008936" size="8" style="flex:1;min-width:0;width:100%;height:50px;font-size:1.25rem;letter-spacing:.06em"></div>`}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <button class="big-btn in" data-s="Approved" style="height:70px">APPROVED<small class="ar">موافق عليه</small></button>
-        <button class="big-btn out" data-s="Rejected" style="height:70px">REJECTED<small class="ar">مرفوض</small></button></div></div>
+    <div class="dlg-b" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="big-btn in" data-s="Approved" style="height:70px">APPROVED<small class="ar">موافق عليه</small></button>
+      <button class="big-btn out" data-s="Rejected" style="height:70px">REJECTED<small class="ar">مرفوض</small></button></div>
     <div class="dlg-f"><button class="btn ghost" data-s="">Cancel</button></div>`;
-  d.onclick = e => {
-    const b = e.target.closest("[data-s]"); if (!b && e.target !== d) return;
-    if (b && b.dataset.s && !known){
-      const n = ($("#sReq").value || "").replace(/\D/g, "");
-      if (n.length < 3){ toast("Type the request number from the pass (Request Name)", true); $("#sReq").focus(); return; }
-      I.req = "REQ-" + n.padStart(6, "0");
-    }
-    d.close(); if (b && b.dataset.s) done(b.dataset.s);
-  };
-  d.showModal(); const f = $("#sReq"); if (f) setTimeout(() => f.focus(), 60);
+  d.onclick = e => { const b = e.target.closest("[data-s]"); if (!b && e.target !== d) return; d.close(); if (b && b.dataset.s) done(b.dataset.s); };
+  d.showModal();
 }
 function reasonBox(kind, seen){
   const d = $("#dlg"), isOut = kind === "out";

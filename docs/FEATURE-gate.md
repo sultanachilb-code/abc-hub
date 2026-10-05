@@ -38,7 +38,11 @@
 5. A full-screen ✓ / ✕ confirms, and the scanner is ready for the next pass.
 
 **Salesforce not connected yet, or no signal:** the banner says **Check the pass**, with a button that opens the pass in Salesforce.
-When the agent presses a button he first answers **What does the pass show? Approved / Rejected** and types the **request number** printed on the pass ("Request Name", e.g. REQ-008936) — that number puts the decision on the right handover line. The QR is then linked to that request, so the next scans of the same pass know it by themselves.
+When the agent presses a button he first answers **What does the pass show? Approved / Rejected** — nothing to type.
+
+**Which handover line?** The line is found by its REQ number. The hub gets it from Salesforce (connector), or straight from the QR when
+the pass QR carries it: in Salesforce, add `&req=` + the request name to the URL inside the QR formula, e.g.
+`…/ABCQRCode/s/?recordId={!Id}&req={!Name}` → `…?recordId=a0G…&req=REQ-008936`. Once a QR has been matched, the hub remembers it.
 Decisions taken without signal are kept on the phone ("Not sent yet") and sent automatically when the connection is back.
 
 ## Shift Handover
@@ -51,11 +55,15 @@ Decisions taken without signal are kept on the phone ("Not sent yet") and sent a
 * The live tracker also has a **Loading area gate** table (time, contractor, tenant, REQ, approved in / rejected + reason, overrides), and the same table goes into the handover email.
 
 ## How the request is read
-The QR holds a Salesforce link (`…/ABCQRCode/s/?recordId=a0G…`). On every scan the hub reads that record from Salesforce
-(status, REQ, contractor, tenant, sender, dates). The status is taken from the status field or from the APPROVED / REJECTED
-stamp image (its alt text / file name). Managers and admins see a **Salesforce fields read** panel under the result,
-to check what the gate reads — use it with `SF_FIELDS` below if a field is picked wrongly.
-If the request is also on the hub's approved list (imported by the handover), the scan is linked to it for Contractors and the Day to Day timeline.
+The QR holds the Tenant Connect pass link (`https://abclebanon.my.site.com/ABCQRCode/s/?recordId=a0G…`). On every scan the hub
+reads that pass **the same way the pass page does**: it starts the public screen flow **QRCodeFlow** with the `recordId` and takes what
+the page shows — Request Name (REQ), Contractor / Supplier, Sender, Account (tenant), Maintenance Type, Sub Maintenance, Notes,
+Valid From / To, and **IsApproved** (the APPROVED / REJECTED stamp). No set-up, no login.
+* Only QR links on `abclebanon.my.site.com` are read (more hosts: variable `PASS_HOSTS`, comma-separated; flow name: `PASS_FLOW`).
+* If the flow's screen labels change (e.g. "Request Name"), update `passMap` in modules/gate.js.
+* If the pass cannot be read (Salesforce down, no signal), the agent opens the pass and taps what the stamp shows.
+* The optional Salesforce Connected App below is only a backup; it is not needed.
+* Managers see a **fields read** panel under each result. Once a QR is matched to a request, the hub remembers it.
 
 ## Salesforce settings (optional, recommended)
 Salesforce Setup → App Manager → New Connected App ("ABC Operations Hub — Loading Gate"):
