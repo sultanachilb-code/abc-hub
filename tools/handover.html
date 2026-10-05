@@ -167,7 +167,7 @@ async function openDay(day){
     const d = await api(`ops/handover/new?site=${CTX.site}&day=${day}`);
     if (d.existing) return open(d.handover.id);
     H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin;
-    dirty = true; LIVE = null; render(); loadLive();
+    dirty = true; LIVE = null; setBase(H); render(); loadLive();
     if (H.can.handover) save(false, true);
   } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
 }
@@ -208,8 +208,53 @@ async function history(){
 async function open(id){
   const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin;
   setTabs(BACK === "hist" || H.day !== CTX.today ? "hist" : "today");
-  dirty = false; LIVE = null; render(); loadLive();
+  dirty = false; LIVE = null; setBase(H); PENDING = null; render(); loadLive();
 }
+
+/* ---------- Live handover: the page checks every 15 s and takes in what others (and the loading gate) changed.
+   Nobody needs to refresh. Edits made here are sent with the copy they started from, so the hub merges line by line
+   instead of one save wiping another person's lines. A change never redraws the page while someone is typing. ---------- */
+let BASE = null, BASE_AT = "", HL = -1, EDIT = 0, SAVING = false, PENDING = null;
+const clone = o => JSON.parse(JSON.stringify(o));
+const newId = () => "n" + Math.random().toString(36).slice(2, 10);
+function setBase(h){ BASE = clone(h.doc); BASE_AT = h.updatedAt || ""; if (h.hl != null) HL = h.hl; }
+let LAST_KEY = 0;
+app.addEventListener("input", () => { LAST_KEY = Date.now(); }, true);
+const editing = () => { const a = document.activeElement; return !!a && app.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); };
+const typing = () => editing() && Date.now() - LAST_KEY < 8000;   // a box left open without typing for 8 s does not hold the page back
+/* redraw without losing the place: scroll position, and the box (by line id, not position — lines may have moved) with its cursor */
+function redraw(){
+  const a = editing() ? document.activeElement : null, y = scrollY;
+  const at = a && { k: a.dataset.k, id: a.dataset.k && H.doc[a.dataset.k] && H.doc[a.dataset.k][+a.dataset.i] ? H.doc[a.dataset.k][+a.dataset.i].id : null,
+    f: a.dataset.f, pc: a.dataset.pc, elId: a.id, s: a.selectionStart, e: a.selectionEnd };
+  return () => {
+    render(); scrollTo(0, y);
+    if (!at) return;
+    let el = at.elId ? document.getElementById(at.elId) : null;
+    if (!el && at.k && at.id){ const i = (H.doc[at.k] || []).findIndex(x => x.id === at.id);
+      if (i >= 0) el = app.querySelector(`[data-k="${at.k}"][data-i="${i}"]${at.pc ? `[data-pc="${at.pc}"]` : at.f ? `[data-f="${at.f}"]` : ""}`); }
+    if (el){ el.focus({ preventScroll: true }); try { if (at.s != null) el.setSelectionRange(at.s, at.e); } catch {} }
+  };
+}
+function adopt(h){
+  const keep = { can: H.can, shifts: H.shifts, shiftNames: H.shiftNames, admin: H.admin }, done = redraw();
+  H = Object.assign(h, keep); setBase(h); dirty = false; PENDING = null;
+  done();
+  const m = $("#savedMsg"); if (m && h.updatedName) m.textContent = `Updated live · ${h.updatedName} ${hm(h.updatedAt)}`;
+}
+async function poll(){
+  if (!H || !H.id || document.visibilityState !== "visible" || SAVING) return;
+  try {
+    const r = await api(`ops/handover/poll?site=${CTX.site}&id=${H.id}&since=${encodeURIComponent(BASE_AT)}&hl=${HL}`);
+    if (!r.changed || !H || r.handover.id !== H.id) return;
+    if (dirty){ if (H.can.handover) save(false, true); return; }   // this page's edits go first — the hub merges, the page takes its copy
+    if (typing()){ PENDING = r.handover; return; }
+    adopt(r.handover);
+  } catch {}
+}
+setInterval(poll, 15000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") poll(); });
+app.addEventListener("focusout", () => setTimeout(() => { if (PENDING && !typing() && !dirty) adopt(PENDING); }, 60));
 const hm = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "";
 const dmy = iso => iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }).replace(",", "") : "";
 const shName = c => (H && H.shiftNames && H.shiftNames[c]) || c;
@@ -235,7 +280,7 @@ function applyGateMarks(marks){
   const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable);
   if (changed && !typing) render();
 }
-setInterval(() => { if (H && H.day === CTX.today && document.visibilityState === "visible") loadLive(); }, 60000);
+setInterval(() => { if (H && H.day === CTX.today && document.visibilityState === "visible") loadLive(); }, 30000);
 document.addEventListener("visibilitychange", () => { if (H && document.visibilityState === "visible") loadLive(); });
 function ckCell(r){ return !r ? `<span class="nd">Not done</span>` : r.status === "submitted" ? `<span class="done">Done</span> <small class="muted">${esc(r.by)} · ${hm(r.at)}${r.issues ? ` · ${r.issues} ✗` : ""}</small>` : `<span class="pr">In progress ${r.done}/${r.total}</span> <small class="muted">${esc(r.by)}</small>`; }
 /* Operations Calendar: the day's marketing events come from the calendar (not typed twice) */
@@ -418,7 +463,7 @@ const blank = { ongoing: () => ({ text: "", cctv: false, done: false, date: "" }
   tomorrow: () => ({ text: "", cctv: false, done: false, date: "" }), upcoming: () => ({ text: "", cctv: false, done: false, date: D.add(CTX.today, 2) }),
   events: () => ({ from: CTX.today, to: CTX.today, name: "", start: "", end: "" }), checklists: () => ({ name: "", am: "", pm: "", note: "" }),
   docs: () => ({ label: "", url: "", task: "", updated: CTX.today, comment: "" }) };
-function touch(){ dirty = true; clearTimeout(timer); if (H.id) timer = setTimeout(() => save(false, true), 2000); const m = $("#savedMsg"); if (m) m.textContent = "Unsaved changes…"; }
+function touch(){ EDIT++; dirty = true; clearTimeout(timer); if (H.id) timer = setTimeout(() => save(false, true), 2000); const m = $("#savedMsg"); if (m) m.textContent = "Unsaved changes…"; }
 app.addEventListener("input", e => {
   if (!H) return;
   const t = e.target, k = t.dataset.k;
@@ -445,7 +490,7 @@ app.addEventListener("click", async e => {
   if (t.id === "impBtn") return $("#impFile").click();
   if (t.id === "mailBtn") return mailDialog();
   const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add;
-    H.doc[k].push({ ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}), ...(add.dataset.src === "portal" && k === "today" ? { manual: true, cols: { tenant: "", req: "", task: "", contractor: "", time: "", m: "" } } : {}) }); touch(); render();
+    H.doc[k].push({ id: newId(), ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}), ...(add.dataset.src === "portal" && k === "today" ? { manual: true, cols: { tenant: "", req: "", task: "", contractor: "", time: "", m: "" } } : {}) }); touch(); render();
     const last = app.querySelectorAll(`[data-k="${k}"][data-i="${H.doc[k].length - 1}"]`); const f = [...last].find(x => x.tagName === "TEXTAREA" || x.type === "text"); f && f.focus(); return; }
   const rm = t.closest("[data-rm]"); if (rm){ H.doc[rm.dataset.rm].splice(+rm.dataset.i, 1); touch(); return render(); }
   const tg = t.closest("[data-tg]"); if (tg){ const x = H.doc[tg.dataset.k][+tg.dataset.i]; x[tg.dataset.tg] = !x[tg.dataset.tg]; touch(); return render(); }
@@ -459,7 +504,12 @@ async function save(submit, quiet, email, shift){
   try {
     let mail;
     if (submit && email){ if (!LIVE || LIVE.error) await loadLive(); MAIL_SHIFT = shift ? shName(shift) : null; const m = mailHtml(); mail = { subject: m.title, html: m.html }; }   // ABC Operations Groups: emailed by the hub
-    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, doc: H.doc, submit, mail, shift });
+    const seq = EDIT; SAVING = true;
+    const r = await api("ops/handover/save", { site: CTX.site, id: H.id, day: H.day, doc: H.doc, submit, mail, shift, base: BASE_AT, baseDoc: BASE }).finally(() => { SAVING = false; });
+    if (r.doc && !submit){   // live handover: the saved copy (merged with others' changes) becomes this page's base
+      if (EDIT === seq && !typing()){ H.updatedAt = r.updatedAt; if (r.merged){ const done = redraw(); H.doc = r.doc; done(); } setBase({ doc: r.doc, updatedAt: r.updatedAt }); }
+      else if (!r.merged) setBase({ doc: r.doc, updatedAt: r.updatedAt });
+    }
     if (r.offline){ dirty = false; const m = $("#savedMsg"); if (m) m.textContent = "Saved on this device — sends when back online"; if (submit) toast("No signal — the hand-over will be sent when you are back online"); return; }
     const first = !H.id; H.id = r.id; dirty = false;
     if (submit){
@@ -569,7 +619,7 @@ $("#impFile").addEventListener("change", async e => {
       <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button>${n ? `<button class="btn gold" data-v="1">Add ${n} to the handover</button>` : ""}</div>`;
     d.onclick = ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; d.close();
       if (b && b.dataset.v === "1"){
-        const mk = (q, dated) => ({ text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "", src: "portal", req: q.req,
+        const mk = (q, dated) => ({ id: newId(), text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "", src: "portal", req: q.req,
           cols: { tenant: nice(q.tenant), req: q.req, task: [q.desc, q.sub].filter(Boolean).join(" · "), contractor: q.contractor || "",
             time: pSpan(q.from.time, q.to && q.to.time, q.to && q.to.day !== q.from.day ? dmyDay(q.to.day).slice(0, 5) : ""), m: "" } });
         IMP.today.forEach(q => H.doc.today.push(mk(q)));
