@@ -792,7 +792,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <div id="list"></div>
       <footer id="foot"></footer>
     </main>
-    <aside class="rail" id="rail" aria-label="Recently opened">
+    <aside class="rail" id="rail" aria-label="Enterprise Systems">
       <svg class="arc" id="arc">
         <defs>
           <linearGradient id="arcGrad" x1="0" y1="0" x2="0" y2="1">
@@ -807,7 +807,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
         <path class="line" id="arcLine"/>
         <circle class="comet" r="3.5"><animateMotion id="comet" dur="9s" repeatCount="indefinite" path="M0 0"/></circle>
       </svg>
-      <div class="rail-title">Recent</div>
+      <div class="rail-title">Enterprise Systems</div>
       <div id="orbs"></div>
     </aside>
   </div>
@@ -2186,6 +2186,7 @@ function renderHome(){
   let foldersDone = false;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
+    if (!q && g === RAIL_GROUP && recentList().length) continue;   // shown on the curved rail instead (search still lists them)
     if (!q && g === DAY_GROUP && showD2D()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
     if (!q && FOLDER_GROUPS.includes(g)){
       if (foldersDone) continue; foldersDone = true;
@@ -2217,9 +2218,10 @@ let REC = [], off = 0, target = 0, G = null, ptr = null, anim = 0, dragging = nu
 const horizontal = () => matchMedia("(max-width:900px)").matches;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+/* The curved rail on the home page shows the Enterprise Systems with their logos (it used to show recently opened systems) */
+const RAIL_GROUP = "Enterprise Systems";
 function recentList(){
-  return store.get("hub.recent", []).map(k => ({ k, ...parseKey(k) }))
-    .filter(r => r.app && (r.site ? isSet(r.app.sites?.[r.site]) : isSet(r.app.url))).slice(0, 14);
+  return APPS.filter(a => a.group === RAIL_GROUP && !a.hidden && (a.sites || isSet(a.url))).map(a => ({ k: keyOf(a.id), app: a, site: "" }));
 }
 function geometry(){
   const w = rail.clientWidth, h = rail.clientHeight, hz = horizontal();
@@ -2251,7 +2253,7 @@ function renderRail(){
   G = geometry();
   drawArc();
   if (!REC.length){
-    orbsEl.innerHTML = `<p class="rail-empty">Systems you open will travel along this line.</p>`;
+    orbsEl.innerHTML = `<p class="rail-empty">No enterprise systems set up yet.</p>`;
     return;
   }
   orbsEl.innerHTML = REC.map((r, i) =>
