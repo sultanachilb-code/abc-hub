@@ -22,6 +22,7 @@ import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./m
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
+import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
 import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";   // Contractors feature — see docs/FEATURE-contractors.md   // Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
@@ -1457,6 +1458,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
   if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
+  if (p === "today") return todayRoute(env, { site, me, canSite, isFull, schedStaff, siteName, pullDay, sites: sitesMap(me), today: beirutToday,
+    hm: () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00") });   // Day to Day Operations
   if (p === "pack") return packRoute(env, p, method, b, url, { site, me, canSite, siteName, pullDay, today: beirutToday, now: nowIso });   // Monthly operations pack
   if (p === "history") {
     if (!canSite(me, site)) throw fail("No access to this flagship", 403);

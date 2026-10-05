@@ -211,6 +211,66 @@ main section h2{font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:
 .refresh:hover{background:var(--paper);color:var(--text)}
 .refresh.spin svg{animation:sp .8s linear infinite}
 .brief-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+/* ---------- Day to Day Operations: live timeline of today (see docs/FEATURE-day-to-day.md) ---------- */
+.d2d{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px;position:relative}
+.d2d-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.d2d-h .dt{font-size:.82rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.d2d-live{font-size:.68rem;font-weight:800;letter-spacing:.05em;color:var(--ok);background:rgba(46,139,87,.12);padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+.d2d-live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:d2dP 2s infinite}
+@keyframes d2dP{0%{box-shadow:0 0 0 0 rgba(46,139,87,.5)}70%{box-shadow:0 0 0 7px rgba(46,139,87,0)}100%{box-shadow:0 0 0 0 rgba(46,139,87,0)}}
+.d2d-h select{margin-left:auto;height:32px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--text);padding:0 10px;font:inherit;font-size:.82rem;font-weight:700}
+.d2d-day{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px}
+.d2d-day span{font-size:.74rem;font-weight:700;border-radius:999px;padding:4px 10px;background:var(--paper);border:1px solid var(--line);color:var(--muted)}
+.d2d-day span b{color:var(--text)}
+.d2d-sc{overflow-x:auto;overflow-y:hidden;border-radius:16px;background:var(--paper);scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.d2d-tr{position:relative;min-width:var(--mw,760px);padding:44px 0 26px}
+.d2d-hr{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--n),1fr);pointer-events:none}
+.d2d-hr span{border-left:1px dashed var(--line);font-size:.62rem;font-weight:600;color:var(--muted);padding:5px 4px}
+.d2d-hr span.pm{background:rgba(123,75,176,.035)}
+.d2d-ln{position:relative;height:30px}
+.d2d-ln.gap{margin-top:8px}
+.d2d-b{position:absolute;top:3px;height:24px;border-radius:7px;font-size:.7rem;font-weight:700;color:#fff;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:24px;text-align:left;
+  background:var(--c);box-shadow:0 1px 0 rgba(0,0,0,.06);transition:transform .15s,box-shadow .15s,opacity .2s;cursor:pointer}
+.d2d-b:hover,.d2d-b:focus-visible{transform:translateY(-1px);box-shadow:0 6px 14px rgba(42,15,69,.22);z-index:3}
+.d2d-b.past{opacity:.45}
+.d2d-b.now{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--c)}
+.d2d-b.exp{background:transparent;color:var(--c);border:1.5px dashed var(--c);line-height:21px}
+.d2d-b.alert{--c:var(--alert)!important}
+.d2d-b.carry{opacity:.6;background:repeating-linear-gradient(135deg,var(--c) 0 6px,color-mix(in srgb,var(--c) 80%,#fff) 6px 12px)}
+.d2d-pin{position:absolute;top:22px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--gold);border:3px solid var(--surface);box-shadow:0 0 0 2px var(--gold);z-index:4;cursor:pointer}
+.d2d-pin.wait{animation:d2dW 1.6s infinite}
+@keyframes d2dW{50%{box-shadow:0 0 0 6px rgba(200,162,74,.35)}}
+.d2d-b.pulse{animation:d2dW 1.6s infinite}
+.d2d-dl{position:absolute;top:3px;height:24px;transform:translateX(-100%);white-space:nowrap;font-size:.7rem;font-weight:800;border-radius:7px 2px 2px 7px;padding:0 9px;line-height:21px;cursor:pointer;
+  border:1.5px solid var(--dc);border-right-width:4px;color:var(--dc);background:var(--surface);transition:transform .15s,box-shadow .15s}
+.d2d-dl:hover{box-shadow:0 6px 14px rgba(42,15,69,.18);z-index:3}
+.d2d-dl.next{--dc:var(--brand-2)} .d2d-dl.done{--dc:var(--ok);background:rgba(46,139,87,.1)} .d2d-dl.late{--dc:var(--warn);background:rgba(192,122,18,.1)}
+.d2d-dl.soon{--dc:var(--warn);animation:d2dW 1.6s infinite} .d2d-dl.over{--dc:#fff;background:var(--alert);border-color:var(--alert)}
+.d2d-hl{position:absolute;top:30px;bottom:0;border-left:2px dashed var(--gold);z-index:2;pointer-events:none}
+.d2d-hl b{position:absolute;top:-10px;left:12px;font-size:.62rem;font-weight:800;color:var(--gold);white-space:nowrap;background:var(--paper);padding:0 4px;border-radius:4px}
+.d2d-now{position:absolute;top:0;bottom:0;width:2px;background:var(--gold);z-index:5;pointer-events:none}
+.d2d-now b{position:absolute;bottom:5px;left:5px;font-size:.6rem;font-weight:800;color:var(--gold);white-space:nowrap;background:var(--paper);padding:0 3px;border-radius:4px}
+.d2d-leg{display:flex;gap:14px;flex-wrap:wrap;margin:10px 2px 14px;font-size:.72rem;color:var(--muted);font-weight:600}
+.d2d-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.d2d-leg i.pn{border-radius:50%;background:var(--gold)}
+.d2d-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.d2d-c{display:flex;gap:11px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:11px 12px;text-align:left;background:var(--surface);transition:border-color .15s,transform .15s,box-shadow .15s;min-width:0}
+.d2d-c:hover{border-color:var(--brand-2);transform:translateY(-1px);box-shadow:0 8px 20px rgba(42,15,69,.08)}
+.d2d-c .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none}
+.d2d-c .ico svg{width:22px;height:22px}
+.d2d-c span.tx{min-width:0;flex:1}
+.d2d-c b{display:block;font-size:.9rem;line-height:1.25}
+.d2d-c small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--muted);font-size:.75rem;line-height:1.35;overflow:hidden;margin-top:1px}
+.d2d-c em{font-style:normal;display:inline-block;white-space:nowrap;font-size:.66rem;font-weight:800;border-radius:999px;padding:2px 7px;margin-top:4px}
+em.ok{background:rgba(46,139,87,.13);color:var(--ok)} em.warn{background:rgba(192,122,18,.15);color:var(--warn)} em.al{background:rgba(192,57,43,.12);color:var(--alert)} em.mu{background:var(--paper);color:var(--muted)}
+.d2d-pop{position:absolute;z-index:20;width:min(300px,calc(100% - 24px));background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 18px 40px rgba(27,10,46,.22)}
+.d2d-pop h4{font-size:.95rem;margin:0 0 2px}.d2d-pop p{font-size:.8rem;color:var(--muted);margin:2px 0;line-height:1.45}
+.d2d-pop em{font-style:normal;display:inline-block;font-size:.7rem;font-weight:800;border-radius:999px;padding:2px 8px}
+.d2d-pop .row{display:flex;gap:8px;margin-top:10px}.d2d-pop .btn{height:36px;font-size:.82rem;padding:0 14px}
+.d2d-sk{height:150px;border-radius:16px;background:linear-gradient(90deg,var(--paper),var(--line),var(--paper));background-size:200% 100%;animation:sk 1.4s infinite}
+@media (max-width:1100px){.d2d-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.d2d{padding:14px;border-radius:18px}.d2d-cards{gap:8px;grid-template-columns:1fr}.d2d-h .dt{font-size:.72rem;width:100%;order:3}.d2d-h .d2d-live{margin-left:auto}.d2d-c{padding:10px;gap:9px}.d2d-c .ico{width:36px;height:36px}.d2d-c b{font-size:.84rem}}
 .bcard{border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;width:100%;display:block;background:var(--paper)}
 button.bcard:hover{border-color:var(--brand-2)}
 .bcard-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -614,7 +674,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 .sheet-body{padding:6px 20px 4px}
 
 @media (max-width:900px){
-  .shell{grid-template-columns:1fr;gap:0;padding-left:16px;padding-right:16px}
+  .shell{grid-template-columns:minmax(0,1fr);gap:0;padding-left:16px;padding-right:16px}
   .ann-wrap{padding-left:16px;padding-right:16px}
   .rail{order:-1;position:relative;top:0;height:128px;margin-top:14px}
   .rail-title{right:auto;left:0}
@@ -948,7 +1008,8 @@ function startHub(){
   loadNotifications();
   buildToolsMenu();
   loadToolSummary();
-  setInterval(() => { if (!document.hidden){ loadHealth(); loadNotifications(); loadToolSummary(); } }, 60 * 1000);
+  loadToday();
+  setInterval(() => { if (!document.hidden){ loadHealth(); loadNotifications(); loadToolSummary(); loadToday(); } }, 60 * 1000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden){ loadNotifications(); checkApprovals(); } });
   checkApprovals();
   route();
@@ -1668,7 +1729,7 @@ async function pushOff(){
 /* ---------- operations tools: cascade from the header button ---------- */
 const TOOLS_GROUP = "Operations Tools";
 let TOOL_SUM = {};
-const toolApps = () => APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden);
+const toolApps = () => [...APPS.filter(a => a.group === "Day to Day Operations" && !a.hidden), ...APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden)];   // the header menu keeps the Day to Day tools too
 function buildToolsMenu(){
   const tools = toolApps();
   $("#tfab").classList.toggle("hidden", !tools.length);
@@ -1864,6 +1925,179 @@ function openFolder(g, fromEl){
 }
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").classList.contains("on")) $("#folderOv").onkeydown(e); });
 
+/* ---------- Day to Day Operations: today's live timeline above Leadership (see docs/FEATURE-day-to-day.md) ---------- */
+const DAY_GROUP = "Day to Day Operations";
+const D2D = { data: null, err: "", site: store.get("hub.d2dSite", ""), scrolled: false, t: 0 };
+const d2dApps = () => APPS.filter(a => a.group === DAY_GROUP && !a.hidden);
+const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
+async function loadToday(){
+  if (!d2dApps().length) return;
+  try { D2D.data = await api("ops/today" + (D2D.site ? "?site=" + encodeURIComponent(D2D.site) : "")); D2D.err = ""; }
+  catch (e){ D2D.err = e.message; }
+  paintD2D();
+}
+function paintD2D(){
+  const el = $("#d2d"); if (!el) return;
+  const sc = el.querySelector(".d2d-sc"), keep = sc ? sc.scrollLeft : null;
+  el.outerHTML = d2dHtml();
+  d2dScroll(keep);
+}
+function d2dScroll(keep){
+  const nsc = $("#d2d .d2d-sc");
+  if (nsc){
+    if (keep != null && D2D.scrolled) nsc.scrollLeft = keep;
+    else if (D2D.data){ const n = nsc.querySelector(".d2d-now"); if (n){ nsc.scrollLeft = Math.max(0, n.offsetLeft - nsc.clientWidth * .35); D2D.scrolled = true; } }
+  }
+}
+/* pack bars into the fewest rows without overlap */
+function d2dPack(items, max){
+  const rows = [];
+  for (const it of items.sort((a, b) => hmM(a.from) - hmM(b.from))){
+    let r = rows.find(r => hmM(r[r.length - 1].to) <= hmM(it.from));
+    if (!r){ if (rows.length >= max){ r = rows[rows.length - 1]; it.over = true; } else rows.push(r = []); }
+    r.push(it);
+  }
+  return rows;
+}
+function d2dHtml(){
+  const apps = d2dApps(); if (!apps.length) return "";
+  const D = D2D.data, has = id => apps.some(a => a.id === id);
+  const sitesSel = D && D.sites && Object.keys(D.sites).length > 1
+    ? `<select id="d2dSite" aria-label="Flagship">${Object.entries(D.sites).map(([c, n]) => `<option value="${esc(c)}" ${c === D.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
+  const dayTxt = new Date().toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", weekday: "long", day: "numeric", month: "long" });
+  const head = `<div class="d2d-h"><h2>${esc(DAY_GROUP)}</h2><span class="dt">· ${esc(dayTxt)}${D ? " · " + esc(D.siteName) : ""}</span><span class="d2d-live">LIVE</span>${sitesSel}</div>`;
+  if (!D) return `<section class="d2d" id="d2d">${head}${D2D.err ? `<p class="brief-empty">${esc(D2D.err)}</p>` : `<div class="d2d-sk"></div>`}${d2dCards(apps, null)}</section>`;
+
+  const now = nowHM(), nm = hmM(now);
+  /* lanes */
+  const SH_COL = ["#4A1F73", "#7B4BB0", "#3C4F8A", "#2F6F7E", "#6B3FA0"];
+  const groups = new Map();
+  for (const s of D.shifts){ const k = `${s.from}-${s.to}${s.carry ? "c" : ""}`; if (!groups.has(k)) groups.set(k, { from: s.from, to: s.to, carry: s.carry, people: [] }); groups.get(k).people.push(s); }
+  let ci = 0;
+  const shiftBars = [...groups.values()].sort((a, b) => hmM(a.from) - hmM(b.from)).map(g => ({ t: "shift", from: g.from, to: g.to, carry: g.carry, g,
+    c: SH_COL[g.carry ? 2 : (ci++ % SH_COL.length)], label: `${g.carry ? "→ " + g.to : g.from + "–" + (g.to === "24:00" ? "00:00" : g.to)} · ${g.people.map(p => p.first).join(", ")}` }));
+  const conBars = has("contractors") && D.contractors ? D.contractors.map(v => { let to = v.to && hmM(v.to) > hmM(v.from || "08:00") ? v.to : "18:00";
+    if (v.state === "onsite" && hmM(now) > hmM(to)) to = now;   // still on site after the permit: the bar runs to now
+    return { t: "con", v, from: v.from || "08:00", to, live: v.state === "onsite",
+    c: "#C07A12", cls: v.overdue ? "alert" : v.state === "expected" ? "exp" : "", label: `${v.company}${v.workers ? " · " + v.workers : ""}` }; }) : [];
+  const timed = [...(has("mom") ? D.meetings : []), ...D.events].filter(x => x.from);
+  const mm = m => `${String(Math.min(23, Math.floor(m / 60))).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const evBars = timed.map(x => ({ t: "ev", x, from: x.from, to: mm(Math.max(hmM(x.from) + 150, x.to && hmM(x.to) > hmM(x.from) ? hmM(x.to) : 0)),   // at least 2½ h wide so the title reads
+    c: x.kind === "mom" ? "#8A5A1F" : x.kind === "marketing" ? "#C2185B" : "#2F6F7E", label: (x.kind === "mom" ? "MOM · " : "") + x.title }));
+  const allDay = [...(has("mom") ? D.meetings : []), ...D.events].filter(x => !x.from);
+  /* hours shown: from 06:00 (earlier if needed) to midnight */
+  const all = [...shiftBars, ...conBars, ...evBars];
+  const h0 = Math.min(6, ...all.filter(b => !b.carry).map(b => Math.floor(hmM(b.from) / 60))), h1 = 24, span = (h1 - h0) * 60;
+  const hs = String(h0).padStart(2, "0") + ":00";
+  all.forEach(b => { if (hmM(b.from) < h0 * 60) b.from = hs; });   // last night's shift: shown from the left edge
+  const X = t => ((hmM(t) - h0 * 60) / span * 100).toFixed(3) + "%";
+  const W = (a, b) => `calc(${((hmM(b) - hmM(a)) / span * 100).toFixed(3)}% - 3px)`;
+  const bar = (b, i) => { const past = b.t === "con" ? b.v.state === "left" : b.t === "rr" ? ["done", "past"].includes(b.st) : hmM(b.to) <= nm, cur = hmM(b.from) <= nm && nm < hmM(b.to);
+    return `<button class="d2d-b ${b.cls || ""} ${b.carry ? "carry" : ""} ${past ? "past" : cur && b.t === "shift" ? "now" : ""}" data-b="${i}" style="left:${X(b.from)};width:${W(b.from, b.to)};--c:${b.c}" title="${esc(b.label)}">${esc(b.label)}</button>`; };
+  const BARS = []; const lane = (rows, gap) => rows.map((r, k) => `<div class="d2d-ln ${gap && k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b); return bar(b, BARS.length - 1); }).join("")}</div>`).join("");
+  /* reminders: restroom windows + deadlines (AM / PM checklist, AM / PM handover) */
+  const rrBars = D.restroom && byId("restroom") ? D.restroom.windows.map((w, i) => {
+    const n = D.restroom.rooms, full = n > 0 && w.ops >= n, live = hmM(w.from) <= nm && nm < hmM(w.to), gone = nm >= hmM(w.to);
+    const st = full ? "done" : live ? "open" : gone ? (D.restroom.error ? "past" : "missed") : "next";
+    return { t: "rr", w, st, from: w.from, to: w.to, c: { done: "#2E8B57", open: "#C07A12", missed: "#C0392B", past: "#8C8398", next: "#2F6F7E" }[st],
+      cls: "rr " + (st === "next" ? "exp" : st === "open" ? "pulse" : ""), label: `${full ? "✓ " : ""}W${i + 1}${n ? ` · ${w.ops}/${n}` : ""}` }; }) : [];
+  const dlBars = (D.reminders || []).filter(r => r.app === "handover" ? has("handover") : byId(r.app)).map(r => {
+    const due = hmM(r.due), late = r.done && r.at && hmM(r.at) > due;
+    const st = r.done ? (late ? "late" : "done") : nm > due ? "over" : due - nm <= 60 ? "soon" : "next";
+    const lbl = r.done ? `✓ ${r.label} ${r.at}${late ? " · late" : ""}` : st === "over" ? `⚠ ${r.label} · overdue ${r.due}` : `${r.label} · by ${r.due}`;
+    return { t: "dl", r, st, from: `${String(Math.floor((due - 170) / 60)).padStart(2, "0")}:${String((due - 170) % 60).padStart(2, "0")}`, to: r.due, label: lbl }; });
+  let lanes = "";
+  if (rrBars.length) lanes += lane([rrBars], false);
+  if (dlBars.length) lanes += d2dPack(dlBars, 3).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl ${b.st}" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">${esc(b.label)}</button>`; }).join("")}</div>`).join("");
+  if (has("schedule")) lanes += lane(d2dPack(shiftBars, 4), !!lanes);
+  if (conBars.length) lanes += lane(d2dPack(conBars, 3), true);
+  if (evBars.length) lanes += lane(d2dPack(evBars, 2), true);
+  if (!lanes) lanes = `<div class="d2d-ln"></div>`;
+  const pins = has("handover") && D.handover ? D.handover.handoffs.map((h, k) => { BARS.push({ t: "pin", h });
+    const wait = k === D.handover.handoffs.length - 1 && D.handover.waiting;
+    return `<span class="d2d-hl" style="left:${X(h.at)}"><b>Handed over ${esc(h.at)} · ${esc(h.by.split(" ")[0])}${h.receivedBy ? " → " + esc(h.receivedBy.split(" ")[0]) : ""}</b></span><button class="d2d-pin ${wait ? "wait" : ""}" data-b="${BARS.length - 1}" style="left:${X(h.at)}" aria-label="Handover ${esc(h.at)}"></button>`; }).join("") : "";
+  D2D.bars = BARS;
+  const hours = [...Array(h1 - h0)].map((_, i) => `<span class="${h0 + i >= 12 ? "pm" : ""}">${String(h0 + i).padStart(2, "0")}</span>`).join("");
+  const offTxt = D.off.length ? `<span>Off / leave: <b>${esc(D.off.map(o => o.name.split(" ")[0] + " (" + o.code + ")").join(", "))}</b></span>` : "";
+  const chips = allDay.map(x => `<span>${x.kind === "mom" ? "Meeting" : x.kind === "marketing" ? "Event" : "Activity"}: <b>${esc(x.title)}</b></span>`).join("") + offTxt;
+  const empty = !all.length ? `<p class="brief-empty" style="position:absolute;left:16px;top:44px;font-size:.82rem">Nothing on today's schedule yet — add the shifts in Operations Schedule.</p>` : "";
+  return `<section class="d2d" id="d2d">${head}${chips ? `<div class="d2d-day">${chips}</div>` : ""}
+    <div class="d2d-sc"><div class="d2d-tr" style="--n:${h1 - h0};--mw:${(h1 - h0) * 46}px"><div class="d2d-hr">${hours}</div>${lanes}${pins}${empty}
+      <div class="d2d-now" style="left:${X(now)}"><b>NOW ${esc(now)}</b></div></div></div>
+    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${conBars.length ? `<span><i style="background:#C07A12"></i>Contractors</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
+    ${d2dCards(apps, D, nm)}</section>`;
+}
+function d2dCards(apps, D, nm){
+  const line = { schedule: () => {
+      if (!D) return ["…", ""];
+      const on = D.shifts.filter(s => hmM(s.from) <= nm && nm < hmM(s.to));
+      const next = D.shifts.filter(s => hmM(s.from) > nm).sort((a, b) => hmM(a.from) - hmM(b.from))[0];
+      if (!D.shifts.length) return ["No shifts set for today", `<em class="warn">Schedule empty</em>`];
+      return [`${on.length} on duty now${on.length ? " · " + on.map(s => s.first).join(", ") : ""}`, next ? `<em class="mu">Next ${esc(next.first)} at ${esc(next.from)}</em>` : `<em class="ok">All shifts started</em>`];
+    },
+    mom: () => {
+      if (!D) return ["…", ""];
+      const m = D.meetings.filter(x => !x.from || hmM(x.from) >= nm - 60).sort((a, b) => hmM(a.from) - hmM(b.from))[0];
+      const a = D.actions;
+      return [m ? `${m.from ? "Meeting " + m.from + " · " : "Today · "}${m.title}` : `${a.open} open action${a.open === 1 ? "" : "s"}`,
+        a.late ? `<em class="al">${a.late} overdue</em>` : a.open ? `<em class="mu">${a.open} open</em>` : `<em class="ok">No open actions</em>`];
+    },
+    handover: () => {
+      if (!D) return ["…", ""];
+      const h = D.handover;
+      if (!h) return ["Not started today", `<em class="mu">Start today's handover</em>`];
+      const L = h.handoffs[h.handoffs.length - 1];
+      if (!L) return [`In progress · started by ${h.startedBy.split(" ")[0]}`, `<em class="mu">Draft</em>`];
+      return h.waiting ? [`Handed over by ${L.by.split(" ")[0]} at ${L.at}`, `<em class="warn">Waiting to be received</em>`]
+        : [`${L.by.split(" ")[0]} → ${(L.receivedBy || "").split(" ")[0]} at ${L.receivedAt || L.at}`, `<em class="ok">Received · ${h.handoffs.length} today</em>`];
+    },
+    contractors: () => {
+      if (!D || !D.contractors) return ["…", ""];
+      const L = D.contractors, n = s => L.filter(v => v.state === s).length, over = L.filter(v => v.overdue).length, late = L.filter(v => v.late).length;
+      if (!L.length) return ["No contractors booked today", `<em class="ok">Clear</em>`];
+      return [`${n("onsite")} on site · ${n("expected")} expected · ${n("left")} left`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
+    } };
+  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (line[a.id] || (() => [a.desc, ""]))();
+    return `<button class="d2d-c" data-id="${esc(a.id)}"><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}</span><span class="tx"><b>${esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
+}
+function d2dPop(b, el){
+  $("#d2dPop") && $("#d2dPop").remove();
+  const box = $("#d2d"); if (!box) return;
+  let h = "", app = "";
+  if (b.t === "shift"){ app = "schedule"; h = `<h4>${esc(b.g.from)} – ${esc(b.g.to === "24:00" ? "00:00" : b.g.to)}${b.carry ? " (from last night)" : ""}</h4>${b.g.people.map(p => `<p><b style="color:var(--text)">${esc(p.name)}</b> · ${esc(p.title || "")}</p>`).join("")}`; }
+  else if (b.t === "con"){ const v = b.v; app = "contractors";
+    h = `<h4>${esc(v.company)}</h4><p>${esc([v.tenant !== v.company ? v.tenant : "", v.work].filter(Boolean).join(" · "))}</p><p>Permit ${esc(v.from || "—")} – ${esc(v.to || "—")}${v.workers ? " · " + v.workers + " workers" : ""}</p>
+      <p><em class="${v.overdue ? "al" : v.state === "onsite" ? "ok" : v.late ? "warn" : "mu"}">${v.overdue ? "Over permit time" : v.state === "onsite" ? "On site since " + esc(v.inAt) : v.state === "left" ? "Left at " + esc(v.outAt) : v.late ? "Late — not checked in" : "Expected"}</em></p>`; }
+  else if (b.t === "ev"){ const x = b.x; app = x.kind === "mom" ? "mom" : "calendar"; h = `<h4>${esc(x.title)}</h4><p>${esc(x.from)}${x.to ? " – " + esc(x.to) : ""}${x.location ? " · " + esc(x.location) : ""}</p>`; }
+  else if (b.t === "rr"){ const w = b.w, n = D2D.data.restroom.rooms; app = "restroom";
+    h = `<h4>Restroom inspection · ${esc(w.label)}</h4><p>${esc(w.from)} – ${esc(w.to)}</p>${n ? `<p>Operations: <b style="color:var(--text)">${w.ops}/${n}</b> rooms · Soft services: <b style="color:var(--text)">${w.ss}/${n}</b></p>` : `<p>${esc(D2D.data.restroom.error || "")}</p>`}
+      <p><em class="${{ done: "ok", open: "warn", missed: "al" }[b.st] || "mu"}">${{ done: "All rooms inspected", open: "Window open now", missed: "Rooms missed", past: "Window closed", next: "Upcoming" }[b.st]}</em></p>`; }
+  else if (b.t === "dl"){ const r = b.r; app = r.app;
+    h = `<h4>${esc(r.label)}</h4><p>Due by <b style="color:var(--text)">${esc(r.due)}</b></p>${r.done ? `<p>${r.app === "handover" ? "Handed over" : "Submitted"} at ${esc(r.at)} by ${esc(r.by)}${r.receivedBy ? " · received by " + esc(r.receivedBy) : ""}</p>` : r.started ? `<p>Started by ${esc(r.by)} — not submitted yet</p>` : ""}
+      <p><em class="${{ done: "ok", late: "warn", over: "al", soon: "warn" }[b.st] || "mu"}">${{ done: "Done on time", late: "Done late", over: "Overdue", soon: "Due within the hour", next: "Upcoming" }[b.st]}</em></p>`; }
+  else if (b.t === "pin"){ const x = b.h; app = "handover"; h = `<h4>Handover at ${esc(x.at)}</h4><p>Handed over by <b style="color:var(--text)">${esc(x.by)}</b></p><p>${x.receivedBy ? "Received by " + esc(x.receivedBy) + " at " + esc(x.receivedAt) : "<em class=\"warn\">Not received yet</em>"}</p>`; }
+  const a = byId(app);
+  const p = document.createElement("div"); p.className = "d2d-pop"; p.id = "d2dPop"; p.setAttribute("role", "dialog");
+  p.innerHTML = h + (a ? `<div class="row"><button class="btn" data-open="${esc(a.id)}">Open ${esc(a.name)}</button><button class="btn ghost" data-x>Close</button></div>` : "");
+  box.append(p);
+  const r = el.getBoundingClientRect(), br = box.getBoundingClientRect();
+  p.style.left = Math.max(12, Math.min(br.width - p.offsetWidth - 12, r.left - br.left + r.width / 2 - p.offsetWidth / 2)) + "px";
+  p.style.top = (r.bottom - br.top + 8) + "px";
+}
+document.addEventListener("click", e => {
+  const pop = $("#d2dPop");
+  if (pop && !e.target.closest("#d2dPop") && !e.target.closest(".d2d-b,.d2d-pin,.d2d-dl")) pop.remove();
+  if (!e.target.closest("#d2d")) return;
+  const o = e.target.closest("[data-open]"); if (o){ pop && pop.remove(); return launch(byId(o.dataset.open)); }
+  if (e.target.closest("[data-x]")) return pop && pop.remove();
+  const b = e.target.closest(".d2d-b,.d2d-pin,.d2d-dl"); if (b) return d2dPop(D2D.bars[+b.dataset.b], b);
+  const c = e.target.closest(".d2d-c"); if (c) launch(byId(c.dataset.id));
+});
+document.addEventListener("change", e => { if (e.target.id === "d2dSite"){ D2D.site = e.target.value; store.set("hub.d2dSite", D2D.site); D2D.data = null; D2D.scrolled = false; paintD2D(); loadToday(); } });
+addEventListener("keydown", e => { if (e.key === "Escape" && $("#d2dPop")) $("#d2dPop").remove(); });
+document.addEventListener("scroll", e => { if (e.target.classList && e.target.classList.contains("d2d-sc")) $("#d2dPop") && $("#d2dPop").remove(); }, true);
+
 /* ---------- Tenants Directory feature: tenants and employees in the home search ---------- */
 const DIRS = { q: "", res: null, t: 0, busy: "" };
 const DIR_IC = { tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>' };
@@ -1917,6 +2151,7 @@ function renderHome(){
   let foldersDone = false;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
+    if (!q && g === DAY_GROUP){ html += d2dHtml(); continue; }   // Day to Day Operations: live timeline instead of tiles
     if (!q && FOLDER_GROUPS.includes(g)){
       if (foldersDone) continue; foldersDone = true;
       const tiles = FOLDER_GROUPS.map(folderTile).filter(Boolean).join("");
@@ -1926,8 +2161,10 @@ function renderHome(){
     if (list.length) html += `<section><h2>${esc(g)}</h2><div class="grid">${list.map(tile).join("")}</div></section>`;
   }
   const dir = q.length >= 2 ? dirSection(q) : "";
+  const d2dKeep = $("#d2d .d2d-sc") ? $("#d2d .d2d-sc").scrollLeft : null;
   $("#list").innerHTML = dir + html || (DIRS.q === q && DIRS.res && DIRS.res.results.length ? "" : `<p class="empty">No system matches “${esc(q)}”.</p>`);
   $("#brief").classList.toggle("hidden", !!q);
+  if (!q) d2dScroll(d2dKeep);
   renderRail();
 }
 $("#q").addEventListener("input", renderHome);

@@ -55,7 +55,7 @@ function visitOut(v, c, day, today, now) {
     workers: c ? c.workers : 0, inAt: c ? c.in_at : "", inName: c ? c.in_name : "", outAt: c ? c.out_at : "", outName: c ? c.out_name : "", note: c ? c.note : "" };
 }
 
-async function dayList(env, site, day, today) {
+export async function dayList(env, site, day, today) {   // also read by the Day to Day timeline (modules/today.js)
   const [vs, cs, reg] = await Promise.all([
     env.DB.prepare("SELECT * FROM contractor_visits WHERE site = ? AND deleted = 0 AND day_from <= ? AND day_to >= ? ORDER BY time_from, company").bind(site, day, day).all(),
     env.DB.prepare("SELECT * FROM contractor_checks WHERE site = ? AND day = ?").bind(site, day).all(),

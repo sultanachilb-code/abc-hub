@@ -26,7 +26,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
+  GROUPS: ["Day to Day Operations", "Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
 
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
@@ -34,7 +34,7 @@ window.HUB = {
       id: "schedule",
       name: "Operations Schedule",
       desc: "Weekly shifts by flagship, ranked by position",
-      group: "Operations Tools",
+      group: "Day to Day Operations",
       icon: "calendar",
       color: "#4A1F73",
       url: "/tools/schedule"
@@ -43,7 +43,7 @@ window.HUB = {
       id: "mom",
       name: "Minutes of Meeting",
       desc: "Attendance, agenda, actions and deadlines",
-      group: "Operations Tools",
+      group: "Day to Day Operations",
       icon: "book",
       color: "#8A5A1F",
       url: "/tools/mom"
@@ -52,7 +52,7 @@ window.HUB = {
       id: "handover",
       name: "Shift Handover",
       desc: "Follow-ups, today, tomorrow, events and checklists",
-      group: "Operations Tools",
+      group: "Day to Day Operations",
       icon: "clipboard",
       color: "#2F6F73",
       url: "/tools/handover"
@@ -112,7 +112,7 @@ window.HUB = {
     /* Downloads feature — see docs/FEATURE-downloads.md */
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Data & Reporting", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
-    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Operations Tools", icon: "hardhat", color: "#C07A12", url: "/tools/contractors", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
+    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", url: "/tools/contractors", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
     /* Projects feature — see docs/FEATURE-projects.md */
     { id: "projects", name: "Operations Future Projects", desc: "Ideas and plans — from idea to approved", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects?view=future" },
     { id: "project-tracker", name: "Project Tracker", desc: "Projects in progress — milestones, progress, budget vs spent", group: "Operations Projects and Budget", icon: "gauge", color: "#2E6B4F", url: "/tools/projects?view=tracker" },
