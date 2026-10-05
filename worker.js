@@ -1741,7 +1741,9 @@ async function opsRoute(env, me, p, method, b, url) {
     }
     const calendar = await calendarDayEvents(env, site, day).catch(() => []);   // Operations Calendar feature: the day's marketing events
     const gate = await gateDay(env, site, day).catch(() => null);   // Loading Gate feature: approved in / rejected out at the loading area
-    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate };
+    const hd = await env.DB.prepare("SELECT doc FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first().catch(() => null);
+    let gateMarks = {}; try { gateMarks = hd ? gateMarksOf(JSON.parse(hd.doc || "{}")) : {}; } catch {}   // the open page shows new gate marks without reloading
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
@@ -1957,12 +1959,18 @@ async function gateMarkHandover(env, site, day, req, mark) {
   await env.DB.prepare("UPDATE handovers SET doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(JSON.stringify(cleanHandover(d)), nowIso(), "Loading Gate", h.id).run();
   return true;
 }
-function keepGateMarks(saved, incoming) {
-  const marks = new Map();
-  for (const k of ["today", "ongoing", "tomorrow"]) for (const x of saved[k] || []) { const m = x.req && x.text.match(GATE_MARK); if (m) marks.set(x.req, m[0]); }
-  if (!marks.size) return;
+/* a handover line's REQ number: the imported REQ, or "REQ-008935" written in a line the team typed */
+const reqKeyOf = x => { const d = String(x.req || "").replace(/\D/g, "") || ((String(x.text || "").match(/\bREQ-?(\d{3,})\b/i) || [])[1] || ""); return d.replace(/^0+/, ""); };
+function gateMarksOf(doc) {   // { "8935": " — ✓ Attended 20:04 · 1 worker" } from a saved handover
+  const marks = {};
+  for (const k of ["today", "ongoing", "tomorrow"]) for (const x of (doc && doc[k]) || []) { const m = x.text && x.text.match(GATE_MARK), r = reqKeyOf(x); if (m && r) marks[r] = m[0]; }
+  return marks;
+}
+function keepGateMarks(saved, incoming) {   // a page opened before a scan must not wipe the gate's marks (imported and typed lines)
+  const marks = gateMarksOf(saved);
+  if (!Object.keys(marks).length) return;
   for (const k of ["today", "ongoing", "tomorrow"]) for (const x of incoming[k] || []) {
-    const m = x.req && marks.get(x.req);
+    const m = marks[reqKeyOf(x)];
     if (m && !GATE_MARK.test(x.text)) x.text = (x.text + m).slice(0, 500);
   }
 }

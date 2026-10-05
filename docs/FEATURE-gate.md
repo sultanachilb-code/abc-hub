@@ -50,7 +50,8 @@ Decisions taken without signal are kept on the phone ("Not sent yet") and sent a
   * `— ✓ Attended 23:58 · 3 workers` (approved in; `· override: <reason>` when let in against Salesforce)
   * `— ✕ Refused at gate 08:40 · Permit expired` (rejected out)
   * `… → left 02:10` (checked out)
-  A newer decision replaces the older mark. Saving the handover from a page opened earlier keeps the marks.
+  A newer decision replaces the older mark. Typed lines are matched too, by the `REQ-…` written in them.
+  The open handover page picks up new marks every minute (and when the page comes back to the screen), and saving from a page opened earlier never removes them.
   When the REQ has no line in the day's handover, nothing is added there — it is still in the table below.
 * The live tracker also has a **Loading area gate** table (time, contractor, tenant, REQ, approved in / rejected + reason, overrides), and the same table goes into the handover email.
 
