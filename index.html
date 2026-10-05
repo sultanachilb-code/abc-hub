@@ -915,7 +915,7 @@ function authScreen(mode, errText){
     if (mode === "error") return location.reload();
     go.disabled = true; msg("");
     try {
-      if (mode === "login"){ const r = await api("login", { email: $("#aEmail").value, password: $("#aPass").value }); if (r && r.twofa) return twofaLogin(r.twofa); }
+      if (mode === "login"){ const r = await api("login", { email: $("#aEmail").value, password: $("#aPass").value }); if (r && r.twofa){ tfEmail = $("#aEmail").value.trim().toLowerCase(); return twofaLogin(r.twofa); } }
       if (mode === "setup") await api("setup", { name: $("#aName").value, email: $("#aEmail").value, password: $("#aPass").value });
       if (mode === "change") await api("password", { current: $("#aCur").value, next: $("#aPass").value });
       boot();
@@ -953,7 +953,7 @@ function startHub(){
   checkApprovals();
   route();
   setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
-  setTimeout(() => { if (!welcomeSeen()) welcomeSheet(); }, 900);   // Welcome feature: first sign-in on this device
+  setTimeout(() => { if (!welcomeSeen()) welcomeSheet(); else offerPasskey(); }, 900);   // Welcome feature: first sign-in on this device
 }
 
 /* =====================================================================
@@ -970,7 +970,7 @@ async function welcomeState(){
   try { if (!pushSupported()) st.push = iOS && !isStandalone() ? "later" : "na"; else if (Notification.permission === "denied") st.push = "blocked"; else if (Notification.permission === "granted" && await currentSub()) st.push = "done"; } catch {}
   try { const p = navigator.permissions && await navigator.permissions.query({ name: "camera" }); if (p && p.state === "granted") st.camera = "done"; else if (p && p.state === "denied") st.camera = "blocked"; } catch {}
   if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) st.camera = "na";
-  try { const t = await api("2fa/status"); if (t.passkeys && t.passkeys.length) st.passkey = "done"; } catch {}
+  if (pkHere(ME.user.email)) st.passkey = "done";   // passkeys are per device: only this device counts
   if (!window.PublicKeyCredential) st.passkey = "na";
   else try { if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) st.passkey = "na"; } catch {}
   return st;
@@ -1217,8 +1217,14 @@ const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 let tfPoll = 0;
 /* ---- laptop (or any device): after the password ---- */
+/* passkeys live on one device: remember on THIS device that it has one, so other devices start with the email code */
+let tfEmail = "";
+const pkKey = e => "hub.pk." + String(e || "").toLowerCase();
+const pkHere = e => { try { return !!localStorage.getItem(pkKey(e)); } catch { return false; } };
+const pkMark = e => { try { localStorage.setItem(pkKey(e), "1"); } catch {} };
 function twofaLogin(t, view){
   clearInterval(tfPoll);
+  if (!view && t.methods.includes("passkey") && !pkHere(tfEmail)) view = t.methods.includes("email") ? "email" : undefined;
   const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
   const has = m => t.methods.includes(m);
   view = view || (has("passkey") ? "passkey" : has("approve") && t.challenge ? "approve" : has("code") ? "code" : "email");
@@ -1266,8 +1272,8 @@ function twofaLogin(t, view){
           allowCredentials: pk.allowCredentials.map(c => ({ type: "public-key", id: tfUnb64u(c.id), transports: c.transports })) } });
         const r = await api("login/2fa/pk", { trust: !!($("#tfTrust") || {}).checked, assertion: { id: tfB64u(cred.rawId), authenticatorData: tfB64u(cred.response.authenticatorData),
           clientDataJSON: tfB64u(cred.response.clientDataJSON), signature: tfB64u(cred.response.signature) } });
-        if (r.signedIn){ b.outerHTML = `<div class="tf-tick">${TICK}</div>`; setTimeout(boot, 700); }
-      } catch (er){ b.disabled = false; msg(er.name === "NotAllowedError" ? "Cancelled, or this device has no passkey for your account yet. Try again, or use “Email me a code”." : er.message); }
+        if (r.signedIn){ pkMark(tfEmail); b.outerHTML = `<div class="tf-tick">${TICK}</div>`; setTimeout(boot, 700); }
+      } catch (er){ b.disabled = false; msg(er.name === "NotAllowedError" ? "This device has no Face ID / Windows Hello set up for the hub yet. Use “Email me a code” — after signing in, the hub offers to turn it on for this device." : er.message); }
     };
     $("#tfPk").onclick = go;
     if (!window.PublicKeyCredential) msg("This browser cannot use passkeys — choose “Email me a code”.");
@@ -1305,7 +1311,8 @@ function twofaLogin(t, view){
     const rs = $("#tfResend"); if (rs) rs.onclick = sendMail;
     const go = async () => {
       const b = $("#tfGo"); b.disabled = true; msg("");
-      try { const r = await api("login/2fa/code", { code: $("#tfCode").value, trust: !!$("#tfTrust").checked }); if (r.signedIn) boot(); }
+      try { const r = await api("login/2fa/code", { code: $("#tfCode").value, trust: !!$("#tfTrust").checked });
+        if (r.signedIn){ try { if (!pkHere(tfEmail)) sessionStorage.setItem("hub.offerPk", "1"); } catch {} boot(); } }
       catch (er){ msg(er.message); b.disabled = false; if (er.status === 401 && /timed out/.test(er.message)) setTimeout(() => authScreen("login"), 1500); }
     };
     $("#tfGo").onclick = go; $("#tfCode").onkeydown = e => { if (e.key === "Enter") go(); };
@@ -1376,6 +1383,24 @@ async function renderTwofaBox(){
     <div id="tfMsg2"></div>`;
   box.onclick = e => { const b = e.target.closest("[data-tf]"); if (b) twofaAction(b.dataset.tf, box, null, b.dataset.id); };
 }
+/* signed in with a code on a device that can do Face ID / Windows Hello → offer it once for next time */
+async function offerPasskey(){
+  let want = false; try { want = sessionStorage.getItem("hub.offerPk") === "1"; sessionStorage.removeItem("hub.offerPk"); } catch {}
+  if (!want || pkHere(ME.user.email) || !window.PublicKeyCredential) return;
+  try { if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) return; } catch { return; }
+  sheet.classList.remove("pf-sheet");
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Sign in faster on this device?</b><small>Face ID · fingerprint · Windows Hello</small></div></div>
+    <div class="sheet-body"><p class="tf-note">Next time, confirm with your face, fingerprint or PIN instead of waiting for an email code. It is set up for this device only — do it once on each device you use.</p><div id="opMsg"></div></div>
+    <div class="sheet-f"><button class="btn ghost" data-x>Not now</button><button class="btn" id="opGo">Turn it on</button></div>`;
+  sheet.onclick = async e => {
+    if (e.target.closest("[data-x]")) return sheet.close();
+    if (e.target.id === "opGo"){ e.target.disabled = true;
+      try { await addPasskey(); sheet.close(); }
+      catch (er){ e.target.disabled = false; $("#opMsg").innerHTML = `<div class="msg err">${esc(er.name === "NotAllowedError" ? "Cancelled — you can turn it on later in Profile settings." : er.name === "InvalidStateError" ? "This device already has it — next time choose “Use Face ID / fingerprint / Windows Hello”." : er.message)}</div>`;
+        if (er.name === "InvalidStateError") pkMark(ME.user.email); } }
+  };
+  sheet.showModal();
+}
 /* ---- Outlook add-in: connect with a 6-digit code (Profile settings → Outlook) ---- */
 async function renderOutlookBox(){
   const box = $("#olBox"); if (!box) return;
@@ -1405,6 +1430,7 @@ async function addPasskey(){
   const r = await api("2fa/pk/register", { id: tfB64u(cred.rawId), publicKey: tfB64u(spki), alg: cred.response.getPublicKeyAlgorithm ? cred.response.getPublicKeyAlgorithm() : -7,
     clientDataJSON: tfB64u(cred.response.clientDataJSON) });
   if (ME) ME.user.twofa = Object.assign(ME.user.twofa || {}, { on: true, setupNeeded: false });
+  if (ME) pkMark(ME.user.email);
   return r;
 }
 function tfBackupHtml(codes){
