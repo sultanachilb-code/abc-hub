@@ -362,13 +362,13 @@ export async function gateRoute(env, p, method, b, url, d) {
     const workers = Math.max(0, Math.min(500, Number(b.workers) || 0));
 
     /* approved in without a visit on today's list → add it, so it shows on Contractors and the Day to Day timeline */
-    if (decision === "in" && (!v || !v.id || v.notToday) && (info.contractor || info.tenant)) {
+    if (decision === "in" && (!v || !v.id || v.notToday) && (info.contractor || info.tenant || info.req)) {   // also when only the REQ is known (typed from the pass)
       const fromD = info.from && info.from.day <= day ? info.from.day : day, toD = info.to && info.to.day >= day ? info.to.day : day;
       if (v && v.id && v.notToday) {
         await env.DB.prepare("UPDATE contractor_visits SET day_from = MIN(day_from, ?), day_to = MAX(day_to, ?) WHERE id = ?").bind(day, day, v.id).run();
       } else {
         const r = await env.DB.prepare(`INSERT INTO contractor_visits (contractor_id, company, tenant, work, descr, day_from, day_to, time_from, time_to, site, req, src, sf_id, created_at, created_name)
-          VALUES (0,?,?,?,?,?,?,?,?,?,?,'gate',?,?,?)`).bind(info.contractor || info.tenant, info.tenant, info.work, info.desc, fromD, toD,
+          VALUES (0,?,?,?,?,?,?,?,?,?,?,'gate',?,?,?)`).bind(info.contractor || info.tenant || info.req, info.tenant, info.work, info.desc, fromD, toD,
           info.from && info.from.time || "", info.to && info.to.time || "", site, /^REQ-?\d+$/i.test(info.req) ? info.req.toUpperCase() : "", c.sfId, at, me.full_name).run();
         v = { id: r.meta.last_row_id };
       }
