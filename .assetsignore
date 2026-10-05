@@ -13,3 +13,7 @@ docs
 .git
 .git/**
 .github
+
+# Loading Gate app: deployed as its own worker (gate-worker/), never served by the hub
+gate-worker
+gate-worker/**

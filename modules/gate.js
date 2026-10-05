@@ -36,7 +36,11 @@ export async function gateSchema(env) {
       valid_from TEXT NOT NULL DEFAULT '', valid_to TEXT NOT NULL DEFAULT '', workers INTEGER NOT NULL DEFAULT 0, visit_id INTEGER NOT NULL DEFAULT 0,
       by_name TEXT NOT NULL DEFAULT '', by_email TEXT NOT NULL DEFAULT '', scanned_at TEXT NOT NULL DEFAULT '')`),
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS gate_scans_day ON gate_scans (site, day)`),
-    env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS gate_scans_client ON gate_scans (site, client_id) WHERE client_id != ''`)
+    env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS gate_scans_client ON gate_scans (site, client_id) WHERE client_id != ''`),
+    /* Loading-area phones (separate Loading Gate link, no hub account): paired once by a manager, revocable */
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS gate_devices (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, name TEXT NOT NULL,
+      token_hash TEXT NOT NULL DEFAULT '', pair_hash TEXT NOT NULL DEFAULT '', pair_exp TEXT NOT NULL DEFAULT '', created_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT '', paired_at TEXT NOT NULL DEFAULT '', last_seen TEXT NOT NULL DEFAULT '', last_agent TEXT NOT NULL DEFAULT '', revoked INTEGER NOT NULL DEFAULT 0)`)
   ]);
   const cols = (await env.DB.prepare("PRAGMA table_info(contractor_visits)").all()).results || [];
   if (cols.length && !cols.some(c => c.name === "sf_id")) await env.DB.prepare("ALTER TABLE contractor_visits ADD COLUMN sf_id TEXT NOT NULL DEFAULT ''").run();
@@ -206,6 +210,78 @@ async function visitById(env, id) {
 const scanOut = r => ({ id: r.id, clientId: r.client_id, at: r.at, decision: r.decision, reason: r.reason, override: !!r.override, verdict: r.verdict, req: r.req, tenant: r.tenant,
   contractor: r.contractor, work: r.work, validFrom: r.valid_from, validTo: r.valid_to, workers: r.workers, by: r.by_name, sfId: r.sf_id });
 
+/* ---------- Loading-area phones: the separate Loading Gate app ----------
+   The gate app (worker abc-loading-gate, its own link) reaches the hub only through a Cloudflare service binding,
+   with the shared secret GATE_KEY. Each phone is paired once with a one-time code from a manager and then carries
+   its own token (only its SHA-256 is stored). Revoking a phone in the hub cuts it off at once. */
+export const GATE_URL = "https://abc-loading-gate.sultanachi-lb-61f.workers.dev";
+const sha = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(t))))].map(x => x.toString(16).padStart(2, "0")).join("");
+const randomCode = n => { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", b = crypto.getRandomValues(new Uint8Array(n)); return [...b].map(x => A[x % A.length]).join(""); };
+const randomToken = () => [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, "0")).join("");
+const sameText = (a, b) => { a = String(a || ""); b = String(b || ""); if (!a || a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; };
+const devOut = r => ({ id: r.id, name: r.name, paired: !!r.token_hash, pairedAt: r.paired_at, lastSeen: r.last_seen, lastAgent: r.last_agent,
+  pending: !r.token_hash && !!r.pair_hash && r.pair_exp > new Date().toISOString(), pairExp: r.pair_exp, createdName: r.created_name });
+
+async function devicesRoute(env, p, method, b, site, d) {
+  if (!d.full) throw err("Only managers can pair or remove loading-area phones", 403);
+  if (p === "gate/devices" && method === "GET") {
+    const { results } = await env.DB.prepare("SELECT * FROM gate_devices WHERE site = ? AND revoked = 0 ORDER BY id").bind(site).all();
+    return { list: (results || []).map(devOut), gateUrl: env.GATE_URL || GATE_URL, ready: !!env.GATE_KEY };
+  }
+  if (method !== "POST") throw err("Unknown request", 404);
+  if (p === "gate/devices/new") {   // a new phone, or a new code for a phone that is not paired yet
+    const name = clip(b.name, 60) || "Loading area phone";
+    const code = randomCode(8), exp = new Date(Date.now() + 30 * 60000).toISOString();
+    let id = Number(b.id) || 0;
+    if (id) await env.DB.prepare("UPDATE gate_devices SET pair_hash = ?, pair_exp = ?, token_hash = '' WHERE id = ? AND site = ? AND revoked = 0").bind(await sha(code), exp, id, site).run();
+    else id = (await env.DB.prepare("INSERT INTO gate_devices (site, name, pair_hash, pair_exp, created_name, created_at) VALUES (?,?,?,?,?,?)")
+      .bind(site, name, await sha(code), exp, d.me.full_name, d.now()).run()).meta.last_row_id;
+    const gateUrl = env.GATE_URL || GATE_URL;
+    return { id, name, code: code.slice(0, 4) + "-" + code.slice(4), exp, link: `${gateUrl}/#pair=${code}`, gateUrl };
+  }
+  if (p === "gate/devices/revoke") {
+    await env.DB.prepare("UPDATE gate_devices SET revoked = 1, token_hash = '', pair_hash = '' WHERE id = ? AND site = ?").bind(Number(b.id) || 0, site).run();
+    if (d.raiseEvent) await d.raiseEvent(env, { site, app: "gate", tone: "info", title: "Loading-area phone removed", body: `${clip(b.name, 60)} · by ${d.me.full_name}` }).catch(() => {});
+    return { revoked: true };
+  }
+  throw err("Unknown request", 404);
+}
+
+/* the gate app's only door into the hub: /api/gate-ext/*  (pair · me · lookup · decide · day) */
+export async function gatePublic(env, request, p, method, b, url, deps) {
+  if (!env.GATE_KEY || !sameText(request.headers.get("x-gate-key"), env.GATE_KEY)) throw err("Not allowed", 403);
+  const ip = clip(request.headers.get("x-gate-ip"), 60) || "?";
+  if (p === "pair" && method === "POST") {
+    const lockKey = `gate:pairfail:${ip}`;
+    const lk = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(lockKey).first().catch(() => null);
+    let L = { n: 0, at: 0 }; try { L = lk ? JSON.parse(lk.v) : L; } catch {}
+    if (L.n >= 8 && Date.now() - L.at < 15 * 60000) throw err("Too many wrong codes — wait 15 minutes", 429);
+    const code = String(b.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const row = code.length === 8 ? await env.DB.prepare("SELECT * FROM gate_devices WHERE pair_hash = ? AND revoked = 0").bind(await sha(code)).first() : null;
+    if (!row || !(row.pair_exp > new Date().toISOString())) {
+      await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(lockKey, JSON.stringify({ n: (Date.now() - L.at < 15 * 60000 ? L.n : 0) + 1, at: Date.now() })).run().catch(() => {});
+      throw err("This code is wrong or has expired — ask the manager for a new one", 400);
+    }
+    const token = randomToken(), at = deps.now();
+    await env.DB.prepare("UPDATE gate_devices SET token_hash = ?, pair_hash = '', pair_exp = '', paired_at = ?, last_seen = ? WHERE id = ?").bind(await sha(token), at, at, row.id).run();
+    await env.DB.prepare("DELETE FROM meta WHERE k = ?").bind(lockKey).run().catch(() => {});
+    if (deps.raiseEvent) await deps.raiseEvent(env, { site: row.site, app: "gate", tone: "info", title: "Loading-area phone paired", body: row.name }).catch(() => {});
+    return { token, site: row.site, siteName: deps.siteName(row.site), device: row.name };
+  }
+  const tok = String(request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const dev = /^[0-9a-f]{64}$/.test(tok) ? await env.DB.prepare("SELECT * FROM gate_devices WHERE token_hash = ? AND revoked = 0").bind(await sha(tok)).first() : null;
+  if (!dev) throw err("This phone is not paired, or it was removed — ask the manager for a pairing code", 401);
+  const agent = clip(decodeURIComponent(request.headers.get("x-gate-agent") || ""), 60);
+  const nowIso = deps.now();
+  if (!dev.last_seen || Date.parse(nowIso) - Date.parse(dev.last_seen) > 5 * 60000 || (agent && agent !== dev.last_agent))
+    await env.DB.prepare("UPDATE gate_devices SET last_seen = ?, last_agent = CASE WHEN ? != '' THEN ? ELSE last_agent END WHERE id = ?").bind(nowIso, agent, agent, dev.id).run().catch(() => {});
+  if (p === "me") return { site: dev.site, siteName: deps.siteName(dev.site), device: dev.name, today: deps.today(), agent };
+  if (!["lookup", "decide", "day"].includes(p)) throw err("Unknown request", 404);
+  if (p === "decide" && !agent) throw err("Write your name first", 400);
+  const me = { full_name: agent ? `${agent} · ${dev.name}` : dev.name, email: "", role: "SECURITY", position: "" };
+  return gateRoute(env, "gate/" + p, method, b, url, { ...deps, site: dev.site, me, full: false, canSite: (_, s) => s === dev.site });
+}
+
 /* the day's gate log — also read by the Shift Handover (handover/live) */
 export async function gateDay(env, site, day) {
   const { results } = await env.DB.prepare("SELECT * FROM gate_scans WHERE site = ? AND day = ? ORDER BY at DESC, id DESC LIMIT 400").bind(site, day).all().catch(() => ({ results: [] }));
@@ -221,10 +297,11 @@ export async function gateRoute(env, p, method, b, url, d) {
   const team = d.full || (me.role === "SUPERVISOR" && me.position !== "WH") || me.role === "SECURITY";
   if (!team) throw err("Only the operations team and security use the loading gate", 403);
   const today = d.today(), now = beirut();
+  if (p.startsWith("gate/devices")) return devicesRoute(env, p, method, b, site, d);   // managers: pair / remove loading-area phones
 
   if (p === "gate/day") {
     const day = isDay(url.searchParams.get("day")) ? url.searchParams.get("day") : today;
-    return { day, today, reasons: GATE_REASONS, salesforce: sfOn(env), ...(await gateDay(env, site, day)) };
+    return { day, today, reasons: GATE_REASONS, salesforce: sfOn(env), canPair: !!d.full, ...(await gateDay(env, site, day)) };
   }
   if (method !== "POST") throw err("Unknown request", 404);
 

@@ -1,0 +1,5 @@
+# copied from the hub by the GitHub Action before deploying (one source: tools/gate.html)
+public/index.html
+public/tools.css
+public/jsqr.min.js
+public/icons/
