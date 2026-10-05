@@ -16,12 +16,12 @@ const initials = s => String(s || "").split(/\s+/).filter(Boolean).map(w => w[0]
    wait on the device and are sent as soon as the connection is back. */
 const OFF = {
   cacheable: /^ops\/(context|forms\/(meta|new|get|list|tenants)|handover\/(list|get|new|live))\b/,
-  queueable: /^ops\/(forms|handover)\/save$/,
+  queueable: /^ops\/((forms|handover)\/save|gate\/decide)$/,   /* Loading Gate: decisions taken without signal are sent later */
   key: "hub.outbox"
 };
 function offRead(){ try { return JSON.parse(localStorage.getItem(OFF.key) || "[]"); } catch { return []; } }
 function offWrite(q){ try { localStorage.setItem(OFF.key, JSON.stringify(q)); } catch {} offBadge(); }
-function offKey(path, b){ return path + "|" + (b.site || "") + "|" + (b.id || `${b.form || ""}|${b.day || ""}|${(b.header && b.header.tenant) || ""}`); }
+function offKey(path, b){ return path + "|" + (b.site || "") + "|" + (b.clientId || b.id || `${b.form || ""}|${b.day || ""}|${(b.header && b.header.tenant) || ""}`); }
 async function apiRaw(path, body){
   const r = await fetch("/api/" + path, body === undefined ? { credentials: "same-origin" }
     : { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });

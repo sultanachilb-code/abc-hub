@@ -113,6 +113,8 @@ window.HUB = {
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Data & Reporting", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
     { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", url: "/tools/contractors", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
+    /* Loading Gate feature — see docs/FEATURE-gate.md */
+    { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Day to Day Operations", icon: "qr", color: "#2E8B57", url: "/tools/gate", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
     /* Projects feature — see docs/FEATURE-projects.md */
     { id: "projects", name: "Operations Future Projects", desc: "Ideas and plans — from idea to approved", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects?view=future" },
     { id: "project-tracker", name: "Project Tracker", desc: "Projects in progress — milestones, progress, budget vs spent", group: "Operations Projects and Budget", icon: "gauge", color: "#2E6B4F", url: "/tools/projects?view=tracker" },

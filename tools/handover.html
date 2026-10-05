@@ -206,7 +206,7 @@ function ckCell(r){ return !r ? `<span class="nd">Not done</span>` : r.status ==
 function calEvents(d){ const have = new Set((d.events || []).map(e => String(e.name).trim().toLowerCase())); return (LIVE && !LIVE.error && LIVE.calendar || []).filter(e => !have.has(String(e.name).trim().toLowerCase())); }
 function calRowsHtml(d){ return calEvents(d).map(x => `<tr class="calrow"><td>${esc(D.fmt(x.from))}</td><td>${esc(D.fmt(x.to))}</td><td><b>${esc(x.name)}</b> <small class="muted">📅 calendar${x.location ? " · " + esc(x.location) : ""}</small></td><td>${esc(x.start)}</td><td>${esc(x.end)}</td><td></td></tr>`).join(""); }
 function liveHtml(){
-  if (!LIVE) return `<div class="emptyrow" style="padding:8px 10px">Loading today's incidents, tenant feedback, checklists and restroom inspections…</div>`;
+  if (!LIVE) return `<div class="emptyrow" style="padding:8px 10px">Loading today's incidents, tenant feedback, loading gate, checklists and restroom inspections…</div>`;
   if (LIVE.error) return `<div class="emptyrow" style="padding:8px 10px">${esc(LIVE.error)}</div>`;
   const R = LIVE.restroom || {};
   const I = LIVE.incidents || {}, FB = LIVE.feedback || [];
@@ -217,9 +217,15 @@ function liveHtml(){
   const fbT = `<table class="t live"><tr><th>Tenant feedback today${FB.length ? ` · ${FB.length}` : ""}</th><th style="width:34%">Feedback</th><th style="width:30%">Action</th></tr>
     ${FB.length ? FB.map(f => `<tr><td><b>${esc(f.tenant)}</b> <small class="muted">${esc(f.time)}${f.category ? " · " + esc(f.category) : ""}</small></td><td>${esc(f.description)}</td><td>${esc([f.action, f.actionDesc].filter(Boolean).join(" — "))}</td></tr>`).join("")
       : `<tr><td colspan="3" class="emptyrow" style="padding:8px">No tenant feedback logged today.</td></tr>`}</table>`;
+  /* Loading Gate feature: every QR scan at the loading area — approved in (green) / rejected out (red) */
+  const G = LIVE.gate, gl = G ? G.list.filter(x => x.decision !== "leave") : [];
+  const gateT = G ? `<table class="t live"><tr><th>Loading area gate${gl.length ? ` · <span class="done">${G.counts.in} in</span> · <span class="nd">${G.counts.out} rejected</span>` : ""}</th><th style="width:34%">Tenant · request</th><th style="width:30%">Decision</th></tr>
+    ${gl.length ? gl.map(x => `<tr><td><b>${esc(x.contractor || x.tenant || x.req)}</b> <small class="muted">${hm(x.at)} · ${esc(x.by)}</small></td><td>${esc(x.tenant)}${x.req ? ` <small class="muted">· ${esc(x.req)}</small>` : ""}</td>
+      <td>${x.decision === "in" ? `<span class="done">Approved in</span>${x.workers ? ` <small class="muted">· ${x.workers} workers</small>` : ""}${x.override ? ` <small class="nd">· override: ${esc(x.reason)}</small>` : ""}` : `<span class="nd">Rejected out</span> <small class="muted">· ${esc(x.reason)}</small>`}</td></tr>`).join("")
+      : `<tr><td colspan="3" class="emptyrow" style="padding:8px">No QR scanned at the loading gate today.</td></tr>`}</table>` : "";
   const wrow = w => { const cls = (n) => n >= R.rooms ? "done" : w.state === "closed" ? "nd" : w.state === "open" ? "pr" : ""; const cell = (n, by) => R.rooms ? `<span class="${cls(n)}">${n}/${R.rooms}</span>${by.length ? ` <small class="muted">${esc(by.join(", "))}</small>` : ""}` : "—";
     return `<tr><td>${esc(w.label)} <small class="muted">${esc(w.time)}</small></td><td>${cell(w.ops, w.opsBy)}</td><td>${cell(w.ss, w.ssBy)}</td></tr>`; };
-  return incT + fbT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
+  return incT + fbT + gateT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
     <tr><td><b>AM Checklist</b></td><td colspan="2">${ckCell(LIVE.am)}</td></tr>
     <tr><td><b>PM Checklist</b></td><td colspan="2">${ckCell(LIVE.pm)}</td></tr></table>
     <table class="t live"><tr><th>Restroom inspections${R.rooms ? ` · ${R.rooms} restrooms` : ""}</th><th style="width:34%">OPS</th><th style="width:30%">S.S</th></tr>
@@ -522,6 +528,9 @@ function mailHtml(){
   const IM = L2 && L2.incidents || {}, FM = L2 && L2.feedback || [];
   const incM = L2 ? (IM.error ? "" : tbl(["Incident report", "Time", "Type", "Severity", "Status"], (IM.list || []).map(i => [`<b>${esc(i.ref)}</b>${i.location ? ` <span style="color:#777">${esc(i.location)}</span>` : ""}`, esc(i.time), esc(i.type), esc(i.severity), esc(i.status)])))
     + tbl(["Tenant feedback", "Time", "Category", "Feedback", "Action"], FM.map(f => [`<b>${esc(f.tenant)}</b>`, esc(f.time), esc(f.category), esc(f.description), esc([f.action, f.actionDesc].filter(Boolean).join(" — "))])) : "";
+  const GM = L2 && L2.gate ? L2.gate.list.filter(x => x.decision !== "leave") : null;   // Loading Gate feature
+  const gateM = GM ? tbl(["Loading gate", "Time", "Tenant", "Request", "Decision"], GM.map(x => [`<b>${esc(x.contractor || x.tenant)}</b>`, hm(x.at), esc(x.tenant), esc(x.req),
+    x.decision === "in" ? `<b style="color:#2E8B57">Approved in</b>${x.workers ? ` · ${x.workers} workers` : ""}${x.override ? ` <span style="color:#C0392B">· override: ${esc(x.reason)}</span>` : ""}` : `<b style="color:#C0392B">Rejected out</b> · ${esc(x.reason)}`])) : "";
   const liveM = L2 ? tbl(["Checklist", "Status"], [["AM Checklist", ckM(L2.am)], ["PM Checklist", ckM(L2.pm)]])
     + (R.windows && R.windows.length ? tbl(["Restroom inspections", "OPS", "S.S"], R.windows.map(w => [`${esc(w.label)} <span style="color:#777">${esc(w.time)}</span>`, rrM(w.ops, w.opsBy, w.state), rrM(w.ss, w.ssBy, w.state)])) : "") : "";
   return { title, html: `<div style="${F}"><p style="${F}font-size:14px">Dear team,<br><br>Please find below the shift handover.</p>
@@ -532,6 +541,7 @@ function mailHtml(){
     ${head("Tomorrow")}${split(d.tomorrow)}
     ${head("Coming up")}${items(d.upcoming, true)}
     ${head("Incidents & tenant feedback")}${incM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Not available.</td></tr>`}
+    ${gateM ? head("Loading area gate", "QR scans today") + gateM : ""}
     ${head("Daily operations checklist tracker")}${liveM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Live checklist status not available.</td></tr>`}
     ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], calEvents(d).concat(d.events).map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
   </table>
