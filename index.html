@@ -56,8 +56,48 @@ button{background:none;border:0;cursor:pointer}
 .msg.okm{background:rgba(46,139,87,.12);color:var(--ok)}
 
 /* ---------- sign-in ---------- */
-#auth{display:grid;place-items:center;background:var(--ink);padding:24px}
-.auth-card{width:min(420px,100%);background:var(--surface);border-radius:24px;padding:32px 28px}
+/* sign-in: a dark atrium — slow rings, a gold arc, a floor scale — with the brand panel on the left and the card on the right */
+#auth{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,460px);align-items:center;gap:clamp(24px,5vw,80px);padding:clamp(20px,5vw,72px);
+  background:radial-gradient(1200px 700px at 18% 20%,#4A1F73 0%,rgba(74,31,115,0) 60%),radial-gradient(900px 600px at 90% 110%,#3A1A5E 0%,rgba(58,26,94,0) 55%),#1B0A2E;color:#fff;isolation:isolate;overflow-x:hidden}
+.auth-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.auth-bg svg{position:absolute;width:min(1300px,140vw);height:auto;left:-18%;top:50%;transform:translateY(-50%);opacity:.9}
+.auth-bg .ring{fill:none;stroke:rgba(255,255,255,.07);stroke-width:1.2;transform-origin:600px 600px;animation:authSpin 140s linear infinite}
+.auth-bg .ring.r2{stroke:rgba(255,255,255,.05);animation-duration:200s;animation-direction:reverse;stroke-dasharray:2 10}
+.auth-bg .ring.r3{stroke:rgba(200,162,74,.18);stroke-width:1.6;stroke-dasharray:520 2400;animation-duration:60s}
+.auth-bg .arc{fill:none;stroke:url(#authGold);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:1400;stroke-dashoffset:1400;animation:authDraw 2.4s .3s cubic-bezier(.2,.8,.2,1) forwards}
+.auth-bg .dots circle{fill:rgba(255,255,255,.16)}
+.auth-bg .floors{position:absolute;right:clamp(14px,3vw,40px);top:50%;transform:translateY(-50%);display:grid;gap:14px;font:800 .62rem/1 var(--font);letter-spacing:.2em;color:rgba(255,255,255,.22)}
+.auth-bg .floors span{display:flex;gap:8px;align-items:center}.auth-bg .floors span::before{content:"";width:22px;height:1px;background:currentColor}
+.auth-bg .grain{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:3px 3px;mix-blend-mode:overlay;opacity:.5}
+@keyframes authSpin{to{transform:rotate(360deg)}}
+@keyframes authDraw{to{stroke-dashoffset:0}}
+@keyframes authUp{from{opacity:0;transform:translateY(14px)}}
+.auth-brand{max-width:560px;justify-self:end;animation:authUp .8s .1s cubic-bezier(.2,.8,.2,1) both}
+.auth-brand .mark{width:72px;height:72px;border-radius:22px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);display:grid;place-items:center;backdrop-filter:blur(6px);margin-bottom:28px}
+.auth-brand .mark img{width:46px}
+.auth-brand .eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+.auth-brand h2{font-size:clamp(2rem,3.6vw,3.1rem);font-weight:800;line-height:1.05;letter-spacing:-.02em;margin:10px 0 14px}
+.auth-brand h2 em{font-style:normal;background:linear-gradient(90deg,#E9CF8A,#C8A24A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.auth-brand p{color:rgba(255,255,255,.72);font-size:1rem;line-height:1.6;max-width:440px}
+.auth-brand p[dir=rtl]{font-size:.92rem;margin-top:6px;color:rgba(255,255,255,.55)}
+.auth-flags{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 30px}
+.auth-flags span{padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);font-size:.78rem;font-weight:700;color:rgba(255,255,255,.85)}
+.auth-clock{display:flex;gap:16px;align-items:center;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);max-width:440px}
+.auth-clock b{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.auth-clock small{display:block;color:rgba(255,255,255,.6);font-size:.8rem;line-height:1.45}
+.auth-card{width:min(460px,100%);background:var(--surface);color:var(--text);border-radius:26px;padding:34px 30px;box-shadow:0 30px 80px rgba(8,2,18,.55),0 0 0 1px rgba(255,255,255,.06);animation:authUp .7s .2s cubic-bezier(.2,.8,.2,1) both;position:relative}
+.auth-foot{grid-column:1/-1;text-align:center;font-size:.72rem;color:rgba(255,255,255,.4);letter-spacing:.04em;align-self:end}
+@media (max-width:900px){
+  #auth{grid-template-columns:1fr;justify-items:center;align-content:center;gap:22px}
+  .auth-brand{justify-self:center;text-align:center;max-width:460px}
+  .auth-brand .mark,.auth-brand p,.auth-flags,.auth-clock{display:none}
+  .auth-brand h2{font-size:1.5rem;margin:6px 0 0}
+  .auth-bg svg{left:50%;top:-6%;transform:translateX(-50%);width:170vw}
+  .auth-bg .floors{display:none}
+  .auth-card{padding:28px 22px}
+}
+@media (min-width:901px){ #authCard > .logo{display:none} }
+@media (prefers-reduced-motion:reduce){ .auth-bg .ring,.auth-bg .arc,.auth-brand,.auth-card{animation:none} .auth-bg .arc{stroke-dashoffset:0} }
 .auth-card .logo{width:64px;height:64px;border-radius:18px;background:var(--ink);display:grid;place-items:center;margin-bottom:18px}
 .auth-card .logo img{width:42px}
 .auth-card h1{font-size:1.4rem;font-weight:800}
@@ -609,7 +649,26 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 <div id="boot" class="view"><img src="icons/abc-logo-white.png" alt="ABC"></div>
 
 <!-- SIGN IN / FIRST-RUN SETUP / FORCED PASSWORD CHANGE -->
-<div id="auth" class="view hidden"><div class="auth-card" id="authCard"></div></div>
+<div id="auth" class="view hidden">
+  <div class="auth-bg" aria-hidden="true">
+    <svg viewBox="0 0 1200 1200"><defs><linearGradient id="authGold" x1="0" x2="1"><stop offset="0" stop-color="#C8A24A" stop-opacity="0"/><stop offset=".5" stop-color="#E9CF8A"/><stop offset="1" stop-color="#C8A24A" stop-opacity=".2"/></linearGradient></defs>
+      <circle class="ring" cx="600" cy="600" r="560"/><circle class="ring r2" cx="600" cy="600" r="470"/><circle class="ring" cx="600" cy="600" r="380"/>
+      <circle class="ring r3" cx="600" cy="600" r="300"/><circle class="ring r2" cx="600" cy="600" r="220"/><circle class="ring" cx="600" cy="600" r="140"/>
+      <path class="arc" d="M40 1010 C 320 880, 780 900, 1180 720"/><g class="dots"><circle cx="960" cy="120" r="1.4"/><circle cx="976" cy="120" r="1.4"/><circle cx="992" cy="120" r="1.4"/><circle cx="1008" cy="120" r="1.4"/><circle cx="1024" cy="120" r="1.4"/><circle cx="1040" cy="120" r="1.4"/><circle cx="1056" cy="120" r="1.4"/><circle cx="1072" cy="120" r="1.4"/><circle cx="1088" cy="120" r="1.4"/><circle cx="1104" cy="120" r="1.4"/><circle cx="960" cy="136" r="1.4"/><circle cx="976" cy="136" r="1.4"/><circle cx="992" cy="136" r="1.4"/><circle cx="1008" cy="136" r="1.4"/><circle cx="1024" cy="136" r="1.4"/><circle cx="1040" cy="136" r="1.4"/><circle cx="1056" cy="136" r="1.4"/><circle cx="1072" cy="136" r="1.4"/><circle cx="1088" cy="136" r="1.4"/><circle cx="1104" cy="136" r="1.4"/><circle cx="960" cy="152" r="1.4"/><circle cx="976" cy="152" r="1.4"/><circle cx="992" cy="152" r="1.4"/><circle cx="1008" cy="152" r="1.4"/><circle cx="1024" cy="152" r="1.4"/><circle cx="1040" cy="152" r="1.4"/><circle cx="1056" cy="152" r="1.4"/><circle cx="1072" cy="152" r="1.4"/><circle cx="1088" cy="152" r="1.4"/><circle cx="1104" cy="152" r="1.4"/><circle cx="960" cy="168" r="1.4"/><circle cx="976" cy="168" r="1.4"/><circle cx="992" cy="168" r="1.4"/><circle cx="1008" cy="168" r="1.4"/><circle cx="1024" cy="168" r="1.4"/><circle cx="1040" cy="168" r="1.4"/><circle cx="1056" cy="168" r="1.4"/><circle cx="1072" cy="168" r="1.4"/><circle cx="1088" cy="168" r="1.4"/><circle cx="1104" cy="168" r="1.4"/><circle cx="960" cy="184" r="1.4"/><circle cx="976" cy="184" r="1.4"/><circle cx="992" cy="184" r="1.4"/><circle cx="1008" cy="184" r="1.4"/><circle cx="1024" cy="184" r="1.4"/><circle cx="1040" cy="184" r="1.4"/><circle cx="1056" cy="184" r="1.4"/><circle cx="1072" cy="184" r="1.4"/><circle cx="1088" cy="184" r="1.4"/><circle cx="1104" cy="184" r="1.4"/><circle cx="960" cy="200" r="1.4"/><circle cx="976" cy="200" r="1.4"/><circle cx="992" cy="200" r="1.4"/><circle cx="1008" cy="200" r="1.4"/><circle cx="1024" cy="200" r="1.4"/><circle cx="1040" cy="200" r="1.4"/><circle cx="1056" cy="200" r="1.4"/><circle cx="1072" cy="200" r="1.4"/><circle cx="1088" cy="200" r="1.4"/><circle cx="1104" cy="200" r="1.4"/></g></svg>
+    <div class="floors"><span>L4</span><span>L3</span><span>L2</span><span>L1</span><span>GF</span><span>LG</span></div>
+    <div class="grain"></div>
+  </div>
+  <aside class="auth-brand">
+    <div class="mark"><img src="icons/abc-logo-white.png" alt="ABC"></div>
+    <div class="eyebrow">ABC Operations</div>
+    <h2>Every flagship.<br><em>One hub.</em></h2>
+    <p>The whole operations in one place, on every device.</p>
+    <div class="auth-flags"><span>Verdun Mall</span><span>Achrafieh Mall</span><span>Dbayeh DS</span><span>Verdun DS</span><span>Achrafieh DS</span></div>
+    <div class="auth-clock"><b id="authTime">--:--</b><small id="authDate"></small></div>
+  </aside>
+  <div class="auth-card" id="authCard"></div>
+  <div class="auth-foot">ABC Operations Hub · authorised staff only</div>
+</div>
 
 <!-- HOME -->
 <div id="home" class="view hidden">
@@ -820,8 +879,15 @@ async function boot(){
   if (ME.user.twofa && ME.user.twofa.setupNeeded) return twofaSetupScreen();   // Two-step login feature: required for this role
   startHub();
 }
+function authClock(){
+  const t = $("#authTime"); if (!t || $("#auth").classList.contains("hidden")) return;
+  const now = new Date(), h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", hour12: false }).format(now)) % 24;
+  t.textContent = now.toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" });
+  $("#authDate").innerHTML = `${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"} · Beirut<br>${now.toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", weekday: "long", day: "numeric", month: "long", year: "numeric" })}`;
+}
+setInterval(authClock, 20000);
 function authScreen(mode, errText){
-  show("auth");
+  show("auth"); authClock();
   const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
   const forms = {
     login: `${logo}<h1>ABC Operations Hub</h1><p class="sub">Sign in to reach every operational system in one place.</p>
@@ -1180,7 +1246,7 @@ function twofaLogin(t, view){
       <div id="aMsg"></div><label class="field"><span>${view === "backup" ? "Backup code" : "6-digit code"}</span><input id="tfCode" class="tf-code" ${view !== "backup" ? 'inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="––––––"' : 'maxlength="9" placeholder="XXXX-XXXX" style="text-transform:uppercase"'}></label>
       <button class="btn" id="tfGo">Confirm</button>${mail ? `<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="tfResend" style="border:0;color:var(--brand-2)">Send a new code</button></div>` : ""}${trust}`;
   }
-  show("auth");
+  show("auth"); authClock();
   $("#authCard").innerHTML = `${logo}${body}<div class="tf-links">${links}</div>`;
   const msg = (x, cls = "err") => { const m = $("#aMsg"); if (m) m.innerHTML = x ? `<div class="msg ${cls}">${esc(x)}</div>` : ""; };
   $("#authCard").onclick = async e => {
@@ -1417,7 +1483,7 @@ async function twofaTotpSetup(box, onDone){
 }
 /* required for the role and not set up yet: the hub opens only after one way is on */
 function twofaSetupScreen(){
-  show("auth");
+  show("auth"); authClock();
   const wa = !!(window.PublicKeyCredential && navigator.credentials);
   $("#authCard").innerHTML = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div><h1>Turn on two-step login</h1>
     <p class="sub">Your administrator made two-step login required for your role. Choose one way to continue — you can add more later in Profile settings.</p>
