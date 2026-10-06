@@ -459,6 +459,9 @@ async function shiftEndCheck(c){
   for (const v of (T.contractors || []).filter(v => v.state === "onsite" && (pm || v.overdue)))
     out.push(`<b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b> still in the mall${v.overdue ? ` · <b>past permit ${esc(v.to)}</b>` : v.to ? ` · permit until ${esc(v.to)}` : ""}`);
   if (T.handover && T.handover.waiting) out.push(`The previous hand-over is <b>still waiting to be received</b>`);
+  try { const MF = await api("ops/mf/list?site=" + CTX.site);   // Malfunction Records: urgent ones still open
+    for (const m of MF.list.filter(m => m.open && ["High", "Critical"].includes(m.priority)).slice(0, 5))
+      out.push(`<b>${esc(m.priority)} malfunction</b> · ${esc(m.category || "")}${m.location ? " · " + esc(m.location) : ""} — ${esc(m.status)}${m.provider ? " (" + esc(m.provider) + ")" : ""}`); } catch {}
   return out.length
     ? `<span class="se-open" style="display:block;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--alert) 10%,transparent);color:var(--text)"><b style="color:var(--alert)">Shift-end check · ${out.length} still open</b>${out.map(x => `<span style="display:block;margin-top:6px">• ${x}</span>`).join("")}<span style="display:block;margin-top:8px;color:var(--muted);font-size:.85em">Add them to the hand-over or close them before you hand over.</span></span>`
     : `<span style="display:block;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-weight:700">✓ Shift-end check: nothing left open</span>`;

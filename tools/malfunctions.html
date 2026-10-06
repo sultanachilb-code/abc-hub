@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Malfunction Records · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Malfunction Records: malfunctions followed with the service providers (Chip, Soffa, …) — see docs/FEATURE-malfunctions.md -->
+<style>
+.kp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.6rem;line-height:1.1}.kp small{color:var(--muted);font-size:.74rem;font-weight:700}
+.kp .al b{color:var(--alert)}.kp .ok b{color:var(--ok)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar input[type=search]{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chips button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:6px 12px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.chips button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.sc{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.sc .card{padding:10px 14px;font-size:.8rem}.sc b{font-size:.92rem}
+.mf{display:grid;grid-template-columns:8px 1fr auto;gap:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;align-items:start}
+.mf .pr{width:8px;align-self:stretch;border-radius:4px;background:var(--line)}
+.mf .pr.Critical{background:var(--alert)}.mf .pr.High{background:var(--warn)}.mf .pr.Medium{background:var(--brand-2)}
+.mf b{font-size:.95rem}.mf small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.st{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--paper);white-space:nowrap}
+.st.Open{color:var(--alert)}.st.Reported{color:var(--warn)}.st.In{color:var(--brand-2)}.st.Fixed,.st.Closed{color:var(--ok)}
+.steps{display:flex;gap:4px;margin:6px 0 2px}.steps i{flex:1;height:6px;border-radius:3px;background:var(--line)}.steps i.d{background:var(--ok)}
+dialog{width:min(640px,96vw)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg label{display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:700;color:var(--muted)}
+.fg .w{grid-column:1/-1}
+.fg input,.fg select,.fg textarea{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-weight:500}
+.ph{display:flex;gap:8px;flex-wrap:wrap}.ph img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.ph .x{position:relative}.ph .x button{position:absolute;top:2px;right:2px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
+.nt{font-size:.8rem;border-top:1px solid var(--line);padding:6px 0}.nt small{color:var(--muted)}
+@media (max-width:700px){.kp{grid-template-columns:1fr 1fr}.fg{grid-template-columns:1fr}.mf{grid-template-columns:6px 1fr}.mf .r{grid-column:2}}
+</style>
+</head>
+<body>
+<div class="top"><h1>🛠 Malfunction Records <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<dialog id="dlg"></dialog>
+<input type="file" id="cam" accept="image/*" capture="environment" multiple hidden>
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", M = null, view = "open", prov = 0, q = "", E = null, newPh = [];
+const fmtT = iso => iso ? new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+const dur = h => h == null ? "—" : h < 1 ? Math.round(h * 60) + " min" : h < 48 ? Math.round(h) + " h" : Math.round(h / 24) + " d";
+const local = iso => { if (!iso) return ""; const d = new Date(iso); const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d).reduce((a, x) => (a[x.type] = x.value, a), {}); return `${p.year}-${p.month}-${p.day}T${p.hour === "24" ? "00" : p.hour}:${p.minute}`; };
+const toIso = v => v ? new Date(v + ":00+03:00").toISOString() : "";
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    if (!site || site === "ALL") site = ctx.site;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${site}`); load(); });
+    load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){ try { M = await api(`ops/mf/list?site=${site}${view === "all" ? "&all=1" : ""}`); $("#sub").textContent = M.siteName; draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; } }
+function draw(){
+  const L = M.list, open = L.filter(x => x.open), urgent = open.filter(x => ["High", "Critical"].includes(x.priority));
+  const fx = L.filter(x => x.fixH != null), avg = fx.length ? fx.reduce((s, x) => s + x.fixH, 0) / fx.length : null;
+  const s = q.toLowerCase();
+  const show = L.filter(x => (view === "open" ? x.open : view === "fixed" ? !x.open : true) && (!prov || x.providerId === prov)
+    && (!s || [x.description, x.location, x.asset, x.category, x.provider, x.providerRef].join(" ").toLowerCase().includes(s)));
+  $("#app").innerHTML = `<div class="kp">
+      <div class="card ${open.length ? "al" : "ok"}"><b>${open.length}</b><small>Open</small></div>
+      <div class="card ${urgent.length ? "al" : "ok"}"><b>${urgent.length}</b><small>High / Critical open</small></div>
+      <div class="card"><b>${dur(avg)}</b><small>Average time to fix</small></div>
+      <div class="card ok"><b>${L.filter(x => !x.open).length}</b><small>Fixed · ${view === "all" ? "all time" : "90 days"}</small></div></div>
+    ${M.score.length ? `<div class="sc">${M.score.map(p => `<div class="card"><b>${esc(p.name)}</b> · ${p.open} open of ${p.total} · fix ${dur(p.avgFixH)}</div>`).join("")}</div>` : ""}
+    <div class="bar"><input type="search" id="q" placeholder="Search description, location, asset, provider ref" value="${esc(q)}">
+      <select class="sel" id="prov"><option value="0">All providers</option>${M.providers.map(p => `<option value="${p.id}" ${p.id === prov ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select>
+      ${M.can.provAdmin ? `<button class="btn ghost" id="provBtn">Service providers</button>` : ""}
+      ${M.can.edit ? `<button class="btn" id="add">+ Malfunction</button>` : ""}</div>
+    <div class="chips" id="views">${[["open", "Open"], ["fixed", "Fixed / closed"], ["all", "All time"]].map(([k, t]) => `<button data-v="${k}" class="${view === k ? "on" : ""}">${t}</button>`).join("")}</div>
+    <div id="list">${show.length ? show.map(card).join("") : `<div class="card empty">${view === "open" ? "No open malfunctions." : "Nothing here."}</div>`}</div>`;
+  $("#q").oninput = e => { q = e.target.value; const p = e.target.selectionStart; draw(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+  $("#prov").onchange = e => { prov = Number(e.target.value); draw(); };
+  $("#views").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; const was = view; view = b.dataset.v; (view === "all" || was === "all") ? load() : draw(); };
+  const a = $("#add"); if (a) a.onclick = () => editor({ status: "Open", priority: "Medium", foundAt: new Date().toISOString(), notes: [], photos: [] });
+  const pb = $("#provBtn"); if (pb) pb.onclick = providersDlg;
+  $("#list").onclick = async e => { const c = e.target.closest("[data-id]"); if (!c) return; try { const r = await api(`ops/mf/get?site=${site}&id=${c.dataset.id}`); editor(r.record); } catch (er){ toast(er.message, true); } };
+}
+function card(x){
+  const i = M.statuses.indexOf(x.status);
+  return `<div class="card mf" data-id="${x.id}"><span class="pr ${esc(x.priority)}"></span>
+    <div><b>${esc(x.category || "Malfunction")}${x.location ? " · " + esc(x.location) : ""}</b>
+      <small>${esc(x.description.slice(0, 160))}</small>
+      <div class="steps">${M.statuses.map((_, k) => `<i class="${k <= i ? "d" : ""}"></i>`).join("")}</div>
+      <small>${esc([x.provider || "No provider", x.providerRef && "Ref " + x.providerRef, "found " + fmtT(x.foundAt), x.fixedAt ? "fixed " + fmtT(x.fixedAt) + " (" + dur(x.fixH) + ")" : "open " + dur(x.ageH), x.photoCount ? "📷 " + x.photoCount : ""].filter(Boolean).join(" · "))}</small></div>
+    <div class="r" style="text-align:right"><span class="st ${esc(x.status.split(" ")[0])}">${esc(x.status)}</span><small style="margin-top:6px">${esc(x.priority)}</small></div></div>`;
+}
+function editor(x){
+  E = x; newPh = [];
+  const ro = !M.can.edit, opt = (L, v) => L.map(o => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("");
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>${x.id ? "Malfunction #" + x.id : "New malfunction"}</b><small>${x.id ? "Logged by " + esc(x.by) + " · " + esc(fmtT(x.foundAt)) : M.siteName}</small></div>
+    <div class="dlg-b"><div class="fg">
+      <label>Category<select id="fCat"><option value=""></option>${opt(M.categories, x.category)}</select></label>
+      <label>Priority<select id="fPr">${opt(M.priorities, x.priority)}</select></label>
+      <label>Location<input id="fLoc" value="${esc(x.location || "")}" placeholder="e.g. L2 restrooms, Gate B"></label>
+      <label>Asset / equipment<input id="fAsset" value="${esc(x.asset || "")}" placeholder="e.g. Escalator E3, AHU-4"></label>
+      <label class="w">What is wrong<textarea id="fDesc" rows="3">${esc(x.description || "")}</textarea></label>
+      <label>Service provider<select id="fProv"><option value="0">—</option>${M.providers.filter(p => p.active || p.id === x.providerId).map(p => `<option value="${p.id}" ${p.id === x.providerId ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+      <label>Provider ticket / ref<input id="fRef" value="${esc(x.providerRef || "")}"></label>
+      <label>Status<select id="fSt">${opt(M.statuses, x.status)}</select></label>
+      <label>Found at<input type="datetime-local" id="fFound" value="${local(x.foundAt)}"></label>
+      <label>Reported to provider<input type="datetime-local" id="fRep" value="${local(x.reportedAt)}"></label>
+      <label>Provider attended<input type="datetime-local" id="fAtt" value="${local(x.attendedAt)}"></label>
+      <label>Fixed<input type="datetime-local" id="fFix" value="${local(x.fixedAt)}"></label>
+      <label>Closed<input type="datetime-local" id="fClo" value="${local(x.closedAt)}"></label>
+      <label class="w">Add a note<input id="fNote" placeholder="e.g. Chip technician replaced the motor capacitor"></label>
+      <div class="w"><div class="ph" id="phs">${(x.photos || []).map(p => `<span class="x"><img src="${p.data}" alt="">${ro ? "" : `<button data-rmph="${p.id}" title="Remove">✕</button>`}</span>`).join("")}</div>
+        ${ro ? "" : `<button class="btn ghost small" id="phAdd" style="margin-top:8px">📷 Add photo</button>`}</div>
+      ${(x.notes || []).length ? `<div class="w">${x.notes.slice().reverse().map(n => `<div class="nt">${esc(n.t)}<br><small>${esc(n.by)} · ${esc(fmtT(n.at))}</small></div>`).join("")}</div>` : ""}
+    </div></div>
+    <div class="dlg-f">${x.id && !ro ? `<button class="btn ghost" id="fDel" style="margin-right:auto;color:var(--alert)">Delete</button>` : ""}<button class="btn ghost" id="fCancel">Close</button>${ro ? "" : `<button class="btn" id="fSave">Save</button>`}</div>`;
+  if (ro) d.querySelectorAll("input,select,textarea").forEach(i => i.disabled = true);
+  /* moving the status fills the time of that step with now (it can be changed) */
+  const stepF = ["", "fRep", "fAtt", "fFix", "fClo"];
+  $("#fSt").onchange = e => { const k = M.statuses.indexOf(e.target.value); for (let i = 1; i <= k; i++){ const f = $("#" + stepF[i]); if (f && !f.value) f.value = local(new Date().toISOString()); } };
+  $("#fCancel").onclick = () => d.close();
+  const del = $("#fDel"); if (del) del.onclick = async () => { if (!(await confirmBox("Delete this malfunction?", "It is removed from the records.", "Delete"))) return; try { await api("ops/mf/delete", { site, id: x.id }); d.close(); load(); } catch (er){ toast(er.message, true); } };
+  const pa = $("#phAdd"); if (pa) pa.onclick = () => $("#cam").click();
+  d.querySelectorAll("[data-rmph]").forEach(b => b.onclick = async () => { try { await api("ops/mf/photo/delete", { site, id: Number(b.dataset.rmph) }); b.parentElement.remove(); } catch (er){ toast(er.message, true); } });
+  const sv = $("#fSave"); if (sv) sv.onclick = async () => {
+    sv.disabled = true;
+    try {
+      await api("ops/mf/save", { site, id: x.id || 0, category: $("#fCat").value, priority: $("#fPr").value, location: $("#fLoc").value, asset: $("#fAsset").value,
+        description: $("#fDesc").value, providerId: Number($("#fProv").value), providerRef: $("#fRef").value, status: $("#fSt").value,
+        foundAt: toIso($("#fFound").value), reportedAt: toIso($("#fRep").value), attendedAt: toIso($("#fAtt").value), fixedAt: toIso($("#fFix").value), closedAt: toIso($("#fClo").value),
+        note: $("#fNote").value, photos: newPh });
+      d.close(); toast("Saved"); load();
+    } catch (er){ toast(er.message, true); sv.disabled = false; }
+  };
+  d.showModal();
+}
+/* photos are shrunk on the phone before sending (max 1024 px, JPEG) */
+$("#cam").onchange = async e => {
+  for (const f of [...e.target.files].slice(0, 4 - newPh.length)) {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(f); });
+    const k = Math.min(1, 1024 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    let q = .72, data = c.toDataURL("image/jpeg", q); while (data.length > 210000 && q > .3){ q -= .1; data = c.toDataURL("image/jpeg", q); }
+    newPh.push(data); $("#phs").insertAdjacentHTML("beforeend", `<span class="x"><img src="${data}" alt=""></span>`);
+  }
+  e.target.value = "";
+};
+function providersDlg(){
+  const d = $("#dlg");
+  const row = p => `<div class="nt" style="display:flex;gap:8px;align-items:center"><div style="flex:1"><b>${esc(p.name)}</b>${p.active ? "" : " <small>(not used)</small>"}<br><small>${esc([p.service, p.contact, p.phone, p.email].filter(Boolean).join(" · "))}</small></div><button class="btn ghost small" data-ep="${p.id}">Edit</button></div>`;
+  d.innerHTML = `<div class="dlg-h"><b>Service providers</b><small>Shared by every flagship</small></div>
+    <div class="dlg-b">${M.providers.map(row).join("")}
+      <div class="fg" style="margin-top:12px"><input type="hidden" id="pId"><label>Name<input id="pName"></label><label>Service<input id="pSvc" placeholder="e.g. Cleaning, HVAC, Lifts"></label>
+      <label>Contact person<input id="pCon"></label><label>Phone<input id="pTel" inputmode="tel"></label><label class="w">Email<input id="pMail" type="email"></label>
+      <label><span><input type="checkbox" id="pAct" checked> In use</span></label></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="pClose">Close</button><button class="btn" id="pSave">Save provider</button></div>`;
+  d.querySelectorAll("[data-ep]").forEach(b => b.onclick = () => { const p = M.providers.find(x => x.id === Number(b.dataset.ep));
+    $("#pId").value = p.id; $("#pName").value = p.name; $("#pSvc").value = p.service; $("#pCon").value = p.contact; $("#pTel").value = p.phone; $("#pMail").value = p.email; $("#pAct").checked = p.active; $("#pName").focus(); });
+  $("#pClose").onclick = () => d.close();
+  $("#pSave").onclick = async () => { try { await api("ops/mf/provider/save", { site, id: Number($("#pId").value) || 0, name: $("#pName").value, service: $("#pSvc").value, contact: $("#pCon").value, phone: $("#pTel").value, email: $("#pMail").value, active: $("#pAct").checked });
+    toast("Provider saved"); await load(); providersDlg(); } catch (er){ toast(er.message, true); } };
+  if (!d.open) d.showModal();
+}
+boot();
+</script>
+</body>
+</html>

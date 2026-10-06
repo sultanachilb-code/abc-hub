@@ -23,7 +23,8 @@ import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar 
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
 import { portalSchema, portalRoute } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
 import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs/FEATURE-tenant-360.md
-import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
+import { findRoute } from "./modules/find.js";
+import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md   // Hub search across content — see docs/FEATURE-hub-search.md
 import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
@@ -196,6 +197,7 @@ const APP_ACCESS = {
   contracts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   portal: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   tenant360: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  malfunctions: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   directory: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gla: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -324,6 +326,7 @@ async function ensureSchema(env) {
   await addinSchema(env);   // Outlook add-in feature
   await contractsSchema(env);   // Contracts near ending
   await portalSchema(env);   // Tenant portal follow-up
+  await malfunctionsSchema(env);   // Malfunction Records
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -1203,7 +1206,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1520,6 +1523,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
   if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content
   if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday });   // Tenant 360
   if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
