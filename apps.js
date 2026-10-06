@@ -14,9 +14,8 @@
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
      embed   false = open in its own window instead of inside the hub
-     roles   who sees the tile: ["MANAGER","SUPERVISOR","SECURITY"]
-             (leave out = everyone; Admin, Property Advisor, Mall Directors and
-             the Chief Department Store Operations Officer always see everything)
+     tools   false = a Day to Day tile that is not repeated in the header Tools button
+     who sees a tile is set in ACCESS below, by position.
      sso     true = sign in automatically with the hub account
      logo    picture shown on the tile instead of the icon (e.g. "/logos/jde.png", square, 256×256)
    Empty groups are hidden automatically.
@@ -28,10 +27,69 @@ window.HUB = {
 
   GROUPS: ["Day to Day Operations", "Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
 
+  /* Who sees each tile, by position (from the Access sheet, Oct 2026). Admin always sees everything.
+       MM   Mall Manager / Senior Mall Manager     OM  Operations Manager / Deputy Operations Manager
+       SMS  Senior Mall Supervisor   MS  Mall Supervisor   MO  Mall Officer   WH  Warehouse
+       SEC  Security                 LEAD  Property Advisor / Mall Director / CDSO
+     A system missing from this list is seen by everyone. Keep APP_ACCESS in worker.js in line (push notifications). */
+  ACCESS: {
+    "schedule":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
+    "mom":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
+    "handover":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
+    "contractors":     ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "gate":            ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "leadership":      ["LEAD"],
+    "eod":             ["MM",  "OM"],
+    "forms":           ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "emergency":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "reminders":       ["MM",  "OM"],
+    "calendar":        ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "tenants":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "feedback":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "compliance":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "fitout":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "works":           ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "directory":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "gla":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "property":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "layouts":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "exec":            ["MM",  "OM",  "LEAD"],
+    "accuracy":        ["MM",  "OM"],
+    "projects":        ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "project-tracker": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "budget":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "snaglist":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "restroom":        ["MM",  "OM",  "LEAD"],
+    "evacuation":      ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "incidents":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "cleaner-qr":      ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "abc-connect":     ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "tenant-connect":  ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "jde":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "archibus":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "pm-portal":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "successfactors":  ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "sign-in-help":    [],
+    "pack":            ["MM",  "OM",  "LEAD"],
+    "downloads":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "footfall":        [],
+    "pp-owner":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "pp-assist":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "pp-general":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "form-am":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "form-pm":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "form-open":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "form-close":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  },
+
   APPS: [
     /* Built into the hub — same sign-in, nothing to host separately */
     {
       id: "schedule",
+      tools: false,   /* not repeated in the header Tools button (Access sheet, Oct 2026) */
       name: "Operations Schedule",
       desc: "Weekly shifts by flagship, ranked by position",
       group: "Day to Day Operations",
@@ -41,6 +99,7 @@ window.HUB = {
     },
     {
       id: "mom",
+      tools: false,   /* not repeated in the header Tools button (Access sheet, Oct 2026) */
       name: "Minutes of Meeting",
       desc: "Attendance, agenda, actions and deadlines",
       group: "Day to Day Operations",
@@ -50,6 +109,7 @@ window.HUB = {
     },
     {
       id: "handover",
+      tools: false,   /* not repeated in the header Tools button (Access sheet, Oct 2026) */
       name: "Shift Handover",
       desc: "Follow-ups, today, tomorrow, events and checklists",
       group: "Day to Day Operations",
@@ -108,13 +168,13 @@ window.HUB = {
     /* Operations Calendar feature — see docs/FEATURE-calendar.md */
     { id: "calendar", name: "Operations Calendar", desc: "Marketing events, ops activities, MOM, objectives and expiry dates", group: "Operations Tools", icon: "calendar", color: "#C2185B", url: "/tools/calendar" },
     /* Monthly operations pack feature — see docs/FEATURE-ops-pack.md */
-    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Data & Reporting", icon: "pack", color: "#2A0F45", url: "/tools/pack", roles: ["MANAGER", "SUPERVISOR"] },
+    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Data & Reporting", icon: "pack", color: "#2A0F45", url: "/tools/pack" },
     /* Downloads feature — see docs/FEATURE-downloads.md */
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Data & Reporting", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
-    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", url: "/tools/contractors", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
+    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", url: "/tools/contractors" },
     /* Loading Gate feature — see docs/FEATURE-gate.md */
-    { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Day to Day Operations", icon: "qr", color: "#2E8B57", url: "/tools/gate", roles: ["MANAGER", "SUPERVISOR", "SECURITY"] },
+    { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Day to Day Operations", icon: "qr", color: "#2E8B57", url: "/tools/gate" },
     /* Projects feature — see docs/FEATURE-projects.md */
     { id: "projects", name: "Operations Future Projects", desc: "Ideas and plans — from idea to approved", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects?view=future" },
     { id: "project-tracker", name: "Project Tracker", desc: "Projects in progress — milestones, progress, budget vs spent", group: "Operations Projects and Budget", icon: "gauge", color: "#2E6B4F", url: "/tools/projects?view=tracker" },
@@ -132,14 +192,14 @@ window.HUB = {
       url: "/tools/feedback"
     },
     /* Leadership dashboards feature — see docs/FEATURE-leadership.md */
-    { id: "leadership", name: "Performance Dashboard", desc: "Every flagship's status, soft services and the monthly pack", group: "Leadership", icon: "gauge", color: "#2A0F45", url: "/tools/leadership", roles: ["ADVISOR", "DIRECTOR", "CDSO"] },
+    { id: "leadership", name: "Performance Dashboard", desc: "Every flagship's status, soft services and the monthly pack", group: "Leadership", icon: "gauge", color: "#2A0F45", url: "/tools/leadership" },
     /* Tenant Management feature — see docs/FEATURE-tenant-management.md */
     { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance" },
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
-    { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts", roles: ["MANAGER", "SUPERVISOR"] },
+    { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
-    { id: "portal", name: "Tenant Portal Follow-up", desc: "Breaches & penalties, violations and ABC requests waiting on tenants", group: "Tenant Management", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal", roles: ["MANAGER", "SUPERVISOR"] },
+    { id: "portal", name: "Tenant Portal Follow-up", desc: "Breaches & penalties, violations and ABC requests waiting on tenants", group: "Tenant Management", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },
     { id: "directory", name: "Tenants Directory", desc: "Tenant contacts for reception — names, mobiles, emails", group: "Tenant Management", icon: "users", color: "#3C4F8A", url: "/tools/directory" },
     /* Property Overview & Info — more property references will join this section */
@@ -170,8 +230,7 @@ window.HUB = {
       group: "Executive Report",
       icon: "chart",
       color: "#0F5C7A",
-      url: "/tools/exec",
-      roles: ["MANAGER"]          /* flagship management and leadership only — not the operations team */
+      url: "/tools/exec"
     },
     /* Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md */
     {
@@ -181,8 +240,7 @@ window.HUB = {
       group: "Operations Projects and Budget",
       icon: "wallet",
       color: "#8A6D1F",
-      url: "/tools/budget",
-      roles: ["MANAGER", "SUPERVISOR"]
+      url: "/tools/budget"
     },
     /* Data Accuracy Score feature — see docs/FEATURE-accuracy.md */
     {
@@ -224,7 +282,6 @@ window.HUB = {
       icon: "qr",
       color: "#2F6F73",
       url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/",
-      roles: ["MANAGER", "SUPERVISOR"],
       sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     {
@@ -247,7 +304,6 @@ window.HUB = {
       icon: "shield",
       color: "#3C4F8A",
       url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/",
-      roles: ["MANAGER", "SECURITY"],
       sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     {
@@ -281,8 +337,7 @@ window.HUB = {
       icon: "box",
       color: "#B4471F",
       url: "https://jdesrvweb.abc.com.lb:8882/jde/E1Menu.maf",
-      embed: false,
-      roles: ["MANAGER", "SUPERVISOR"]   /* operations team uses it for the budget requests */
+      embed: false
     },
     {
       id: "archibus",
@@ -293,8 +348,7 @@ window.HUB = {
       icon: "bolt",
       color: "#2E6B4F",
       url: "http://192.168.5.68:8080/archibus/login.axvw",
-      embed: false,
-      roles: ["MANAGER", "SUPERVISOR"]
+      embed: false
     },
     {
       id: "pm-portal",
@@ -328,7 +382,6 @@ window.HUB = {
       icon: "footfall",
       color: "#8A5A1F",
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/",
-      roles: ["MANAGER"],
       sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     /* Policies & Procedures — the three systems are placeholders until their content is built */

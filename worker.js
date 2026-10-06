@@ -172,9 +172,64 @@ const HEALTH_CACHE_MS = 60 * 1000;
 const NOTIFY_DAYS = 7;
 const NOTIFY_CACHE_MS = 60 * 1000;
 const VAPID_SUBJECT = "mailto:salaachi@abc.com.lb";
-/* Who may receive each system's events — keep in line with "roles" in apps.js
+/* Who may receive each system's events, by position — the same list as ACCESS in apps.js
    (systems not listed go to everyone; Admins always receive everything). */
-const APP_ROLES = { restroom: ["MANAGER", "SUPERVISOR"], exec: ["MANAGER"] };
+const APP_ACCESS = {
+  schedule: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
+  mom: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
+  handover: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
+  contractors: ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  gate: ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  leadership: ["LEAD"],
+  eod: ["MM",  "OM"],
+  forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  emergency: ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  reminders: ["MM",  "OM"],
+  calendar: ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  tenants: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  feedback: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  compliance: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  fitout: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  contracts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  portal: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  directory: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  gla: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  property: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  layouts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  exec: ["MM",  "OM",  "LEAD"],
+  accuracy: ["MM",  "OM"],
+  projects: ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  "project-tracker": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  budget: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  snaglist: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  restroom: ["MM",  "OM",  "LEAD"],
+  evacuation: ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  incidents: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "cleaner-qr": ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  "abc-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "tenant-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  jde: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  archibus: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "pm-portal": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  successfactors: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "sign-in-help": [],
+  pack: ["MM",  "OM",  "LEAD"],
+  downloads: ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  footfall: [],
+  "pp-owner": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "pp-assist": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "pp-general": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "form-am": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "form-dbank": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "form-open": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "form-close": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"]
+};
+const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
+  : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
+  : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : "MO")
+  : u.role === "SECURITY" ? "SEC" : u.role;
 
 /* Morning email */
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
@@ -1044,7 +1099,7 @@ async function notificationsFor(env, me) {
   events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))).slice(0, 80);
   return { events, readAt: me.notif_read_at || "" };
 }
-const roleAllows = (role, app) => FULL_ROLES.includes(role) || !APP_ROLES[app] || APP_ROLES[app].includes(role);
+const roleAllows = (u, app) => u.role === "ADMIN" || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u));
 
 /* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
 async function vapidKeys(env) {
@@ -1137,7 +1192,7 @@ async function ensureWatermark(env) {
    and pushes them to each subscribed device the person is allowed to see. */
 async function pushRun(env) {
   const subsQ = await env.DB.prepare(
-    "SELECT s.*, u.site_code, u.role, u.sites FROM push_subs s JOIN users u ON u.email = s.email WHERE u.active = 1").all();
+    "SELECT s.*, u.site_code, u.role, u.sites, u.position FROM push_subs s JOIN users u ON u.email = s.email WHERE u.active = 1").all();
   const subs = subsQ.results || [];
   const wmRow = await env.DB.prepare("SELECT v FROM meta WHERE k = 'push:wm'").first();
   if (!wmRow) { await ensureWatermark(env); return; }
@@ -1152,7 +1207,7 @@ async function pushRun(env) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
       (e.to === sub.email || !e.site || (MULTI_ROLES.includes(sub.role) ? sitesOf(sub).includes(e.site) : (!sub.site_code || e.site === sub.site_code))) &&
-      roleAllows(sub.role, e.app) && e.app !== "emergency" &&   /* Emergency Alert feature pushes its own alerts */
+      roleAllows(sub, e.app) && e.app !== "emergency" &&   /* Emergency Alert feature pushes its own alerts */
       (sub.level === "all" || e.tone === "alert" || e.tone === "warn"));
     if (!mine.length) continue;
     if (mine.length <= 3) {
