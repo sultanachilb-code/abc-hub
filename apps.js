@@ -138,6 +138,8 @@ window.HUB = {
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts", roles: ["MANAGER", "SUPERVISOR"] },
+    /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
+    { id: "portal", name: "Tenant Portal Follow-up", desc: "Breaches & penalties, violations and ABC requests waiting on tenants", group: "Tenant Management", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal", roles: ["MANAGER", "SUPERVISOR"] },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },
     { id: "directory", name: "Tenants Directory", desc: "Tenant contacts for reception — names, mobiles, emails", group: "Tenant Management", icon: "users", color: "#3C4F8A", url: "/tools/directory" },
     /* Property Overview & Info — more property references will join this section */

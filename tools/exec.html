@@ -326,6 +326,7 @@ var EDIT=[
   ]},
   {id:'lease',title:'Leasing',items:[
     {info:'<b>Opened / closed year to date</b> come automatically from the GLA change history, and <b>fit-out units</b> (Fit-out or Reserved in the GLA) from the GLA itself. Add below only what the GLA does not show (for example openings before the hub was used).'},
+    {movesPanel:true},
     {fitPanel:true},
     {tbl:'opened',l:'Additional opened YTD (not in the GLA history)'},
     {tbl:'closed',l:'Additional closed YTD (not in the GLA history)'},
@@ -369,7 +370,7 @@ function rows(m,key){
 }
 function blankMall(name){
   var m={};SAVED.concat(LOCALF).forEach(function(k){m[k]=''});
-  m.name=name;TKEYS.forEach(function(k){m[k]=[]});m.units=[];m.unitNotes={};m.fitout={};
+  m.name=name;TKEYS.forEach(function(k){m[k]=[]});m.units=[];m.unitNotes={};m.fitout={};m.hideMoves={opened:{},closed:{}};
   m.footfall=MN.map(function(n){return {month:n,ff25:'',ff26:'',s25:'',s26:'',sales:''}});
   return m;
 }
@@ -406,6 +407,7 @@ async function loadMall(site){
   TKEYS.forEach(function(k){if(Array.isArray(s[k]))m[k]=s[k]});
   if(!rows(m,'footfall').length)m.footfall=MN.map(function(n){return {month:n,ff25:'',ff26:'',s25:'',s26:'',sales:''}});
   m.unitNotes=s.unitNotes||{};m.fitout=s.fitout||{};
+  m.hideMoves={opened:(s.hideMoves&&s.hideMoves.opened)||{},closed:(s.hideMoves&&s.hideMoves.closed)||{}};   // opened / closed names removed from the report by hand
   m.period=d.periodLabel;m.ytd='YTD '+d.period.slice(0,4);
   if(!trim(m.qcCurLabel))m.qcCurLabel=d.periodLabel;
   var a=d.auto;AUTO[site]=a;META[site]={source:d.source,savedAt:d.savedAt,savedBy:d.savedBy,all:d.can.all};
@@ -425,7 +427,7 @@ async function loadMall(site){
 function payload(m){
   var o={};SAVED.forEach(function(k){o[k]=m[k]});
   TKEYS.forEach(function(k){if(LOCALT.indexOf(k)>=0)return;o[k]=(m[k]||[]).map(function(r){var x={};Object.keys(r).forEach(function(kk){if(kk.charAt(0)!=='_'&&(k!=='footfall'||/^(month|ff25|ff26)$/.test(kk)))x[kk]=r[kk]});return x})});
-  o.unitNotes=m.unitNotes;o.fitout=m.fitout;return o;
+  o.unitNotes=m.unitNotes;o.fitout=m.fitout;o.hideMoves=m.hideMoves;return o;
 }
 var saveT=0,saving=null;
 function setStatus(t){var s=$('#saveSt');if(s)s.textContent=t}
@@ -477,7 +479,7 @@ function calcOcc(m){
 function unitIssues(m){return m.units.filter(function(u){return isNaN(num(u.sqm))&&(trim(u.code)||trim(u.brand)||trim(u.floor))})}
 function uName(u){var c=trim(u.code),n=trim(u.note);return c?(n?c+' - '+n:c):(n||nice(u.brand))}
 function sortedNames(map){return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1})}
-function movesList(m){
+function movesList(m,all){
   var op={},cl={};
   m.units.forEach(function(u){
     if(u.move==='Opened YTD'){var n=nice(u.brand)||trim(u.code);if(n)op[nk(n)]=n}
@@ -491,6 +493,8 @@ function movesList(m){
   (m._autoClosed||[]).forEach(function(n){n=nice(n);if(n&&!cl[nk(n)])cl[nk(n)]=n});
   rows(m,'opened').forEach(function(r){var n=trim(r.name);if(n&&!op[nk(n)])op[nk(n)]=n});
   rows(m,'closed').forEach(function(r){var n=trim(r.name);if(n&&!cl[nk(n)])cl[nk(n)]=n});
+  if(all)return {opened:op,closed:cl};
+  var H=m.hideMoves||{};Object.keys(H.opened||{}).forEach(function(k){delete op[k]});Object.keys(H.closed||{}).forEach(function(k){delete cl[k]});   // removed by hand in Edit data
   return {opened:sortedNames(op),closed:sortedNames(cl)};
 }
 function contractList(m){
@@ -856,6 +860,22 @@ function tableHtml(key,title,hint){
   return h;
 }
 
+/* Opening / closing YTD: every name in the report (GLA history + added rows) with a button to remove it from the report or bring it back */
+function movesPanelHtml(m){
+  var all=movesList(m,true),H=m.hideMoves||{opened:{},closed:{}};
+  var col=function(kind,label){
+    var keys=Object.keys(all[kind]).sort(function(a,b){return all[kind][a].localeCompare(all[kind][b])});
+    var hid=Object.keys(H[kind]||{}).filter(function(k){return !all[kind][k]});   // removed names no longer in the data
+    var shown=keys.filter(function(k){return !(H[kind]||{})[k]}).length;
+    return '<td style="vertical-align:top;padding:6px 8px;width:50%"><b style="font-size:.8rem">'+label+' ('+shown+')</b>'+
+      (keys.length?keys.map(function(k){var off=!!(H[kind]||{})[k];
+        return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--line)"><span style="flex:1;'+(off?'text-decoration:line-through;color:var(--muted)':'')+'">'+esc(all[kind][k])+'</span>'+
+          '<button class="btn sm'+(off?' pri':' danger')+'" data-a="mv" data-kind="'+kind+'" data-k="'+esc(k)+'" data-n="'+esc(all[kind][k])+'" title="'+(off?'Show it in the report again':'Remove it from the report')+'">'+(off?'↺ Restore':'✕ Remove')+'</button></div>'}).join(''):'<div class="hint" style="margin:6px 0">None.</div>')+
+      (hid.length?'<div class="hint" style="margin-top:6px">'+hid.length+' removed name(s) no longer in the data · <button class="btn sm" data-a="mvClear" data-kind="'+kind+'">Clear</button></div>':'')+'</td>';
+  };
+  return '<div class="te"><div class="te-h"><b>Opening / closing '+esc(trim(m.ytd)||'YTD')+' <span class="auto">edit</span></b><small>From the GLA history plus the rows added below. Remove a name (for example a deleted unit) and it leaves the report; Restore brings it back. Saved with the report.</small></div>'+
+    '<div class="tw"><table class="vn" style="width:100%"><tbody><tr>'+col('opened','Opened')+col('closed','Closed')+'</tr></tbody></table></div></div>';
+}
 function fitPanelHtml(m){
   var fo=m.units.filter(function(u){return u.status==='Fit out'});
   if(!fo.length)return '<div class="hint">No unit is in Fit-out or Reserved in the GLA at the end of this month.</div>';
@@ -877,6 +897,7 @@ function buildEditor(){
   sec.items.forEach(function(it){
     if(it.row)h+='<div class="grid2">'+it.row.map(fieldHtml).join('')+'</div>';
     else if(it.occPanel)h+=occPanelHtml(m);
+    else if(it.movesPanel)h+=movesPanelHtml(m);
     else if(it.fitPanel)h+=fitPanelHtml(m);
     else if(it.salesPanel)h+=salesPanelHtml(m);
     else if(it.info)h+='<div class="hint">'+it.info+'</div>';
@@ -1067,6 +1088,9 @@ body.addEventListener('paste',function(e){
 body.addEventListener('click',function(e){
   var b=e.target.closest('[data-a]');if(!b)return;
   var a=b.dataset.a,m=M();
+  if(a==='mv'){var H=m.hideMoves||(m.hideMoves={opened:{},closed:{}}),K=H[b.dataset.kind]||(H[b.dataset.kind]={});
+    if(K[b.dataset.k])delete K[b.dataset.k];else K[b.dataset.k]=b.dataset.n;save();renderReport();buildEditor();return}
+  if(a==='mvClear'){var H2=m.hideMoves||{},all=movesList(m,true)[b.dataset.kind],K2=H2[b.dataset.kind]||{};Object.keys(K2).forEach(function(k){if(!all[k])delete K2[k]});save();renderReport();buildEditor();return}
   if(a==='salesImport'){$('#salesIn').click();return}
   if(a==='salesClear'){if(confirm('Remove the sales from this page?'))clearLocal();return}
   if(a==='salesRecalc'&&LOCAL){delete LOCAL.bySite[state.current];applyLocal(state.current,m);renderReport();buildEditor();return}

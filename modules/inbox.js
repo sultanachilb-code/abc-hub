@@ -8,11 +8,13 @@
      …+cal-<flagship>-<TAG>@gmail.com        → an Operations Calendar entry (marketing event by default;
                                                 subject starting "Ops:", "Expiry:" or "Objective:" picks the kind)
      …+contracts-<TAG>@gmail.com             → the daily "contracts near ending" Excel report (all flagships)
+     …+portal-<TAG>@gmail.com                → the portal reports (Breaches & Penalties, Violations, ABC Requests — any flagship)
    A meeting invitation (.ics) gives the exact date, time, place and attendees; otherwise the first date in the
    subject or the email, else the day the email was sent. The sender must be a hub user of that flagship
    (operations team for MOM / calendar); nothing is ever replied — the flagship gets a hub notification.
    ===================================================================== */
 import { contractsImport } from "./contracts.js";
+import { portalImport } from "./portal.js";   // Tenant portal follow-up: Breaches & Penalties · Violations · ABC Requests reports
 
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
@@ -90,10 +92,12 @@ export async function mailInbox(env, request, body, d) {
   if (!env.INBOX_KEY) throw err("The hub inbox is not set up (INBOX_KEY secret is missing)", 503);
   const key = request.headers.get("x-inbox-key") || "";
   if (key.length !== env.INBOX_KEY.length || key !== env.INBOX_KEY) throw err("Wrong inbox key", 403);
-  const kind = ["mom", "cal", "contracts"].includes(body.kind) ? body.kind : "";
+  const kind = ["mom", "cal", "contracts", "portal"].includes(body.kind) ? body.kind : "";
   if (!kind) throw err("Unknown kind");
   const from = clip(body.from, 160).toLowerCase();
-  const u = await userBy(env, from);
+  let u = await userBy(env, from);
+  /* portal reports may also come straight from IT or a Salesforce report subscription: senders listed in PORTAL_SENDERS */
+  if (!u && kind === "portal" && String(env.PORTAL_SENDERS || "").toLowerCase().split(/[\s,;]+/).filter(Boolean).includes(from)) u = { full_name: from, email: from };
   if (!u) return { accepted: false, reason: `${from || "The sender"} is not a hub user — ignored` };
   const msgId = clip(body.msgId, 200);
   if (msgId) {
@@ -101,6 +105,12 @@ export async function mailInbox(env, request, body, d) {
     if (!claim.meta || claim.meta.changes !== 1) return { accepted: true, duplicate: true, reason: "Already added" };
   }
   try {
+    if (kind === "portal") {
+      const files = (Array.isArray(body.files) ? body.files : []).slice(0, 6);
+      if (!files.length) return { accepted: false, reason: "No report attached" };
+      const r = await portalImport(env, d, { files, from: u.full_name });
+      return { accepted: true, ...r, reason: r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.changed} status changes · ${f.gone} no longer in the report`).join(" | ") };
+    }
     if (kind === "contracts") {
       const files = (Array.isArray(body.files) ? body.files : []).slice(0, 5);
       if (!files.length) return { accepted: false, reason: "No Excel attached" };
@@ -127,7 +137,7 @@ async function addMom(env, d, { site, u, subject, text, ics, sent, year, to, cc 
   const date = (ics && ics.start && ics.start.day) || findDate(subject, year) || findDate(text, year) || sent;
   const title = clip((ics && ics.title) || subject, 160) || `ABC ${d.SITES[site]} - Minutes of Meeting`;
   /* participants: invitation attendees, else the email's To / Cc (the hub's own address left out) */
-  const people = (ics && ics.attendees.length ? ics.attendees : [...addrList(to), ...addrList(cc)]).filter(p => !/abcoperationshub|\+(mom|cal|works|contracts)-/i.test(p.email));
+  const people = (ics && ics.attendees.length ? ics.attendees : [...addrList(to), ...addrList(cc)]).filter(p => !/abcoperationshub|\+(mom|cal|works|contracts|portal)-/i.test(p.email));
   const seen = new Set(), parts = [];
   for (const p of people) {
     if (seen.has(p.email)) continue; seen.add(p.email);

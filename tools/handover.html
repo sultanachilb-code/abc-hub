@@ -590,7 +590,7 @@ function planImport(list){
     const endDay = q.to ? q.to.day : q.from.day;
     if (q.from.day === day || (q.from.day < day && endDay >= day)) plan.today.push(q);
     else if (q.from.day === next) plan.tomorrow.push(q);
-    else if (q.from.day > next){ plan.later.push(q); continue; }   // only today's and tomorrow's requests are imported — later ones come in with that day's import
+    else if (q.from.day > next) plan.upcoming.push(q);   // later dates go to "Coming up": the day before they move to Tomorrow, on the day to Today
     else plan.past.push(q);
     have.add(q.req);
   }
@@ -620,6 +620,7 @@ $("#impFile").addEventListener("change", async e => {
     d.onclick = ev => { const b = ev.target.closest("[data-v]"); if (!b && ev.target !== d) return; d.close();
       if (b && b.dataset.v === "1"){
         const mk = (q, dated) => ({ id: newId(), text: reqText(q), cctv: false, done: false, date: dated ? q.from.day : "", src: "portal", req: q.req,
+          until: q.to && q.to.day > q.from.day ? q.to.day : q.from.day,   // last day of the permit: after it the line leaves Today at midnight
           cols: { tenant: nice(q.tenant), req: q.req, task: [q.desc, q.sub].filter(Boolean).join(" · "), contractor: q.contractor || "",
             time: pSpan(q.from.time, q.to && q.to.time, q.to && q.to.day !== q.from.day ? dmyDay(q.to.day).slice(0, 5) : ""), m: "" } });
         IMP.today.forEach(q => H.doc.today.push(mk(q)));

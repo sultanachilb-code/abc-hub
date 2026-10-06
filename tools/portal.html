@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Portal Follow-up · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant portal follow-up: Breaches & Penalties · Violations · ABC Requests (Salesforce reports by email) — see docs/FEATURE-portal-followup.md -->
+<style>
+:root{--bp:#A33B3B;--vr:#C07A12;--nr:#2F6F7E}
+.src{padding:12px 16px;margin-bottom:14px;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.src .it{display:flex;align-items:center;gap:6px}
+.src .it i{width:8px;height:8px;border-radius:50%;background:var(--k)}
+.src .it b{color:var(--text)}
+.src .sp{flex:1}
+.hero{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.kc{padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.kc:hover{border-color:var(--brand-2);transform:translateY(-1px);box-shadow:0 10px 24px rgba(42,15,69,.08)}
+.kc.on{border-color:var(--brand-2);box-shadow:inset 0 0 0 1px var(--brand-2)}
+.kc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--k,var(--brand))}
+.kc h4{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kc .big{font-size:2.1rem;font-weight:800;line-height:1.1;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.kc .big small{font-size:.85rem;font-weight:700;color:var(--muted);margin-left:6px}
+.kc .sub{font-size:.78rem;color:var(--muted);line-height:1.5}
+.kc.lead{background:linear-gradient(135deg,#2A0F45,#5B2A8A);color:#fff;border-color:transparent}
+.kc.lead::before{display:none}
+.kc.lead h4,.kc.lead .sub,.kc.lead .big small{color:rgba(255,255,255,.75)}
+.kc.lead .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.kc.lead .chips span{background:rgba(255,255,255,.14);border-radius:999px;padding:3px 10px;font-size:.74rem;font-weight:700}
+.stk{display:flex;height:9px;border-radius:99px;overflow:hidden;background:var(--line);margin:10px 0 6px}
+.stk i{display:block;height:100%}
+.lg{display:flex;gap:4px 10px;flex-wrap:wrap;font-size:.72rem;color:var(--muted)}
+.lg span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:4px;vertical-align:0}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.sec{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 0 10px;display:flex;align-items:center;gap:8px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.bar .inp{flex:1;min-width:180px}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{height:30px;padding:0 12px;border-radius:8px;font-weight:700;font-size:.8rem;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.list{display:grid;gap:8px}
+.f{display:grid;grid-template-columns:64px 1fr auto;gap:14px;align-items:center;padding:12px 14px;border-left:4px solid var(--k)}
+.f .age{text-align:center;border-radius:12px;padding:7px 0;background:var(--paper);font-weight:800;font-size:1.25rem;line-height:1.05;font-variant-numeric:tabular-nums}
+.f .age small{display:block;font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.f .age.a2{background:rgba(192,122,18,.13);color:var(--warn)} .f .age.a3{background:rgba(192,57,43,.13);color:var(--alert)}
+.f h3{font-size:.95rem;font-weight:800;display:flex;gap:8px;align-items:center;flex-wrap:wrap;line-height:1.3}
+.f .kp{font-size:.66rem;font-weight:800;padding:2px 8px;border-radius:999px;color:#fff;background:var(--k)}
+.f .no{font-size:.78rem;color:var(--muted);font-weight:700}
+.f .meta{font-size:.78rem;color:var(--muted);margin-top:3px}
+.f .ds{font-size:.82rem;margin-top:5px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.f .ds.open{-webkit-line-clamp:unset}
+.f .go{display:inline-flex;align-items:center;gap:6px}
+.panel{padding:14px 16px;margin-bottom:14px}
+.hb{display:grid;grid-template-columns:minmax(90px,38%) 1fr 34px;gap:8px;align-items:center;font-size:.8rem;margin:6px 0;cursor:pointer}
+.hb .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.hb .b{height:14px;border-radius:5px;background:var(--paper);overflow:hidden;display:flex}
+.hb .b i{display:block;height:100%}
+.hb .n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.hb:hover .t{color:var(--brand-2)}
+.note{font-size:.78rem;color:var(--muted);padding:10px 12px;border-radius:12px;background:var(--paper);line-height:1.5;margin-top:8px}
+.left .f{opacity:.65}
+details summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted);margin:8px 0}
+.tag{font-size:.72rem;font-weight:800;color:var(--alert)}
+@media (max-width:1100px){ .hero{grid-template-columns:repeat(2,minmax(0,1fr))} .cols{grid-template-columns:1fr} }
+@media (max-width:600px){ .hero{grid-template-columns:1fr 1fr;gap:8px} .kc{padding:12px} .kc .big{font-size:1.6rem} .kc.lead{grid-column:1/-1}
+  .f{grid-template-columns:52px 1fr;gap:10px;padding:10px} .f .acts{grid-column:1/-1;justify-self:end} }
+@media print{ .top,.bar,.src button,.acts{display:none!important} .wrap{padding:0} .f,.panel{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="top"><h1>🧾 Tenant Portal Follow-up <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<input type="file" id="file" accept=".xlsx,.csv" multiple hidden>
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+const K = { bp: { c: "var(--bp)", short: "Breach" }, vr: { c: "var(--vr)", short: "Violation" }, nr: { c: "var(--nr)", short: "Request" } };
+const ST_COL = { "Sent to Tenant": "#C0392B", "In Review": "#C07A12", "Acknowledged": "#2E8B57", "Rejected": "#8C8398", "Confirmed & Resolved": "#2E8B57", "Closed": "#8C8398" };
+const stCol = s => ST_COL[s] || "#7B4BB0";
+let ctx = null, site = UP.get("site") || "", P = null, kind = "", q = "", old = false, tenant = "", status = "follow", LIM = 40;
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site && site !== "ALL" ? `?site=${site}` : ""));
+    if (!site) site = ctx.site;
+    const S = Object.entries(ctx.sites || {});
+    $("#sitePick").innerHTML = S.length > 1 ? `<select class="sel" id="siteSel" aria-label="Flagship"><option value="ALL" ${site === "ALL" ? "selected" : ""}>All flagships</option>${S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : `<span class="pill brand">${esc(ctx.siteName)}</span>`;
+    const sel = $("#siteSel"); if (sel) sel.onchange = () => { site = sel.value; history.replaceState(null, "", `?site=${site}`); load(); };
+    load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){ try { P = await api(`ops/portal/data?site=${site}`); draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; } }
+const ago = iso => { if (!iso) return ""; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+const ageCls = a => a == null ? "" : a > 30 ? "a3" : a > 14 ? "a2" : "";
+function stack(L, keyOf, order){
+  const c = {}; L.forEach(x => { const k = keyOf(x); c[k] = (c[k] || 0) + 1; });
+  const keys = [...(order || []).filter(k => c[k]), ...Object.keys(c).filter(k => !(order || []).includes(k))];
+  const n = L.length || 1;
+  return `<div class="stk">${keys.map(k => `<i style="width:${c[k] / n * 100}%;background:${stCol(k)}" title="${esc(k)}: ${c[k]}"></i>`).join("")}</div>
+    <div class="lg">${keys.map(k => `<span style="--c:${stCol(k)}">${esc(k)} <b>${c[k]}</b></span>`).join("")}</div>`;
+}
+function draw(){
+  $("#sub").textContent = P.all ? "All flagships" : P.siteNames[P.sites[0]] || "";
+  const I = P.items, of = k => I.filter(x => x.kind === k), FU = I.filter(x => x.followUp);
+  const bp = of("bp"), vr = of("vr"), nr = of("nr");
+  const oldest = FU.reduce((m, x) => Math.max(m, x.age || 0), 0);
+  const lastTxt = k => { const l = P.last[k]; return `<span class="it" style="--k:${K[k].c}"><i></i>${esc(P.kinds[k].label)}: ${l ? `<b>${esc(ago(l.at))}</b> · ${l.rows} rows` : "<b>not imported yet</b>"}</span>`; };
+  /* the list */
+  const s = q.toLowerCase();
+  const L = I.filter(x => (status === "follow" ? x.followUp : status === "review" ? /review/i.test(x.status) : true) && (!kind || x.kind === kind) && (!tenant || x.tenant === tenant)
+      && (!old || (x.age || 0) > 30) && (!s || `${x.name} ${x.tenant} ${x.type} ${x.subject} ${x.desc}`.toLowerCase().includes(s)))
+    .sort((a, b) => (b.age || 0) - (a.age || 0));
+  /* repeat tenants: breaches + violations */
+  const T = {}; [...bp, ...vr].forEach(x => { const t = T[x.tenant] = T[x.tenant] || { n: 0, open: 0, bp: 0, vr: 0 }; t.n++; t[x.kind]++; if (x.followUp) t.open++; });
+  const topT = Object.entries(T).sort((a, b) => b[1].n - a[1].n).slice(0, 10), topN = Math.max(1, ...topT.map(([, t]) => t.n));
+  const VT = {}; vr.forEach(x => { const t = VT[x.type || "Other"] = VT[x.type || "Other"] || { n: 0, open: 0 }; t.n++; if (x.followUp) t.open++; });
+  const vtN = Math.max(1, ...Object.values(VT).map(t => t.n));
+  const resolved = vr.filter(x => /resolved/i.test(x.status)).length;
+  $("#app").innerHTML = `
+    <div class="card src">${["bp", "vr", "nr"].map(lastTxt).join("")}<span class="sp"></span>
+      ${P.can.import ? `<button class="btn small ghost" id="impBtn" title="Salesforce report exports (.xlsx) — Breaches & Penalties, Violations, ABC Requests">⤓ Import reports</button>` : ""}</div>
+    <div class="hero">
+      <div class="card kc lead ${status === "follow" && !kind ? "on" : ""}" data-q="follow"><h4>Waiting on tenants</h4><div class="big">${FU.length}<small>sent to tenant</small></div>
+        <div class="sub">${FU.length ? `Oldest ${oldest} days · ${FU.filter(x => (x.age || 0) > 30).length} over 30 days` : "Nothing waiting"}</div>
+        <div class="chips"><span>${FU.filter(x => x.kind === "bp").length} breaches</span><span>${FU.filter(x => x.kind === "vr").length} violations</span><span>${FU.filter(x => x.kind === "nr").length} requests</span></div></div>
+      <div class="card kc ${kind === "bp" ? "on" : ""}" style="--k:var(--bp)" data-k="bp"><h4>Breaches &amp; Penalties</h4><div class="big">${bp.length}<small>${bp.filter(x => /review/i.test(x.status)).length} in review</small></div>
+        ${stack(bp, x => x.status, ["Sent to Tenant", "In Review", "Acknowledged", "Rejected"])}</div>
+      <div class="card kc ${kind === "vr" ? "on" : ""}" style="--k:var(--vr)" data-k="vr"><h4>Violations</h4><div class="big">${vr.filter(x => x.followUp).length}<small>open of ${vr.length}</small></div>
+        <div class="sub">${vr.length ? `${Math.round(resolved / vr.length * 100)}% confirmed &amp; resolved` : "—"}</div>${stack(vr, x => x.status, ["Sent to Tenant", "Confirmed & Resolved"])}</div>
+      <div class="card kc ${kind === "nr" ? "on" : ""}" style="--k:var(--nr)" data-k="nr"><h4>ABC Requests</h4><div class="big">${nr.filter(x => x.followUp).length}<small>open of ${nr.length}</small></div>
+        ${nr.length ? stack(nr, x => x.status, ["Sent to Tenant", "Closed"]) : `<div class="sub">Import the Normal Requests report to see them here.</div>`}</div>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="bar">
+          <span class="seg" id="stSeg"><button data-s="follow" class="${status === "follow" ? "on" : ""}">Sent to tenant</button><button data-s="review" class="${status === "review" ? "on" : ""}">In review</button><button data-s="all" class="${status === "all" ? "on" : ""}">All</button></span>
+          <span class="seg" id="kSeg"><button data-k="" class="${!kind ? "on" : ""}">All</button><button data-k="bp" class="${kind === "bp" ? "on" : ""}">Breaches</button><button data-k="vr" class="${kind === "vr" ? "on" : ""}">Violations</button><button data-k="nr" class="${kind === "nr" ? "on" : ""}">Requests</button></span>
+          <label class="pill ${old ? "alert" : ""}" style="cursor:pointer"><input type="checkbox" id="old" ${old ? "checked" : ""} style="margin:0 2px 0 0"> Over 30 days</label>
+          <input class="inp" id="q" placeholder="Search tenant, number or text…" value="${esc(q)}">
+        </div>
+        ${tenant ? `<div class="bar"><span class="pill brand">Tenant: ${esc(tenant)} <button id="clrT" style="font-weight:800;margin-left:4px">×</button></span></div>` : ""}
+        <div class="sec">${status === "follow" ? "Follow-up — sent to tenant, oldest first" : status === "review" ? "In review" : "All items"} · ${L.length}</div>
+        <div class="list">${L.slice(0, LIM).map(row).join("") || `<div class="card empty" style="padding:22px">${I.length ? "Nothing matches." : "No portal report imported yet — use “Import reports” or email them to the hub."}</div>`}</div>
+        ${L.length > LIM ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="more">Show ${Math.min(40, L.length - LIM)} more · ${L.length - LIM} left</button></div>` : ""}
+        ${P.left.length ? `<details class="left"><summary>Left the report in the last 14 days · ${P.left.length}</summary><div class="list">${P.left.map(x => `<div class="card f" style="--k:${K[x.kind].c}"><div class="age">✓<small>left</small></div><div><h3>${esc(x.tenant)} <span class="no">${esc(x.name)}</span></h3><div class="meta">Last status ${esc(x.status)} · ${esc(ago(x.at))}${P.all ? " · " + esc(P.siteNames[x.site] || x.site) : ""}</div></div></div>`).join("")}</div></details>` : ""}
+      </div>
+      <div>
+        <div class="card panel"><div class="sec">Repeat tenants · breaches &amp; violations</div>
+          ${topT.map(([t, v]) => `<div class="hb" data-t="${esc(t)}" title="${v.bp} breaches · ${v.vr} violations · ${v.open} open"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.bp / topN * 100}%;background:var(--bp)"></i><i style="width:${v.vr / topN * 100}%;background:var(--vr)"></i></span><span class="n">${v.n}</span></div>`).join("") || `<div class="sub muted">No data yet.</div>`}
+          <div class="lg" style="margin-top:8px"><span style="--c:var(--bp)">Breaches &amp; penalties</span><span style="--c:var(--vr)">Violations</span></div></div>
+        <div class="card panel"><div class="sec">Violations by type</div>
+          ${Object.entries(VT).sort((a, b) => b[1].n - a[1].n).map(([t, v]) => `<div class="hb" style="cursor:default"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.open / vtN * 100}%;background:#C0392B"></i><i style="width:${(v.n - v.open) / vtN * 100}%;background:#2E8B57"></i></span><span class="n">${v.n}</span></div>`).join("") || `<div class="sub muted">No data yet.</div>`}
+          <div class="lg" style="margin-top:8px"><span style="--c:#C0392B">Sent to tenant</span><span style="--c:#2E8B57">Confirmed &amp; resolved</span></div></div>
+        ${!P.linked && I.length ? `<div class="note">🔗 Until IT adds the record link (or Record ID) column to the reports, “Open in portal” opens the portal search for the number. Once it is in the report, the button opens the record directly.</div>` : ""}
+        <div class="note">📧 Reports by email: <b>abcoperationshub+portal-…@gmail.com</b> (any flagship — the Branch column decides). Items that drop out of the next report move to “Left the report”.</div>
+      </div>
+    </div>`;
+  wire();
+}
+function row(x){
+  const k = K[x.kind];
+  return `<div class="card f" style="--k:${k.c}">
+    <div class="age ${x.followUp ? ageCls(x.age) : ""}" title="${x.created ? "Days since it was created" : "No date in the report — days since it first came into the hub"}">${x.age == null ? "—" : x.age}<small>${x.created ? "days" : "in hub"}</small></div>
+    <div><h3><span class="kp">${k.short}</span>${esc(x.tenant)} <span class="no">${esc(x.name)}</span>${x.amount ? ` <span class="pill warn">$${x.amount}</span>` : ""}</h3>
+      <div class="meta">${esc([x.type || x.subject, x.status, x.created ? "created " + D.fmt(x.created, { year: "numeric" }) : x.firstSeen ? "in the hub since " + D.fmt(x.firstSeen.slice(0, 10), { year: "numeric" }) : "", P.all ? P.siteNames[x.site] : ""].filter(Boolean).join(" · "))}</div>
+      ${x.desc || (x.subject && x.type) ? `<div class="ds">${esc(x.desc || x.subject)}</div>` : ""}</div>
+    <div class="acts"><a class="btn small ${x.followUp ? "" : "ghost"} go" href="${esc(x.url)}" target="_blank" rel="noopener" title="${x.direct ? "Open this record in the portal" : "Search the portal for " + esc(x.name)}">Open in portal ↗</a></div></div>`;
+}
+function wire(){
+  $("#app").onclick = e => {
+    if (e.target.id === "more"){ LIM += 40; return draw(); }
+    if (e.target.closest(".kc,#stSeg button,#kSeg button,.hb[data-t]") || e.target.id === "clrT") LIM = 40;   // a new filter starts from the top
+    const c = e.target.closest(".kc"); if (c){ if (c.dataset.q){ status = "follow"; kind = ""; } else { kind = kind === c.dataset.k ? "" : c.dataset.k; status = "all"; } return draw(); }
+    const sb = e.target.closest("#stSeg button"); if (sb){ status = sb.dataset.s; return draw(); }
+    const kb = e.target.closest("#kSeg button"); if (kb){ kind = kb.dataset.k; return draw(); }
+    const t = e.target.closest(".hb[data-t]"); if (t){ tenant = t.dataset.t; status = "all"; return draw(); }
+    if (e.target.id === "clrT"){ tenant = ""; return draw(); }
+    const d = e.target.closest(".ds"); if (d) return d.classList.toggle("open");
+    if (e.target.id === "impBtn") return $("#file").click();
+  };
+  const o = $("#old"); if (o) o.onchange = () => { old = o.checked; LIM = 40; draw(); };
+  const qi = $("#q"); if (qi) qi.oninput = () => { q = qi.value; const pos = qi.selectionStart; draw(); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); };
+}
+$("#file").onchange = async e => {
+  const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
+  try {
+    const files = await Promise.all(fs.map(f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res({ name: f.name, data: r.result }); r.onerror = () => rej(new Error("Could not read " + f.name)); r.readAsDataURL(f); })));
+    const r = await api("ops/portal/import", { site: site === "ALL" ? "" : site, files });
+    toast(r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.gone} left`).join(" | "));
+    load();
+  } catch (er){ toast(er.message, true); }
+};
+boot();
+</script>
+</body>
+</html>

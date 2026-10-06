@@ -104,7 +104,7 @@ function clean(d) {
   for (const k of TABLE_KEYS) o[k] = Array.isArray(d[k]) ? d[k].slice(0, 400).map(r => {
     const x = {}; for (const [kk, vv] of Object.entries(r || {})) if (/^[a-z0-9]{1,12}$/i.test(kk) && (!ROW_KEEP[k] || ROW_KEEP[k].includes(kk))) x[kk] = typeof vv === "number" ? vv : String(vv ?? "").slice(0, 300); return x;
   }) : [];
-  for (const k of ["unitNotes", "fitout"]) o[k] = d[k] && typeof d[k] === "object" && !Array.isArray(d[k]) ? JSON.parse(JSON.stringify(d[k]).slice(0, 60000)) : {};
+  for (const k of ["unitNotes", "fitout", "hideMoves"]) o[k] = d[k] && typeof d[k] === "object" && !Array.isArray(d[k]) ? JSON.parse(JSON.stringify(d[k]).slice(0, 60000)) : {};
   return o;
 }
 /* a month with nothing saved starts from the month before: QC current → previous, commentary cleared, tables kept */
@@ -112,7 +112,7 @@ function rollForward(prev, period) {
   const d = JSON.parse(JSON.stringify(prev));
   d.qcPrevLabel = d.qcCurLabel || ""; d.qcPrev = d.qcCur || ""; d.qcCurLabel = label(period); d.qcCur = "";
   for (const k of ["highlights", "occNote", "leaseNote", "capexNote", "qcNote"]) d[k] = "";
-  if (period.endsWith("-01")) { d.opened = []; d.closed = []; d.footfall = []; }   // a new year starts clean
+  if (period.endsWith("-01")) { d.opened = []; d.closed = []; d.footfall = []; d.hideMoves = {}; }   // a new year starts clean
   return d;
 }
 

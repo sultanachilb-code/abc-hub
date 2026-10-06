@@ -20,7 +20,9 @@ import { evacSchema, evacRoute } from "./modules/evac.js";   // Tenant Evacuatio
 import { projectsSchema, projectsRoute, projectsRun } from "./modules/projects.js";   // Projects feature — see docs/FEATURE-projects.md
 import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
-import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";   // Contracts near ending — see docs/FEATURE-email-inbox.md
+import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
+import { portalSchema, portalRoute } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
+import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
@@ -265,6 +267,7 @@ async function ensureSchema(env) {
   await projectsSchema(env);   // Projects feature
   await addinSchema(env);   // Outlook add-in feature
   await contractsSchema(env);   // Contracts near ending
+  await portalSchema(env);   // Tenant portal follow-up
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -378,6 +381,7 @@ export default {
       await schedMailRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent, SITES }).catch(e => console.error("schedmail", e && e.message));   // Weekly schedule email reminders
       await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
       await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
+      await storageRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent }).catch(e => console.error("storage", e && e.message));   // Cloudflare storage meter
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -489,6 +493,7 @@ async function route(request, env, ctx, url) {
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     if (a === "mail-quota" && method === "GET") return ok(await mailQuota(env));   // Mail quota feature
+    if (a === "storage" && method === "GET") return ok(await storageStatus(env, url.searchParams.get("fresh") === "1"));   // Cloudflare storage meter (R2 / D1)
     if (a === "schedcc") return ok(await schedCcAdmin(env, method, body, SITES));   // Weekly schedule email: Cc per flagship
     if (a === "history" && method === "GET") return ok(await historyList(env, url));   // Change history feature
     /* Automation feature: backup download, backup status, End of Day email test */
@@ -1459,6 +1464,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover });   // Loading Gate feature
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
@@ -2027,7 +2033,7 @@ function mergeHandover(base, cur, mine) {
 function cleanHandover(d) {
   const item = x => ({ id: hoId(x.id), text: s(x.text, 500), cctv: !!x.cctv, done: !!x.done, date: isDay(x.date) ? x.date : "",
     src: x.src === "portal" ? "portal" : "", req: /^REQ-?\d+$/i.test(x.req || "") ? String(x.req).toUpperCase() : "",
-    ...(x.manual ? { manual: true } : {}),
+    ...(x.manual ? { manual: true } : {}), ...(isDay(x.until) ? { until: x.until } : {}),
     ...(x.cols && typeof x.cols === "object" ? { cols: { tenant: s(x.cols.tenant, 160), req: s(x.cols.req, 40), task: s(x.cols.task, 300), contractor: s(x.cols.contractor, 160), time: s(x.cols.time, 40), m: s(x.cols.m, 60) } } : {}) });   // Portal Handover table columns (import) and the team's own cells (m)   // src: portal = imported from Tenant Connect (black), else typed by the team (red)
   const out = blankHandover();
   for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) out[k] = withIds((Array.isArray(d[k]) ? d[k] : []).slice(0, 80).map(item).filter(x => x.text.trim()), x => k + "|" + x.text.replace(GATE_MARK, ""));
@@ -2048,9 +2054,13 @@ function carryHandover(prev, day) {
   const next = (() => { const t = new Date(day + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); })();
   const due = d.upcoming.filter(x => x.date && x.date <= day);
   const dueTomorrow = d.upcoming.filter(x => x.date === next);   // "Coming up" dated tomorrow → Tomorrow
+  /* Portal Handover lines (Tenant Connect requests) stay in Today only while their permit runs: yesterday's finished
+     requests leave at midnight even if nobody ticked Done. Typed lines (Operations Handover) carry on until Done. */
+  const lastDay = x => x.until || (String(x.text || "").match(/\b\d{2}\/\d{2}\/\d{4}\b/g) || []).map(t => `${t.slice(6)}-${t.slice(3, 5)}-${t.slice(0, 2)}`).sort().pop() || "";
+  const stays = x => !x.done && (x.src !== "portal" || x.manual || lastDay(x) >= day);   // rows typed by hand have no permit dates: kept until Done
   return {
     ongoing: d.ongoing.filter(x => !x.done).map(x => ({ ...x })),
-    today: [...d.today.filter(x => !x.done), ...d.tomorrow, ...due].map(x => ({ ...x, done: false, date: "" })),
+    today: [...d.today.filter(stays), ...d.tomorrow, ...due].map(x => ({ ...x, done: false, date: "" })),
     tomorrow: dueTomorrow.map(x => ({ ...x, done: false })),
     upcoming: d.upcoming.filter(x => !x.date || x.date > next),
     events: d.events.filter(e => !e.to || e.to >= day),

@@ -635,6 +635,16 @@ footer{margin-top:36px;color:var(--muted);font-size:.8rem}
 .mq .bar{flex:1 1 160px;max-width:260px;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
 .mq .bar i{display:block;height:100%;border-radius:99px;background:var(--mq);transition:width .5s}
 .mq .warn{flex-basis:100%;font-size:.82rem;color:var(--mq);font-weight:600}
+#admStore{padding-top:10px}
+.mq .meters{display:flex;gap:18px;flex-wrap:wrap;flex:3 1 420px}
+.mq .mt{flex:1 1 140px;min-width:130px}
+.mq .mt span{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:var(--muted);font-weight:700;margin-bottom:4px}
+.mq .mt span b{color:var(--text);font-size:.78rem}
+.mq .mt .bar{max-width:none}
+.st-tbl{width:100%;border-collapse:collapse;font-size:.88rem}
+.st-tbl th{text-align:left;font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+.st-tbl td{padding:8px;border-bottom:1px solid var(--line)}.st-tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+.st-tbl .sb{height:6px;border-radius:99px;background:var(--line);overflow:hidden;min-width:80px}.st-tbl .sb i{display:block;height:100%;background:var(--brand-2)}
 .adm-body{max-width:1100px;margin:0 auto;padding:22px 20px 60px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
 .panel h3{font-size:1rem;font-weight:800;margin-bottom:14px}
@@ -792,7 +802,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <div id="list"></div>
       <footer id="foot"></footer>
     </main>
-    <aside class="rail" id="rail" aria-label="Enterprise Systems">
+    <aside class="rail" id="rail" aria-label="Recently opened">
       <svg class="arc" id="arc">
         <defs>
           <linearGradient id="arcGrad" x1="0" y1="0" x2="0" y2="1">
@@ -807,7 +817,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
         <path class="line" id="arcLine"/>
         <circle class="comet" r="3.5"><animateMotion id="comet" dur="9s" repeatCount="indefinite" path="M0 0"/></circle>
       </svg>
-      <div class="rail-title">Enterprise Systems</div>
+      <div class="rail-title">Recent</div>
       <div id="orbs"></div>
     </aside>
   </div>
@@ -845,9 +855,11 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <button data-t="backup">Backup</button>
       <button data-t="covers">Flagship covers</button>
       <button data-t="history">Change history</button>
+      <button data-t="storage">Storage</button>
     </div>
   </div>
   <div class="adm-quota" id="admQuota"></div>
+  <div class="adm-quota" id="admStore"></div>
   <div class="adm-body" id="admBody"></div>
 </div>
 
@@ -2186,7 +2198,6 @@ function renderHome(){
   let foldersDone = false;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
-    if (!q && g === RAIL_GROUP && recentList().length) continue;   // shown on the curved rail instead (search still lists them)
     if (!q && g === DAY_GROUP && showD2D()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
     if (!q && FOLDER_GROUPS.includes(g)){
       if (foldersDone) continue; foldersDone = true;
@@ -2218,10 +2229,9 @@ let REC = [], off = 0, target = 0, G = null, ptr = null, anim = 0, dragging = nu
 const horizontal = () => matchMedia("(max-width:900px)").matches;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-/* The curved rail on the home page shows the Enterprise Systems with their logos (it used to show recently opened systems) */
-const RAIL_GROUP = "Enterprise Systems";
 function recentList(){
-  return APPS.filter(a => a.group === RAIL_GROUP && !a.hidden && (a.sites || isSet(a.url))).map(a => ({ k: keyOf(a.id), app: a, site: "" }));
+  return store.get("hub.recent", []).map(k => ({ k, ...parseKey(k) }))
+    .filter(r => r.app && (r.site ? isSet(r.app.sites?.[r.site]) : isSet(r.app.url))).slice(0, 14);
 }
 function geometry(){
   const w = rail.clientWidth, h = rail.clientHeight, hz = horizontal();
@@ -2253,7 +2263,7 @@ function renderRail(){
   G = geometry();
   drawArc();
   if (!REC.length){
-    orbsEl.innerHTML = `<p class="rail-empty">No enterprise systems set up yet.</p>`;
+    orbsEl.innerHTML = `<p class="rail-empty">Systems you open will travel along this line.</p>`;
     return;
   }
   orbsEl.innerHTML = REC.map((r, i) =>
@@ -2471,10 +2481,10 @@ const siteOptions = (sel, allLabel) => (allLabel ? `<option value="ALL">${esc(al
 async function renderAdmin(){
   if (ME.user.role !== "ADMIN") return goHome();
   show("admin");
-  mailQuotaBar();
+  mailQuotaBar(); storageBar();
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
-  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : admTab === "history" ? await adminHistory(body) : await adminAnnouncements(body); }
+  try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : admTab === "history" ? await adminHistory(body) : admTab === "storage" ? await adminStorage(body) : await adminAnnouncements(body); }
   catch (e){ body.innerHTML = `<div class="panel"><div class="msg err">${esc(e.message)}</div></div>`; }
 }
 /* ----- Weekly schedule email: who receives the Sunday schedule (To = Mall Manager, Cc = this list) ----- */
@@ -2687,6 +2697,46 @@ async function mailQuotaBar(force){
       ${n != null && n < 20 ? `<div class="warn">Almost used up — hub emails may fail until the quota resets (about 24 hours after the first sends). Every address in To/Cc counts; send to distribution lists where you can.</div>` : ""}
     </div>`;
   $("#mqRe").onclick = () => mailQuotaBar(true);
+}
+/* Cloudflare storage meter — R2 (all buckets) and the hub database (D1) against the free allowance (see docs/FEATURE-storage-meter.md) */
+const fmtBytes = n => n == null ? "—" : n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(2) + " GB" : n >= 1024 ** 2 ? (n / 1024 ** 2).toFixed(1) + " MB" : Math.round(n / 1024) + " KB";
+const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(2) + " M" : n >= 1e3 ? (n / 1e3).toFixed(1) + " K" : String(n);
+const pctTone = v => v == null ? "var(--muted)" : v >= 95 ? "var(--alert)" : v >= 80 ? "var(--warn)" : "var(--ok)";
+let stAt = 0;
+async function storageBar(force){
+  const el = $("#admStore");
+  if (!force && Date.now() - stAt < 60000 && el.innerHTML) return;
+  stAt = Date.now();
+  if (!el.innerHTML) el.innerHTML = `<div class="mq" style="--mq:var(--muted)"><div class="tx"><small>Checking Cloudflare storage…</small></div></div>`;
+  let d; try { d = await api("admin/storage" + (force ? "?fresh=1" : "")); } catch (e){ el.innerHTML = `<div class="mq" style="--mq:var(--muted)"><div class="tx"><small>Storage: ${esc(e.message)}</small></div></div>`; return; }
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>';
+  const worst = Math.max(...Object.values(d.pct).filter(v => v != null), 0);
+  const m = (label, used, lim, pct, f) => `<div class="mt" style="--mq:${pctTone(pct)}"><span>${label}<b>${f(used)} / ${f(lim)}</b></span><div class="bar" title="${pct == null ? "unknown" : pct + "%"}"><i style="width:${Math.max(2, Math.min(100, pct || 0))}%"></i></div></div>`;
+  const r2 = d.r2 || {}, L = d.limits;
+  el.innerHTML = `<div class="mq" style="--mq:${pctTone(worst)}">
+      <div class="ic">${icon}</div>
+      <div class="tx" style="flex:0 1 210px"><b>Cloudflare storage</b><small>${!r2.setup ? "R2: add CF_ACCOUNT_ID and the CF_API_TOKEN secret to read it" : r2.error ? "R2: " + esc(r2.error) : `Free allowance · ${worst}% at most`} · ${new Date(d.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" })}</small></div>
+      <div class="meters">${r2.setup && !r2.error ? m("R2 stored", r2.bytes, L.r2Bytes, d.pct.r2, fmtBytes) + m("R2 writes (A)", r2.classA, L.classA, d.pct.classA, fmtN) + m("R2 reads (B)", r2.classB, L.classB, d.pct.classB, fmtN) : ""}${m("Hub database", d.d1.bytes, L.d1Bytes, d.pct.d1, fmtBytes)}</div>
+      <button class="btn small ghost" id="stRe">Refresh</button>
+      ${worst >= 80 ? `<div class="warn">Close to the free allowance — open the Storage tab to see which bucket uses the space. Above 100% Cloudflare starts charging.</div>` : ""}
+    </div>`;
+  $("#stRe").onclick = () => storageBar(true);
+  return d;
+}
+async function adminStorage(body){
+  const d = await api("admin/storage"), r2 = d.r2 || {}, L = d.limits;
+  const B = r2.buckets || [], top = Math.max(1, ...B.map(b => b.bytes));
+  body.innerHTML = `<div class="panel"><h3>R2 buckets</h3>
+      ${!r2.setup ? `<p class="brief-empty" style="font-size:.9rem;line-height:1.6">To read R2 the hub needs a read-only Cloudflare token:<br>
+        1. Cloudflare → <b>My Profile → API Tokens → Create token</b> → Custom token → permission <b>Account · Account Analytics · Read</b> → your account.<br>
+        2. Workers → <b>operations-hub</b> → Settings → Variables and Secrets: add the secret <b>CF_API_TOKEN</b> (the token) and the variable <b>CF_ACCOUNT_ID</b> (Account home → Account ID).</p>`
+      : r2.error ? `<p style="color:var(--alert)">${esc(r2.error)}</p>`
+      : `<p class="brief-empty" style="font-size:.86rem;margin-bottom:10px">${fmtBytes(r2.bytes)} stored of ${fmtBytes(L.r2Bytes)} free · ${fmtN(r2.objects)} files · operations this month (${esc(r2.month)}): ${fmtN(r2.classA)} writes of ${fmtN(L.classA)}, ${fmtN(r2.classB)} reads of ${fmtN(L.classB)}</p>
+        <table class="st-tbl"><tr><th>Bucket</th><th style="width:30%">Share</th><th class="n">Stored</th><th class="n">Files</th><th class="n">Writes (A)</th><th class="n">Reads (B)</th></tr>
+        ${B.map(b => `<tr><td><b>${esc(b.name)}</b></td><td><div class="sb"><i style="width:${Math.max(1, b.bytes / top * 100)}%"></i></div></td><td class="n">${fmtBytes(b.bytes)}</td><td class="n">${fmtN(b.objects)}</td><td class="n">${fmtN(b.classA)}</td><td class="n">${fmtN(b.classB)}</td></tr>`).join("") || `<tr><td colspan="6" class="brief-empty">No buckets found.</td></tr>`}</table>`}</div>
+    <div class="panel"><h3>Hub database (D1)</h3><p style="font-size:.9rem">${fmtBytes(d.d1.bytes)} of ${fmtBytes(L.d1Bytes)} free (${d.pct.d1 == null ? "—" : d.pct.d1 + "%"}). Uploaded work forms, mall plans and photos kept by the hub count here.</p></div>
+    <div class="panel"><p class="brief-empty" style="font-size:.84rem;line-height:1.55">The administrators get a notification when anything passes 80% and again at 95% of the free allowance (checked daily at 09:00).
+      Limits used: R2 ${fmtBytes(L.r2Bytes)} stored, ${fmtN(L.classA)} writes and ${fmtN(L.classB)} reads per month; D1 ${fmtBytes(L.d1Bytes)}. If your Cloudflare plan changes, set R2_FREE_GB / R2_FREE_CLASS_A / R2_FREE_CLASS_B / D1_FREE_GB.</p></div>`;
 }
 /* Backup — Automation feature (weekly email every Sunday 03:00, download any time) */
 async function adminBackup(body){

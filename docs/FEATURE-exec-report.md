@@ -44,3 +44,6 @@ new tenants, low performers, plus sales vs last year / budget / 2018, sales by c
 Everything can be edited, then Export PDF. Closing or refreshing the page removes the sales. The server strips every sales field on save and on read,
 and a one-time clean-up erased sales saved before (meta `exec:salesPurged`). Footfall stays saved as before.
 Workbook layout expected: sheet "Sales Data Conso" (one row per lease, months by year, LFL flags, space), "Sales Total Summary" (Period YTD), "Footfall Table" (cinema, parking).
+
+## Opening / closing YTD — remove a name (Oct 2026)
+In Edit data → Leasing, the **Opening / closing YTD** panel lists every opened and closed name: the ones from the GLA history plus the rows added by hand. Press **✕ Remove** to take a name out of the report (for example a deleted unit) and **↺ Restore** to bring it back. The choice is saved with the report (`hideMoves`), carries into the following months, and resets in January.
