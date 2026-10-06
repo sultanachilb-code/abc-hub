@@ -49,6 +49,7 @@ window.HUB = {
     "compliance":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "fitout":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -274,6 +275,8 @@ window.HUB = {
       url: "https://abc-snaglist.sultanalachi-work.workers.dev",
       sso: true
     },
+    /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
+    { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
     {
       id: "restroom",
       logo: "/logos/restroom.png",   /* replace the file in /logos to change the picture */
