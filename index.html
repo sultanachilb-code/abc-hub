@@ -1079,10 +1079,19 @@ function authScreen(mode, errText){
 /* =====================================================================
    HUB
    ===================================================================== */
+function accessKey(u){
+  const r = u.role, p = u.position;
+  if (["ADVISOR", "DIRECTOR", "CDSO"].includes(r)) return "LEAD";
+  if (r === "MANAGER") return ["OM", "DOM"].includes(p) ? "OM" : "MM";
+  if (r === "SUPERVISOR") return ["SMS", "MS", "MO", "WH"].includes(p) ? p : "MO";
+  if (r === "SECURITY") return "SEC";
+  return r;
+}
 function startHub(){
   const role = ME.user.role;
-  const fullAccess = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(role);   /* leadership sees every system */
-  APPS = ALL_APPS.filter(a => !a.roles || fullAccess || a.roles.includes(role));
+  /* who sees each tile: the ACCESS list in apps.js, by position (Admin sees everything) */
+  const key = accessKey(ME.user), ACC = H.ACCESS || {};
+  APPS = ALL_APPS.filter(a => role === "ADMIN" || !ACC[a.id] || ACC[a.id].includes(key));
   $("#hubTitle").textContent = H.title;
   const hr = new Date().getHours();
   const first = ME.user.name.split(" ")[0];
@@ -1821,7 +1830,7 @@ async function pushOff(){
 /* ---------- operations tools: cascade from the header button ---------- */
 const TOOLS_GROUP = "Operations Tools";
 let TOOL_SUM = {};
-const toolApps = () => [...APPS.filter(a => a.group === "Day to Day Operations" && !a.hidden), ...APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden)];   // the header menu keeps the Day to Day tools too
+const toolApps = () => [...APPS.filter(a => a.group === "Day to Day Operations" && !a.hidden && a.tools !== false), ...APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden)];   // the header menu keeps the Day to Day tools too, except those marked tools: false
 function buildToolsMenu(){
   const tools = toolApps();
   $("#tfab").classList.toggle("hidden", !tools.length);
@@ -3113,7 +3122,7 @@ $("#installBtn").onclick = async () => {
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 
 /* a small bridge for add-on blocks below this script (Emergency Alert feature) */
-window.HUBX = { api, me: () => ME, open: id => { const a = byId(id); if (a) launch(a); }, onHome: () => !/^#\/app\//.test(location.hash) };
+window.HUBX = { api, me: () => ME, can: id => !!byId(id), open: id => { const a = byId(id); if (a) launch(a); }, onHome: () => !/^#\/app\//.test(location.hash) };
 
 boot();
 })();
@@ -3211,7 +3220,7 @@ boot();
   (async function fabInit(tries){
     if (!window.HUBX || !HUBX.me()){ if (tries < 240) setTimeout(() => fabInit(tries + 1), 500); return; }
     const u = HUBX.me().user || {};
-    canSend = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"].includes(u.role);      /* show at once for these; the server confirms (and adds the SMS) */
+    canSend = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"].includes(u.role) && (!HUBX.can || HUBX.can("emergency"));   // and the Emergency Alert tile is open to this position      /* show at once for these; the server confirms (and adds the SMS) */
     fabPaint();
     try { canSend = !!(await HUBX.api("ops/emergency/meta")).can.send; } catch {}
     fabPaint();
