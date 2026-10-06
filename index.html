@@ -1229,6 +1229,7 @@ function settingsDialog(){ return profileSheet("alerts"); }
 /* ---------- Profile feature: LinkedIn-style profile — flagship cover, picture, account, password, appearance, brief, alerts ---------- */
 const CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 async function profileSheet(focus){
+  api("ops/digest/preview").then(r => { const set = n => { const g = $("#segDigest"); if (g) g.querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === (r.on ? "1" : "0"))); else if (n < 20) setTimeout(() => set(n + 1), 150); }; set(0); }).catch(() => {});
   let P0 = null; try { P0 = await api("profile"); } catch { P0 = { ...ME.user, access: (ME.user.sites || []).map(c => ({ code: c, name: SITES[c] })) }; }
   const theme = store.get("hub.theme", "light"), collapsed = store.get("hub.briefCollapsed", false);
   const home = ME.user.site;
@@ -1262,6 +1263,9 @@ async function profileSheet(focus){
       <div class="seg" id="segBrief" style="grid-template-columns:1fr 1fr">
         <button data-v="0" class="${collapsed ? "" : "on"}">Show everything</button>
         <button data-v="1" class="${collapsed ? "on" : ""}">Attention only</button></div>
+      <div class="set-label">Weekly digest</div>
+      <p class="pf-note" style="margin:0 0 8px">Every Monday morning, an email with only your items: your MOM actions, malfunctions you logged, your training${["ADMIN","ADVISOR","DIRECTOR","CDSO","MANAGER"].includes(ME.user.role) || ME.user.position === "SMS" ? " and your flagship's follow-ups" : ""}.</p>
+      <div class="seg" id="segDigest" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:18px"><button data-v="1">On</button><button data-v="0">Off</button><button data-v="p">Preview</button></div>
       <div class="set-label" id="pfAlerts">Alerts on this device</div>
       <div id="pushBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Recently opened</div>
@@ -1277,6 +1281,12 @@ async function profileSheet(focus){
     if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
     const t = e.target.closest("#segTheme button");
     if (t){ store.set("hub.theme", t.dataset.v); applyTheme(t.dataset.v); $("#segTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b === t)); }
+    const dg = e.target.closest("#segDigest button");   // Weekly digest per person
+    if (dg){
+      if (dg.dataset.v === "p"){ try { const r = await api("ops/digest/preview"); const w = window.open("", "digest"); if (w){ w.document.write(r.count ? r.html : "<p style='font-family:sans-serif;padding:20px'>Nothing for you this week — no email would be sent.</p>"); w.document.close(); } } catch (er){ msg(er.message); } return; }
+      try { const r = await api("ops/digest/set", { on: dg.dataset.v === "1" }); $("#segDigest").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === (r.on ? "1" : "0"))); } catch (er){ msg(er.message); }
+      return;
+    }
     const b = e.target.closest("#segBrief button");
     if (b){ store.set("hub.briefCollapsed", b.dataset.v === "1"); $("#segBrief").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); renderBrief(false); }
     if (e.target.id === "setClear"){ store.set("hub.recent", []); renderRail(); e.target.textContent = "Cleared ✓"; }

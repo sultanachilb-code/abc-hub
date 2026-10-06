@@ -27,6 +27,7 @@ import { findRoute } from "./modules/find.js";   // Hub search across content �
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
+import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
 import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
@@ -242,6 +243,8 @@ const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
 /* Morning email */
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
 const MAIL_HOUR = 8;   // Beirut time
+/* Weekly digest per person (modules/digest.js) */
+const DIGEST_DEPS = { today: () => beirutToday(), sitesOf: u => sitesOf(u), staff: (env, s) => siteStaff(env, s), posKey: u => accessKey(u), isFull: u => isFull(u), siteName: s => siteName(s), relay: (env, m) => relay(env, m), hubUrl: HUB_URL };
 const SYSTEM_NAMES = { snaglist: "Snaglist Manager", incidents: "Incident Report System", restroom: "Restroom Inspections" };
 
 /* ---------- helpers ---------- */
@@ -334,6 +337,7 @@ async function ensureSchema(env) {
   await malfunctionsSchema(env);   // Malfunction Records
   await cleaningSchema(env);   // Cleaning headcount control
   await trainingSchema(env);   // Training tracker
+  await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -448,6 +452,7 @@ export default {
       await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
       await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
       await storageRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent }).catch(e => console.error("storage", e && e.message));   // Cloudflare storage meter
+      await digestRun(env, DIGEST_DEPS).catch(e => console.error("digest", e && e.message));   // Weekly digest per person
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -1539,6 +1544,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p === "digest/preview") { const D = await digestFor(env, me, DIGEST_DEPS); return { count: D.count, on: me.weekly_digest !== 0, html: digestHtml(me, D, HUB_URL) }; }   // Weekly digest per person
+  if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
   if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
