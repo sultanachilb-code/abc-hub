@@ -96,8 +96,14 @@ export async function mailInbox(env, request, body, d) {
   if (!kind) throw err("Unknown kind");
   const from = clip(body.from, 160).toLowerCase();
   let u = await userBy(env, from);
-  /* portal reports may also come straight from IT or a Salesforce report subscription: senders listed in PORTAL_SENDERS */
-  if (!u && kind === "portal" && String(env.PORTAL_SENDERS || "").toLowerCase().split(/[\s,;]+/).filter(Boolean).includes(from)) u = { full_name: from, email: from };
+  /* the report emails (contracts near ending, portal reports) usually come from IT or a Salesforce subscription, not a hub user:
+     accepted from any company address (REPORT_DOMAINS, default abc.com.lb) or from a sender listed in REPORT_SENDERS / PORTAL_SENDERS.
+     The secret tag in the address already keeps strangers out. */
+  if (!u && (kind === "contracts" || kind === "portal")) {
+    const list = `${env.REPORT_SENDERS || ""},${env.PORTAL_SENDERS || ""}`.toLowerCase().split(/[\s,;]+/).filter(Boolean);
+    const doms = String(env.REPORT_DOMAINS || "abc.com.lb").toLowerCase().split(/[\s,;]+/).filter(Boolean);
+    if (list.includes(from) || doms.some(dm => from.endsWith("@" + dm) || from.endsWith("." + dm))) u = { full_name: from, email: from };
+  }
   if (!u) return { accepted: false, reason: `${from || "The sender"} is not a hub user — ignored` };
   const msgId = clip(body.msgId, 200);
   if (msgId) {

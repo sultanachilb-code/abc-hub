@@ -87,7 +87,7 @@ export async function readSheet(name, b64) {
   const bin = Uint8Array.from(atob(String(b64).replace(/^data:[^,]*,/, "").replace(/\s+/g, "")), c => c.charCodeAt(0));
   if (/\.csv$/i.test(name) || /\.txt$/i.test(name)) return readCsv(new TextDecoder().decode(bin));
   if (bin[0] === 0x50 && bin[1] === 0x4b) return readXlsx(bin);
-  if (/<table/i.test(new TextDecoder().decode(bin.subarray(0, 4000)))) {   // "Excel" exports that are really HTML tables (Salesforce)
+  if (/\.html?$/i.test(name) || /<table/i.test(new TextDecoder().decode(bin.subarray(0, 4000)))) {   // also the report inside an email body   // "Excel" exports that are really HTML tables (Salesforce)
     const html = new TextDecoder().decode(bin);
     return [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(r => [...r[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(c => ent(c[1].replace(/<[^>]+>/g, "")).trim()));
   }

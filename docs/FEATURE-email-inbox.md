@@ -23,3 +23,7 @@ Rules: the sender must be a hub user — for MOM / calendar a Manager or Supervi
 Outlook rule for the daily report: *Rules → New rule → From* (the Salesforce sender) *and subject contains* … → *Forward to* the contracts address. Use **Forward**, not Redirect, so the Excel stays attached.
 
 Files: `modules/inbox.js` · `modules/contracts.js` · `modules/sheetread.js` (Excel reader) · `tools/contracts.html` · table `contracts_ending` · `POST /api/inbox/mail` (INBOX_KEY).
+
+## Report emails from IT / Salesforce (Oct 2026)
+- **Senders:** contracts near ending (`+contracts-`) and portal reports (`+portal-`) are accepted from any company address (`REPORT_DOMAINS`, default `abc.com.lb`), from a hub user, or from a sender listed in `REPORT_SENDERS` (comma-separated). This covers forwards from IT and Salesforce report subscriptions. MOM, calendar and works forms still need a hub user.
+- **Report in the email body:** when no Excel is attached but the email contains the report as a table, the Gmail script sends the email body and the hub reads the table.
