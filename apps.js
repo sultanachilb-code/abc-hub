@@ -49,6 +49,7 @@ window.HUB = {
     "compliance":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "fitout":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "sales":           ["MM",  "OM",  "LEAD"],
     "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -245,6 +246,8 @@ window.HUB = {
       url: "/tools/budget"
     },
     /* Data Accuracy Score feature — see docs/FEATURE-accuracy.md */
+    /* Tenant Sales & Score Card — sales file read on the page only, never saved (see docs/FEATURE-tenant-sales.md) */
+    { id: "sales", name: "Tenant Sales & Score Card", desc: "YTD vs last year, sales / m², categories and a score card per tenant — file not saved", group: "Executive Report", icon: "chart", color: "#7B4BB0", url: "/tools/sales" },
     {
       id: "accuracy",
       name: "Data Accuracy Score",

@@ -200,6 +200,7 @@ const APP_ACCESS = {
   tenant360: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   malfunctions: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   cleaning: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  sales: ["MM", "OM", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   directory: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gla: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
