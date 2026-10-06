@@ -202,6 +202,69 @@ button{background:none;border:0;cursor:pointer}
 main section{margin-top:28px}
 main section h2{font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:14px}
 
+/* ---------- Home layouts (each person picks one; see docs/FEATURE-home-layouts.md): Smart cards · Orbit · Glass dock ---------- */
+.hl-h{display:flex;align-items:center;gap:10px;margin:28px 0 14px}
+main section .hl-h h2,.hl-h h2{margin:0;font-size:1rem;font-weight:700;color:var(--muted)}
+.hl-sw{margin-left:auto;display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px;position:relative}
+.hl-sw button{position:relative;z-index:1;height:30px;padding:0 11px;border-radius:9px;font-size:.78rem;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px;transition:color .2s}
+.hl-sw button svg{width:15px;height:15px}
+.hl-sw button.on{color:#fff}
+.hl-sw i{position:absolute;top:3px;bottom:3px;border-radius:9px;background:var(--brand);transition:left .3s cubic-bezier(.2,.8,.2,1),width .3s cubic-bezier(.2,.8,.2,1)}
+.hl-app{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:6px 2px;border-radius:14px;transition:background .15s,transform .15s}
+.hl-app b{font-size:.74rem;font-weight:600;line-height:1.2;max-width:92px;color:var(--text)}
+.hl-app:hover{background:var(--paper)}.hl-app:active{transform:scale(.95)}
+.hl-app.locked{opacity:.45;pointer-events:none}
+.hl-app .ico{width:52px;height:52px;border-radius:15px}
+/* smart cards */
+.hl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.hl-card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px 14px 10px;cursor:pointer;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s,border-color .2s;animation:hlIn .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--n) * 35ms)}
+.hl-card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(42,15,69,.12);border-color:var(--brand-2)}
+.hl-card h3{display:flex;align-items:center;gap:8px;font-size:.95rem;font-weight:800;margin:0 2px 10px}
+.hl-card h3 small{margin-left:auto;color:var(--muted);font-weight:700;font-size:.78rem}
+.hl-card h3 .hl-n{background:var(--alert);color:#fff;font-size:.68rem;font-weight:800;border-radius:999px;padding:2px 7px}
+.hl-card .q{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.hl-card .more{font-size:.74rem;font-weight:700;color:var(--brand-2);text-align:center;margin-top:4px}
+@keyframes hlIn{from{opacity:0;transform:translateY(10px)}}
+/* orbit */
+.hl-orb{position:relative;height:620px;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 50% 50%,#3B1866,#1B0A2E 72%);display:grid;place-items:center}
+.hl-orb .ring{position:absolute;border-radius:50%;border:1px solid rgba(200,162,74,.35);pointer-events:none}
+.hl-orb .core{position:absolute;width:118px;height:118px;border-radius:50%;background:linear-gradient(135deg,#C8A24A,#8A5A1F);color:#2A0F45;font-weight:800;font-size:.84rem;line-height:1.25;display:grid;place-items:center;text-align:center;padding:10px;box-shadow:0 0 0 10px rgba(200,162,74,.15);transition:transform .35s cubic-bezier(.2,.8,.2,1);z-index:3}
+.hl-orb.open .core{transform:scale(.72)}
+.hl-orb .cat{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) translate(var(--x),var(--y));max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:8px 13px;font-size:.78rem;font-weight:700;transition:transform .55s cubic-bezier(.2,.8,.2,1),background .2s,opacity .3s;z-index:2}
+.hl-orb .cat:hover{background:rgba(255,255,255,.18)}
+.hl-orb .cat.on{background:#C8A24A;color:#2A0F45;border-color:#C8A24A}.hl-orb.open .cat:not(.on){opacity:.35}
+.hl-orb .cat .hl-n{display:inline-block;margin-left:6px;background:var(--alert);color:#fff;border-radius:999px;padding:0 6px;font-size:.66rem}
+.hl-orb .sat{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.3);opacity:0;transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .3s;z-index:4;width:104px}
+.hl-orb .sat.in{transform:translate(-50%,-50%) translate(var(--x),var(--y));opacity:1}
+.hl-orb .sat b{color:#fff;font-size:.68rem}.hl-orb .sat:hover{background:rgba(255,255,255,.1)}
+.hl-orb .sheet{position:absolute;left:10px;right:10px;bottom:10px;max-height:62%;overflow:auto;background:var(--surface);border-radius:22px;padding:12px;z-index:5;animation:hlSheet .38s cubic-bezier(.2,.8,.2,1) both}
+.hl-orb .sheet .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+@keyframes hlSheet{from{transform:translateY(105%)}}
+/* glass dock */
+.hl-dock{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);z-index:40;display:flex;align-items:flex-end;gap:10px;padding:10px 14px;max-width:calc(100% - 24px);
+  background:color-mix(in srgb,var(--surface) 70%,transparent);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border:1px solid color-mix(in srgb,var(--surface) 80%,transparent);border-radius:24px;box-shadow:0 20px 44px rgba(20,8,34,.22);animation:hlDockIn .45s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlDockIn{from{transform:translateX(-50%) translateY(120%)}}
+.hl-dock .fd{position:relative;display:flex;flex-direction:column;align-items:center}
+.hl-dock .fd .fi{width:calc(50px * var(--s,1));height:calc(50px * var(--s,1));transition:width .12s,height .12s;border-radius:calc(15px * var(--s,1));background:var(--surface);box-shadow:0 4px 12px rgba(42,15,69,.16);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:6px}
+.hl-dock .fd .fi i{border-radius:4px;display:block}
+.hl-dock .fd .tip{position:absolute;bottom:calc(100% + 8px);background:var(--ink);color:#fff;font-size:.7rem;font-weight:700;padding:4px 9px;border-radius:8px;white-space:nowrap;opacity:0;transform:translateY(4px);transition:all .15s;pointer-events:none}
+.hl-dock .fd:hover .tip,.hl-dock .fd.on .tip{opacity:1;transform:none}
+.hl-dock .fd .hl-n{position:absolute;top:-5px;right:-5px;background:var(--alert);color:#fff;font-size:.62rem;font-weight:800;border-radius:999px;padding:1px 5px;border:2px solid var(--surface)}
+.hl-dock .fd.on .fi{box-shadow:0 0 0 2px var(--brand-2),0 4px 12px rgba(42,15,69,.16)}
+.hl-pop{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 110px);transform:translateX(-50%) translateY(14px) scale(.97);opacity:0;pointer-events:none;z-index:41;width:min(520px,calc(100% - 24px));max-height:60vh;overflow:auto;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 24px 50px rgba(20,8,34,.25);transition:all .26s cubic-bezier(.2,.8,.2,1)}
+.hl-pop.on{opacity:1;transform:translateX(-50%);pointer-events:auto}
+.hl-pop h3{font-size:.92rem;font-weight:800;margin:0 0 8px 4px}
+.hl-pop .grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px}
+body.hl-docked main{padding-bottom:110px}
+.hl-dockhint{color:var(--muted);font-size:.86rem;padding:4px 2px 0}
+@media (max-width:760px){
+  .hl-orb{height:540px}.hl-orb .cat{font-size:.7rem;padding:6px 10px;max-width:120px}.hl-orb .core{width:96px;height:96px;font-size:.74rem}
+  .hl-dock{left:12px;right:84px;transform:none;max-width:none;overflow-x:auto;gap:8px;padding:8px 10px;scrollbar-width:none}
+  @keyframes hlDockIn{from{transform:translateY(120%)}}
+  .hl-sw button span{display:none}
+}
+@media (prefers-reduced-motion:reduce){.hl-card,.hl-dock,.hl-orb .sheet{animation:none}.hl-orb .cat,.hl-orb .sat,.hl-pop{transition:none}}
 /* ---------- daily brief ---------- */
 .brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
@@ -821,6 +884,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       <div id="orbs"></div>
     </aside>
   </div>
+  <div id="hlDock" class="hl-dock hidden" aria-label="All tools"></div>
 </div>
 
 <!-- APP VIEW -->
@@ -1121,6 +1185,7 @@ function buildMenu(){
     <button data-a="profile" class="pm-i">${pmIcon("user")}<span>Profile settings<small>Picture, password, appearance, alerts</small></span></button>
     <button data-a="welcome" class="pm-i">${pmIcon("device")}<span>Set up this device<small>Alerts, install, camera, Face ID / Windows Hello</small></span></button>
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
+    <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · Smart cards, Orbit or Glass dock</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
   paint(); m._paint = paint;
@@ -1138,6 +1203,7 @@ function buildMenu(){
     if (a === "profile") profileSheet();
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));
+    if (a === "layout"){ const i = HL_KINDS.findIndex(k => k[0] === HL); hlSetLayout(HL_KINDS[(i + 1) % HL_KINDS.length][0]); m._paint(); setTimeout(() => { const sw = $("#hlSw"); if (sw) sw.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50); }   // each tap moves to the next layout
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
 }
@@ -2057,7 +2123,7 @@ function d2dHtml(){
   const hours = [...Array(h1 - h0)].map((_, i) => `<span class="${h0 + i >= 12 ? "pm" : ""}">${String(h0 + i).padStart(2, "0")}</span>`).join("");
   const offTxt = D.off.length ? `<span>Off / leave: <b>${esc(D.off.map(o => o.name.split(" ")[0] + " (" + o.code + ")").join(", "))}</b></span>` : "";
   const chips = allDay.map(x => `<span>${x.kind === "mom" ? "Meeting" : x.kind === "marketing" ? "Event" : "Activity"}: <b>${esc(x.title)}</b></span>`).join("") + offTxt;
-  const empty = !all.length ? `<p class="brief-empty" style="position:absolute;left:16px;top:44px;font-size:.82rem">Nothing on today's schedule yet — add the shifts in Operations Schedule.</p>` : "";
+  const empty = !all.length && !rrBars.length && !dlBars.length && !conDots.length && !tcBars.length ? `<p class="brief-empty" style="position:absolute;left:16px;top:44px;font-size:.82rem">Nothing on today's schedule yet — add the shifts in Operations Schedule.</p>` : "";
   return `<section class="d2d" id="d2d">${head}${chips ? `<div class="d2d-day">${chips}</div>` : ""}
     <div class="d2d-sc"><div class="d2d-tr" style="--n:${h1 - h0};--mw:${(h1 - h0) * 46}px"><div class="d2d-hr">${hours}</div>${lanes}${pins}${empty}
       <div class="d2d-now" style="left:${X(now)}"><b>NOW ${esc(now)}</b></div></div></div>
@@ -2145,6 +2211,100 @@ document.addEventListener("change", e => { if (e.target.id === "d2dSite"){ D2D.s
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#d2dPop")) $("#d2dPop").remove(); });
 document.addEventListener("scroll", e => { if (e.target.classList && e.target.classList.contains("d2d-sc")) $("#d2dPop") && $("#d2dPop").remove(); }, true);
 
+/* =====================================================================
+   HOME LAYOUTS — every person picks how the tools are laid out (stored on this device):
+   Smart cards (default) · Orbit · Glass dock. Search always shows the plain list. See docs/FEATURE-home-layouts.md
+   ===================================================================== */
+const HL_KINDS = [["cards", "Smart cards", '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>'],
+  ["orbit", "Orbit", '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/><circle cx="12" cy="3" r="1.5" fill="currentColor"/>'],
+  ["dock", "Glass dock", '<rect x="2" y="15" width="20" height="6" rx="3"/><rect x="5" y="17" width="3" height="2"/><rect x="10.5" y="17" width="3" height="2"/><rect x="16" y="17" width="3" height="2"/><path d="M8 4h8v7H8z"/>']];
+let HL = (() => { const v = store.get("hub.layout", "cards"); return HL_KINDS.some(k => k[0] === v) ? v : "cards"; })();
+const HLS = { orb: null };
+const HL_SHORT = { "Operations Tools": "Ops Tools", "Data & Reporting": "Data", "Operations Projects and Budget": "Projects & Budget", "Incidents & Security": "Incidents",
+  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Executive Report": "Exec Report", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day" };
+const hlSvg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const hlCount = L => L.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
+const hlApp = (a, cls = "", st = "") => { const ok = appReady(a);
+  return `<button class="hl-app ${cls} ${ok ? "" : "locked"}" ${ok ? `data-hl="${esc(a.id)}"` : 'aria-disabled="true"'} title="${esc(a.desc || "")}" ${st ? `style="${st}"` : ""}>${icoHTML(a, true)}<b>${esc(a.name)}</b></button>`; };
+/* the categories of the home page (the Day to Day timeline, when shown, stays above on its own) */
+function hlCats(groups){
+  return groups.filter(g => !(g === DAY_GROUP && showD2D())).map(g => ({ g, L: APPS.filter(a => a.group === g && !a.hidden) })).filter(c => c.L.length);
+}
+function hlSwitch(){
+  return `<span class="hl-sw" id="hlSw" role="tablist" aria-label="Home layout"><i></i>${HL_KINDS.map(([k, n, ic]) => `<button role="tab" data-hlk="${k}" class="${k === HL ? "on" : ""}" aria-selected="${k === HL}" title="${n}">${hlSvg(ic)}<span>${n}</span></button>`).join("")}</span>`;
+}
+function hlHtml(groups){
+  const C = hlCats(groups);
+  document.body.classList.toggle("hl-docked", HL === "dock");
+  const head = `<div class="hl-h"><h2>${HL === "dock" ? "All tools are in the dock below" : "All tools"}</h2>${hlSwitch()}</div>`;
+  if (HL === "dock"){ hlDock(C); return `<section>${head}</section>`; }
+  hlDock(null);
+  if (HL === "orbit") return `<section>${head}${hlOrbit(C)}</section>`;
+  return `<section>${head}<div class="hl-cards">${C.map((c, i) => { const n = hlCount(c.L);
+    return `<div class="hl-card" data-hlg="${esc(c.g)}" role="button" tabindex="0" style="--n:${i}"><h3>${esc(c.g)}${n ? `<span class="hl-n">${n > 99 ? "99+" : n}</span>` : ""}<small>${c.L.length}</small></h3>
+      <div class="q">${c.L.slice(0, 4).map(a => hlApp(a)).join("")}</div>${c.L.length > 4 ? `<div class="more">+${c.L.length - 4} more</div>` : ""}</div>`; }).join("")}</div></section>`;
+}
+function hlOrbit(C){
+  const sel = C.some(c => c.g === HLS.orb) ? HLS.orb : null;
+  const w = Math.min(($("#list") || document.body).clientWidth || innerWidth, 1060), narrow = w < 600;
+  const rr = Math.max(118, Math.min(245, w / 2 - 60)), n = C.length, k = sel ? C.findIndex(c => c.g === sel) : 0;
+  const cats = C.map((c, i) => { const a = -Math.PI / 2 + (i - k) * 2 * Math.PI / n, cnt = hlCount(c.L);
+    return `<button class="cat ${c.g === sel ? "on" : ""}" data-orb="${esc(c.g)}" title="${esc(c.g)}" style="--x:${(Math.cos(a) * rr).toFixed(1)}px;--y:${(Math.sin(a) * rr).toFixed(1)}px">${esc(HL_SHORT[c.g] || c.g)}${cnt ? `<span class="hl-n">${cnt}</span>` : ""}</button>`; }).join("");
+  const L = sel ? C.find(c => c.g === sel).L : [];
+  const tools = !sel ? "" : narrow ? `<div class="sheet"><div class="grid3">${L.map(a => hlApp(a)).join("")}</div></div>`
+    : L.map((a, i) => { const ang = -Math.PI / 2 + (i + .5) * 2 * Math.PI / L.length, r2 = rr * .6;
+        return hlApp(a, "sat", `--x:${(Math.cos(ang) * r2).toFixed(1)}px;--y:${(Math.sin(ang) * r2).toFixed(1)}px;transition-delay:${i * 40}ms`); }).join("");
+  return `<div class="hl-orb ${sel ? "open" : ""}" id="hlOrb"><div class="ring" style="width:${rr * 2}px;height:${rr * 2}px"></div><div class="ring" style="width:${rr * 1.25}px;height:${rr * 1.25}px"></div>
+    <button class="core" id="hlCore">${sel ? "‹ All<br>categories" : "ABC<br>Operations Hub"}</button>${cats}${tools}</div>`;
+}
+function hlDock(C){
+  const d = $("#hlDock"); if (!d) return;
+  if (!C){ d.classList.add("hidden"); d.innerHTML = ""; hlPopClose(); return; }
+  d.classList.remove("hidden");
+  const open = $("#hlPop") && $("#hlPop").classList.contains("on") ? $("#hlPop").dataset.g : "";
+  d.innerHTML = C.map(c => { const n = hlCount(c.L);
+    return `<button class="fd ${c.g === open ? "on" : ""}" data-dock="${esc(c.g)}" aria-label="${esc(c.g)}"><span class="fi">${c.L.slice(0, 4).map(a => `<i style="background:${esc(a.color || "#4A1F73")}"></i>`).join("")}</span>${n ? `<span class="hl-n">${n > 99 ? "99+" : n}</span>` : ""}<span class="tip">${esc(c.g)}</span></button>`; }).join("");
+  if (open) hlPopOpen(open, true);
+}
+function hlPopOpen(g, refresh){
+  let p = $("#hlPop"); if (!p){ p = document.createElement("div"); p.id = "hlPop"; p.className = "hl-pop"; $("#home").append(p); }
+  const L = APPS.filter(a => a.group === g && !a.hidden);
+  p.dataset.g = g; p.innerHTML = `<h3>${esc(g)}</h3><div class="grid4">${L.map(a => hlApp(a)).join("")}</div>`;
+  if (!refresh) requestAnimationFrame(() => p.classList.add("on"));
+  $("#hlDock").querySelectorAll(".fd").forEach(f => f.classList.toggle("on", f.dataset.dock === g));
+}
+function hlPopClose(){ const p = $("#hlPop"); if (p) p.classList.remove("on"); const d = $("#hlDock"); if (d) d.querySelectorAll(".fd.on").forEach(f => f.classList.remove("on")); }
+function hlSetLayout(k){
+  if (!HL_KINDS.some(x => x[0] === k) || k === HL) return;
+  HL = k; store.set("hub.layout", k); HLS.orb = null; hlPopClose(); renderHome();
+}
+function hlMarkSwitch(){ const sw = $("#hlSw"); if (!sw) return; const b = sw.querySelector("button.on"), i = sw.querySelector("i"); if (b && i){ i.style.left = b.offsetLeft + "px"; i.style.width = b.offsetWidth + "px"; } }
+/* clicks: tools open; a smart card opens its folder; orbit turns; the dock pops up */
+document.addEventListener("click", e => {
+  if (!$("#home") || $("#home").classList.contains("hidden")) return;
+  const sw = e.target.closest("[data-hlk]"); if (sw) return hlSetLayout(sw.dataset.hlk);
+  const ap = e.target.closest("[data-hl]"); if (ap){ hlPopClose(); return launch(byId(ap.dataset.hl), undefined, (() => { const r = ap.querySelector(".ico").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()); }
+  const card = e.target.closest(".hl-card"); if (card) return openFolder(card.dataset.hlg, card.querySelector(".q"));
+  const oc = e.target.closest("[data-orb]"); if (oc){ HLS.orb = HLS.orb === oc.dataset.orb ? null : oc.dataset.orb; return hlRedrawOrbit(); }
+  if (e.target.closest("#hlCore") && HLS.orb){ HLS.orb = null; return hlRedrawOrbit(); }
+  const fd = e.target.closest("[data-dock]"); if (fd){ const p = $("#hlPop"); if (p && p.classList.contains("on") && p.dataset.g === fd.dataset.dock) return hlPopClose(); return hlPopOpen(fd.dataset.dock); }
+  if (!e.target.closest("#hlPop")) hlPopClose();
+});
+addEventListener("keydown", e => { if (e.key === "Escape"){ hlPopClose(); if (HLS.orb && HL === "orbit"){ HLS.orb = null; hlRedrawOrbit(); } } });
+function hlRedrawOrbit(){
+  const o = $("#hlOrb"); if (!o) return renderHome();
+  const tmp = document.createElement("div"); tmp.innerHTML = hlOrbit(hlCats(hlGroups()));
+  o.replaceWith(tmp.firstElementChild);
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#hlOrb .sat").forEach(x => x.classList.add("in"))));
+}
+/* the dock magnifies under the mouse */
+document.addEventListener("mousemove", e => {
+  const d = $("#hlDock"); if (!d || d.classList.contains("hidden")) return;
+  const r0 = d.getBoundingClientRect(), near = e.clientY > r0.top - 60 && e.clientY < r0.bottom + 10 && e.clientX > r0.left - 40 && e.clientX < r0.right + 40;
+  d.querySelectorAll(".fd").forEach(f => { const r = f.getBoundingClientRect(), dist = Math.abs(e.clientX - (r.left + r.width / 2));
+    f.style.setProperty("--s", near ? (1 + Math.max(0, 1 - dist / 130) * .6).toFixed(3) : 1); });
+}, { passive: true });
+
 /* ---------- Tenants Directory feature: tenants and employees in the home search ---------- */
 const DIRS = { q: "", res: null, t: 0, busy: "" };
 const DIR_IC = { tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>' };
@@ -2196,6 +2356,12 @@ function renderHome(){
     .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => a.group === TOOLS_GROUP))
     .filter(g => q || !APPS.some(a => a.kind === "orbit" && a.orbitGroup === g));
   let foldersDone = false;
+  const hlG = groups.slice(); hlGroups = () => hlG;
+  if (!q){   // Home layouts: Smart cards · Orbit · Glass dock (search keeps the plain list below)
+    if (groups.includes(DAY_GROUP) && showD2D()) html += d2dHtml();
+    html += hlHtml(groups);
+  } else hlDock(null);
+  if (!q) groups.length = 0;
   for (const g of groups){
     const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
     if (!q && g === DAY_GROUP && showD2D()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
@@ -2212,8 +2378,10 @@ function renderHome(){
   $("#list").innerHTML = dir + html || (DIRS.q === q && DIRS.res && DIRS.res.results.length ? "" : `<p class="empty">No system matches “${esc(q)}”.</p>`);
   $("#brief").classList.toggle("hidden", !!q);
   if (!q) d2dScroll(d2dKeep);
+  if (!q){ hlMarkSwitch(); requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#hlOrb .sat").forEach(x => x.classList.add("in")))); }
   renderRail();
 }
+let hlGroups = () => [];
 $("#q").addEventListener("input", renderHome);
 $("#list").addEventListener("click", e => {
   const f = e.target.closest(".fold"); if (f) return openFolder(f.dataset.folder, f.querySelector(".ico"));
