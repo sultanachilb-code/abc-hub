@@ -180,6 +180,7 @@ const APP_ACCESS = {
   handover: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
   contractors: ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gate: ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "contractor-access": ["OM", "SMS", "MS", "MO", "LEAD"],
   leadership: ["LEAD"],
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],

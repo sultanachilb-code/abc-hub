@@ -1830,7 +1830,7 @@ async function pushOff(){
 /* ---------- operations tools: cascade from the header button ---------- */
 const TOOLS_GROUP = "Operations Tools";
 let TOOL_SUM = {};
-const toolApps = () => [...APPS.filter(a => a.group === "Day to Day Operations" && !a.hidden && a.tools !== false), ...APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden)];   // the header menu keeps the Day to Day tools too, except those marked tools: false
+const toolApps = () => APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden);   // the header Tools button: Operations Tools only (Day to Day lives on the home screen)
 function buildToolsMenu(){
   const tools = toolApps();
   $("#tfab").classList.toggle("hidden", !tools.length);
@@ -1893,7 +1893,7 @@ function openOrbit(a, from){
   const list = items.length ? items : [1, 2, 3, 4, 5, 6].map(i => ({ ph: true, name: i === 1 ? "Checklists coming soon" : "" }));
   o.innerHTML = `<div class="orbit-veil"></div><div class="orbit-ring" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px"></div>
     <button class="orbit-core" style="left:${cx}px;top:${cy}px;background:${esc(a.color)}" aria-label="Close ${esc(a.name)}">${appIcon(a)}</button>
-    <div class="orbit-cap" style="left:${cx}px;top:${cy + 48}px">${esc(a.name)}<small>${items.length ? `${items.length} checklist${items.length === 1 ? "" : "s"}` : "No checklists yet"}</small></div>
+    <div class="orbit-cap" style="left:${cx}px;top:${cy + 48}px">${esc(a.name)}<small>${(w => items.length ? `${items.length} ${w}${items.length === 1 ? "" : "s"}` : `No ${w}s yet`)(a.orbitGroup === "Operations Forms" ? "checklist" : "tool")}</small></div>
     ${list.map((x, k) => { const ang = -Math.PI / 2 + k * 2 * Math.PI / list.length, dx = Math.cos(ang) * R, dy = Math.sin(ang) * R;
       return `<button class="orbit-it ${x.ph ? "ph" : ""}" ${x.ph ? "disabled" : `data-id="${esc(x.id)}"`} style="left:${cx}px;top:${cy}px;--x0:${fx}px;--y0:${fy}px;--x:${dx}px;--y:${dy}px;transition-delay:${k * 60}ms">
         <span class="ico" style="background:${esc(x.color || "#555")}">${x.ph ? "" : appIcon(x)}</span><b>${esc(x.name || "")}</b></button>`; }).join("")}`;
@@ -2174,7 +2174,7 @@ function d2dCards(apps, D, nm){
       const w = L.filter(v => v.state === "onsite").reduce((a, v) => a + (v.workers || 0), 0);
       return [`${n("onsite")} in the mall now${w ? " · " + w + " workers" : ""} · ${n("expected")} expected`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
     } };
-  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (line[a.id] || (() => [a.desc, ""]))(); const live = a.id === "contractors";
+  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (line[a.id] || (a.id === "contractor-access" && line.contractors) || (() => [a.desc, ""]))(); const live = a.id === "contractors";   // the Contractor Access folder shows today's contractor count
     return `<button class="d2d-c" data-id="${esc(a.id)}" ${live ? "data-live" : ""}><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}${live ? `<span class="lv"></span>` : ""}</span><span class="tx"><b>${live ? "Live contractor access" : esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
 }
 function d2dPop(b, el){

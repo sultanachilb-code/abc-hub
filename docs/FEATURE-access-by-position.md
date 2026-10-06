@@ -20,3 +20,9 @@ Who sees each tile is set in `apps.js` → `ACCESS`, one line per system, by pos
 ## Header Tools button
 Day to Day tiles marked `tools: false` (Operations Schedule, Minutes of Meeting, Shift Handover) are no longer repeated
 in the header Tools button — they stay on the home Day to Day panel. Contractors and Loading Gate stay in both.
+
+## Day to Day / Tools reorganisation (6 Oct 2026, evening)
+- Day to Day Operations: Operations Schedule, Minutes of Meeting, Shift Handover, Operations Calendar, and the **Contractor Access** folder
+  (a ring with Contractors and Loading Gate). The "Live contractor access" card is gone; the contractor dots on the timeline stay.
+- Header Tools button lists Operations Tools only: End of Day Report, Operations Forms, Reminders, **Portal Dashboard**
+  (the Tenant Portal Follow-up, moved from Tenant Management and renamed).
