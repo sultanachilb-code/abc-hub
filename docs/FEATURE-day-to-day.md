@@ -46,3 +46,10 @@ Edit `DEADLINES` (and `MALL_CLOSE` for tenant closing) at the top of `modules/to
 - It reads `form_runs` (AM/PM), the Restroom system's day (cached for 2 minutes per flagship), `sched_cells` (today and yesterday), `handovers`, `mom_meetings`/`mom_actions`, `cal_items` and the contractors day list (`dayList`, now exported from `modules/contractors.js`).
 - `apps.js` adds the new group "Day to Day Operations" first in `GROUPS`, and moves the four apps into it.
 - `index.html`: `d2dHtml()` and `loadToday()`. The phone layout fix gives the main column `minmax(0,1fr)`.
+
+## Portal approvals scanned before they reach the handover (Oct 2026)
+The loading gate writes its outcome on the handover line with the same REQ. If a request was approved during the day and
+scanned at the gate before anyone imported it, there was no line to write on. Now the hub looks up the day's gate scans:
+- when the handover page refreshes (every 30 s, and right after a portal import), the marks of every REQ scanned today are applied;
+- on every save, the server adds the gate's outcome (✓ Attended · ✕ Refused at gate · → left) to any line whose REQ was scanned that day.
+The Loading area feedback column then shows green / yellow as usual.
