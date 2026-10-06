@@ -22,6 +22,8 @@ import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./m
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
 import { portalSchema, portalRoute } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
+import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs/FEATURE-tenant-360.md
+import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
 import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
@@ -193,6 +195,7 @@ const APP_ACCESS = {
   fitout: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   contracts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   portal: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  tenant360: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   directory: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gla: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -200,8 +203,7 @@ const APP_ACCESS = {
   layouts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   exec: ["MM",  "OM",  "LEAD"],
   accuracy: ["MM",  "OM"],
-  projects: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  "project-tracker": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  projects: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   budget: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snaglist: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   restroom: ["MM",  "OM",  "LEAD"],
@@ -218,9 +220,7 @@ const APP_ACCESS = {
   pack: ["MM",  "OM",  "LEAD"],
   downloads: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   footfall: [],
-  "pp-owner": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "pp-assist": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "pp-general": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  policies: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   "form-am": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-dbank": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -1520,6 +1520,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content
+  if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday });   // Tenant 360
   if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover });   // Loading Gate feature

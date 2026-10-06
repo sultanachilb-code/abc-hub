@@ -90,3 +90,7 @@ The **Run As** user must be able to read the request object and those fields (Fi
 * `tools/gate.html` — camera via BarcodeDetector (Android Chrome) or `tools/jsqr.min.js` (jsQR 1.4.0, Apache-2.0) on iPhone.
 * Handover: `handover/live` returns `gate`; `tools/handover.html` draws it and adds it to the email. The line marks are written by `gateMarkHandover` and kept on save by `keepGateMarks` (worker.js).
 * `tools/common.js` — `gate/decide` added to the offline queue. `sw.js` caches the scanner (cache v18).
+
+## Offline booking list (Oct 2026)
+The gate phone keeps today's and tomorrow's contractor bookings (`GET /api/ops/gate/offline`), refreshed every 10 minutes while online.
+A scan without signal shows the booking found on the phone (or warns that it is not in the list); the decision is queued as before.

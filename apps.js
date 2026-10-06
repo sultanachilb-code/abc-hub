@@ -49,6 +49,7 @@ window.HUB = {
     "compliance":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "fitout":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "works":           ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "directory":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -57,8 +58,7 @@ window.HUB = {
     "layouts":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "exec":            ["MM",  "OM",  "LEAD"],
     "accuracy":        ["MM",  "OM"],
-    "projects":        ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "project-tracker": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "projects":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   /* Future + Tracker in one tile */
     "budget":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "snaglist":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "restroom":        ["MM",  "OM",  "LEAD"],
@@ -75,9 +75,7 @@ window.HUB = {
     "pack":            ["MM",  "OM",  "LEAD"],
     "downloads":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "footfall":        [],
-    "pp-owner":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "pp-assist":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "pp-general":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-am":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-pm":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -175,11 +173,12 @@ window.HUB = {
     /* Loading Gate feature — see docs/FEATURE-gate.md */
     { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Contractor Access", icon: "qr", color: "#2E8B57", url: "/tools/gate" },
     /* Projects feature — see docs/FEATURE-projects.md */
-    { id: "projects", name: "Operations Future Projects", desc: "Ideas and plans — from idea to approved", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects?view=future" },
-    { id: "project-tracker", name: "Project Tracker", desc: "Projects in progress — milestones, progress, budget vs spent", group: "Operations Projects and Budget", icon: "gauge", color: "#2E6B4F", url: "/tools/projects?view=tracker" },
+    { id: "projects", name: "Operations Projects", desc: "Future projects and the project tracker — from idea to done", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects" },
     /* Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md */
     { id: "evacuation", name: "Tenant Evacuation Plan", desc: "Service corridor and assembly point for every active tenant", group: "Incidents & Security", icon: "exit", color: "#2E7D32", url: "/tools/evacuation" },
     /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */
+    /* Tenant 360 — one page per unit with everything the hub knows about the tenant (see docs/FEATURE-tenant-360.md) */
+    { id: "tenant360", name: "Tenant 360", desc: "One page per unit — contract, portal items, violations, fit-out, works, contacts, contractors", group: "Tenant Management", icon: "users", color: "#4A1F73", url: "/tools/tenant360" },
     { id: "tenants", name: "Tenant Announcements", desc: "Opening, closure and relocation emails with photos", group: "Tenant Management", icon: "storeIn", color: "#2F6F73", url: "/tools/tenants" },
     {
       id: "feedback",
@@ -384,9 +383,7 @@ window.HUB = {
       sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     /* Policies & Procedures — the three systems are placeholders until their content is built */
-    { id: "pp-owner", name: "Owner", desc: "Owner policies and procedures", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies?s=owner" },
-    { id: "pp-assist", name: "Assist", desc: "Assist policies and procedures", group: "Policies & Procedures", icon: "handshake", color: "#2F6F73", url: "/tools/policies?s=assist" },
-    { id: "pp-general", name: "ABC General Policies", desc: "Company-wide policies", group: "Policies & Procedures", icon: "scroll", color: "#8A5A1F", url: "/tools/policies?s=general" }
+    { id: "policies", name: "Policies & Procedures", desc: "Owner, Assist and ABC General policies in one place", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies" }
 
     /* Next system goes here — add a comma after the } above, then paste:
     ,{

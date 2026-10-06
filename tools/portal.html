@@ -78,7 +78,7 @@ const UP = new URLSearchParams(location.search);
 const K = { bp: { c: "var(--bp)", short: "Breach" }, vr: { c: "var(--vr)", short: "Violation" }, nr: { c: "var(--nr)", short: "Request" } };
 const ST_COL = { "Sent to Tenant": "#C0392B", "In Review": "#C07A12", "Acknowledged": "#2E8B57", "Rejected": "#8C8398", "Confirmed & Resolved": "#2E8B57", "Closed": "#8C8398" };
 const stCol = s => ST_COL[s] || "#7B4BB0";
-let ctx = null, site = UP.get("site") || "", P = null, kind = "", q = "", old = false, tenant = "", status = "follow", LIM = 40;
+let ctx = null, site = UP.get("site") || "", P = null, kind = "", q = UP.get("q") || "", old = false, tenant = "", status = "follow", LIM = 40;
 async function boot(){
   try {
     ctx = await api("ops/context" + (site && site !== "ALL" ? `?site=${site}` : ""));
