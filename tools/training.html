@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Tracker · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Training & induction tracker — see docs/FEATURE-training.md -->
+<style>
+.kp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.5rem;line-height:1.1}.kp small{color:var(--muted);font-size:.72rem;font-weight:700}
+.kp .al b{color:var(--alert)}.kp .warn b{color:var(--warn)}.kp .ok b{color:var(--ok)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar input[type=search]{flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit}
+.scr{overflow:auto;max-height:70vh}
+table.m{border-collapse:separate;border-spacing:0;font-size:.78rem;min-width:100%}
+table.m th,table.m td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:center;white-space:nowrap}
+table.m th{position:sticky;top:0;background:var(--surface);z-index:2;font-size:.7rem;color:var(--muted);vertical-align:bottom}
+table.m th small{display:block;font-weight:500}
+table.m td:first-child,table.m th:first-child{position:sticky;left:0;background:var(--surface);text-align:left;z-index:1}
+table.m th:first-child{z-index:3}
+table.m td:first-child small{display:block;color:var(--muted)}
+.c{display:inline-block;min-width:64px;padding:3px 6px;border-radius:8px;font-weight:700;cursor:pointer;border:1px solid transparent}
+.c.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.c.soon{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.c.expired{background:color-mix(in srgb,var(--alert) 14%,transparent);color:var(--alert)}
+.c.missing{border:1px dashed var(--alert);color:var(--alert)}
+.c.none{color:var(--line)}
+.c small{display:block;font-weight:500;font-size:.66rem}
+dialog{width:min(560px,96vw)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg label{display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:700;color:var(--muted)}.fg .w{grid-column:1/-1}
+.fg input,.fg select{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-weight:500}
+.ppl{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px 10px;display:grid;grid-template-columns:1fr 1fr;gap:2px 10px}
+.ppl label{flex-direction:row;align-items:center;gap:6px;font-weight:500;color:var(--text)}
+.lgd{display:flex;gap:12px;flex-wrap:wrap;font-size:.74rem;color:var(--muted);margin-top:8px}
+@media (max-width:700px){.kp{grid-template-columns:1fr 1fr}.fg{grid-template-columns:1fr}.ppl{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top"><h1>🎓 Training Tracker <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<dialog id="dlg"></dialog>
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", T = null, q = "", only = "";
+async function boot(){
+  try { ctx = await api("ops/context" + (site ? `?site=${site}` : "")); if (!site || site === "ALL") site = ctx.site;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${site}`); load(); }); load(); }
+  catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){ try { T = await api(`ops/tr/data?site=${site}`); $("#sub").textContent = T.siteName; draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; } }
+function draw(){
+  const K = T.kpi, s = q.toLowerCase();
+  const rows = T.rows.filter(r => (!s || (r.name + " " + r.label).toLowerCase().includes(s)) && (!only || T.courses.some(c => r.cells[c.id].st === only)));
+  const cellH = (r, c) => { const x = r.cells[c.id];
+    if (!x.st) return `<span class="c none" data-p="${esc(r.key)}" data-c="${c.id}">·</span>`;
+    if (x.st === "missing") return `<span class="c missing" data-p="${esc(r.key)}" data-c="${c.id}">Needed</span>`;
+    return `<span class="c ${x.st}" data-p="${esc(r.key)}" data-c="${c.id}" data-r="${x.id}">${esc(D.fmt(x.done, { year: "2-digit" }))}${x.exp ? `<small>${x.st === "expired" ? "expired" : "until"} ${esc(D.fmt(x.exp, { year: "2-digit" }))}</small>` : ""}</span>`; };
+  $("#app").innerHTML = `<div class="kp">
+      <div class="card ${K.compliance >= 90 ? "ok" : K.compliance >= 70 ? "warn" : "al"}"><b>${K.compliance}%</b><small>Required training done</small></div>
+      <div class="card ${K.missing ? "al" : "ok"}"><b>${K.missing}</b><small>Required, not done</small></div>
+      <div class="card ${K.expired ? "al" : "ok"}"><b>${K.expired}</b><small>Expired</small></div>
+      <div class="card ${K.soon ? "warn" : "ok"}"><b>${K.soon}</b><small>Expiring within a month</small></div>
+      <div class="card"><b>${K.people}</b><small>People</small></div></div>
+    <div class="bar"><input type="search" id="q" placeholder="Search a person" value="${esc(q)}">
+      <select class="sel" id="only"><option value="">Everyone</option>${[["missing", "Required, not done"], ["expired", "Expired"], ["soon", "Expiring soon"]].map(([k, t]) => `<option value="${k}" ${only === k ? "selected" : ""}>${t}</option>`).join("")}</select>
+      ${T.can.admin ? `<button class="btn ghost" id="courses">Courses</button>` : ""}
+      ${T.can.edit ? `<button class="btn ghost" id="addP">+ Person outside the hub</button><button class="btn" id="addR">+ Training done</button>` : ""}</div>
+    <div class="card" style="padding:6px"><div class="scr"><table class="m"><tr><th>Person</th>${T.courses.map(c => `<th>${esc(c.name)}<small>${esc(c.category)}${c.validity ? ` · ${c.validity} mo` : ""}</small></th>`).join("")}</tr>
+      ${rows.map(r => `<tr><td><b>${esc(r.name)}</b><small>${esc(r.label || "")}${r.hub ? "" : " · outside the hub"}</small></td>${T.courses.map(c => `<td>${cellH(r, c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${T.courses.length + 1}" class="muted">Nobody matches.</td></tr>`}
+    </table></div></div>
+    <div class="lgd"><span><span class="c ok">date</span> done</span><span><span class="c soon">date</span> expires within a month</span><span><span class="c expired">date</span> expired</span><span><span class="c missing">Needed</span> required for the position</span></div>`;
+  $("#q").oninput = e => { q = e.target.value; const p = e.target.selectionStart; draw(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+  $("#only").onchange = e => { only = e.target.value; draw(); };
+  const cb = $("#courses"); if (cb) cb.onclick = coursesDlg;
+  const ap = $("#addP"); if (ap) ap.onclick = () => personDlg();
+  const ar = $("#addR"); if (ar) ar.onclick = () => recordDlg({});
+  document.querySelector(".m").onclick = e => { const c = e.target.closest("[data-c]"); if (!c || !T.can.edit) return; recordDlg({ person: c.dataset.p, courseId: Number(c.dataset.c), rid: Number(c.dataset.r) || 0 }); };
+}
+function recordDlg(x){
+  const d = $("#dlg"), r = x.person ? T.rows.find(y => y.key === x.person) : null, cur = r && x.courseId ? r.cells[x.courseId] : null;
+  d.innerHTML = `<div class="dlg-h"><b>Training done</b><small>${esc(T.siteName)}</small></div><div class="dlg-b"><div class="fg">
+    <label class="w">Course<select id="rC">${T.courses.map(c => `<option value="${c.id}" ${c.id === x.courseId ? "selected" : ""}>${esc(c.name)}${c.validity ? ` (${c.validity} months)` : ""}</option>`).join("")}</select></label>
+    <label>Date done<input type="date" id="rD" value="${esc(T.today)}"></label>
+    <label>Expires<input type="date" id="rE" placeholder="from the course validity"><small style="font-weight:500">Empty = from the course validity</small></label>
+    <label>Trainer / provider<input id="rT"></label><label>Note<input id="rN"></label>
+    <div class="w"><b style="font-size:.78rem;color:var(--muted)">People trained</b><div class="ppl">${T.rows.map(p => `<label><input type="checkbox" value="${esc(p.key)}" ${p.key === x.person ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}</div></div>
+    ${cur && cur.id ? `<div class="w muted" style="font-size:.8rem">Last record: ${esc(D.fmt(cur.done))}${cur.exp ? " · until " + esc(D.fmt(cur.exp)) : ""}${cur.trainer ? " · " + esc(cur.trainer) : ""} <button class="btn ghost small" id="rDel" style="color:var(--alert)">Delete this record</button></div>` : ""}
+    </div></div><div class="dlg-f"><button class="btn ghost" id="rX">Cancel</button><button class="btn" id="rS">Save</button></div>`;
+  $("#rX").onclick = () => d.close();
+  const del = $("#rDel"); if (del) del.onclick = async () => { await api("ops/tr/record/delete", { site, id: cur.id }); d.close(); load(); };
+  $("#rS").onclick = async () => {
+    const people = [...d.querySelectorAll(".ppl input:checked")].map(i => i.value);
+    if (!people.length) return toast("Tick at least one person", true);
+    try { const r2 = await api("ops/tr/record", { site, courseId: Number($("#rC").value), person: people[0], people, done: $("#rD").value, expires: $("#rE").value, trainer: $("#rT").value, note: $("#rN").value });
+      d.close(); toast(`Saved for ${r2.n} ${r2.n === 1 ? "person" : "people"}`); load(); } catch (e){ toast(e.message, true); } };
+  d.showModal();
+}
+function personDlg(){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Person outside the hub</b><small>Security guards, cleaners, technicians… tracked at ${esc(T.siteName)}</small></div><div class="dlg-b"><div class="fg">
+    <label class="w">Name<input id="pN"></label><label>Role<input id="pR" placeholder="e.g. Security guard"></label><label>Company<input id="pC" placeholder="e.g. BPM"></label>
+    <label class="w">Counts as (for required training)<select id="pP"><option value="">—</option>${Object.entries(T.positions).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="pX">Cancel</button><button class="btn" id="pS">Add</button></div>`;
+  $("#pX").onclick = () => d.close();
+  $("#pS").onclick = async () => { try { await api("ops/tr/person", { site, name: $("#pN").value, role: $("#pR").value, company: $("#pC").value, pos: $("#pP").value }); d.close(); load(); } catch (e){ toast(e.message, true); } };
+  d.showModal();
+}
+function coursesDlg(){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Courses</b><small>Shared by every flagship</small></div><div class="dlg-b">
+    ${T.courses.map(c => `<div style="padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center"><div style="flex:1"><b>${esc(c.name)}</b><br><small class="muted">${esc(c.category)} · ${c.validity ? c.validity + " months" : "no expiry"} · required: ${c.required.map(k => esc(T.positions[k] || k)).join(", ") || "—"}</small></div><button class="btn ghost small" data-ec="${c.id}">Edit</button></div>`).join("")}
+    <div class="fg" style="margin-top:12px"><input type="hidden" id="cI"><label>Name<input id="cN"></label><label>Category<input id="cG" placeholder="Safety, Systems…"></label>
+      <label>Valid for (months, 0 = no expiry)<input id="cV" type="number" min="0" value="0"></label><label><span><input type="checkbox" id="cA" checked> In use</span></label>
+      <div class="w"><b style="font-size:.78rem;color:var(--muted)">Required for</b><div class="ppl">${Object.entries(T.positions).map(([k, v]) => `<label><input type="checkbox" value="${k}"> ${esc(v)}</label>`).join("")}</div></div></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="cX">Close</button><button class="btn" id="cS">Save course</button></div>`;
+  d.querySelectorAll("[data-ec]").forEach(b => b.onclick = () => { const c = T.courses.find(x => x.id === Number(b.dataset.ec));
+    $("#cI").value = c.id; $("#cN").value = c.name; $("#cG").value = c.category; $("#cV").value = c.validity; d.querySelectorAll(".ppl input").forEach(i => i.checked = c.required.includes(i.value)); });
+  $("#cX").onclick = () => d.close();
+  $("#cS").onclick = async () => { try { await api("ops/tr/course", { site, id: Number($("#cI").value) || 0, name: $("#cN").value, category: $("#cG").value, validity: Number($("#cV").value),
+    active: $("#cA").checked, required: [...d.querySelectorAll(".ppl input:checked")].map(i => i.value) }); toast("Course saved"); await load(); coursesDlg(); } catch (e){ toast(e.message, true); } };
+  if (!d.open) d.showModal();
+}
+boot();
+</script>
+</body>
+</html>

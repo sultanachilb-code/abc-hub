@@ -26,6 +26,7 @@ import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs
 import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
+import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
 import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
@@ -201,6 +202,7 @@ const APP_ACCESS = {
   malfunctions: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   cleaning: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   sales: ["MM", "OM", "LEAD"],
+  training: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   directory: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gla: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -331,6 +333,7 @@ async function ensureSchema(env) {
   await portalSchema(env);   // Tenant portal follow-up
   await malfunctionsSchema(env);   // Malfunction Records
   await cleaningSchema(env);   // Cleaning headcount control
+  await trainingSchema(env);   // Training tracker
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -1536,6 +1539,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
   if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
   if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content

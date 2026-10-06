@@ -49,6 +49,7 @@ window.HUB = {
     "compliance":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "fitout":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "training":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "sales":           ["MM",  "OM",  "LEAD"],
     "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -392,6 +393,8 @@ window.HUB = {
       sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     /* Policies & Procedures — the three systems are placeholders until their content is built */
+    /* Training & induction tracker (see docs/FEATURE-training.md) */
+    { id: "training", name: "Training Tracker", desc: "Who completed which training, what expires, what is still needed", group: "Policies & Procedures", icon: "book", color: "#2E6B4F", url: "/tools/training" },
     { id: "policies", name: "Policies & Procedures", desc: "Owner, Assist and ABC General policies in one place", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies" }
 
     /* Next system goes here — add a comma after the } above, then paste:
