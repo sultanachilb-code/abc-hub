@@ -1749,6 +1749,7 @@ async function opsRoute(env, me, p, method, b, url) {
     const gate = await gateDay(env, site, day).catch(() => null);   // Loading Gate feature: approved in / rejected out at the loading area
     const hd = await env.DB.prepare("SELECT doc FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first().catch(() => null);
     let gateMarks = {}; try { gateMarks = hd ? gateMarksOf(JSON.parse(hd.doc || "{}")) : {}; } catch {}   // the open page shows new gate marks without reloading
+    gateMarks = { ...gateMarks, ...(await gateScanMarks(env, site, day).catch(() => ({}))) };   // and approvals scanned before their REQ was imported
     return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks };
   }
   if (p === "handover/save" && method === "POST") {
@@ -1765,6 +1766,7 @@ async function opsRoute(env, me, p, method, b, url) {
         keepGateMarks(C, incoming);   // Loading Gate feature: a page opened before a scan must not wipe the gate's "✓ Attended / ✕ Refused" marks
       }
     }
+    if (await fillGateMarks(env, site, b.day, incoming).catch(() => 0)) merged = true;   // approvals scanned at the gate before the REQ was in the handover → the page takes the marked copy
     const doc = JSON.stringify(incoming);
     if (doc.length > 60000) throw fail("This handover is too long — remove finished items");
     const at = nowIso();
@@ -1983,6 +1985,33 @@ function gateMarksOf(doc) {   // { "8935": " — ✓ Attended 20:04 · 1 worker"
   const marks = {};
   for (const k of ["today", "ongoing", "tomorrow"]) for (const x of (doc && doc[k]) || []) { const m = x.text && x.text.match(GATE_MARK), r = reqKeyOf(x); if (m && r) marks[r] = m[0]; }
   return marks;
+}
+/* A request approved (and scanned at the loading gate) during the day before it was imported into the handover:
+   on every save, lines whose REQ was already scanned that day get the gate's outcome, built the same way the gate writes it live. */
+const gateHm = iso => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)).replace(/^24/, "00"); } catch { return ""; } };
+async function gateScanMarks(env, site, day) {   // { "8935": " — ✓ Attended 20:04 · 1 worker" } from the day's gate scans
+  if (!isDay(day)) return {};
+  const { results } = await env.DB.prepare("SELECT at, decision, reason, override, workers, req FROM gate_scans WHERE site = ? AND day = ? AND req != '' ORDER BY id").bind(site, day).all();
+  const marks = {};
+  for (const r of results || []) {
+    const k = String(r.req).replace(/\D/g, "").replace(/^0+/, ""), t = gateHm(r.at); if (!k) continue;
+    if (r.decision === "in") marks[k] = ` — ✓ Attended ${t}${r.workers ? ` · ${r.workers} worker${r.workers === 1 ? "" : "s"}` : ""}${r.override ? ` · override: ${r.reason}` : ""}`;
+    else if (r.decision === "out") marks[k] = ` — ✕ Refused at gate ${t} · ${r.reason}`;
+    else if (r.decision === "leave") { const base = (marks[k] || "").replace(/ → left.*$/, ""); marks[k] = base ? base + " → left " + t : ` — → Left ${t}`; }
+  }
+  return marks;
+}
+async function fillGateMarks(env, site, day, doc) {
+  const lines = ["today", "ongoing", "tomorrow"].flatMap(k => doc[k] || []).filter(x => reqKeyOf(x));
+  if (!lines.length) return 0;
+  const marks = await gateScanMarks(env, site, day);
+  let n = 0;
+  for (const x of lines) {
+    const m = marks[reqKeyOf(x)]; if (!m) continue;
+    const t = (x.text.replace(GATE_MARK, "") + m).slice(0, 500);
+    if (t !== x.text) { x.text = t; n++; }
+  }
+  return n;
 }
 function keepGateMarks(saved, incoming) {   // a page opened before a scan must not wipe the gate's marks (imported and typed lines)
   const marks = gateMarksOf(saved);

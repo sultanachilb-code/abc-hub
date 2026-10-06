@@ -628,6 +628,7 @@ $("#impFile").addEventListener("change", async e => {
         IMP.upcoming.forEach(q => H.doc.upcoming.push(mk(q, true)));
         H.doc.upcoming.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
         touch(); render(); toast(`${n} request${n === 1 ? "" : "s"} added — save to keep them`);
+        if (H.day === CTX.today) loadLive();   // requests already scanned at the loading gate today get their feedback straight away
       } };
     d.showModal();
   } catch (er){ toast(er.message, true); }
