@@ -472,6 +472,15 @@ async function route(request, env, ctx, url) {
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   if (path === "setup" && method === "POST") return setup(env, body);
   if (path === "inbox/mail" && method === "POST") return ok(await mailInbox(env, request, body, { SITES, canSite, isFull, now: nowIso, today: beirutToday, raiseEvent, audit }));   // Email inbox: MOM · calendar · contracts report
+  /* Monthly backup to Google Drive: the Apps Script (same INBOX_KEY as the email inbox) pulls every table and saves an Excel file in Drive */
+  if (path === "inbox/backup" && method === "POST") {
+    if (!env.INBOX_KEY) throw fail("The hub inbox is not set up (INBOX_KEY secret is missing)", 503);
+    const key = request.headers.get("x-inbox-key") || "";
+    if (key.length !== env.INBOX_KEY.length || key !== env.INBOX_KEY) throw fail("Wrong inbox key", 403);
+    const data = await backupData(env);
+    for (const t of ["mf_photos", "push_subs", "sessions", "twofa_codes", "twofa_keys", "addin_pairs", "gate_devices"]) delete data.tables[t];   // pictures and secrets stay out of Drive
+    return ok(data);
+  }
   if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
   if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
     { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
