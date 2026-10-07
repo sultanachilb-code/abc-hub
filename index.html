@@ -2136,6 +2136,12 @@ function d2dHtml(){
   if (has("schedule")) lanes += lane(d2dPack(shiftBars, 4), !!lanes);
   if (conDots.length) lanes += d2dPack(conDots, 3).map((r, k) => `<div class="d2d-ln ${k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b);
     return `<button class="d2d-dot ${b.st} ${b.over ? "nolbl" : ""}" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>${b.L.length > 1 ? b.L.length : ""}</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
+  /* Loading Gate: contractors refused at the gate — a red ✕ at the time of the scan (several in the same 20 min share one mark) */
+  const gRef = []; if (D.gate && (has("gate") || has("contractor-access"))) for (const r of D.gate.refused.slice().sort((a, b) => hmM(a.at) - hmM(b.at))){
+    const g = gRef.find(x => Math.abs(hmM(x.at) - hmM(r.at)) <= 20); if (g) g.L.push(r); else gRef.push({ t: "gref", at: r.at, L: [r] }); }
+  const gBars = gRef.map(g => ({ ...g, from: g.at, to: mm0(Math.min(1439, hmM(g.at) + 25 + 14 * 9)), label: g.L.length > 1 ? `${g.L.length} refused at the gate` : `Refused · ${g.L[0].contractor || g.L[0].tenant || g.L[0].req}` }));
+  if (gBars.length) lanes += d2dPack(gBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b);
+    return `<button class="d2d-dot over gref" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>✕</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
   if (tcBars.length) lanes += d2dPack(tcBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl close" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">🏁 ${esc(b.label)}</button>`; }).join("")}</div>`).join("");
   if (evBars.length) lanes += lane(d2dPack(evBars, 2), true);
   if (!lanes) lanes = `<div class="d2d-ln"></div>`;
@@ -2150,7 +2156,7 @@ function d2dHtml(){
   return `<section class="d2d" id="d2d">${head}${chips ? `<div class="d2d-day">${chips}</div>` : ""}
     <div class="d2d-sc"><div class="d2d-tr" style="--n:${h1 - h0};--mw:${(h1 - h0) * 46}px"><div class="d2d-hr">${hours}</div>${lanes}${pins}${empty}
       <div class="d2d-now" style="left:${X(now)}"><b>NOW ${esc(now)}</b></div></div></div>
-    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#C07A12"></i>Contractor permit ends</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
+    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#C07A12"></i>Contractor permit ends</span>` : ""}${gBars.length ? `<span><i class="pn" style="background:#C0392B"></i>Refused at the gate</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
     ${d2dCards(apps, D, nm)}</section>`;
 }
 function d2dCards(apps, D, nm){
@@ -2184,7 +2190,8 @@ function d2dCards(apps, D, nm){
       const w = L.filter(v => v.state === "onsite").reduce((a, v) => a + (v.workers || 0), 0);
       return [`${n("onsite")} in the mall now${w ? " · " + w + " workers" : ""} · ${n("expected")} expected`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
     } };
-  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (line[a.id] || (a.id === "contractor-access" && line.contractors) || (() => [a.desc, ""]))(); const live = a.id === "contractors";   // the Contractor Access folder shows today's contractor count
+  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (a.id === "contractor-access" ? (() => { const [t0, p0] = line.contractors(); const G = D && D.gate;
+      return [t0 + (G && (G.in || G.out) ? ` · gate ${G.in} in${G.out ? " · " + G.out + " refused" : ""}` : ""), G && G.out && !/al/.test(p0) ? `<em class="al">${G.out} refused at the gate</em>` : p0]; }) : line[a.id] || (() => [a.desc, ""]))(); const live = a.id === "contractors";   // the Contractor Access folder shows today's contractor count
     return `<button class="d2d-c" data-id="${esc(a.id)}" ${live ? "data-live" : ""}><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}${live ? `<span class="lv"></span>` : ""}</span><span class="tx"><b>${live ? "Live contractor access" : esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
 }
 function d2dPop(b, el){
@@ -2202,6 +2209,9 @@ function d2dPop(b, el){
   else if (b.t === "dl"){ const r = b.r; app = r.app;
     h = `<h4>${esc(r.label)}</h4><p>Due by <b style="color:var(--text)">${esc(r.due)}</b></p>${r.done ? `<p>${r.app === "handover" ? "Handed over" : "Submitted"} at ${esc(r.at)} by ${esc(r.by)}${r.receivedBy ? " · received by " + esc(r.receivedBy) : ""}</p>` : r.started ? `<p>Started by ${esc(r.by)} — not submitted yet</p>` : ""}
       <p><em class="${{ done: "ok", late: "warn", over: "al", soon: "warn" }[b.st] || "mu"}">${{ done: "Done on time", late: "Done late", over: "Overdue", soon: "Due within the hour", next: "Upcoming" }[b.st]}</em></p>`; }
+  else if (b.t === "gref"){ app = "gate";
+    h = `<h4>Refused at the loading gate</h4><div class="d2d-plist">${b.L.map(r => `<div><b>${esc(r.tenant && r.tenant !== r.contractor ? r.tenant + " - " : "")}${esc(r.contractor || r.req || "Contractor")}</b>
+      <p>${esc([r.req, r.at, r.by && "by " + r.by].filter(Boolean).join(" · "))}</p><em class="al">${esc(r.reason || "Refused")}</em></div>`).join("")}</div>`; }
   else if (b.t === "cdot"){ app = "contractors";
     const tag = v => v.overdue ? `<em class="al">Over permit time</em>` : v.state === "onsite" ? `<em class="ok">In the mall since ${esc(v.inAt)}</em>` : v.state === "left" ? `<em class="mu">Left ${esc(v.outAt)}</em>` : v.late ? `<em class="warn">Late — not checked in</em>` : `<em class="mu">Expected</em>`;
     h = `<h4>${b.L.length > 1 ? b.L.length + " contractors · permits end " : "Permit ends "}${esc(b.at)}</h4><div class="d2d-plist">${b.L.map(v => `<div><b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b>

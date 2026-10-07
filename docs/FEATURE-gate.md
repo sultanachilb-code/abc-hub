@@ -94,3 +94,8 @@ The **Run As** user must be able to read the request object and those fields (Fi
 ## Offline booking list (Oct 2026)
 The gate phone keeps today's and tomorrow's contractor bookings (`GET /api/ops/gate/offline`), refreshed every 10 minutes while online.
 A scan without signal shows the booking found on the phone (or warns that it is not in the list); the decision is queued as before.
+
+## On the Day to Day timeline (Oct 2026)
+`/api/ops/today` returns the day's gate counts and every refused scan. The timeline shows a red ✕ at the time of each refusal
+(refusals within 20 minutes share one mark; the popup lists contractor, REQ, time, agent and reason with "Open Loading Gate"),
+and the Contractor Access card adds "gate N in · M refused".
