@@ -1762,7 +1762,22 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p === "handover/new") {
     const day = isDay(q("day")) ? q("day") : beirutToday();
-    const same = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+    let same = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+    /* Repair (Oct 2026): before the fix, changing the date box re-dated the open handover. A handover whose hand-overs all
+       happened before its day and that was created before its day was moved — it goes back to the day of its last hand-over. */
+    if (same) {
+      const hs = JSON.parse(same.handoffs || "[]"), dayOf = iso => { const p = beirutParts(new Date(iso)); return `${p.year}-${p.month}-${p.day}`; };
+      const lastDay = hs.length ? hs.map(h => h.at ? dayOf(h.at) : "").filter(Boolean).sort().pop() : "";
+      const madeDay = same.created_at ? dayOf(same.created_at) : "";
+      if (lastDay && lastDay < day && madeDay && madeDay < day) {
+        const busy = await env.DB.prepare("SELECT id FROM handovers WHERE site = ? AND day = ? AND id != ?").bind(site, lastDay, same.id).first();
+        if (!busy) {
+          await env.DB.prepare("UPDATE handovers SET day = ? WHERE id = ?").bind(lastDay, same.id).run();
+          await raiseEvent(env, { site, app: "handover", tone: "info", title: `Handover of ${lastDay} put back on its own date`, body: `It had been moved to ${day}. ${day} starts from it.` }).catch(() => {});
+          same = null;
+        }
+      }
+    }
     const shiftInfo = { shifts: await handoverShifts(env, site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN" };
     if (same) return { handover: handoverOut(same), can, existing: true, ...shiftInfo };
     const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first()
@@ -1857,12 +1872,14 @@ async function opsRoute(env, me, p, method, b, url) {
     const doc = JSON.stringify(incoming);
     if (doc.length > 60000) throw fail("This handover is too long — remove finished items");
     const at = nowIso();
+    if (id) { const own = await env.DB.prepare("SELECT day FROM handovers WHERE id = ?").bind(id).first(); if (own) b.day = own.day; }
     const other = await env.DB.prepare("SELECT id FROM handovers WHERE site = ? AND day = ? AND id != ? LIMIT 1").bind(site, b.day, id).first();
     if (other) throw fail("There is already a handover for this day — open it from the list and continue there", 409, { id: other.id });
     if (id) {
       const h = await env.DB.prepare("SELECT site FROM handovers WHERE id = ?").bind(id).first();
       if (!h || h.site !== site) throw fail("Handover not found", 404);
-      await env.DB.prepare("UPDATE handovers SET day = ?, shift = 'DAY', doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(b.day, doc, at, me.full_name, id).run();
+      /* the day of a saved handover never changes (changing the date on the page opens that day's handover instead) */
+      await env.DB.prepare("UPDATE handovers SET shift = 'DAY', doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(doc, at, me.full_name, id).run();
     } else {
       const r = await env.DB.prepare(`INSERT INTO handovers (site, day, shift, doc, status, created_by, created_name, created_at, updated_at, updated_name, handoffs)
         VALUES (?,?,'DAY',?,'draft',?,?,?,?,?,'[]')`).bind(site, b.day, doc, me.email, me.full_name, at, at, me.full_name).run();

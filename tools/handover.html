@@ -330,7 +330,7 @@ function render(){
   app.innerHTML = `
   <div class="meta" style="max-width:980px;margin:0 auto">
     ${BACK === "hist" ? `<button class="btn ghost small" id="back">‹ Handover History</button>` : H.day !== CTX.today ? `<button class="btn ghost small" id="toToday">‹ Today's handover</button>` : ""}
-    <input class="inp" type="date" id="hDay" value="${esc(H.day)}" ${ro}>
+    <input class="inp" type="date" id="hDay" value="${esc(H.day)}" max="${esc(CTX.today)}" title="Open the handover of another day">
     <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy === "Auto-closed" ? "Closed" : H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
     <span style="flex:1"></span>
     ${ro ? "" : `<button class="btn ghost small" id="impBtn" title="Salesforce Handover Report (.xlsx)">⤓ Import tenant requests</button>`}
@@ -494,7 +494,7 @@ app.addEventListener("input", e => {
   if (!H) return;
   const t = e.target, k = t.dataset.k;
   if (t.id === "notes"){ H.doc.notes = t.value; return touch(); }
-  if (t.id === "hDay"){ H.day = t.value; return touch(); }
+  if (t.id === "hDay"){ return; }   // the date box opens that day's handover (on change) — it never moves this one
   if (k && t.dataset.pc){   // Portal Handover table cell: the change is the team's own input (red); the line text is rebuilt, keeping the gate mark
     const x = H.doc[k][+t.dataset.i], f = t.dataset.pc, c = { ...portalCols(x) };
     c[f] = t.value; const m = new Set(String(c.m || "").split(",").filter(Boolean)); m.add(f); c.m = [...m].join(",");
@@ -504,7 +504,16 @@ app.addEventListener("input", e => {
   }
   if (k){ H.doc[k][+t.dataset.i][t.dataset.f] = t.value; if (t.tagName === "TEXTAREA") grow(t); if (t.tagName === "SELECT") t.className = t.value === "Done" ? "done" : t.value === "Not done" ? "nd" : ""; touch(); }
 });
-app.addEventListener("change", e => { if (H && e.target.id === "hDay"){ LIVE = null; const b = $("#liveBox"); if (b) b.innerHTML = liveHtml(); loadLive(); } });
+app.addEventListener("change", async e => {
+  if (!H || e.target.id !== "hDay" || !/^\d{4}-\d{2}-\d{2}$/.test(e.target.value) || e.target.value === H.day) return;
+  if (e.target.value > CTX.today){ toast("A handover cannot be opened for a future date — use Tomorrow / Coming up", true); e.target.value = H.day; return; }
+  if (dirty && H.can.handover) await save(false, true).catch(() => {});   // keep what was typed on this day first
+  const day = e.target.value;
+  if (day === CTX.today){ BACK = ""; return openDay(day); }
+  try { const L = await api(`ops/handover/list?site=${CTX.site}&from=${day}&to=${day}`);   // a past day: open its handover, never create one
+    if (L.handovers.length){ BACK = "hist"; return open(L.handovers[0].id); }
+    toast(`There is no handover on ${D.fmt(day, { weekday: "short" })}`, true); e.target.value = H.day; } catch (er){ toast(er.message, true); }
+});
 app.addEventListener("click", async e => {
   if (!H) return;
   const t = e.target;

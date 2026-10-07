@@ -57,3 +57,9 @@ The Loading area feedback column then shows green / yellow as usual.
 ## Shift-end check (Oct 2026)
 Submitting a shift hand-over first lists what is still open on that shift: its checklist, restroom windows not fully inspected,
 contractors still in the mall (PM) or past their permit (any shift), and a previous hand-over not received. "Submit anyway" still works.
+
+## Handover date box fix (7 Oct 2026)
+Changing the date box on an open handover used to re-date that handover (yesterday's handover became "today", so the new day never started).
+Now the date box opens the handover of the chosen day (today's is created from the last one as usual; a past day opens only if it exists),
+and saving never changes a handover's day. A handover already moved by the old behaviour (all its hand-overs and its creation before its day)
+is put back on the day of its last hand-over the next time today's handover is opened, and today starts from it.
