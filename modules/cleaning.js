@@ -1,18 +1,15 @@
 /* =====================================================================
    CLEANING HEADCOUNT CONTROL — the cleaning provider's punching record (PDF from its time-attendance system)
-   is read on the page and checked against the planned headcount per shift:
-   shortages per shift and day, late entries, early exits, missing punch-outs, long shifts.
+   is read on the page and checked against the cleaning contract:
+   the agreed headcount per day, the minimum on duty at any time during the cover hours (no fixed shifts), missing punches, long shifts.
    The page reads the PDF; the hub keeps the parsed punches per period and the plan per flagship.
    See docs/FEATURE-cleaning-control.md · Routes: /api/ops/cl/*
    ===================================================================== */
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
-/* first plan, from the October 2026 BPM punching record (12-hour day and afternoon shifts) — changed on the page */
-const DEFAULT = { provider: "BPM", grace: 10, shifts: [
-  { name: "Day", from: "07:00", to: "19:00", planned: 0 },
-  { name: "Afternoon", from: "14:00", to: "02:00", planned: 0 },
-  { name: "Evening", from: "18:00", to: "02:00", planned: 0 } ] };
+/* the contract: no fixed shifts — an agreed headcount per day and a minimum on duty during the cover hours (typed on the page) */
+const DEFAULT = { provider: "BPM", headcount: 0, minOnDuty: 0, coverFrom: "10:00", coverTo: "22:00", maxHours: 13 };
 
 export async function cleaningSchema(env) {
   await env.DB.batch([
@@ -46,11 +43,10 @@ export async function cleaningRoute(env, p, method, b, url, d) {
   if (method !== "POST") throw err("Unknown request", 404);
 
   if (p === "cl/settings") {
-    if (!plan) throw err("Only the operations team can change the plan", 403);
-    const shifts = (Array.isArray(b.shifts) ? b.shifts : []).slice(0, 8).map(s => ({ name: clip(s.name, 30) || "Shift", from: HM.test(s.from) ? s.from : "07:00",
-      to: HM.test(s.to) ? s.to : "15:00", planned: Math.max(0, Math.min(500, Number(s.planned) || 0)) }));
-    if (!shifts.length) throw err("Add at least one shift");
-    const data = { provider: clip(b.provider, 60) || "Cleaning provider", grace: Math.max(0, Math.min(60, Number(b.grace) || 0)), shifts };
+    if (!plan) throw err("Only the operations team can change the contract figures", 403);
+    const n = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+    const data = { provider: clip(b.provider, 60) || "Cleaning provider", headcount: n(b.headcount, 500), minOnDuty: n(b.minOnDuty, 500),
+      coverFrom: HM.test(b.coverFrom) ? b.coverFrom : "10:00", coverTo: HM.test(b.coverTo) ? b.coverTo : "22:00", maxHours: n(b.maxHours, 24) || 13 };
     await DB.prepare(`INSERT INTO cl_settings (site, data, updated_at, updated_name) VALUES (?,?,?,?)
       ON CONFLICT(site) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at, updated_name = excluded.updated_name`).bind(site, JSON.stringify(data), now(), me.full_name).run();
     return { settings: await settingsOf(env, site) };

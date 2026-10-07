@@ -25,6 +25,9 @@ table.t td.c,table.t th.c{text-align:center}
 .sh input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit}
 .scr{max-height:520px;overflow:auto}
 .pc{font-size:.74rem;line-height:1.25;white-space:nowrap}.pc small{color:var(--muted)}
+.strip{display:flex;gap:1px;min-width:240px}.strip i{flex:1;height:14px;border-radius:2px;background:var(--line)}
+.strip i.okb,.lgd2 i.okb{background:var(--ok)}.strip i.lo,.lgd2 i.lo{background:var(--alert)}.strip i.nb{background:var(--brand-2);opacity:.55}
+.lgd2{display:flex;gap:14px;font-size:.74rem;color:var(--muted);margin-top:8px}.lgd2 i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:5px 11px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
 .chips button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 @media (max-width:1000px){.kp{grid-template-columns:repeat(3,minmax(0,1fr))}.row2{grid-template-columns:1fr}}
@@ -91,107 +94,100 @@ async function readPdf(file){
   return { from, to, rows, printed };
 }
 
-/* ---------- suggest the shifts from the record itself: punches grouped by start time (nearest 30 min) ---------- */
-function suggestShifts(rep){
-  const P = [];
-  for (const r of rep.rows) for (const x of r.days){ const i = mins(x.in); let o = mins(x.out); if (i == null || o == null) continue; if (o < i) o += 1440; P.push([i, o]); }
-  if (!P.length) return null;
-  const G = new Map(); for (const [i, o] of P){ const k = Math.round(i / 60) * 60; (G.get(k) || G.set(k, []).get(k)).push([i, o]); }
-  const nDays = rep.rows[0].days.length, med = a => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
-  const q15 = m => Math.round(m / 15) * 15;
-  /* groups starting within an hour of each other and ending at about the same time are one shift */
-  const grp = [...G.entries()].filter(([, L]) => L.length >= Math.max(3, P.length * .03)).sort((a, b) => a[0] - b[0]).map(([, L]) => L)
-    .reduce((acc, L) => { const last = acc[acc.length - 1], m = X => [med(X.map(x => x[0])), med(X.map(x => x[1]))];
-      if (last){ const [f1, t1] = m(last), [f2, t2] = m(L); if (f2 - f1 <= 60 && Math.abs(t2 - t1) <= 60){ last.push(...L); return acc; } }
-      acc.push(L.slice()); return acc; }, []);
-  return grp.map((L, n) => {
-    const f = q15(med(L.map(x => x[0]))), t = q15(med(L.map(x => x[1])));
-    return { name: ["Morning", "Mid", "Afternoon", "Evening", "Night"][n] || "Shift " + (n + 1), from: hmS(f), to: hmS(t), planned: Math.round(L.length / nDays) };
-  });
-}
-
-/* ---------- check the punches against the plan ---------- */
+/* ---------- the contract: no fixed shifts — the provider must keep the agreed headcount every day,
+   and at least a minimum number of cleaners on duty at any time during the cover hours ---------- */
+const SLOT = 30;   // on-duty count every 30 minutes
 function analyse(rep, S){
-  const shifts = S.shifts.map(s => { const f = mins(s.from); let t = mins(s.to); if (t <= f) t += 1440; return { ...s, f, t }; });
-  const g = Number(S.grace) || 0, today = ctx.today;
-  const grid = {}, exc = [], per = [];
+  const today = ctx.today, maxH = Number(S.maxHours) || 13;
+  const cf = mins(S.coverFrom || "10:00"); let ct = mins(S.coverTo || "22:00"); if (ct <= cf) ct += 1440;
+  const pDay = (rep.printed || "").slice(0, 10), pM = rep.printed ? mins(rep.printed.slice(11)) : null;
+  const days = rep.rows[0] ? rep.rows[0].days.map(d => d.day) : [];
+  const iv = Object.fromEntries(days.map(d => [d, []]));   // intervals per day
+  const exc = [], per = [];
   for (const r of rep.rows){
     const P = { ...r, flags: 0, cells: [] };
     for (const x of r.days){
       const cell = { day: x.day, in: x.in, out: x.out, tags: [] };
       const i = mins(x.in); let o = mins(x.out);
       if (i == null && o == null){ P.cells.push(cell); continue; }
-      const sh = i == null ? null : shifts.reduce((a, s) => Math.abs(s.f - i) < Math.abs(a.f - i) ? s : a, shifts[0]);
-      if (sh){ cell.shift = sh.name; (grid[x.day] = grid[x.day] || {})[sh.name] = ((grid[x.day] || {})[sh.name] || 0) + 1; }
       if (o != null && i != null && o < i) o += 1440;
+      const printedThatDay = pDay === x.day;
       if (i == null) cell.tags.push(["miss", "No IN punch"]);
-      else if (o == null) cell.tags.push(x.day >= today ? ["in", "Still in"] : ["miss", "No OUT punch"]);
-      if (sh && i != null && i - sh.f > g) cell.tags.push(["late", `Late ${i - sh.f} min`]);
-      if (sh && o != null && sh.t - o > g) cell.tags.push(["early", `Left ${sh.t - o} min early`]);
-      if (sh && i != null && o != null && (o - i) - (sh.t - sh.f) > 60) cell.tags.push(["long", `${Math.round((o - i) / 6) / 10} h worked`]);
+      else if (o == null){ if (printedThatDay || x.day >= today) cell.tags.push(["in", "Still in"]); else cell.tags.push(["miss", "No OUT punch"]); }
+      if (i != null && o != null && (o - i) / 60 > maxH) cell.tags.push(["long", `${Math.round((o - i) / 6) / 10} h worked`]);
+      if (i != null) iv[x.day].push([i, o != null ? o : (printedThatDay && pM != null ? Math.max(i, pM) : i + 8 * 60), o == null]);
       if (cell.tags.some(t => t[0] !== "in")){ P.flags++; exc.push({ no: r.no, name: r.name, ...cell }); }
       P.cells.push(cell);
     }
     per.push(P);
   }
-  const days = rep.rows[0] ? rep.rows[0].days.map(d => d.day) : [];
-  const nowM = mins(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00"));
-  /* a shift of the last day that had not started when the record was printed is not counted (the record is printed during the day) */
-  const pDay = (rep.printed || "").slice(0, 10), pM = rep.printed ? mins(rep.printed.slice(11)) : (rep.to >= today ? nowM : null);
-  const notYet = (d, s) => d === rep.to && pM != null && (pDay ? pDay === d : true) && s.f > pM;
-  const cover = days.map(d => ({ day: d, sh: shifts.map(s => ({ name: s.name, planned: s.planned, present: (grid[d] || {})[s.name] || 0, wait: notYet(d, s) })) }));
-  const short = cover.reduce((n, c) => n + c.sh.filter(s => !s.wait && s.planned && s.present < s.planned).length, 0);
+  const need = Number(S.headcount) || 0, minOn = Number(S.minOnDuty) || 0;
+  const cover = days.map(d => {
+    const L = iv[d], present = L.length;
+    const end = pDay === d && pM != null ? Math.min(ct, pM) : ct;   // the day the record was printed: only up to the print time
+    const slots = [];
+    for (let t = cf; t < end; t += SLOT) slots.push({ t, n: L.filter(([a, b]) => a <= t && b > t).length });
+    const low = slots.length ? slots.reduce((m, x) => x.n < m.n ? x : m, slots[0]) : null;
+    const shortSlots = minOn ? slots.filter(x => x.n < minOn) : [];
+    return { day: d, present, need, slots, low, shortSlots, partial: pDay === d };
+  });
   const cnt = k => exc.reduce((n, e) => n + e.tags.filter(t => t[0] === k).length, 0);
-  return { shifts, cover, exc, per, short, late: cnt("late"), early: cnt("early"), miss: cnt("miss"), long: cnt("long"),
-    avg: days.length ? Math.round(cover.reduce((n, c) => n + c.sh.reduce((a, s) => a + s.present, 0), 0) / days.length) : 0 };
+  const full = cover.filter(c => !c.partial);
+  return { cover, exc, per, cf, ct, miss: cnt("miss"), long: cnt("long"),
+    shortDays: need ? full.filter(c => c.present < need).length : 0,
+    lowest: cover.filter(c => c.low).reduce((m, c) => !m || c.low.n < m.low.n ? c : m, null),
+    shortTime: cover.reduce((n, c) => n + c.shortSlots.length * SLOT, 0),
+    avg: full.length ? Math.round(full.reduce((n, c) => n + c.present, 0) / full.length) : (cover[0] ? cover[0].present : 0) };
 }
-
+const hmLabel = m => hmS(((m % 1440) + 1440) % 1440);
 function draw(){
-  const S = C.settings, A = REP ? analyse(REP, S) : null;
-  const plan = `<div class="card box"><h3><span>Plan · ${esc(S.provider)}</span>${C.can.plan ? `<button class="btn small" id="svPlan">Save plan</button>` : ""}</h3>
-    <table class="t sh"><tr><th>Shift</th><th>From</th><th>To</th><th class="c">Planned</th>${C.can.plan ? "<th></th>" : ""}</tr>
-    ${S.shifts.map((s, i) => `<tr data-i="${i}"><td><input data-k="name" value="${esc(s.name)}"></td><td><input data-k="from" type="time" value="${esc(s.from)}"></td><td><input data-k="to" type="time" value="${esc(s.to)}"></td>
-      <td><input data-k="planned" type="number" min="0" value="${s.planned}" style="text-align:center"></td>${C.can.plan ? `<td><button class="btn ghost small" data-rm="${i}">✕</button></td>` : ""}</tr>`).join("")}</table>
-    <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;font-size:.8rem">
-      ${C.can.plan ? `<button class="btn ghost small" id="addSh">+ Shift</button>${REP ? `<button class="btn ghost small" id="sugSh">✨ Suggest from this record</button>` : ""}` : ""}
-      <label>Provider <input id="prov" value="${esc(S.provider)}" style="width:130px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)"></label>
-      <label>Grace <input id="grace" type="number" min="0" max="60" value="${S.grace}" style="width:60px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)"> min</label></div>
-    <p class="muted" style="font-size:.74rem;margin-top:8px">Each punch is matched to the shift whose start is closest. Late = IN after start + grace; early = OUT before end − grace.${S.updatedBy ? ` Last change: ${esc(S.updatedBy)}.` : ""}</p></div>`;
+  const S = C.settings, A = REP ? analyse(REP, S) : null, ro = C.can.plan ? "" : "disabled";
+  const inp = (id, v, type, w) => `<input id="${id}" type="${type || "text"}" value="${esc(v)}" ${ro} style="width:${w || 90}px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)">`;
+  const plan = `<div class="card box"><h3><span>Contract · ${esc(S.provider)}</span>${C.can.plan ? `<button class="btn small" id="svPlan">Save</button>` : ""}</h3>
+    <div class="sh" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;font-size:.8rem">
+      <label>Provider<br>${inp("prov", S.provider, "text", 160)}</label>
+      <label>Agreed headcount per day<br>${inp("need", S.headcount || 0, "number", 90)}</label>
+      <label>Minimum on duty at any time<br>${inp("minOn", S.minOnDuty || 0, "number", 90)}</label>
+      <label>During<br>${inp("cf", S.coverFrom || "10:00", "time", 110)} – ${inp("ct", S.coverTo || "22:00", "time", 110)}</label>
+      <label>Long shift above<br>${inp("maxH", S.maxHours || 13, "number", 70)} h</label></div>
+    <p class="muted" style="font-size:.74rem;margin-top:10px">No fixed shifts: the provider can work any time, but every day the agreed number of cleaners must punch in,
+      and at least the minimum must be on duty at every moment of the cover hours.${S.updatedBy ? ` Last change: ${esc(S.updatedBy)}.` : ""}</p></div>`;
   const up = `<div class="card box"><h3><span>Punching record</span></h3>
     ${C.can.edit ? `<div class="drop" id="drop">📄 <b>Upload the punching record PDF</b><br><small>From the provider's time-attendance system · the same period uploaded again replaces it</small></div>` : ""}
     ${C.reports.length ? `<div style="margin-top:10px"><select class="sel" id="repSel" style="width:100%">${C.reports.map(r => `<option value="${r.id}" ${REP && REP.id === r.id ? "selected" : ""}>${esc(D.fmt(r.from))} – ${esc(D.fmt(r.to))} · ${r.staff} staff · ${esc(r.provider || "")} · ${esc(r.by)}</option>`).join("")}</select></div>` : `<p class="muted" style="margin-top:10px;font-size:.82rem">No punching record uploaded yet.</p>`}</div>`;
   let body = "";
   if (A){
-    const kp = [[REP.rows.length, "Staff in the record", ""], [A.avg, "Present per day (avg)", ""], [A.short, "Short shift-days", A.short ? "al" : "ok"],
-      [A.late, "Late entries", A.late ? "warn" : "ok"], [A.early, "Early exits", A.early ? "warn" : "ok"], [A.miss, "Missing punches", A.miss ? "al" : "ok"]];
-    const cov = `<div class="card box"><h3><span>Headcount vs plan</span><small class="muted">${esc(D.fmt(REP.from))} – ${esc(D.fmt(REP.to))}${REP.printed ? " · printed " + esc(D.fmt(REP.printed.slice(0, 10))) + " " + esc(REP.printed.slice(11)) : ""}</small></h3><div class="scr"><table class="t">
-      <tr><th>Day</th>${A.shifts.map(s => `<th class="c">${esc(s.name)}<br><small>${esc(s.from)}–${esc(s.to)}</small></th>`).join("")}</tr>
-      ${A.cover.map(c => `<tr><td>${esc(D.dow(c.day))} ${esc(D.fmt(c.day))}</td>${c.sh.map(s => s.wait ? `<td class="c muted"><small>not started in this record</small></td>` : `<td class="c ${s.planned ? (s.present < s.planned ? "short" : "okc") : ""}">${s.present}${s.planned ? ` / ${s.planned}` : ""}${s.planned && s.present < s.planned ? ` <small>(−${s.planned - s.present})</small>` : ""}</td>`).join("")}</tr>`).join("")}
-      </table></div>${A.shifts.some(s => s.planned) ? "" : `<p class="muted" style="font-size:.76rem;margin-top:8px">Set the planned headcount per shift to see the shortages.</p>`}</div>`;
-    const exc = A.exc.length ? `<table class="t"><tr><th>Day</th><th>Employee</th><th>Shift</th><th>IN</th><th>OUT</th><th>Check</th></tr>
-      ${A.exc.sort((a, b) => a.day.localeCompare(b.day) || a.name.localeCompare(b.name)).map(e => `<tr><td>${esc(D.fmt(e.day))}</td><td><b>${esc(e.name)}</b> <small class="muted">${esc(e.no)}</small></td><td>${esc(e.shift || "—")}</td><td>${esc(e.in || "—")}</td><td>${esc(e.out || "—")}</td>
-        <td>${e.tags.map(t => `<span class="tg ${t[0]}">${esc(t[1])}</span>`).join("")}</td></tr>`).join("")}</table>` : `<div class="empty">No exceptions in this period.</div>`;
+    const need = Number(S.headcount) || 0, minOn = Number(S.minOnDuty) || 0;
+    const kp = [[REP.rows.length, "Staff in the record", ""], [A.avg + (need ? ` / ${need}` : ""), "Present per day (avg)", need ? (A.avg < need ? "al" : "ok") : ""],
+      [need ? A.shortDays : "—", "Days below the headcount", need ? (A.shortDays ? "al" : "ok") : ""],
+      [A.lowest ? A.lowest.low.n : "—", A.lowest ? `Lowest on duty · ${D.fmt(A.lowest.day)} ${hmLabel(A.lowest.low.t)}` : "Lowest on duty", minOn && A.lowest ? (A.lowest.low.n < minOn ? "al" : "ok") : ""],
+      [A.miss, "Missing punches", A.miss ? "al" : "ok"], [A.long, `Shifts over ${S.maxHours || 13} h`, A.long ? "warn" : "ok"]];
+    const strip = c => `<div class="strip">${c.slots.map(x => `<i class="${minOn ? (x.n < minOn ? "lo" : "okb") : "nb"}" title="${hmLabel(x.t)} · ${x.n} on duty"></i>`).join("")}</div>`;
+    const cov = `<div class="card box"><h3><span>Headcount vs contract</span><small class="muted">${esc(D.fmt(REP.from))} – ${esc(D.fmt(REP.to))}${REP.printed ? " · printed " + esc(D.fmt(REP.printed.slice(0, 10))) + " " + esc(REP.printed.slice(11)) : ""}</small></h3><div class="scr"><table class="t">
+      <tr><th>Day</th><th class="c">Present${need ? " / agreed" : ""}</th><th class="c">Lowest on duty</th><th>On duty ${esc(hmLabel(A.cf))}–${esc(hmLabel(A.ct))} (every 30 min)</th><th class="c">Below minimum</th></tr>
+      ${A.cover.map(c => `<tr><td>${esc(D.dow(c.day))} ${esc(D.fmt(c.day))}${c.partial ? `<br><small class="muted">until ${esc(REP.printed.slice(11))}</small>` : ""}</td>
+        <td class="c ${need && !c.partial ? (c.present < need ? "short" : "okc") : ""}">${c.present}${need ? ` / ${need}` : ""}${need && !c.partial && c.present < need ? ` <small>(−${need - c.present})</small>` : ""}</td>
+        <td class="c ${minOn && c.low ? (c.low.n < minOn ? "short" : "okc") : ""}">${c.low ? `${c.low.n} <small class="muted">at ${esc(hmLabel(c.low.t))}</small>` : "—"}</td>
+        <td>${strip(c)}</td><td class="c ${c.shortSlots.length ? "short" : ""}">${minOn ? (c.shortSlots.length ? `${c.shortSlots.length * SLOT / 60} h` : "—") : ""}</td></tr>`).join("")}
+      </table></div>${need || minOn ? `<div class="lgd2"><span><i class="okb"></i>at or above the minimum</span><span><i class="lo"></i>below the minimum</span></div>` : `<p class="muted" style="font-size:.76rem;margin-top:8px">Type the agreed headcount and the minimum on duty from the contract, then Save.</p>`}</div>`;
+    const exc = A.exc.length ? `<table class="t"><tr><th>Day</th><th>Employee</th><th>IN</th><th>OUT</th><th>Check</th></tr>
+      ${A.exc.sort((a, b) => a.day.localeCompare(b.day) || a.name.localeCompare(b.name)).map(e => `<tr><td>${esc(D.fmt(e.day))}</td><td><b>${esc(e.name)}</b> <small class="muted">${esc(e.no)}</small></td><td>${esc(e.in || "—")}</td><td>${esc(e.out || "—")}</td>
+        <td>${e.tags.map(t => `<span class="tg ${t[0]}">${esc(t[1])}</span>`).join("")}</td></tr>`).join("")}</table>` : `<div class="empty">No missing punches or long shifts in this period.</div>`;
     const days = REP.rows[0].days.map(d => d.day);
-    const per = `<table class="t"><tr><th>Employee</th>${days.map(d => `<th class="c">${esc(D.dow(d))}<br>${esc(D.fmt(d))}</th>`).join("")}<th class="c">Flags</th></tr>
-      ${A.per.map(p => `<tr><td><b>${esc(p.name)}</b><br><small class="muted">${esc(p.no)}</small></td>${p.cells.map(c => `<td class="c pc">${c.in || c.out ? `${esc(c.in || "—")}<br>${esc(c.out || "—")}${c.tags.length ? "<br>" + c.tags.map(t => `<span class="tg ${t[0]}">${esc(t[0] === "late" || t[0] === "early" ? t[1].replace(/ min.*/, "′") : t[0] === "long" ? t[1].replace(" worked", "") : t[1].replace(" punch", ""))}</span>`).join("") : ""}` : `<small>off</small>`}</td>`).join("")}
-        <td class="c ${p.flags ? "short" : "okc"}">${p.flags}</td></tr>`).join("")}</table>`;
+    const per = `<table class="t"><tr><th>Employee</th>${days.map(d => `<th class="c">${esc(D.dow(d))}<br>${esc(D.fmt(d))}</th>`).join("")}<th class="c">Days</th></tr>
+      ${A.per.map(p => `<tr><td><b>${esc(p.name)}</b><br><small class="muted">${esc(p.no)}</small></td>${p.cells.map(c => `<td class="c pc">${c.in || c.out ? `${esc(c.in || "—")}<br>${esc(c.out || "—")}${c.tags.length ? "<br>" + c.tags.map(t => `<span class="tg ${t[0]}">${esc(t[0] === "long" ? t[1].replace(" worked", "") : t[1].replace(" punch", ""))}</span>`).join("") : ""}` : `<small>off</small>`}</td>`).join("")}
+        <td class="c">${p.cells.filter(c => c.in).length}</td></tr>`).join("")}</table>`;
     body = `<div class="kp">${kp.map(([v, t, c]) => `<div class="card ${c}"><b>${esc(v)}</b><small>${esc(t)}</small></div>`).join("")}</div>
       ${cov}
       <div class="card box" style="margin-top:14px"><h3><span class="chips" id="tabs"><button data-t="exc" class="${tab === "exc" ? "on" : ""}">Exceptions · ${A.exc.length}</button><button data-t="per" class="${tab === "per" ? "on" : ""}">By employee · ${REP.rows.length}</button></span>
         ${C.can.plan ? `<button class="btn ghost small" id="delRep" style="color:var(--alert)">Delete this upload</button>` : ""}</h3><div class="scr">${tab === "exc" ? exc : per}</div></div>`;
   }
   $("#app").innerHTML = `<div class="row2">${up}${plan}</div>${body}`;
-  /* events */
   const dr = $("#drop"); if (dr){ dr.onclick = () => $("#file").click(); dr.ondragover = e => e.preventDefault(); dr.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); }; }
   const rs = $("#repSel"); if (rs) rs.onchange = async () => { REP = await api(`ops/cl/report?site=${site}&id=${rs.value}`); draw(); };
   const tb = $("#tabs"); if (tb) tb.onclick = e => { const b = e.target.closest("[data-t]"); if (b){ tab = b.dataset.t; draw(); } };
-  const readPlan = () => ({ provider: $("#prov").value, grace: Number($("#grace").value), shifts: [...document.querySelectorAll(".sh tr[data-i]")].map(tr => {
-    const v = k => tr.querySelector(`[data-k="${k}"]`).value; return { name: v("name"), from: v("from"), to: v("to"), planned: Number(v("planned")) }; }) });
-  document.querySelectorAll(".sh input, #grace").forEach(i => i.onchange = () => { C.settings = { ...C.settings, ...readPlan() }; draw(); });
-  const sv = $("#svPlan"); if (sv) sv.onclick = async () => { try { const r = await api("ops/cl/settings", { site, ...readPlan() }); C.settings = r.settings; toast("Plan saved"); draw(); } catch (e){ toast(e.message, true); } };
-  const sg = $("#sugSh"); if (sg) sg.onclick = () => { const L = suggestShifts(REP); if (L){ C.settings.shifts = L; draw(); toast("Shifts suggested from the punches — check them and Save plan"); } };
-  const ad = $("#addSh"); if (ad) ad.onclick = () => { C.settings.shifts.push({ name: "Shift", from: "07:00", to: "15:00", planned: 0 }); draw(); };
-  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { C.settings.shifts.splice(Number(b.dataset.rm), 1); draw(); });
+  const readPlan = () => ({ provider: $("#prov").value, headcount: Number($("#need").value), minOnDuty: Number($("#minOn").value), coverFrom: $("#cf").value, coverTo: $("#ct").value, maxHours: Number($("#maxH").value) });
+  const sv = $("#svPlan"); if (sv) sv.onclick = async () => { try { const r = await api("ops/cl/settings", { site, ...readPlan() }); C.settings = r.settings; toast("Contract saved — figures recalculated"); draw(); } catch (e){ toast(e.message, true); } };
   const dl = $("#delRep"); if (dl) dl.onclick = async () => { if (!(await confirmBox("Delete this upload?", "The punches of this period are removed from the hub.", "Delete"))) return; await api("ops/cl/delete", { site, id: REP.id }); REP = null; load(); };
 }
 async function upload(f){
@@ -201,7 +197,6 @@ async function upload(f){
     const s = await api("ops/cl/save", { site, provider: C.settings.provider, file: f.name, ...r });
     toast(`${r.rows.length} staff read · ${D.fmt(r.from)} – ${D.fmt(r.to)}`);
     REP = await api(`ops/cl/report?site=${site}&id=${s.id}`); await load();
-    if (!C.settings.updatedBy && C.can.plan){ const L = suggestShifts(REP); if (L){ C.settings.shifts = L; draw(); toast("First upload: shifts suggested from the punches — check them and Save plan"); } }
   } catch (e){ toast(e.message, true); }
 }
 $("#file").onchange = e => { if (e.target.files[0]) upload(e.target.files[0]); e.target.value = ""; };

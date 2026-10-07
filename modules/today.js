@@ -6,6 +6,7 @@
    Read-only. See docs/FEATURE-day-to-day.md
    ===================================================================== */
 import { dayList } from "./contractors.js";
+import { gateDay } from "./gate.js";   // Loading Gate scans on the timeline
 
 const isShift = v => /^([01]\d|2[0-4]):[03]0-([01]\d|2[0-4]):[03]0$/.test(String(v || ""));
 const hm = iso => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)).replace(/^24/, "00"); } catch { return ""; } };
@@ -46,7 +47,7 @@ export async function todayRoute(env, d) {
   const seeCon = full || ["SUPERVISOR", "SECURITY", "MANAGER"].includes(me.role);
   const seeRR = full || ["SUPERVISOR", "MANAGER"].includes(me.role);
 
-  const [staff, cells, hov, momToday, calToday, acts, cons, runs, restroom, closeAnn, closeCon] = await Promise.all([
+  const [staff, cells, hov, momToday, calToday, acts, cons, runs, restroom, closeAnn, closeCon, gate] = await Promise.all([
     d.schedStaff(env, site),
     env.DB.prepare("SELECT day, email, val FROM sched_cells WHERE site = ? AND day IN (?, ?)").bind(site, day, yday).all(),
     env.DB.prepare("SELECT id, day, status, created_name, submitted_at, received_by, received_at, handoffs FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first(),
@@ -58,7 +59,8 @@ export async function todayRoute(env, d) {
     env.DB.prepare("SELECT form, status, submitted_at, submitted_name, created_name FROM form_runs WHERE site = ? AND day = ? AND form IN ('am','pm') ORDER BY id").bind(site, day).all().catch(() => ({ results: [] })),
     seeRR ? restroomDay(d, env, site, day) : Promise.resolve(null),
     env.DB.prepare("SELECT brand, unit, level, type FROM tm_announcements WHERE site = ? AND eff_date = ? AND type IN ('close','reloc')").bind(site, day).all().catch(() => ({ results: [] })),
-    env.DB.prepare("SELECT tenant, account FROM contracts_ending WHERE site = ? AND active = 1 AND departure_day = ?").bind(site, day).all().catch(() => ({ results: [] }))
+    env.DB.prepare("SELECT tenant, account FROM contracts_ending WHERE site = ? AND active = 1 AND departure_day = ?").bind(site, day).all().catch(() => ({ results: [] })),
+    seeCon ? gateDay(env, site, day).catch(() => null) : Promise.resolve(null)
   ]);
   /* tenants closing today (closure / relocation announcement, or the contracts report's departure date) */
   const nb = x => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -114,6 +116,9 @@ export async function todayRoute(env, d) {
     actions: { open: Number(acts && acts.n || 0), late: Number(acts && acts.late || 0) },
     contractors: cons && cons.map(v => ({ id: v.id, company: v.company || v.tenant, tenant: v.tenant, work: v.work, from: v.timeFrom, to: v.timeTo,
       state: v.state, overdue: v.overdue, late: v.late, workers: v.workers, inAt: v.inAt ? hm(v.inAt) : "", outAt: v.outAt ? hm(v.outAt) : "" })),
+    /* Loading Gate: today's counts and every refused scan (a red mark on the timeline at the time of the scan) */
+    gate: gate && { in: gate.counts.in, out: gate.counts.out, workers: gate.counts.workers,
+      refused: gate.list.filter(x => x.decision === "out").map(x => ({ at: hm(x.at), contractor: x.contractor || "", tenant: x.tenant || "", req: x.req || "", reason: x.reason || "", by: x.by || "" })) },
     sites: d.sites
   };
 }
