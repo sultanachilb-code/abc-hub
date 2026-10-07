@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snaglist Report · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Snaglist consolidated report — all flagships, from the Snaglist Manager. See docs/FEATURE-snaglist-report.md -->
+<style>
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.bar label{font-size:.8rem;color:var(--muted);font-weight:700;display:flex;gap:6px;align-items:center}
+.bar input{padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:6px 12px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.chips button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.kp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.6rem;line-height:1.1}.kp small{color:var(--muted);font-size:.72rem;font-weight:700}
+.kp .al b{color:var(--alert)}.kp .ok b{color:var(--ok)}
+.box{padding:14px 16px;margin-bottom:14px}.box h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.scr{overflow:auto}
+table.t{width:100%;border-collapse:collapse;font-size:.84rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:8px;text-align:right;white-space:nowrap}
+table.t th{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+table.t td:first-child,table.t th:first-child{text-align:left}
+.al{color:var(--alert);font-weight:800}.ok{color:var(--ok);font-weight:800}
+.sites{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.li{font-size:.82rem;padding:7px 0;border-top:1px solid var(--line)}.li small{color:var(--muted);display:block}
+.mix{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.mix span{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--paper)}
+@media (max-width:900px){.kp{grid-template-columns:repeat(2,minmax(0,1fr))}.sites{grid-template-columns:1fr}}
+@media print{.top,.bar{display:none!important}.wrap{padding:0}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="top"><h1>🧾 Snaglist Report <small id="sub">All flagships</small></h1><button class="btn ghost small" onclick="print()">Print / PDF</button></div>
+<div class="wrap"><div class="bar"><span class="chips" id="pre"></span><label>From<input type="date" id="from"></label><label>To<input type="date" id="to"></label></div><div id="app"><div class="empty">Loading…</div></div></div>
+<script src="common.js"></script>
+<script>
+let ctx = null, R = null, pre = "month";
+const P = { week: "Last 7 days", month: "This month", last: "Last month", d30: "Last 30 days" };
+function range(k){
+  const t = ctx.today, [y, m] = t.split("-").map(Number);
+  if (k === "week") return [D.add(t, -6), t];
+  if (k === "d30") return [D.add(t, -29), t];
+  if (k === "last"){ const s = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10), e = new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10); return [s, e]; }
+  return [t.slice(0, 8) + "01", t];
+}
+async function boot(){
+  try { ctx = await api("ops/context"); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#pre").innerHTML = Object.entries(P).map(([k, t]) => `<button data-p="${k}">${t}</button>`).join("");
+  $("#pre").onclick = e => { const b = e.target.closest("[data-p]"); if (b){ pre = b.dataset.p; setRange(); load(); } };
+  $("#from").onchange = $("#to").onchange = () => { pre = ""; mark(); load(); };
+  setRange(); load();
+}
+const mark = () => $("#pre").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.p === pre));
+function setRange(){ const [f, t] = range(pre); $("#from").value = f; $("#to").value = t; mark(); }
+async function load(){
+  $("#app").innerHTML = `<div class="empty">Loading from Snaglist…</div>`;
+  try { R = await api(`ops/snag/report?from=${$("#from").value}&to=${$("#to").value}`); draw(); }
+  catch (e){ $("#app").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+}
+function draw(){
+  const S = R.sites, sum = k => S.reduce((n, s) => n + (typeof k === "function" ? k(s) : s[k]), 0);
+  const open = sum("openTotal"), added = sum("added"), solved = sum("solved"), vOpen = sum(s => s.visits.openNow), late = sum(s => s.visits.late);
+  $("#sub").textContent = `${S.length === 5 ? "All flagships" : S.map(s => s.siteName).join(", ")} · ${D.fmt(R.from)} – ${D.fmt(R.to)}`;
+  $("#app").innerHTML = `<div class="kp">
+      <div class="card ${open ? "al" : "ok"}"><b>${open}</b><small>Findings open now</small></div>
+      <div class="card"><b>${added}</b><small>Findings added</small></div>
+      <div class="card ok"><b>${solved}</b><small>Findings solved</small></div>
+      <div class="card"><b>${vOpen}</b><small>Site visits open</small></div>
+      <div class="card ${late ? "al" : "ok"}"><b>${late}</b><small>Site visits open over 2 days</small></div></div>
+    <div class="card box"><h3>By flagship</h3><div class="scr"><table class="t"><tr><th>Flagship</th><th>Open now</th><th>Added</th><th>Solved</th><th>Solved vs added</th><th>Visits posted</th><th>Visits closed</th><th>Visits open</th><th>Open &gt; 2 days</th><th>Snaglists started</th></tr>
+      ${S.map(s => { const ratio = s.added ? Math.round(s.solved / s.added * 100) : null, lists = Object.values(s.lists).reduce((a, b) => a + b, 0);
+        return `<tr><td><b>${esc(s.siteName)}</b></td><td class="${s.openTotal ? "al" : ""}">${s.openTotal}</td><td>${s.added}</td><td class="ok">${s.solved}</td><td>${ratio == null ? "—" : ratio + "%"}</td>
+          <td>${s.visits.posted}</td><td>${s.visits.closed}</td><td>${s.visits.openNow}</td><td class="${s.visits.late ? "al" : ""}">${s.visits.late}</td><td>${lists}</td></tr>`; }).join("")}
+      <tr><td><b>Total</b></td><td><b>${open}</b></td><td><b>${added}</b></td><td><b>${solved}</b></td><td>${added ? Math.round(solved / added * 100) + "%" : "—"}</td><td><b>${sum(s => s.visits.posted)}</b></td><td><b>${sum(s => s.visits.closed)}</b></td><td><b>${vOpen}</b></td><td><b>${late}</b></td><td><b>${sum(s => Object.values(s.lists).reduce((a, b) => a + b, 0))}</b></td></tr>
+    </table></div></div>
+    <div class="sites">${S.map(s => `<div class="card box"><h3>${esc(s.siteName)}</h3>
+      ${s.openTotal ? `<div class="mix">${Object.entries(s.open).map(([k, n]) => `<span>${esc(k)} · ${n}</span>`).join("")}</div>` : ""}
+      <b style="font-size:.78rem;color:var(--muted)">Oldest open findings</b>
+      ${s.oldest.length ? s.oldest.map(o => `<div class="li"><b>${esc(o.location || "—")}</b> — ${esc(o.issue)}<small>${esc(o.list)} · ${esc(o.status)} · <span class="${o.days > 7 ? "al" : ""}">${o.days} days</span></small></div>`).join("") : `<div class="li muted">Nothing open.</div>`}
+      ${s.locations.length ? `<b style="font-size:.78rem;color:var(--muted);display:block;margin-top:10px">Busiest locations in the period</b>${s.locations.map(l => `<div class="li">${esc(l.location)} <small style="display:inline">· ${l.n} findings</small></div>`).join("")}` : ""}
+      ${Object.keys(s.lists).length ? `<b style="font-size:.78rem;color:var(--muted);display:block;margin-top:10px">Snaglists started</b><div class="mix" style="margin-top:6px">${Object.entries(s.lists).map(([k, n]) => `<span>${esc(k)} · ${n}</span>`).join("")}</div>` : ""}
+    </div>`).join("")}</div>
+    <p class="muted" style="font-size:.74rem">From the Snaglist Manager. Open findings are those of site visits and long-standing follow-ups not marked Solved. Every Monday this report (last 7 days) is emailed to management and leadership.</p>`;
+}
+boot();
+</script>
+</body>
+</html>
