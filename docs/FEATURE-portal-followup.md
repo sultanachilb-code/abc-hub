@@ -31,3 +31,8 @@ A dashboard (Tenant Management → **Tenant Portal Follow-up**, Manager and Supe
 
 ## Gmail script
 `hub-inbox.gs` now also routes `+portal-<TAG>@`. Replace the script and run `showAddresses()` to see the address.
+
+## Direct record links (7 Oct 2026)
+With the record ID (from the report's Record ID column) the "Open" button goes straight to the record, in the portal's own format:
+`…/abcemployee/s/breach-penalties/<id>/bp000030`, `…/s/violations-requests/<id>/vr000390`, `…/s/normal-requests/<id>/nr000242`.
+Without the ID it still opens the portal search for the item number. Tenant 360 uses the same links.

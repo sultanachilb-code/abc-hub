@@ -8,7 +8,7 @@
    Routes: /api/ops/t360/list?site= · /api/ops/t360/unit?site=&id=
    ===================================================================== */
 import { complianceFor, MILESTONES } from "./tenants.js";
-import { isFollowUp, cleanStatus } from "./portal.js";
+import { isFollowUp, cleanStatus, linkOf } from "./portal.js";
 
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 /* "ZARA s.a.l." → "zara" — company suffixes and punctuation do not count when matching names */
@@ -108,7 +108,7 @@ export async function t360Route(env, p, method, b, url, d) {
       contract: c ? { no: c.contract_no, status: c.status, type: c.rtype, start: c.start_day, end: c.end_day, departure: c.departure_day, note: c.note,
         active: !!c.active, daysLeft: daysTo(T, c.departure_day || c.end_day) } : null,
       portal: R.portal.map(x => ({ name: x.name, kind: x.kind, kindLabel: PKIND[x.kind] || x.kind, status: cleanStatus(x.status), type: x.type, day: x.created_day,
-        subject: x.subject, desc: String(x.description || "").slice(0, 300), link: x.link, followUp: isFollowUp(cleanStatus(x.status)) }))
+        subject: x.subject, desc: String(x.description || "").slice(0, 300), link: linkOf(env, x), followUp: isFollowUp(cleanStatus(x.status)) }))
         .sort((a, b) => (b.followUp - a.followUp) || String(b.day).localeCompare(String(a.day))),
       compliance: comp ? { score: comp.score, violations: comp.violations || 0, repeats: comp.repeats || [] } : null,
       feedback: R.feedback.slice(0, 40).map(f => ({ day: f.day, time: f.time, category: f.category, description: f.description, action: f.action, actionDesc: f.action_desc, by: f.created_name })),
