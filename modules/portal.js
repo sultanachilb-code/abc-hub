@@ -138,7 +138,12 @@ export async function portalImport(env, d, { files, from }) {
 }
 
 /* the button: the record link from the report when IT adds it, else the portal search for the number */
-const linkOf = (env, r) => r.link || (r.sf_id ? `${PORTAL(env)}/detail/${r.sf_id}` : `${PORTAL(env)}/global-search/${encodeURIComponent(r.name)}`);
+/* record pages of the ABC Connect employee portal (from real links, Oct 2026):
+     …/s/breach-penalties/a08a3000003aZ2OAAU/bp000030 · …/s/violations-requests/<id>/vr000390 · …/s/normal-requests/<id>/nr000242 */
+const RECORD_PATH = { bp: "breach-penalties", vr: "violations-requests", nr: "normal-requests" };
+const slugOf = name => String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+export const linkOf = (env, r) => r.link || (r.sf_id && RECORD_PATH[r.kind] ? `${PORTAL(env)}/${RECORD_PATH[r.kind]}/${r.sf_id}/${slugOf(r.name)}`
+  : `${PORTAL(env)}/global-search/${encodeURIComponent(r.name)}`);
 const amountOf = t => { const m = String(t || "").match(/\$\s?(\d[\d,]*(?:\.\d+)?)|(\d[\d,]*(?:\.\d+)?)\s?(?:\$|usd\b|dollars?\b)/i); return m ? Number((m[1] || m[2]).replace(/,/g, "")) || null : null; };
 
 /* ---------- routes: /api/ops/portal/* ---------- */
