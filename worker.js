@@ -1311,6 +1311,7 @@ function rights(me, site) {
   const team = full || (mine && me.role === "SUPERVISOR" && !wh);
   return {
     schedule: opsLead,
+    scheduleOwn: team && me.role === "SUPERVISOR",   // the operations team fills its own shifts (the whole schedule stays with the Manager / Senior Mall Supervisor)
     mom: team,
     handover: mine && me.role !== "SECURITY" && !wh,
     feedback: mine && !wh,                 // anyone at the flagship can log tenant feedback
@@ -1670,7 +1671,9 @@ async function opsRoute(env, me, p, method, b, url) {
     return { staff: await schedStaff(env, site) };
   }
   if (p === "schedule" && method === "POST") {
-    if (!can.schedule) throw fail("Only the flagship's Manager or Senior Mall Supervisor can edit the schedule", 403);
+    const ownOnly = !can.schedule && can.scheduleOwn;   // a team member: only their own row, no day notes
+    if (!can.schedule && !ownOnly) throw fail("Only the flagship's Manager or Senior Mall Supervisor can edit the schedule", 403);
+    if (ownOnly) { b.cells = (Array.isArray(b.cells) ? b.cells : []).filter(c => String(c.email || "").toLowerCase() === me.email.toLowerCase()); b.notes = []; }
     const staff = new Set((await siteStaff(env, site)).filter(s => s.atSite).map(s => s.email));
     const ops = [];
     for (const c of (Array.isArray(b.cells) ? b.cells : []).slice(0, 800)) {

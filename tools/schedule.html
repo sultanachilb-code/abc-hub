@@ -143,6 +143,7 @@ async function load(){
   DATA.map = Object.fromEntries(DATA.cells.map(c => [key(c.email, c.day), c.val]));
   DATA.noteMap = Object.fromEntries(DATA.notes.map(n => [n.day, n.note]));
   $("#editTools").classList.toggle("hidden", !DATA.can.schedule);
+  if (!DATA.can.schedule && DATA.can.scheduleOwn && !$("#ownHint")) $("#board").insertAdjacentHTML("beforebegin", `<p id="ownHint" class="muted noprint" style="font-size:.82rem;margin:0 0 8px">Tap a day on <b>your own line</b> to fill your shift, then <b>Save changes</b>.</p>`);
   render();
   loadSend();
 }
@@ -163,6 +164,7 @@ function render(){
       let total = 0;
       const cells = d.map(x => {
         const v = valOf(p.email, x); total += hoursOf(v);
+        const can = mayEdit(p.email);   // the Manager / Senior Mall Supervisor edit every row, each team member their own
         const dirty = DIRTY.has(key(p.email, x)) ? "dirty" : "";
         let inner = "", cls = "";
         if (v.includes("-")){ const [a, b] = v.split("-"); inner = `${short(a)}–${short(b)}<small>${hoursOf(v)}h</small>`; cls = shiftClass(v); }
@@ -220,7 +222,8 @@ function setVal(v){
 }
 
 /* ----- actions ----- */
-$("#board").addEventListener("click", e => { const c = e.target.closest(".cell"); if (c && DATA.can.schedule) openPicker(c.dataset.e, c.dataset.d); });
+const mayEdit = email => !!(DATA && (DATA.can.schedule || (DATA.can.scheduleOwn && email === CTX.me.email)));
+$("#board").addEventListener("click", e => { const c = e.target.closest(".cell"); if (c && mayEdit(c.dataset.e)) openPicker(c.dataset.e, c.dataset.d); });
 $("#board").addEventListener("input", e => { const n = e.target.dataset.note; if (n === undefined) return;
   (DATA.noteMap[n] || "") === e.target.value ? DIRTY_NOTES.delete(n) : DIRTY_NOTES.set(n, e.target.value);
   $("#savebar").classList.toggle("hidden", !(DIRTY.size || DIRTY_NOTES.size)); $("#saveBtn").textContent = `Save changes (${DIRTY.size + DIRTY_NOTES.size})`; });
