@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tenant Portal Follow-up · ABC</title>
+<title>Portal Dashboard · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
 <!-- Tenant portal follow-up: Breaches & Penalties · Violations · ABC Requests (Salesforce reports by email) — see docs/FEATURE-portal-followup.md -->
@@ -69,7 +69,7 @@ details summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted
 </style>
 </head>
 <body>
-<div class="top"><h1>🧾 Tenant Portal Follow-up <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="top"><h1>🧾 Portal Dashboard <small id="sub"></small></h1><span id="sitePick"></span></div>
 <div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
 <input type="file" id="file" accept=".xlsx,.csv" multiple hidden>
 <script src="common.js"></script>
@@ -78,7 +78,7 @@ const UP = new URLSearchParams(location.search);
 const K = { bp: { c: "var(--bp)", short: "Breach" }, vr: { c: "var(--vr)", short: "Violation" }, nr: { c: "var(--nr)", short: "Request" } };
 const ST_COL = { "Sent to Tenant": "#C0392B", "In Review": "#C07A12", "Acknowledged": "#2E8B57", "Rejected": "#8C8398", "Confirmed & Resolved": "#2E8B57", "Closed": "#8C8398" };
 const stCol = s => ST_COL[s] || "#7B4BB0";
-let ctx = null, site = UP.get("site") || "", P = null, kind = "", q = "", old = false, tenant = "", status = "follow", LIM = 40;
+let ctx = null, site = UP.get("site") || "", P = null, kind = "", q = UP.get("q") || "", old = false, tenant = "", status = "follow", LIM = 40;
 async function boot(){
   try {
     ctx = await api("ops/context" + (site && site !== "ALL" ? `?site=${site}` : ""));

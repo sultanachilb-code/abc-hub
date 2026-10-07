@@ -147,6 +147,17 @@ const pendRead = () => { try { return JSON.parse(localStorage.getItem(PENDING_KE
 const pendWrite = l => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(l.slice(-60))); } catch {} };
 
 /* ---------- start ---------- */
+/* ---------- offline pack: today's bookings kept on this phone (refreshed every 10 minutes while online) ---------- */
+const PACK_KEY = () => "hub.gate.pack:" + site;
+async function packSave(){ if (!navigator.onLine || !site) return; try { const P = await api(`ops/gate/offline?site=${site}`); localStorage.setItem(PACK_KEY(), JSON.stringify(P)); } catch {} }
+function packFind(code, visitId){
+  let P = null; try { P = JSON.parse(localStorage.getItem(PACK_KEY()) || "null"); } catch {}
+  if (!P || !P.list) return null;
+  const n = (String(code && code.raw || code || "").match(/REQ-?0*(\d{3,})/i) || [])[1];
+  const v = P.list.find(x => (visitId && x.id === Number(visitId)) || (n && String(x.req || "").replace(/\D/g, "").replace(/^0+/, "") === n));
+  return v ? { v, at: P.at } : null;
+}
+setInterval(packSave, 600000); addEventListener("online", packSave);
 async function boot(){
   netState(); addEventListener("online", netState); addEventListener("offline", netState);
   try {
@@ -166,6 +177,7 @@ async function wake(){ try { if ("wakeLock" in navigator && !lock){ lock = await
 
 /* ---------- today's log ---------- */
 async function loadDay(){
+  packSave();
   try { DAY = await api(`ops/gate/day?site=${site}`); } catch (e){ if (!DAY) DAY = { list: [], counts: { in: 0, out: 0, workers: 0 }, reasons: [] }; }
   drawDay();
   if (DAY && DAY.canPair) loadPhones();
@@ -290,7 +302,8 @@ async function scanned(code, visitId){
   R = { code, scannedAt: new Date().toISOString(), loading: true };
   drawRes();
   try { const r = await api("ops/gate/lookup", { site, code, visitId }); R = { ...R, ...r, loading: false, workers: (r.visit && r.visit.workers) || 1 }; }
-  catch (e){ R = { ...R, loading: false, offline: !e.status, error: e.status ? e.message : "", workers: 1 }; }
+  catch (e){ R = { ...R, loading: false, offline: !e.status, error: e.status ? e.message : "", workers: 1 };
+    if (R.offline){ const hit = packFind(code, visitId); if (hit){ R.info = { req: hit.v.req, tenant: hit.v.tenant, contractor: hit.v.company, work: hit.v.work, from: hit.v.from, to: hit.v.to }; R.cached = hit.at; } } }
   busy = false;
   drawRes();
 }
@@ -327,6 +340,8 @@ function drawRes(){
   const passUrl = /^https:\/\/[\w.-]+\.(my\.)?site\.com\//.test((R.code && R.code.raw) || "") ? R.code.raw : "";
   const notes = [];
   if (R.offline) notes.push(["warn", "No signal. Your decision is saved on this phone and sent when the signal is back."]);
+  if (R.offline && R.cached) notes.push(["ok", `Booked in the hub list saved on this phone at ${hm(R.cached)}: <b>${esc(I.contractor || "")}</b>${I.tenant ? " for " + esc(I.tenant) : ""} · ${esc(I.work || "")} · ${esc(when(I.from))} – ${esc(when(I.to))}. Still check the pass stamp.`]);
+  else if (R.offline) notes.push(["alert", "Not in the hub list saved on this phone — check the pass carefully or call the supervisor."]);
   else if (vk === "check" && !R.sfError) notes.push(["info", "The pass could not be read automatically — open it to see Approved / Rejected."]);
   if (R.last) notes.push([R.last.decision === "out" ? "alert" : "info", `Scanned before today at ${hm(R.last.at)} — ${R.last.decision === "in" ? "approved in" : R.last.decision === "out" ? "rejected (" + esc(R.last.reason) + ")" : "left"} by ${esc(R.last.by)}.`]);
   if (v && v.state === "onsite") notes.push(["ok", `Already on site since ${hm(v.inAt)}${v.workers ? ` · ${v.workers} workers` : ""}. Use <b>Leaving</b> when they go out.`]);

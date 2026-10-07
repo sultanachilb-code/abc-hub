@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant 360 · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant 360: one page per unit with everything the hub knows about its tenant — see docs/FEATURE-tenant-360.md -->
+<style>
+.t3{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+.t3-l{position:sticky;top:12px;max-height:calc(100vh - 90px);display:flex;flex-direction:column;padding:12px}
+.t3-q{display:flex;gap:8px;margin-bottom:8px}
+.t3-q input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit}
+.t3-f{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.t3-f button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:5px 11px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
+.t3-f button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.t3-list{overflow:auto;flex:1;margin:0 -4px;padding:0 4px}
+.u{display:block;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;padding:10px;border-radius:12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.u:hover{background:var(--paper)}.u.on{background:color-mix(in srgb,var(--brand) 10%,transparent)}
+.u b{display:block;font-size:.9rem}.u small{color:var(--muted);font-size:.74rem}
+.fl{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.fl i{font-style:normal;font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.fl i.al{background:color-mix(in srgb,var(--alert) 14%,transparent);color:var(--alert)}
+.fl i.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.fl i.info{background:color-mix(in srgb,var(--brand-2) 14%,transparent);color:var(--brand-2)}
+.hd{padding:18px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.hd .logo{width:58px;height:58px;border-radius:16px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:1.2rem;flex:none}
+.hd h2{font-size:1.35rem}.hd p{color:var(--muted);font-size:.84rem;margin-top:2px}
+.kp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.5rem;line-height:1.1}.kp small{color:var(--muted);font-size:.74rem;font-weight:700}
+.kp .al b{color:var(--alert)}.kp .warn b{color:var(--warn)}.kp .ok b{color:var(--ok)}
+.sec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.box{padding:14px 16px}.box h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.box h3 a{font-size:.74rem;text-transform:none;letter-spacing:0;color:var(--brand-2);font-weight:700;text-decoration:none}
+.row{padding:8px 0;border-top:1px solid var(--line);font-size:.84rem;line-height:1.4}.row:first-of-type{border-top:0}
+.row small{color:var(--muted);display:block;font-size:.74rem}
+.st{font-size:.7rem;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--paper);white-space:nowrap}
+.st.al{color:var(--alert)}.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}
+.row a{color:var(--brand-2);font-weight:700}
+.none{color:var(--muted);font-size:.82rem;padding:4px 0}
+.ms{display:flex;gap:4px;margin:6px 0}.ms i{flex:1;height:8px;border-radius:4px;background:var(--line)}.ms i.d{background:var(--ok)}
+.back{display:none}
+.wide{grid-column:1/-1}
+@media (max-width:900px){
+  .t3{grid-template-columns:1fr}.t3-l{position:static;max-height:none}
+  .t3.det .t3-l{display:none}.t3:not(.det) .t3-r{display:none}
+  .back{display:inline-flex;margin-bottom:10px}
+  .sec{grid-template-columns:1fr}.kp{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media print{.top,.t3-l,.back{display:none!important}.t3{display:block}}
+</style>
+</head>
+<body>
+<div class="top"><h1>🏬 Tenant 360 <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", L = null, cur = Number(UP.get("unit")) || 0, U = null, q = UP.get("q") || "", flt = "attn";
+const fmtD = d => d ? D.fmt(d) : "";
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    if (!site || site === "ALL") site = ctx.site;
+    const S = Object.entries(ctx.sites || {});
+    $("#sitePick").innerHTML = S.length > 1 ? `<select class="sel" id="siteSel" aria-label="Flagship">${S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
+    const sel = $("#siteSel"); if (sel) sel.onchange = () => { site = sel.value; cur = 0; U = null; load(); };
+    load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){
+  try { L = await api(`ops/t360/list?site=${site}`); $("#sub").textContent = L.siteName; shell(); if (cur) openUnit(cur); else if (window.innerWidth > 900) { const f = sorted()[0]; if (f) openUnit(f.id); } }
+  catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+const tenanted = u => u.brand && !/^(vacant|available)$/i.test(u.brand);
+function sorted(){
+  const s = q.trim().toLowerCase();
+  let A = L.units.filter(u => !s || [u.brand, u.code, u.level, u.dept].join(" ").toLowerCase().includes(s));
+  if (!s && flt === "attn") A = A.filter(u => u.flags.length);
+  if (!s && flt === "open") A = A.filter(u => u.status === "Open" && tenanted(u));
+  if (!s && flt === "fit") A = A.filter(u => /reserved|fit/i.test(u.status));
+  return A.sort((a, b) => (b.attention - a.attention) || String(a.brand || "~").localeCompare(String(b.brand || "~")));
+}
+function shell(){
+  const n = { attn: L.units.filter(u => u.flags.length).length, open: L.units.filter(u => u.status === "Open" && tenanted(u)).length, fit: L.units.filter(u => /reserved|fit/i.test(u.status)).length, all: L.units.length };
+  $("#app").innerHTML = `<div class="t3 ${cur && window.innerWidth <= 900 ? "det" : ""}" id="t3">
+    <div class="card t3-l">
+      <div class="t3-q"><input id="q" type="search" placeholder="Search a tenant, unit or level" value="${esc(q)}" autocomplete="off"></div>
+      <div class="t3-f" id="flt">${[["attn", "Needs attention"], ["open", "Open"], ["fit", "Fit-out"], ["all", "All units"]].map(([k, t]) => `<button data-f="${k}" class="${flt === k ? "on" : ""}">${t} · ${n[k]}</button>`).join("")}</div>
+      <div class="t3-list" id="list"></div>
+    </div>
+    <div class="t3-r" id="det"><div class="card empty">Pick a unit on the left.</div></div></div>`;
+  $("#q").oninput = e => { q = e.target.value; list(); };
+  $("#flt").onclick = e => { const b = e.target.closest("[data-f]"); if (!b) return; flt = b.dataset.f; $("#flt").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); list(); };
+  $("#list").onclick = e => { const b = e.target.closest("[data-u]"); if (b) openUnit(Number(b.dataset.u)); };
+  list();
+}
+function list(){
+  const A = sorted();
+  $("#list").innerHTML = A.length ? A.map(u => `<button class="u ${u.id === cur ? "on" : ""}" data-u="${u.id}"><b>${esc(u.brand || "Vacant")}</b>
+    <small>${esc([u.code, u.level, u.status, u.area ? Math.round(u.area) + " m²" : ""].filter(Boolean).join(" · "))}</small>
+    ${u.flags.length ? `<span class="fl">${u.flags.map(f => `<i class="${f.tone}">${esc(f.t)}</i>`).join("")}</span>` : ""}</button>`).join("")
+    : `<div class="none" style="padding:12px">${flt === "attn" && !q ? "Nothing needs attention at this flagship." : "No unit matches."}</div>`;
+}
+async function openUnit(id){
+  cur = id; history.replaceState(null, "", `?site=${site}&unit=${id}`);
+  document.querySelectorAll(".u").forEach(b => b.classList.toggle("on", Number(b.dataset.u) === id));
+  $("#t3").classList.add("det");
+  $("#det").innerHTML = `<div class="card empty">Loading…</div>`;
+  try { U = await api(`ops/t360/unit?site=${site}&id=${id}`); draw(); }
+  catch (e){ $("#det").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+}
+const box = (title, body, link, wide) => `<div class="card box ${wide ? "wide" : ""}"><h3><span>${title}</span>${link ? `<a href="${link[0]}">${esc(link[1])} →</a>` : ""}</h3>${body}</div>`;
+const none = t => `<div class="none">${t}</div>`;
+function draw(){
+  const u = U.unit, P = U.portal, FU = P.filter(x => x.followUp), C = U.contract, cm = U.compliance;
+  const viol = U.feedback.filter(f => f.category !== "Customer Feedback");
+  const kp = [
+    [FU.length, "Portal follow-ups", FU.length ? "al" : "ok"],
+    [cm ? cm.score : "—", "Compliance this month", !cm ? "" : cm.score < 70 ? "al" : cm.score < 90 ? "warn" : "ok"],
+    [viol.length, "Violations · 12 months", viol.length >= 5 ? "al" : viol.length ? "warn" : "ok"],
+    [C && C.daysLeft != null ? (C.daysLeft < 0 ? "Ended" : C.daysLeft + " d") : "—", "Contract left", C && C.daysLeft != null && C.daysLeft <= 30 ? "al" : C && C.daysLeft != null && C.daysLeft <= 120 ? "warn" : ""]
+  ];
+  const portalB = P.length ? P.slice(0, 12).map(x => `<div class="row"><span class="st ${x.followUp ? "al" : /resolved|closed|ack/i.test(x.status) ? "ok" : "warn"}">${esc(x.status || "—")}</span>
+      <b> ${x.link ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)}</b> · ${esc(x.kindLabel)}${x.type ? " · " + esc(x.type) : ""}
+      <small>${esc(fmtD(x.day))}${x.subject ? " · " + esc(x.subject) : ""}</small></div>`).join("") + (P.length > 12 ? none(`+ ${P.length - 12} more on the Portal Dashboard`) : "") : none("No open portal items.");
+  const fbB = U.feedback.length ? U.feedback.slice(0, 10).map(f => `<div class="row"><span class="st ${f.category === "Customer Feedback" ? (f.description === "Positive" ? "ok" : "warn") : "al"}">${esc(f.category)}</span>
+      ${esc(f.description || "")}${f.action ? ` → <b>${esc(f.action)}</b>` : ""}<small>${esc(fmtD(f.day))} ${esc(f.time || "")} · ${esc(f.by || "")}</small></div>`).join("")
+      + (cm && cm.repeats.length ? `<div class="row"><b style="color:var(--alert)">Repeat this month:</b> ${cm.repeats.map(r => `${esc(r.what)} ×${r.n}${r.suggest ? ` (${esc(r.suggest)})` : ""}`).join(" · ")}</div>` : "")
+    : none("No feedback or violations in the last 12 months.");
+  const conB = C ? `<div class="row"><b>${esc(C.no)}</b> <span class="st">${esc(C.status || (C.active ? "Active" : "Left the report"))}</span>
+      <small>${esc([C.start && "Start " + fmtD(C.start), C.end && "End " + fmtD(C.end), C.departure && "Departure " + fmtD(C.departure), C.type].filter(Boolean).join(" · "))}</small>${C.note ? `<small>Note: ${esc(C.note)}</small>` : ""}</div>`
+    : none(u.contractStart ? `Contract start ${esc(fmtD(u.contractStart))}. Not in the Contracts Near Ending report.` : "Not in the Contracts Near Ending report.");
+  const F = U.fitout, fitB = F ? `<div class="ms">${F.milestones.map(m => `<i class="${m.done ? "d" : ""}" title="${esc(m.label)}${m.date ? " · " + esc(m.date) : ""}"></i>`).join("")}</div>
+      <div class="row">${F.milestones.filter(m => m.done).length}/${F.milestones.length} milestones${F.target ? ` · target opening <b>${esc(fmtD(F.target))}</b>` : ""}
+      <small>Next: ${esc((F.milestones.find(m => !m.done) || { label: "Open" }).label)}</small></div>` : none("No fit-out tracked for this unit.");
+  const ctB = U.contacts.length ? U.contacts.map(x => { const tel = String(x.mobile || x.landline || "").replace(/[^\d+]/g, "");
+      return `<div class="row"><b>${esc(x.name || "—")}</b>${x.position ? " · " + esc(x.position) : ""}<small>${tel ? `<a href="tel:${esc(tel)}">${esc(x.mobile || x.landline)}</a>` : ""}${x.email ? ` · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ""}</small></div>`; }).join("")
+    : none("No contacts in the Tenants Directory.");
+  const crB = (U.contractors.length ? U.contractors.slice(0, 8).map(v => `<div class="row"><b>${esc(v.company)}</b> · ${esc(v.work || "")}${v.req ? " · " + esc(v.req) : ""}<small>${esc(fmtD(v.from))}${v.to !== v.from ? " – " + esc(fmtD(v.to)) : ""} ${esc(v.time)}</small></div>`).join("") : none("No contractor bookings in the last 30 days."))
+    + (U.gate.length ? `<div class="row"><b>Loading gate · 30 days:</b> ${U.gate.filter(g => g.decision === "in").length} let in · <span style="color:var(--alert)">${U.gate.filter(g => g.decision === "out").length} refused</span>
+      ${U.gate.filter(g => g.decision === "out").slice(0, 3).map(g => `<small>${esc(fmtD(g.day))} · ${esc(g.contractor || g.req)} — ${esc(g.reason)}</small>`).join("")}</div>` : "");
+  const wkB = U.works.length ? U.works.slice(0, 6).map(w => `<div class="row"><span class="st ${w.completed ? "ok" : "warn"}">${esc(w.completed ? "Completed" : w.status)}</span> ${esc(w.type || "Works form")}<small>${esc(w.subject || "")} · ${esc(fmtD(String(w.received || "").slice(0, 10)))}</small></div>`).join("") : none("No works forms.");
+  const anB = U.announcements.length ? U.announcements.slice(0, 5).map(a => `<div class="row"><b>${esc(a.type)}</b> · ${esc(fmtD(a.date))}<small>${esc(a.subject || "")}</small></div>`).join("") : none("No announcements.");
+  const hiB = U.history.length ? U.history.slice(0, 6).map(h => `<div class="row"><b>${esc(h.kind)}</b> · ${esc(fmtD(h.date))}<small>${esc([h.after && h.after.brand && "Brand " + h.after.brand, h.after && h.after.status && "Status " + h.after.status, h.note].filter(Boolean).join(" · "))}${h.by ? " · " + esc(h.by) : ""}</small></div>`).join("") : none("No changes recorded.");
+  const E = U.evacuation;
+  $("#det").innerHTML = `<button class="btn back" id="back">‹ All units</button>
+    <div class="card hd"><div class="logo">${esc(initials(u.brand || "—"))}</div>
+      <div style="flex:1;min-width:200px"><h2>${esc(u.brand || "Vacant unit")}</h2><p>${esc([u.code, u.level, u.status, u.section, u.dept, u.area ? Math.round(u.area) + " m²" : ""].filter(Boolean).join(" · "))}</p>
+      ${E ? `<p>🚪 ${esc([E.corridor && "Corridor " + E.corridor, E.assembly && "Assembly " + E.assembly].filter(Boolean).join(" · "))}</p>` : ""}</div>
+      <button class="btn ghost" onclick="print()">Print</button></div>
+    <div class="kp">${kp.map(([v, t, c]) => `<div class="card ${c}"><b>${esc(v)}</b><small>${esc(t)}</small></div>`).join("")}</div>
+    <div class="sec">
+      ${box("Portal — breaches, violations, requests", portalB, ["portal?site=" + site, "Portal Dashboard"], true)}
+      ${box("Feedback & violations", fbB, ["feedback?site=" + site, "Tenant Feedback"])}
+      ${box("Contract", conB, ["contracts?site=" + site, "Contracts"])}
+      ${box("Contacts", ctB, ["directory?site=" + site, "Directory"])}
+      ${box("Fit-out", fitB, ["fitout?site=" + site, "Fit-out Tracker"])}
+      ${box("Contractors & loading gate", crB, ["contractors?site=" + site, "Contractors"])}
+      ${box("Works forms", wkB, ["works?site=" + site, "Works Forms"])}
+      ${box("Announcements", anB, ["tenants?site=" + site, "Announcements"])}
+      ${box("Unit history (GLA)", hiB, ["gla?unit=" + u.id, "GLA & Occupancy"])}
+    </div>`;
+  const bk = $("#back"); if (bk) bk.onclick = () => { $("#t3").classList.remove("det"); cur = 0; history.replaceState(null, "", `?site=${site}`); };
+}
+boot();
+</script>
+</body>
+</html>

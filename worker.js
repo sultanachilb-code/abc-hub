@@ -22,6 +22,12 @@ import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./m
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
 import { portalSchema, portalRoute } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
+import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs/FEATURE-tenant-360.md
+import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
+import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
+import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
+import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
+import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
 import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
@@ -180,6 +186,7 @@ const APP_ACCESS = {
   handover: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
   contractors: ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gate: ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "contractor-access": ["OM", "SMS", "MS", "MO", "LEAD"],
   leadership: ["LEAD"],
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
@@ -192,6 +199,11 @@ const APP_ACCESS = {
   fitout: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   contracts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   portal: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  tenant360: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  malfunctions: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  cleaning: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  sales: ["MM", "OM", "LEAD"],
+  training: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   directory: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   gla: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -199,8 +211,7 @@ const APP_ACCESS = {
   layouts: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   exec: ["MM",  "OM",  "LEAD"],
   accuracy: ["MM",  "OM"],
-  projects: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  "project-tracker": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  projects: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   budget: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snaglist: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   restroom: ["MM",  "OM",  "LEAD"],
@@ -217,9 +228,7 @@ const APP_ACCESS = {
   pack: ["MM",  "OM",  "LEAD"],
   downloads: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   footfall: [],
-  "pp-owner": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "pp-assist": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "pp-general": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  policies: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   "form-am": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-dbank": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -234,6 +243,8 @@ const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
 /* Morning email */
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
 const MAIL_HOUR = 8;   // Beirut time
+/* Weekly digest per person (modules/digest.js) */
+const DIGEST_DEPS = { today: () => beirutToday(), sitesOf: u => sitesOf(u), staff: (env, s) => siteStaff(env, s), posKey: u => accessKey(u), isFull: u => isFull(u), siteName: s => siteName(s), relay: (env, m) => relay(env, m), hubUrl: HUB_URL };
 const SYSTEM_NAMES = { snaglist: "Snaglist Manager", incidents: "Incident Report System", restroom: "Restroom Inspections" };
 
 /* ---------- helpers ---------- */
@@ -323,6 +334,10 @@ async function ensureSchema(env) {
   await addinSchema(env);   // Outlook add-in feature
   await contractsSchema(env);   // Contracts near ending
   await portalSchema(env);   // Tenant portal follow-up
+  await malfunctionsSchema(env);   // Malfunction Records
+  await cleaningSchema(env);   // Cleaning headcount control
+  await trainingSchema(env);   // Training tracker
+  await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await automationSchema(env); // Automation feature
@@ -437,6 +452,7 @@ export default {
       await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
       await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
       await storageRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent }).catch(e => console.error("storage", e && e.message));   // Cloudflare storage meter
+      await digestRun(env, DIGEST_DEPS).catch(e => console.error("digest", e && e.message));   // Weekly digest per person
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -464,6 +480,15 @@ async function route(request, env, ctx, url) {
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   if (path === "setup" && method === "POST") return setup(env, body);
   if (path === "inbox/mail" && method === "POST") return ok(await mailInbox(env, request, body, { SITES, canSite, isFull, now: nowIso, today: beirutToday, raiseEvent, audit }));   // Email inbox: MOM · calendar · contracts report
+  /* Monthly backup to Google Drive: the Apps Script (same INBOX_KEY as the email inbox) pulls every table and saves an Excel file in Drive */
+  if (path === "inbox/backup" && method === "POST") {
+    if (!env.INBOX_KEY) throw fail("The hub inbox is not set up (INBOX_KEY secret is missing)", 503);
+    const key = request.headers.get("x-inbox-key") || "";
+    if (key.length !== env.INBOX_KEY.length || key !== env.INBOX_KEY) throw fail("Wrong inbox key", 403);
+    const data = await backupData(env);
+    for (const t of ["mf_photos", "push_subs", "sessions", "twofa_codes", "twofa_keys", "addin_pairs", "gate_devices"]) delete data.tables[t];   // pictures and secrets stay out of Drive
+    return ok(data);
+  }
   if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
   if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
     { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
@@ -1202,7 +1227,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1519,6 +1544,13 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p === "digest/preview") { const D = await digestFor(env, me, DIGEST_DEPS); return { count: D.count, on: me.weekly_digest !== 0, html: digestHtml(me, D, HUB_URL) }; }   // Weekly digest per person
+  if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
+  if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
+  if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
+  if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
+  if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content
+  if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday });   // Tenant 360
   if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover });   // Loading Gate feature

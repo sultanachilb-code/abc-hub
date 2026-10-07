@@ -437,8 +437,34 @@ async function submitShift(c){
   let R = null; try { R = await api("ops/handover/mailto?site=" + CTX.site); } catch {}
   const who = R && R.auto && R.relay && R.to.length ? `<br><br>✉︎ It is also <b>emailed</b> to <b>${esc(R.to.join(", "))}</b>${R.cc.length ? `, Cc <b>${esc(R.cc.join(", "))}</b>` : ""}.` : "";
   const again = (H.handoffs || []).some(x => x.shift === c);
-  if (!(await confirmBox(`${again ? "Submit again" : "Submit"} the ${shName(c)} handover?`, `The time is recorded and everyone at the flagship is notified that the ${shName(c)} handover is ready to receive.` + who, "Submit"))) return;
+  const chk = await shiftEndCheck(c);
+  if (!(await confirmBox(`${again ? "Submit again" : "Submit"} the ${shName(c)} handover?`, chk + `The time is recorded and everyone at the flagship is notified that the ${shName(c)} handover is ready to receive.` + who, chk.includes("se-open") ? "Submit anyway" : "Submit"))) return;
   return save(true, false, !!who, c);
+}
+/* Shift-end check: before a hand-over is submitted, what is still open on the shift —
+   its checklist, restroom windows not fully inspected, contractors still inside (or past their permit), the previous hand-over not received. */
+async function shiftEndCheck(c){
+  if (!H || H.day !== CTX.today) return "";
+  let T; try { T = await api("ops/today?site=" + CTX.site); } catch { return ""; }
+  const pm = /^(PM|EVE|NIGHT|N)$/i.test(c) || /pm|evening|night/i.test(shName(c)), am = !pm && (/^AM$/i.test(c) || /am|morning/i.test(shName(c)));
+  const out = [], hmNow = T.now || "";
+  const rem = id => (T.reminders || []).find(r => r.id === id);
+  const ck = am ? rem("amCheck") : pm ? rem("pmCheck") : null;
+  if (ck && !ck.done) out.push(`<b>${esc(ck.label)}</b> not submitted${ck.started ? ` (started by ${esc(ck.by)})` : ""} · due ${esc(ck.due)}`);
+  const RR = T.restroom || {};
+  if (RR.rooms) for (const w of RR.windows || []) {
+    const mine = am ? w.from < "15:00" : pm ? w.from >= "15:00" : true;
+    if (mine && w.to && w.to <= hmNow && (w.ops || 0) < RR.rooms) out.push(`<b>Restroom ${esc(w.label)}</b> (${esc(w.from)}–${esc(w.to)}) · ${w.ops || 0}/${RR.rooms} rooms inspected`);
+  }
+  for (const v of (T.contractors || []).filter(v => v.state === "onsite" && (pm || v.overdue)))
+    out.push(`<b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b> still in the mall${v.overdue ? ` · <b>past permit ${esc(v.to)}</b>` : v.to ? ` · permit until ${esc(v.to)}` : ""}`);
+  if (T.handover && T.handover.waiting) out.push(`The previous hand-over is <b>still waiting to be received</b>`);
+  try { const MF = await api("ops/mf/list?site=" + CTX.site);   // Malfunction Records: urgent ones still open
+    for (const m of MF.list.filter(m => m.open && ["High", "Critical"].includes(m.priority)).slice(0, 5))
+      out.push(`<b>${esc(m.priority)} malfunction</b> · ${esc(m.category || "")}${m.location ? " · " + esc(m.location) : ""} — ${esc(m.status)}${m.provider ? " (" + esc(m.provider) + ")" : ""}`); } catch {}
+  return out.length
+    ? `<span class="se-open" style="display:block;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--alert) 10%,transparent);color:var(--text)"><b style="color:var(--alert)">Shift-end check · ${out.length} still open</b>${out.map(x => `<span style="display:block;margin-top:6px">• ${x}</span>`).join("")}<span style="display:block;margin-top:8px;color:var(--muted);font-size:.85em">Add them to the hand-over or close them before you hand over.</span></span>`
+    : `<span style="display:block;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-weight:700">✓ Shift-end check: nothing left open</span>`;
 }
 function shiftsDialog(){
   const d = $("#dShifts"), on = new Set(H.shifts || ["AM", "PM"]);

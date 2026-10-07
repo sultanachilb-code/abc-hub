@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Sales & Score Card · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant sales analysis + tenant score card. The sales file is read in this page only — nothing is saved (like the Executive Report).
+     See docs/FEATURE-tenant-sales.md -->
+<style>
+:root{--cy:#7B4BB0;--ly:#A88426}
+:root[data-theme="dark"]{--cy:#A27BD6;--ly:#B08A2E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cy:#A27BD6;--ly:#B08A2E}}
+.lock{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;font-size:.8rem;color:var(--muted)}
+.lock b{color:var(--text)}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:34px 18px;text-align:center;cursor:pointer;color:var(--muted)}
+.drop:hover{border-color:var(--brand-2);color:var(--text)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar input[type=search]{flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit}
+.kp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.35rem;line-height:1.15}.kp small{color:var(--muted);font-size:.72rem;font-weight:700}
+.up{color:var(--ok)}.dn{color:var(--alert)}
+.tabs2{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs2 button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:6px 13px;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.tabs2 button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.box{padding:14px 16px}
+.scr{overflow:auto;max-height:640px}
+table.t{width:100%;border-collapse:collapse;font-size:.8rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:right;white-space:nowrap}
+table.t th{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;background:var(--surface);cursor:pointer;user-select:none}
+table.t td:first-child,table.t th:first-child,table.t td.l,table.t th.l{text-align:left}
+table.t tr.rw{cursor:pointer}table.t tr.rw:hover td{background:var(--paper)}
+.sp{display:inline-block;height:8px;border-radius:4px;background:var(--cy);vertical-align:middle}
+/* score card */
+.sc{max-width:900px;margin:0 auto;padding:22px 24px}
+.sc .hd{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;border-bottom:2px solid var(--brand);padding-bottom:12px;margin-bottom:14px}
+.sc h2{font-size:1.4rem}.sc .hd p{color:var(--muted);font-size:.82rem;margin-top:2px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.grid4 .card{padding:10px 12px}.grid4 b{display:block;font-size:1.2rem}.grid4 small{color:var(--muted);font-size:.7rem;font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sc h3{font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 8px}
+.lg{display:flex;gap:14px;font-size:.74rem;color:var(--muted);margin-bottom:4px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.li{font-size:.8rem;padding:5px 0;border-top:1px solid var(--line)}.li small{color:var(--muted)}
+.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:.76rem;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:50;display:none}
+@media (max-width:900px){.kp{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+@media print{ .top,.lock,.bar,.tabs2,.noprint{display:none!important} body{background:#fff} .wrap{padding:0} .sc{box-shadow:none;border:0;max-width:none} }
+</style>
+</head>
+<body>
+<div class="top"><h1>📈 Tenant Sales & Score Card <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<div class="tip" id="tip"></div>
+<input type="file" id="file" accept=".xlsx,.xlsm" hidden>
+<script src="exec-sales.js"></script>
+<script src="common.js"></script>
+<script>
+const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MIN_SQM = 20;   // tenants below 20 m² are left out of the comparisons (kiosks, ATMs, promo spaces)
+let ctx = null, site = "", S = null, BU = "", M = 0, tab = "ten", q = "", sortK = "c", sortD = -1, card = null;
+const f0 = v => Math.round(v).toLocaleString("en-US"), pc = v => isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(1) + "%" : "—";
+const cls = v => isFinite(v) ? (v >= 0 ? "up" : "dn") : "";
+async function boot(){
+  try { ctx = await api("ops/context"); site = ctx.site; draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+/* ---------- read the Leasing Sales Performance YTD workbook (in this page only) ---------- */
+async function load(file){
+  try {
+    toast("Reading the sales file…"); await xlsxReady();
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const sheets = wb.SheetNames.map(n => ({ name: n, grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) }));
+    const D = SalesLocal.parse(sheets);
+    S = { D, file: file.name }; M = D.upTo || 12;
+    const units = D.units.filter(u => /mall$|department store$/i.test(u));
+    const mine = (ctx.siteName || "").toLowerCase();
+    BU = units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0];
+    card = null; draw();
+  } catch (e){ toast(e.message, true); }
+}
+/* ---------- figures for one business unit ---------- */
+function build(){
+  const D = S.D, R = D.rows.filter(r => r.bu === BU);
+  const ytd = a => a.slice(0, M).reduce((s, v) => s + v, 0);
+  const ten = {};
+  for (const r of R){
+    const k = r.ten.toLowerCase();
+    const x = ten[k] = ten[k] || { name: r.ten, cat: r.cat || "Other", sub: r.sub, grp: r.grp, cur: Array(12).fill(0), prev: Array(12).fill(0), space: 0 };
+    r.cur.forEach((v, i) => x.cur[i] += v); r.prev.forEach((v, i) => x.prev[i] += v); x.space += r.space;
+  }
+  const all = Object.values(ten).map(x => ({ ...x, c: ytd(x.cur), p: ytd(x.prev) }));
+  const small = all.filter(x => x.space < MIN_SQM);
+  const T = all.filter(x => x.space >= MIN_SQM && (x.c || x.p)).map(x => ({ ...x, d: x.c - x.p, dp: x.p > 0 ? (x.c / x.p - 1) * 100 : NaN,
+    sqm: x.c / x.space, sqmP: x.p / x.space, ann: x.c / x.space * 12 / M }));
+  /* categories */
+  const C = {};
+  for (const x of T){ const c = C[x.cat] = C[x.cat] || { cat: x.cat, n: 0, space: 0, c: 0, p: 0 }; c.n++; c.space += x.space; c.c += x.c; c.p += x.p; }
+  const cats = Object.values(C).map(c => ({ ...c, dp: c.p > 0 ? (c.c / c.p - 1) * 100 : NaN, sqm: c.space ? c.c / c.space : 0, sqmP: c.space ? c.p / c.space : 0 }));
+  const tc = T.reduce((s, x) => s + x.c, 0), tp = T.reduce((s, x) => s + x.p, 0), sp = T.reduce((s, x) => s + x.space, 0);
+  cats.forEach(c => c.share = tc ? c.c / tc * 100 : 0);
+  /* rank inside the category by sales / m² */
+  for (const c of cats){ const L = T.filter(x => x.cat === c.cat).sort((a, b) => b.sqm - a.sqm); L.forEach((x, i) => { x.rank = i + 1; x.of = L.length; x.catSqm = c.sqm; }); }
+  return { T, cats, small, tc, tp, sp, up: T.filter(x => x.d > 0).length, down: T.filter(x => x.d < 0).length };
+}
+function draw(){
+  if (!S){
+    $("#app").innerHTML = `<div class="card lock">🔒 <span><b>Nothing is saved.</b> The sales file is read on this device only — closing or refreshing the page removes it, as in the Executive Report.</span></div>
+      <div class="card drop" id="drop">📊 <b>Upload the Leasing Sales Performance YTD file</b><br><small>The same workbook as the Executive Report (Sales Data Conso)</small></div>`;
+    const dr = $("#drop"); dr.onclick = () => $("#file").click(); dr.ondragover = e => e.preventDefault(); dr.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
+    return;
+  }
+  if (card) return drawCard();
+  const D = S.D, A = build(), units = D.units.filter(u => /mall$|department store$/i.test(u));
+  const tot = A.tp > 0 ? (A.tc / A.tp - 1) * 100 : NaN;
+  const s = q.toLowerCase();
+  const head = `<div class="card lock">🔒 <span><b>${esc(S.file)}</b> · up to <b>${MN[M - 1]} ${D.year}</b> · not saved — closing or refreshing removes it</span><span style="flex:1"></span>
+      <button class="btn small ghost" id="other">Another file</button><button class="btn small ghost" id="clear" style="color:var(--alert)">Remove now</button></div>
+    <div class="bar"><select class="sel" id="bu">${units.map(u => `<option ${u === BU ? "selected" : ""}>${esc(u)}</option>`).join("")}</select>
+      <select class="sel" id="mo">${MN.map((m, i) => i < (D.upTo || 12) ? `<option value="${i + 1}" ${i + 1 === M ? "selected" : ""}>YTD to ${m}</option>` : "").join("")}</select>
+      <input type="search" id="q" placeholder="Search a tenant or category" value="${esc(q)}"></div>
+    <div class="kp">
+      <div class="card"><b>${f0(A.tc)}</b><small>YTD ${D.year} · tenants ≥ ${MIN_SQM} m²</small></div>
+      <div class="card"><b class="${cls(tot)}">${pc(tot)}</b><small>vs YTD ${D.prevYear} (${f0(A.tp)})</small></div>
+      <div class="card"><b>${f0(A.sp ? A.tc / A.sp : 0)}</b><small>Sales / m² YTD (${f0(A.sp ? A.tp / A.sp : 0)} last year)</small></div>
+      <div class="card"><b><span class="up">${A.up}</span> / <span class="dn">${A.down}</span></b><small>Tenants up / down</small></div>
+      <div class="card"><b>${A.small.length}</b><small>Left out · under ${MIN_SQM} m²</small></div></div>
+    <div class="tabs2" id="tabs">${[["ten", `Tenants · ${A.T.length}`], ["cat", `Categories · ${A.cats.length}`], ["mon", "By month"]].map(([k, t]) => `<button data-t="${k}" class="${tab === k ? "on" : ""}">${t}</button>`).join("")}</div>`;
+  let body = "";
+  if (tab === "ten"){
+    const L = A.T.filter(x => !s || (x.name + " " + x.cat + " " + x.grp).toLowerCase().includes(s)).sort((a, b) => sortD * ((a[sortK] ?? -1e18) > (b[sortK] ?? -1e18) ? 1 : (a[sortK] ?? -1e18) < (b[sortK] ?? -1e18) ? -1 : 0));
+    const mx = Math.max(...L.map(x => x.sqm), 1);
+    const th = (k, t, l) => `<th data-s="${k}" class="${l ? "l" : ""}">${t}${sortK === k ? (sortD < 0 ? " ▾" : " ▴") : ""}</th>`;
+    body = `<div class="card box"><div class="scr"><table class="t" id="tt"><tr>${th("name", "Tenant", 1)}${th("cat", "Category", 1)}${th("space", "m²")}${th("c", "YTD " + D.year)}${th("p", "YTD " + D.prevYear)}${th("d", "Change")}${th("dp", "%")}${th("sqm", "Sales / m²")}${th("sqmP", "LY / m²")}${th("rank", "Rank in cat.")}</tr>
+      ${L.map(x => `<tr class="rw" data-tn="${esc(x.name)}"><td><b>${esc(x.name)}</b></td><td class="l">${esc(x.cat)}</td><td>${f0(x.space)}</td><td>${f0(x.c)}</td><td>${f0(x.p)}</td><td class="${cls(x.d)}">${x.d > 0 ? "+" : ""}${f0(x.d)}</td><td class="${cls(x.dp)}">${pc(x.dp)}</td>
+        <td><span class="sp" style="width:${Math.round(x.sqm / mx * 60)}px"></span> ${f0(x.sqm)}</td><td>${f0(x.sqmP)}</td><td>${x.rank}/${x.of}</td></tr>`).join("")}</table></div>
+      <p class="muted noprint" style="font-size:.74rem;margin-top:8px">Tap a tenant for its score card. Sales / m² = YTD sales ÷ space. ${A.small.length} tenants under ${MIN_SQM} m² are not included.</p></div>`;
+  } else if (tab === "cat"){
+    const L = A.cats.sort((a, b) => b.c - a.c);
+    body = `<div class="card box"><div class="scr"><table class="t"><tr><th class="l">Category</th><th>Tenants</th><th>m²</th><th>YTD ${D.year}</th><th>YTD ${D.prevYear}</th><th>%</th><th>Sales / m²</th><th>LY / m²</th><th>Share</th></tr>
+      ${L.map(c => `<tr><td><b>${esc(c.cat)}</b></td><td>${c.n}</td><td>${f0(c.space)}</td><td>${f0(c.c)}</td><td>${f0(c.p)}</td><td class="${cls(c.dp)}">${pc(c.dp)}</td><td>${f0(c.sqm)}</td><td>${f0(c.sqmP)}</td><td>${c.share.toFixed(1)}%</td></tr>`).join("")}</table></div></div>`;
+  } else {
+    const R = A.T, cur = MN.map((_, i) => R.reduce((s2, x) => s2 + x.cur[i], 0)), prev = MN.map((_, i) => R.reduce((s2, x) => s2 + x.prev[i], 0));
+    body = `<div class="card box">${chart(cur, prev, M, D.year, D.prevYear)}<div class="scr" style="margin-top:12px"><table class="t"><tr><th class="l">Month</th><th>${D.year}</th><th>${D.prevYear}</th><th>%</th></tr>
+      ${MN.slice(0, M).map((m, i) => `<tr><td>${m}</td><td>${f0(cur[i])}</td><td>${f0(prev[i])}</td><td class="${cls(prev[i] ? (cur[i] / prev[i] - 1) * 100 : NaN)}">${pc(prev[i] ? (cur[i] / prev[i] - 1) * 100 : NaN)}</td></tr>`).join("")}</table></div></div>`;
+  }
+  $("#app").innerHTML = head + body;
+  $("#bu").onchange = e => { BU = e.target.value; draw(); };
+  $("#mo").onchange = e => { M = Number(e.target.value); draw(); };
+  $("#q").oninput = e => { q = e.target.value; const p = e.target.selectionStart; draw(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+  $("#tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b){ tab = b.dataset.t; draw(); } };
+  $("#other").onclick = () => $("#file").click();
+  $("#clear").onclick = () => { S = null; card = null; draw(); toast("Sales removed from this page"); };
+  const tt = $("#tt"); if (tt) tt.onclick = e => {
+    const h = e.target.closest("[data-s]"); if (h){ const k = h.dataset.s; sortD = sortK === k ? -sortD : (["name", "cat"].includes(k) ? 1 : -1); sortK = k; return draw(); }
+    const r = e.target.closest("[data-tn]"); if (r){ card = { name: r.dataset.tn }; drawCard(); }
+  };
+  if (tab === "mon"){ const R = A.T; tipData($("#mch"), MN.slice(0, M).map((_, i) => R.reduce((t, x) => t + x.cur[i], 0)), MN.map((_, i) => R.reduce((t, x) => t + x.prev[i], 0)), D.year, D.prevYear); }
+  hoverBars();
+}
+/* ---------- monthly bars: this year vs last year (2 series, legend + table view below) ---------- */
+function chart(cur, prev, M, y, py){
+  const W = 760, H = 220, P = { l: 56, r: 10, t: 10, b: 26 }, iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const mx = Math.max(...cur.slice(0, M), ...prev.slice(0, M), 1), step = iw / M, bw = Math.min(22, step / 2 - 3);
+  const yv = v => P.t + ih - v / mx * ih, ticks = [0, .5, 1].map(k => mx * k);
+  const bar = (x, v, c, i, k) => { if (!(v > 0)) return ""; const yy = Math.min(yv(v), P.t + ih - 4); return `<path d="M${x},${P.t + ih} V${yy + 4} q0,-4 4,-4 h${bw - 8} q4,0 4,4 V${P.t + ih} Z" fill="var(${c})" data-i="${i}" data-k="${k}"/>`; };
+  return `<div class="lg"><span><i style="background:var(--cy)"></i>${y}</span><span><i style="background:var(--ly)"></i>${py}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Monthly sales ${y} vs ${py}" id="mch">
+      ${ticks.map(v => `<line x1="${P.l}" x2="${W - P.r}" y1="${yv(v)}" y2="${yv(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${yv(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "k" : Math.round(v)}</text>`).join("")}
+      ${MN.slice(0, M).map((m, i) => { const x0 = P.l + i * step + step / 2; return bar(x0 - bw - 1, cur[i], "--cy", i, "c") + bar(x0 + 1, prev[i], "--ly", i, "p")
+        + `<rect x="${P.l + i * step}" y="${P.t}" width="${step}" height="${ih}" fill="transparent" data-hv="${i}"/><text x="${x0}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--muted)">${m}</text>`; }).join("")}
+    </svg>`;
+}
+function hoverBars(){
+  const svg = $("#mch"); if (!svg) return; const tip = $("#tip");
+  svg.onmousemove = e => { const r = e.target.closest("[data-hv]"); if (!r){ tip.style.display = "none"; return; }
+    tip.innerHTML = svg.dataset["t" + r.dataset.hv] || ""; tip.style.display = "block";
+    tip.style.left = Math.min(innerWidth - 160, e.clientX + 14) + "px"; tip.style.top = (e.clientY + 10) + "px"; };
+  svg.onmouseleave = () => tip.style.display = "none";
+}
+function tipData(svg, cur, prev, y, py){ if (!svg) return; cur.forEach((v, i) => { svg.dataset["t" + i] = `<b>${MN[i]}</b><br>${y}: ${f0(v)}<br>${py}: ${f0(prev[i])}<br>${pc(prev[i] ? (v / prev[i] - 1) * 100 : NaN)}`; }); }
+/* ---------- tenant score card: sales + what the hub knows (compliance, violations, portal, feedback) ---------- */
+async function drawCard(){
+  const D = S.D, A = build(), x = A.T.find(t => t.name === card.name);
+  if (!x){ card = null; return draw(); }
+  card.A = x;
+  const cat = A.cats.find(c => c.cat === x.cat);
+  $("#app").innerHTML = `<div class="bar noprint"><button class="btn ghost" id="back">‹ All tenants</button><span style="flex:1"></span><button class="btn" onclick="print()">Print / PDF</button></div>
+    <div class="card sc"><div class="hd"><div><h2>${esc(x.name)}</h2><p>${esc([x.cat, x.sub, x.grp && x.grp !== x.name ? "Group " + x.grp : "", f0(x.space) + " m²", BU].filter(Boolean).join(" · "))}</p></div>
+      <div style="text-align:right"><b>Tenant score card</b><p>YTD to ${MN[M - 1]} ${D.year} · ${esc(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }))}</p></div></div>
+    <div class="grid4">
+      <div class="card"><b>${f0(x.c)}</b><small>YTD ${D.year}</small></div>
+      <div class="card"><b class="${cls(x.dp)}">${pc(x.dp)}</b><small>vs YTD ${D.prevYear} (${f0(x.p)})</small></div>
+      <div class="card"><b>${f0(x.sqm)}</b><small>Sales / m² · category ${f0(cat ? cat.sqm : 0)}</small></div>
+      <div class="card"><b>${x.rank} / ${x.of}</b><small>Rank in ${esc(x.cat)} (sales / m²)</small></div></div>
+    <h3>Monthly sales</h3>${chart(x.cur, x.prev, M, D.year, D.prevYear)}
+    <div class="two"><div><h3>Operations · from the hub</h3><div id="hubBox"><div class="li muted">Loading…</div></div></div>
+      <div><h3>Sales position</h3>
+        <div class="li">Annualised sales / m²: <b>${f0(x.ann)}</b></div>
+        <div class="li">vs category average: <b class="${cls(cat && cat.sqm ? (x.sqm / cat.sqm - 1) * 100 : NaN)}">${pc(cat && cat.sqm ? (x.sqm / cat.sqm - 1) * 100 : NaN)}</b></div>
+        <div class="li">Category ${esc(x.cat)}: ${pc(cat ? cat.dp : NaN)} vs last year · tenant ${pc(x.dp)}</div>
+        <div class="li">Share of the flagship's sales: <b>${A.tc ? (x.c / A.tc * 100).toFixed(2) : 0}%</b></div></div></div>
+    <p class="muted" style="font-size:.7rem;margin-top:14px">Sales from ${esc(S.file)} (not saved in the hub). Operations figures from the ABC Operations Hub.</p></div>`;
+  $("#back").onclick = () => { card = null; draw(); };
+  tipData($("#mch"), x.cur.slice(0, M), x.prev, D.year, D.prevYear); hoverBars();
+  /* the hub side: Tenant 360 of the unit with this brand at the flagship */
+  try {
+    const L = await api(`ops/t360/list?site=${site}`);
+    const k = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const u = L.units.find(u => k(u.brand) && (k(u.brand) === k(x.name) || k(x.name).includes(k(u.brand)) || k(u.brand).includes(k(x.name))));
+    if (!u){ $("#hubBox").innerHTML = `<div class="li muted">No unit with this brand at ${esc(L.siteName)} in the GLA.</div>`; return; }
+    const U = await api(`ops/t360/unit?site=${site}&id=${u.id}`);
+    const viol = U.feedback.filter(f => f.category !== "Customer Feedback"), neg = U.feedback.filter(f => f.category === "Customer Feedback" && f.description !== "Positive");
+    const fu = U.portal.filter(p => p.followUp);
+    $("#hubBox").innerHTML = `<div class="li">Unit <b>${esc(U.unit.code)}</b> · ${esc(U.unit.level)} · ${esc(U.unit.status)}</div>
+      <div class="li">Compliance this month: <b>${U.compliance ? U.compliance.score : "—"}</b>${U.compliance && U.compliance.repeats.length ? ` · <span class="dn">repeat: ${esc(U.compliance.repeats.map(r => r.what).join(", "))}</span>` : ""}</div>
+      <div class="li">Violations · 12 months: <b class="${viol.length ? "dn" : "up"}">${viol.length}</b> · negative customer feedback: <b>${neg.length}</b></div>
+      <div class="li">Portal follow-ups open: <b class="${fu.length ? "dn" : "up"}">${fu.length}</b>${U.portal.length ? ` of ${U.portal.length} items` : ""}</div>
+      <div class="li">Contract: ${U.contract ? `<b>${esc(U.contract.no)}</b> · ends ${esc(U.contract.end || "—")}${U.contract.daysLeft != null ? ` (${U.contract.daysLeft} d)` : ""}` : "not in the Contracts report"}</div>`;
+  } catch (e){ $("#hubBox").innerHTML = `<div class="li muted">${esc(e.message)}</div>`; }
+}
+$("#file").onchange = e => { if (e.target.files[0]) load(e.target.files[0]); e.target.value = ""; };
+boot();
+</script>
+</body>
+</html>

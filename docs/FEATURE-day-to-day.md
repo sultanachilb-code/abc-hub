@@ -53,3 +53,7 @@ scanned at the gate before anyone imported it, there was no line to write on. No
 - when the handover page refreshes (every 30 s, and right after a portal import), the marks of every REQ scanned today are applied;
 - on every save, the server adds the gate's outcome (✓ Attended · ✕ Refused at gate · → left) to any line whose REQ was scanned that day.
 The Loading area feedback column then shows green / yellow as usual.
+
+## Shift-end check (Oct 2026)
+Submitting a shift hand-over first lists what is still open on that shift: its checklist, restroom windows not fully inspected,
+contractors still in the mall (PM) or past their permit (any shift), and a previous hand-over not received. "Submit anyway" still works.

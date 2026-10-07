@@ -14,7 +14,6 @@
      url     the system link (single-site systems)
      sites   { "Flagship name": "url", ... }  (per-flagship systems)
      embed   false = open in its own window instead of inside the hub
-     tools   false = a Day to Day tile that is not repeated in the header Tools button
      who sees a tile is set in ACCESS below, by position.
      sso     true = sign in automatically with the hub account
      logo    picture shown on the tile instead of the icon (e.g. "/logos/jde.png", square, 256×256)
@@ -25,7 +24,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Day to Day Operations", "Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms"],
+  GROUPS: ["Day to Day Operations", "Leadership", "Operations Tools", "Tenant Management", "Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Inspections", "Incidents & Security", "Operations", "Enterprise Systems", "Data & Reporting", "Policies & Procedures", "Operations Forms", "Contractor Access"],
 
   /* Who sees each tile, by position (from the Access sheet, Oct 2026). Admin always sees everything.
        MM   Mall Manager / Senior Mall Manager     OM  Operations Manager / Deputy Operations Manager
@@ -38,6 +37,7 @@ window.HUB = {
     "handover":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
     "contractors":     ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "gate":            ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "contractor-access": ["OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "leadership":      ["LEAD"],
     "eod":             ["MM",  "OM"],
     "forms":           ["MM",  "OM",  "SMS",  "MS",  "MO"],
@@ -49,6 +49,11 @@ window.HUB = {
     "compliance":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "fitout":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "training":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "sales":           ["MM",  "OM",  "LEAD"],
+    "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "works":           ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "directory":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -57,8 +62,7 @@ window.HUB = {
     "layouts":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "exec":            ["MM",  "OM",  "LEAD"],
     "accuracy":        ["MM",  "OM"],
-    "projects":        ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "project-tracker": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "projects":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   /* Future + Tracker in one tile */
     "budget":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "snaglist":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "restroom":        ["MM",  "OM",  "LEAD"],
@@ -75,9 +79,7 @@ window.HUB = {
     "pack":            ["MM",  "OM",  "LEAD"],
     "downloads":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "footfall":        [],
-    "pp-owner":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "pp-assist":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "pp-general":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-am":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-pm":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -89,7 +91,6 @@ window.HUB = {
     /* Built into the hub — same sign-in, nothing to host separately */
     {
       id: "schedule",
-      tools: false,   /* not repeated in the header Tools button (Access sheet, Oct 2026) */
       name: "Operations Schedule",
       desc: "Weekly shifts by flagship, ranked by position",
       group: "Day to Day Operations",
@@ -99,7 +100,6 @@ window.HUB = {
     },
     {
       id: "mom",
-      tools: false,   /* not repeated in the header Tools button (Access sheet, Oct 2026) */
       name: "Minutes of Meeting",
       desc: "Attendance, agenda, actions and deadlines",
       group: "Day to Day Operations",
@@ -109,7 +109,6 @@ window.HUB = {
     },
     {
       id: "handover",
-      tools: false,   /* not repeated in the header Tools button (Access sheet, Oct 2026) */
       name: "Shift Handover",
       desc: "Follow-ups, today, tomorrow, events and checklists",
       group: "Day to Day Operations",
@@ -117,6 +116,9 @@ window.HUB = {
       color: "#2F6F73",
       url: "/tools/handover"
     },
+    { id: "calendar", name: "Operations Calendar", desc: "Marketing events, ops activities, MOM, objectives and expiry dates", group: "Day to Day Operations", icon: "calendar", color: "#C2185B", url: "/tools/calendar" },
+    /* Contractor Access folder: opens a ring with Contractors (who is in the mall now) and the Loading Gate */
+    { id: "contractor-access", name: "Contractor Access", desc: "Contractors on site and the loading gate", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", kind: "orbit", orbitGroup: "Contractor Access", url: "#contractor-access" },
     {
       id: "eod",
       name: "End of Day Report",
@@ -166,21 +168,21 @@ window.HUB = {
       url: "/tools/reminders"
     },
     /* Operations Calendar feature — see docs/FEATURE-calendar.md */
-    { id: "calendar", name: "Operations Calendar", desc: "Marketing events, ops activities, MOM, objectives and expiry dates", group: "Operations Tools", icon: "calendar", color: "#C2185B", url: "/tools/calendar" },
     /* Monthly operations pack feature — see docs/FEATURE-ops-pack.md */
     { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Data & Reporting", icon: "pack", color: "#2A0F45", url: "/tools/pack" },
     /* Downloads feature — see docs/FEATURE-downloads.md */
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Data & Reporting", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
-    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", url: "/tools/contractors" },
+    { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Contractor Access", icon: "hardhat", color: "#C07A12", url: "/tools/contractors" },
     /* Loading Gate feature — see docs/FEATURE-gate.md */
-    { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Day to Day Operations", icon: "qr", color: "#2E8B57", url: "/tools/gate" },
+    { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Contractor Access", icon: "qr", color: "#2E8B57", url: "/tools/gate" },
     /* Projects feature — see docs/FEATURE-projects.md */
-    { id: "projects", name: "Operations Future Projects", desc: "Ideas and plans — from idea to approved", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects?view=future" },
-    { id: "project-tracker", name: "Project Tracker", desc: "Projects in progress — milestones, progress, budget vs spent", group: "Operations Projects and Budget", icon: "gauge", color: "#2E6B4F", url: "/tools/projects?view=tracker" },
+    { id: "projects", name: "Operations Projects", desc: "Future projects and the project tracker — from idea to done", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects" },
     /* Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md */
     { id: "evacuation", name: "Tenant Evacuation Plan", desc: "Service corridor and assembly point for every active tenant", group: "Incidents & Security", icon: "exit", color: "#2E7D32", url: "/tools/evacuation" },
     /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */
+    /* Tenant 360 — one page per unit with everything the hub knows about the tenant (see docs/FEATURE-tenant-360.md) */
+    { id: "tenant360", name: "Tenant 360", desc: "One page per unit — contract, portal items, violations, fit-out, works, contacts, contractors", group: "Tenant Management", icon: "users", color: "#4A1F73", url: "/tools/tenant360" },
     { id: "tenants", name: "Tenant Announcements", desc: "Opening, closure and relocation emails with photos", group: "Tenant Management", icon: "storeIn", color: "#2F6F73", url: "/tools/tenants" },
     {
       id: "feedback",
@@ -199,7 +201,9 @@ window.HUB = {
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
-    { id: "portal", name: "Tenant Portal Follow-up", desc: "Breaches & penalties, violations and ABC requests waiting on tenants", group: "Tenant Management", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    { id: "portal", name: "Portal Dashboard", desc: "Breaches & penalties, violations and ABC requests waiting on tenants", group: "Operations Tools", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    /* Malfunction Records — soft services and operations follow the service providers (see docs/FEATURE-malfunctions.md) */
+    { id: "malfunctions", name: "Malfunction Records", desc: "Malfunctions handled by service providers — reported, attended, fixed", group: "Operations Tools", icon: "bolt", color: "#B5452B", url: "/tools/malfunctions" },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },
     { id: "directory", name: "Tenants Directory", desc: "Tenant contacts for reception — names, mobiles, emails", group: "Tenant Management", icon: "users", color: "#3C4F8A", url: "/tools/directory" },
     /* Property Overview & Info — more property references will join this section */
@@ -243,6 +247,8 @@ window.HUB = {
       url: "/tools/budget"
     },
     /* Data Accuracy Score feature — see docs/FEATURE-accuracy.md */
+    /* Tenant Sales & Score Card — sales file read on the page only, never saved (see docs/FEATURE-tenant-sales.md) */
+    { id: "sales", name: "Tenant Sales & Score Card", desc: "YTD vs last year, sales / m², categories and a score card per tenant — file not saved", group: "Executive Report", icon: "chart", color: "#7B4BB0", url: "/tools/sales" },
     {
       id: "accuracy",
       name: "Data Accuracy Score",
@@ -273,6 +279,8 @@ window.HUB = {
       url: "https://abc-snaglist.sultanalachi-work.workers.dev",
       sso: true
     },
+    /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
+    { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
     {
       id: "restroom",
       logo: "/logos/restroom.png",   /* replace the file in /logos to change the picture */
@@ -385,9 +393,9 @@ window.HUB = {
       sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
     },
     /* Policies & Procedures — the three systems are placeholders until their content is built */
-    { id: "pp-owner", name: "Owner", desc: "Owner policies and procedures", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies?s=owner" },
-    { id: "pp-assist", name: "Assist", desc: "Assist policies and procedures", group: "Policies & Procedures", icon: "handshake", color: "#2F6F73", url: "/tools/policies?s=assist" },
-    { id: "pp-general", name: "ABC General Policies", desc: "Company-wide policies", group: "Policies & Procedures", icon: "scroll", color: "#8A5A1F", url: "/tools/policies?s=general" }
+    /* Training & induction tracker (see docs/FEATURE-training.md) */
+    { id: "training", name: "Training Tracker", desc: "Who completed which training, what expires, what is still needed", group: "Policies & Procedures", icon: "book", color: "#2E6B4F", url: "/tools/training" },
+    { id: "policies", name: "Policies & Procedures", desc: "Owner, Assist and ABC General policies in one place", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies" }
 
     /* Next system goes here — add a comma after the } above, then paste:
     ,{

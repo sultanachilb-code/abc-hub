@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleaning Headcount · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Cleaning headcount control: the provider's punching record (PDF) against the planned headcount — see docs/FEATURE-cleaning-control.md -->
+<style>
+.kp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:14px 0}
+.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.5rem;line-height:1.1}.kp small{color:var(--muted);font-size:.72rem;font-weight:700}
+.kp .al b{color:var(--alert)}.kp .warn b{color:var(--warn)}.kp .ok b{color:var(--ok)}
+.row2{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:start}
+.box{padding:14px 16px}.box h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;cursor:pointer;color:var(--muted);font-size:.86rem}
+.drop:hover{border-color:var(--brand-2);color:var(--text)}
+table.t{width:100%;border-collapse:collapse;font-size:.8rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:top}
+table.t th{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;background:var(--surface)}
+table.t td.c,table.t th.c{text-align:center}
+.short{color:var(--alert);font-weight:800}.okc{color:var(--ok);font-weight:800}
+.tg{display:inline-block;font-size:.68rem;font-weight:800;padding:1px 6px;border-radius:999px;margin:1px 2px 1px 0;background:var(--paper)}
+.tg.late{color:var(--warn)}.tg.early{color:var(--warn)}.tg.miss{color:var(--alert)}.tg.long{color:var(--brand-2)}.tg.in{color:var(--ok)}
+.sh input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit}
+.scr{max-height:520px;overflow:auto}
+.pc{font-size:.74rem;line-height:1.25;white-space:nowrap}.pc small{color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:5px 11px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
+.chips button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+@media (max-width:1000px){.kp{grid-template-columns:repeat(3,minmax(0,1fr))}.row2{grid-template-columns:1fr}}
+@media (max-width:560px){.kp{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="top"><h1>🧹 Cleaning Headcount <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<input type="file" id="file" accept="application/pdf,.pdf" hidden>
+<script src="/tools/pdfjs/pdf.min.js"></script>
+<script src="common.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/tools/pdfjs/pdf.worker.min.js";
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", C = null, REP = null, tab = "exc";
+const mins = t => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const hmS = m => `${String(Math.floor((m % 1440) / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    if (!site || site === "ALL") site = ctx.site;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; REP = null; history.replaceState(null, "", `?site=${site}`); load(); });
+    load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){
+  try { C = await api(`ops/cl/data?site=${site}`); $("#sub").textContent = C.siteName;
+    if (!REP && C.reports.length) REP = await api(`ops/cl/report?site=${site}&id=${C.reports[0].id}`);
+    draw(); }
+  catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ---------- read the punching record PDF (number · name · a column per day: IN / OUT / worked) ---------- */
+async function readPdf(file){
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const lines = [];
+  for (let pg = 1; pg <= doc.numPages; pg++){
+    const tc = await (await doc.getPage(pg)).getTextContent();
+    const by = [];
+    for (const it of tc.items){ if (!it.str.trim()) continue; const y = it.transform[5], x = it.transform[4];
+      let L = by.find(l => Math.abs(l.y - y) < 3); if (!L){ L = { y, items: [] }; by.push(L); } L.items.push({ x, s: it.str }); }
+    by.sort((a, b) => b.y - a.y).forEach(l => lines.push(l.items.sort((a, b) => a.x - b.x).map(i => i.s).join(" ").replace(/\s+/g, " ").trim()));
+  }
+  const all = lines.join("\n");
+  const per = all.match(/From\s+(\d{2})\/(\d{2})\/(\d{4})\s+To\s+(\d{2})\/(\d{2})\/(\d{4})/i);
+  if (!per) throw new Error("This does not look like the punching record — the period (From … To …) was not found.");
+  const from = `${per[3]}-${per[2]}-${per[1]}`, to = `${per[6]}-${per[5]}-${per[4]}`;
+  const pr = all.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})/);   // printed "06/10/2026 12:46" at the top of each page
+  const printed = pr ? `${pr[3]}-${pr[2]}-${pr[1]} ${pr[4]}` : "";
+  const days = []; for (let d = from; d <= to; d = D.add(d, 1)) days.push(d);
+  const N = days.length, T = /\b\d{1,2}[:.]\d{2}\b/g;
+  const rows = [];
+  for (let i = 0; i < lines.length; i++){
+    const m = lines[i].match(/^(\d{4,6})\s+([^\d:]+?)\s+(\d{1,2}:\d{2}.*)$/);
+    if (!m) continue;
+    const ins = (m[3].match(T) || []).slice(0, N), outs = ((lines[i + 1] || "").match(T) || []).slice(0, N), wk = ((lines[i + 2] || "").match(T) || []).slice(0, N);
+    if (ins.length < N) continue;
+    const z = t => t && t !== "00:00" && t !== "0:00" ? t.replace(".", ":").padStart(5, "0") : "";
+    rows.push({ no: m[1], name: m[2].trim(), days: days.map((d, k) => ({ day: d, in: z(ins[k]), out: z(outs[k]), worked: z(wk[k]) })) });
+    i += 2;
+  }
+  if (!rows.length) throw new Error("No employees were read from this PDF.");
+  return { from, to, rows, printed };
+}
+
+/* ---------- suggest the shifts from the record itself: punches grouped by start time (nearest 30 min) ---------- */
+function suggestShifts(rep){
+  const P = [];
+  for (const r of rep.rows) for (const x of r.days){ const i = mins(x.in); let o = mins(x.out); if (i == null || o == null) continue; if (o < i) o += 1440; P.push([i, o]); }
+  if (!P.length) return null;
+  const G = new Map(); for (const [i, o] of P){ const k = Math.round(i / 60) * 60; (G.get(k) || G.set(k, []).get(k)).push([i, o]); }
+  const nDays = rep.rows[0].days.length, med = a => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+  const q15 = m => Math.round(m / 15) * 15;
+  /* groups starting within an hour of each other and ending at about the same time are one shift */
+  const grp = [...G.entries()].filter(([, L]) => L.length >= Math.max(3, P.length * .03)).sort((a, b) => a[0] - b[0]).map(([, L]) => L)
+    .reduce((acc, L) => { const last = acc[acc.length - 1], m = X => [med(X.map(x => x[0])), med(X.map(x => x[1]))];
+      if (last){ const [f1, t1] = m(last), [f2, t2] = m(L); if (f2 - f1 <= 60 && Math.abs(t2 - t1) <= 60){ last.push(...L); return acc; } }
+      acc.push(L.slice()); return acc; }, []);
+  return grp.map((L, n) => {
+    const f = q15(med(L.map(x => x[0]))), t = q15(med(L.map(x => x[1])));
+    return { name: ["Morning", "Mid", "Afternoon", "Evening", "Night"][n] || "Shift " + (n + 1), from: hmS(f), to: hmS(t), planned: Math.round(L.length / nDays) };
+  });
+}
+
+/* ---------- check the punches against the plan ---------- */
+function analyse(rep, S){
+  const shifts = S.shifts.map(s => { const f = mins(s.from); let t = mins(s.to); if (t <= f) t += 1440; return { ...s, f, t }; });
+  const g = Number(S.grace) || 0, today = ctx.today;
+  const grid = {}, exc = [], per = [];
+  for (const r of rep.rows){
+    const P = { ...r, flags: 0, cells: [] };
+    for (const x of r.days){
+      const cell = { day: x.day, in: x.in, out: x.out, tags: [] };
+      const i = mins(x.in); let o = mins(x.out);
+      if (i == null && o == null){ P.cells.push(cell); continue; }
+      const sh = i == null ? null : shifts.reduce((a, s) => Math.abs(s.f - i) < Math.abs(a.f - i) ? s : a, shifts[0]);
+      if (sh){ cell.shift = sh.name; (grid[x.day] = grid[x.day] || {})[sh.name] = ((grid[x.day] || {})[sh.name] || 0) + 1; }
+      if (o != null && i != null && o < i) o += 1440;
+      if (i == null) cell.tags.push(["miss", "No IN punch"]);
+      else if (o == null) cell.tags.push(x.day >= today ? ["in", "Still in"] : ["miss", "No OUT punch"]);
+      if (sh && i != null && i - sh.f > g) cell.tags.push(["late", `Late ${i - sh.f} min`]);
+      if (sh && o != null && sh.t - o > g) cell.tags.push(["early", `Left ${sh.t - o} min early`]);
+      if (sh && i != null && o != null && (o - i) - (sh.t - sh.f) > 60) cell.tags.push(["long", `${Math.round((o - i) / 6) / 10} h worked`]);
+      if (cell.tags.some(t => t[0] !== "in")){ P.flags++; exc.push({ no: r.no, name: r.name, ...cell }); }
+      P.cells.push(cell);
+    }
+    per.push(P);
+  }
+  const days = rep.rows[0] ? rep.rows[0].days.map(d => d.day) : [];
+  const nowM = mins(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00"));
+  /* a shift of the last day that had not started when the record was printed is not counted (the record is printed during the day) */
+  const pDay = (rep.printed || "").slice(0, 10), pM = rep.printed ? mins(rep.printed.slice(11)) : (rep.to >= today ? nowM : null);
+  const notYet = (d, s) => d === rep.to && pM != null && (pDay ? pDay === d : true) && s.f > pM;
+  const cover = days.map(d => ({ day: d, sh: shifts.map(s => ({ name: s.name, planned: s.planned, present: (grid[d] || {})[s.name] || 0, wait: notYet(d, s) })) }));
+  const short = cover.reduce((n, c) => n + c.sh.filter(s => !s.wait && s.planned && s.present < s.planned).length, 0);
+  const cnt = k => exc.reduce((n, e) => n + e.tags.filter(t => t[0] === k).length, 0);
+  return { shifts, cover, exc, per, short, late: cnt("late"), early: cnt("early"), miss: cnt("miss"), long: cnt("long"),
+    avg: days.length ? Math.round(cover.reduce((n, c) => n + c.sh.reduce((a, s) => a + s.present, 0), 0) / days.length) : 0 };
+}
+
+function draw(){
+  const S = C.settings, A = REP ? analyse(REP, S) : null;
+  const plan = `<div class="card box"><h3><span>Plan · ${esc(S.provider)}</span>${C.can.plan ? `<button class="btn small" id="svPlan">Save plan</button>` : ""}</h3>
+    <table class="t sh"><tr><th>Shift</th><th>From</th><th>To</th><th class="c">Planned</th>${C.can.plan ? "<th></th>" : ""}</tr>
+    ${S.shifts.map((s, i) => `<tr data-i="${i}"><td><input data-k="name" value="${esc(s.name)}"></td><td><input data-k="from" type="time" value="${esc(s.from)}"></td><td><input data-k="to" type="time" value="${esc(s.to)}"></td>
+      <td><input data-k="planned" type="number" min="0" value="${s.planned}" style="text-align:center"></td>${C.can.plan ? `<td><button class="btn ghost small" data-rm="${i}">✕</button></td>` : ""}</tr>`).join("")}</table>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;font-size:.8rem">
+      ${C.can.plan ? `<button class="btn ghost small" id="addSh">+ Shift</button>${REP ? `<button class="btn ghost small" id="sugSh">✨ Suggest from this record</button>` : ""}` : ""}
+      <label>Provider <input id="prov" value="${esc(S.provider)}" style="width:130px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)"></label>
+      <label>Grace <input id="grace" type="number" min="0" max="60" value="${S.grace}" style="width:60px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)"> min</label></div>
+    <p class="muted" style="font-size:.74rem;margin-top:8px">Each punch is matched to the shift whose start is closest. Late = IN after start + grace; early = OUT before end − grace.${S.updatedBy ? ` Last change: ${esc(S.updatedBy)}.` : ""}</p></div>`;
+  const up = `<div class="card box"><h3><span>Punching record</span></h3>
+    ${C.can.edit ? `<div class="drop" id="drop">📄 <b>Upload the punching record PDF</b><br><small>From the provider's time-attendance system · the same period uploaded again replaces it</small></div>` : ""}
+    ${C.reports.length ? `<div style="margin-top:10px"><select class="sel" id="repSel" style="width:100%">${C.reports.map(r => `<option value="${r.id}" ${REP && REP.id === r.id ? "selected" : ""}>${esc(D.fmt(r.from))} – ${esc(D.fmt(r.to))} · ${r.staff} staff · ${esc(r.provider || "")} · ${esc(r.by)}</option>`).join("")}</select></div>` : `<p class="muted" style="margin-top:10px;font-size:.82rem">No punching record uploaded yet.</p>`}</div>`;
+  let body = "";
+  if (A){
+    const kp = [[REP.rows.length, "Staff in the record", ""], [A.avg, "Present per day (avg)", ""], [A.short, "Short shift-days", A.short ? "al" : "ok"],
+      [A.late, "Late entries", A.late ? "warn" : "ok"], [A.early, "Early exits", A.early ? "warn" : "ok"], [A.miss, "Missing punches", A.miss ? "al" : "ok"]];
+    const cov = `<div class="card box"><h3><span>Headcount vs plan</span><small class="muted">${esc(D.fmt(REP.from))} – ${esc(D.fmt(REP.to))}${REP.printed ? " · printed " + esc(D.fmt(REP.printed.slice(0, 10))) + " " + esc(REP.printed.slice(11)) : ""}</small></h3><div class="scr"><table class="t">
+      <tr><th>Day</th>${A.shifts.map(s => `<th class="c">${esc(s.name)}<br><small>${esc(s.from)}–${esc(s.to)}</small></th>`).join("")}</tr>
+      ${A.cover.map(c => `<tr><td>${esc(D.dow(c.day))} ${esc(D.fmt(c.day))}</td>${c.sh.map(s => s.wait ? `<td class="c muted"><small>not started in this record</small></td>` : `<td class="c ${s.planned ? (s.present < s.planned ? "short" : "okc") : ""}">${s.present}${s.planned ? ` / ${s.planned}` : ""}${s.planned && s.present < s.planned ? ` <small>(−${s.planned - s.present})</small>` : ""}</td>`).join("")}</tr>`).join("")}
+      </table></div>${A.shifts.some(s => s.planned) ? "" : `<p class="muted" style="font-size:.76rem;margin-top:8px">Set the planned headcount per shift to see the shortages.</p>`}</div>`;
+    const exc = A.exc.length ? `<table class="t"><tr><th>Day</th><th>Employee</th><th>Shift</th><th>IN</th><th>OUT</th><th>Check</th></tr>
+      ${A.exc.sort((a, b) => a.day.localeCompare(b.day) || a.name.localeCompare(b.name)).map(e => `<tr><td>${esc(D.fmt(e.day))}</td><td><b>${esc(e.name)}</b> <small class="muted">${esc(e.no)}</small></td><td>${esc(e.shift || "—")}</td><td>${esc(e.in || "—")}</td><td>${esc(e.out || "—")}</td>
+        <td>${e.tags.map(t => `<span class="tg ${t[0]}">${esc(t[1])}</span>`).join("")}</td></tr>`).join("")}</table>` : `<div class="empty">No exceptions in this period.</div>`;
+    const days = REP.rows[0].days.map(d => d.day);
+    const per = `<table class="t"><tr><th>Employee</th>${days.map(d => `<th class="c">${esc(D.dow(d))}<br>${esc(D.fmt(d))}</th>`).join("")}<th class="c">Flags</th></tr>
+      ${A.per.map(p => `<tr><td><b>${esc(p.name)}</b><br><small class="muted">${esc(p.no)}</small></td>${p.cells.map(c => `<td class="c pc">${c.in || c.out ? `${esc(c.in || "—")}<br>${esc(c.out || "—")}${c.tags.length ? "<br>" + c.tags.map(t => `<span class="tg ${t[0]}">${esc(t[0] === "late" || t[0] === "early" ? t[1].replace(/ min.*/, "′") : t[0] === "long" ? t[1].replace(" worked", "") : t[1].replace(" punch", ""))}</span>`).join("") : ""}` : `<small>off</small>`}</td>`).join("")}
+        <td class="c ${p.flags ? "short" : "okc"}">${p.flags}</td></tr>`).join("")}</table>`;
+    body = `<div class="kp">${kp.map(([v, t, c]) => `<div class="card ${c}"><b>${esc(v)}</b><small>${esc(t)}</small></div>`).join("")}</div>
+      ${cov}
+      <div class="card box" style="margin-top:14px"><h3><span class="chips" id="tabs"><button data-t="exc" class="${tab === "exc" ? "on" : ""}">Exceptions · ${A.exc.length}</button><button data-t="per" class="${tab === "per" ? "on" : ""}">By employee · ${REP.rows.length}</button></span>
+        ${C.can.plan ? `<button class="btn ghost small" id="delRep" style="color:var(--alert)">Delete this upload</button>` : ""}</h3><div class="scr">${tab === "exc" ? exc : per}</div></div>`;
+  }
+  $("#app").innerHTML = `<div class="row2">${up}${plan}</div>${body}`;
+  /* events */
+  const dr = $("#drop"); if (dr){ dr.onclick = () => $("#file").click(); dr.ondragover = e => e.preventDefault(); dr.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); }; }
+  const rs = $("#repSel"); if (rs) rs.onchange = async () => { REP = await api(`ops/cl/report?site=${site}&id=${rs.value}`); draw(); };
+  const tb = $("#tabs"); if (tb) tb.onclick = e => { const b = e.target.closest("[data-t]"); if (b){ tab = b.dataset.t; draw(); } };
+  const readPlan = () => ({ provider: $("#prov").value, grace: Number($("#grace").value), shifts: [...document.querySelectorAll(".sh tr[data-i]")].map(tr => {
+    const v = k => tr.querySelector(`[data-k="${k}"]`).value; return { name: v("name"), from: v("from"), to: v("to"), planned: Number(v("planned")) }; }) });
+  document.querySelectorAll(".sh input, #grace").forEach(i => i.onchange = () => { C.settings = { ...C.settings, ...readPlan() }; draw(); });
+  const sv = $("#svPlan"); if (sv) sv.onclick = async () => { try { const r = await api("ops/cl/settings", { site, ...readPlan() }); C.settings = r.settings; toast("Plan saved"); draw(); } catch (e){ toast(e.message, true); } };
+  const sg = $("#sugSh"); if (sg) sg.onclick = () => { const L = suggestShifts(REP); if (L){ C.settings.shifts = L; draw(); toast("Shifts suggested from the punches — check them and Save plan"); } };
+  const ad = $("#addSh"); if (ad) ad.onclick = () => { C.settings.shifts.push({ name: "Shift", from: "07:00", to: "15:00", planned: 0 }); draw(); };
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { C.settings.shifts.splice(Number(b.dataset.rm), 1); draw(); });
+  const dl = $("#delRep"); if (dl) dl.onclick = async () => { if (!(await confirmBox("Delete this upload?", "The punches of this period are removed from the hub.", "Delete"))) return; await api("ops/cl/delete", { site, id: REP.id }); REP = null; load(); };
+}
+async function upload(f){
+  try {
+    toast("Reading the PDF…");
+    const r = await readPdf(f);
+    const s = await api("ops/cl/save", { site, provider: C.settings.provider, file: f.name, ...r });
+    toast(`${r.rows.length} staff read · ${D.fmt(r.from)} – ${D.fmt(r.to)}`);
+    REP = await api(`ops/cl/report?site=${site}&id=${s.id}`); await load();
+    if (!C.settings.updatedBy && C.can.plan){ const L = suggestShifts(REP); if (L){ C.settings.shifts = L; draw(); toast("First upload: shifts suggested from the punches — check them and Save plan"); } }
+  } catch (e){ toast(e.message, true); }
+}
+$("#file").onchange = e => { if (e.target.files[0]) upload(e.target.files[0]); e.target.value = ""; };
+boot();
+</script>
+</body>
+</html>

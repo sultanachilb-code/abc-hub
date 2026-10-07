@@ -352,6 +352,14 @@ export async function gateRoute(env, p, method, b, url, d) {
     const day = isDay(url.searchParams.get("day")) ? url.searchParams.get("day") : today;
     return { day, today, reasons: GATE_REASONS, salesforce: sfOn(env), canPair: !!d.full, ...(await gateDay(env, site, day)) };
   }
+  /* Offline pack: today's and tomorrow's booked contractors, kept on the gate phone so a scan without signal still shows the booking */
+  if (p === "gate/offline") {
+    const next = new Date(Date.parse(today + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+    const { results } = await env.DB.prepare(`SELECT id, company, tenant, work, req, day_from, day_to, time_from, time_to FROM contractor_visits
+      WHERE site = ? AND deleted = 0 AND day_from <= ? AND day_to >= ? ORDER BY day_from, time_from LIMIT 600`).bind(site, next, today).all().catch(() => ({ results: [] }));
+    return { site, today, at: new Date().toISOString(), list: (results || []).map(v => ({ id: v.id, req: v.req, tenant: v.tenant, company: v.company, work: v.work,
+      from: { day: v.day_from, time: v.time_from }, to: { day: v.day_to, time: v.time_to } })) };
+  }
   if (method !== "POST") throw err("Unknown request", 404);
 
   if (p === "gate/lookup") {
