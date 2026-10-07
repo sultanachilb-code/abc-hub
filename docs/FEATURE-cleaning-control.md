@@ -8,3 +8,10 @@ Tile in Inspections → `/tools/cleaning`. The cleaning provider's punching reco
 - The PDF marks late / early / absence with colours only, which do not come through as text — the hub uses the shift times instead.
 - Stored: the plan (`cl_settings`) and the parsed punches per period (`cl_reports`; the same period uploaded again replaces it).
   Routes `/api/ops/cl/*` (`modules/cleaning.js`).
+
+## Contract headcount instead of shifts (7 Oct 2026)
+The provider has no fixed shifts: it can work any time but must keep the headcount agreed in the contract. The page now checks
+- the **agreed headcount per day** (people who punched in that day; the day the record was printed counts only up to the print time),
+- the **minimum on duty at any time** during the cover hours (default 10:00–22:00), counted every 30 minutes and shown as a strip per day,
+- missing IN / OUT punches and shifts longer than a set number of hours (default 13).
+Late / early checks were removed (no shifts). Figures are typed in the Contract card and recalculated on Save.
