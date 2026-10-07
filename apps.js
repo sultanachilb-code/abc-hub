@@ -51,6 +51,7 @@ window.HUB = {
     "contracts":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "training":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "sales":           ["MM",  "OM",  "LEAD"],
+    "snagreport":      ["MM",  "OM",  "SMS",  "LEAD"],
     "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -279,6 +280,8 @@ window.HUB = {
       url: "https://abc-snaglist.sultanalachi-work.workers.dev",
       sso: true
     },
+    /* Snaglist consolidated report — all flagships, from the Snaglist Manager (see docs/FEATURE-snaglist-report.md) */
+    { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Inspections", icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
     /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
     { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
     {

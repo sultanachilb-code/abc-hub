@@ -27,7 +27,8 @@ import { findRoute } from "./modules/find.js";   // Hub search across content �
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
-import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
+import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
+import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
 import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
@@ -214,6 +215,7 @@ const APP_ACCESS = {
   projects: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   budget: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snaglist: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  snagreport: ["MM", "OM", "SMS", "LEAD"],
   restroom: ["MM",  "OM",  "LEAD"],
   evacuation: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   incidents: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -452,7 +454,8 @@ export default {
       await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
       await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
       await storageRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent }).catch(e => console.error("storage", e && e.message));   // Cloudflare storage meter
-      await digestRun(env, DIGEST_DEPS).catch(e => console.error("digest", e && e.message));   // Weekly digest per person
+      await digestRun(env, DIGEST_DEPS).catch(e => console.error("digest", e && e.message));
+      await snagReportRun(env, { base: CONNECTORS.snaglist.base, relay: (e, m) => relay(e, m), hubUrl: HUB_URL }).catch(e => console.error("snagreport", e && e.message));   // Snaglist weekly email   // Weekly digest per person
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -1544,6 +1547,13 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
+  if (p === "snag/report") {   // Snaglist consolidated report (all flagships)
+    if (!(isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS"))) throw fail("Management and Senior Mall Supervisors only", 403);
+    const to = isDay(q("to")) ? q("to") : beirutToday(), from = isDay(q("from")) ? q("from") : to.slice(0, 8) + "01";
+    const R = await snagReport(env, CONNECTORS.snaglist.base, from, to);
+    const mine = sitesOf(me); R.sites = R.sites.filter(s => mine.includes(s.site));
+    return R;
+  }
   if (p === "digest/preview") { const D = await digestFor(env, me, DIGEST_DEPS); return { count: D.count, on: me.weekly_digest !== 0, html: digestHtml(me, D, HUB_URL) }; }   // Weekly digest per person
   if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
