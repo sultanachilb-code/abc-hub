@@ -1006,6 +1006,10 @@ const icoHTML = (a, withBadge) => {
 
 /* ---------- helpers ---------- */
 const byId = id => APPS.find(a => a.id === id);
+/* a tile lives in its group and, optionally, in more folders listed in also: [...] (apps.js) */
+let MYKEY = "";   // the viewer's position key, set in startHub
+const alsoOk = g => { const L = (H.ALSO_ACCESS || {})[g]; return !L || (ME && ME.user && ME.user.role === "ADMIN") || L.includes(MYKEY); };
+const inG = (a, g) => a.group === g || (Array.isArray(a.also) && a.also.includes(g) && alsoOk(g));
 const appReady = a => a.sites ? Object.values(a.sites).some(isSet) : isSet(a.url);
 const keyOf = (id, site) => site ? `${id}::${site}` : id;
 const parseKey = k => { const [id, site] = k.split("::"); return { app: byId(id), site: site || null }; };
@@ -1090,7 +1094,7 @@ function accessKey(u){
 function startHub(){
   const role = ME.user.role;
   /* who sees each tile: the ACCESS list in apps.js, by position (Admin sees everything) */
-  const key = accessKey(ME.user), ACC = H.ACCESS || {};
+  const key = accessKey(ME.user), ACC = H.ACCESS || {}; MYKEY = key;
   APPS = ALL_APPS.filter(a => role === "ADMIN" || !ACC[a.id] || ACC[a.id].includes(key));
   $("#hubTitle").textContent = H.title;
   const hr = new Date().getHours();
@@ -1840,7 +1844,7 @@ async function pushOff(){
 /* ---------- operations tools: cascade from the header button ---------- */
 const TOOLS_GROUP = "Operations Tools";
 let TOOL_SUM = {};
-const toolApps = () => APPS.filter(a => a.group === TOOLS_GROUP && !a.hidden);   // the header Tools button: Operations Tools only (Day to Day lives on the home screen)
+const toolApps = () => APPS.filter(a => inG(a, TOOLS_GROUP) && !a.hidden);   // the header Tools button: Operations Tools only (Day to Day lives on the home screen)
 function buildToolsMenu(){
   const tools = toolApps();
   $("#tfab").classList.toggle("hidden", !tools.length);
@@ -1896,7 +1900,7 @@ addEventListener("resize", () => { setToolsOpen(false); buildToolsMenu(); });
 
 /* ---------- orbit ring (Operations Forms) ---------- */
 function openOrbit(a, from){
-  const o = $("#orbit"), items = APPS.filter(x => x.group === a.orbitGroup);
+  const o = $("#orbit"), items = APPS.filter(x => inG(x, a.orbitGroup));
   const W = innerWidth, H = innerHeight;
   const cx = W / 2, cy = Math.min(H / 2, H - 200), R = Math.max(110, Math.min(190, W * .34, (H - 160) / 2));
   const fx = from ? from.x - cx : 0, fy = from ? from.y - cy : 0;
@@ -2005,8 +2009,8 @@ $("#brief").addEventListener("click", e => { const c = e.target.closest(".brow, 
 
 
 /* ---------- iOS-style folders: a section folds into one tile; tap → it zooms open over a blurred home ---------- */
-const FOLDER_GROUPS = ["Property Overview & Info", "Executive Report", "Operations Projects and Budget", "Tenant Management", "Policies & Procedures"];
-const folderApps = g => APPS.filter(a => a.group === g && !a.hidden);
+const FOLDER_GROUPS = ["Property Overview & Info", "Tenant Management", "Policies & Procedures"];   /* Operations Projects and Budget opens from its tile in Property Overview & Info */
+const folderApps = g => APPS.filter(a => inG(a, g) && !a.hidden);
 function folderTile(g){
   const list = folderApps(g); if (!list.length) return "";
   const n = list.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
@@ -2044,7 +2048,7 @@ addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").clas
 /* ---------- Day to Day Operations: today's live timeline above Leadership (see docs/FEATURE-day-to-day.md) ---------- */
 const DAY_GROUP = "Day to Day Operations";
 const D2D = { data: null, err: "", site: store.get("hub.d2dSite", ""), scrolled: false, t: 0 };
-const d2dApps = () => APPS.filter(a => a.group === DAY_GROUP && !a.hidden);
+const d2dApps = () => APPS.filter(a => inG(a, DAY_GROUP) && !a.hidden);
 const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 async function loadToday(){
@@ -2078,7 +2082,7 @@ function d2dPack(items, max){
 }
 function d2dHtml(){
   const apps = d2dApps(); if (!apps.length) return "";
-  const D = D2D.data, has = id => apps.some(a => a.id === id);
+  const D = D2D.data, has = id => apps.some(a => a.id === id) || !!byId(id);   // schedule and calendar sit inside the Schedule & Calendar tile
   const sitesSel = D && D.sites && Object.keys(D.sites).length > 1
     ? `<select id="d2dSite" aria-label="Flagship">${Object.entries(D.sites).map(([c, n]) => `<option value="${esc(c)}" ${c === D.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
   const dayTxt = new Date().toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", weekday: "long", day: "numeric", month: "long" });
@@ -2190,6 +2194,7 @@ function d2dCards(apps, D, nm){
       const w = L.filter(v => v.state === "onsite").reduce((a, v) => a + (v.workers || 0), 0);
       return [`${n("onsite")} in the mall now${w ? " · " + w + " workers" : ""} · ${n("expected")} expected`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
     } };
+  line["schedule-calendar"] = line.schedule;   // the Schedule & Calendar tile shows who is on duty
   return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (a.id === "contractor-access" ? (() => { const [t0, p0] = line.contractors(); const G = D && D.gate;
       return [t0 + (G && (G.in || G.out) ? ` · gate ${G.in} in${G.out ? " · " + G.out + " refused" : ""}` : ""), G && G.out && !/al/.test(p0) ? `<em class="al">${G.out} refused at the gate</em>` : p0]; }) : line[a.id] || (() => [a.desc, ""]))(); const live = a.id === "contractors";   // the Contractor Access folder shows today's contractor count
     return `<button class="d2d-c" data-id="${esc(a.id)}" ${live ? "data-live" : ""}><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}${live ? `<span class="lv"></span>` : ""}</span><span class="tx"><b>${live ? "Live contractor access" : esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
@@ -2253,15 +2258,15 @@ const HL_KINDS = [["cards", "Smart cards", '<rect x="3" y="3" width="8" height="
   ["dock", "Glass dock", '<rect x="2" y="15" width="20" height="6" rx="3"/><rect x="5" y="17" width="3" height="2"/><rect x="10.5" y="17" width="3" height="2"/><rect x="16" y="17" width="3" height="2"/><path d="M8 4h8v7H8z"/>']];
 let HL = (() => { const v = store.get("hub.layout", "cards"); return HL_KINDS.some(k => k[0] === v) ? v : "cards"; })();
 const HLS = { orb: null };
-const HL_SHORT = { "Operations Tools": "Ops Tools", "Data & Reporting": "Data", "Operations Projects and Budget": "Projects & Budget", "Incidents & Security": "Incidents",
-  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Executive Report": "Exec Report", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day" };
+const HL_SHORT = { "Operations Tools": "Ops Tools", "Incidents, Security & Footfall": "Incidents & Footfall",
+  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day" };
 const hlSvg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const hlCount = L => L.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
 const hlApp = (a, cls = "", st = "") => { const ok = appReady(a);
   return `<button class="hl-app ${cls} ${ok ? "" : "locked"}" ${ok ? `data-hl="${esc(a.id)}"` : 'aria-disabled="true"'} title="${esc(a.desc || "")}" ${st ? `style="${st}"` : ""}>${icoHTML(a, true)}<b>${esc(a.name)}</b></button>`; };
 /* the categories of the home page (the Day to Day timeline, when shown, stays above on its own) */
 function hlCats(groups){
-  return groups.filter(g => !(g === DAY_GROUP && showD2D())).map(g => ({ g, L: APPS.filter(a => a.group === g && !a.hidden) })).filter(c => c.L.length);
+  return groups.filter(g => !(g === DAY_GROUP && showD2D())).map(g => ({ g, L: APPS.filter(a => inG(a, g) && !a.hidden) })).filter(c => c.L.length);
 }
 function hlSwitch(){
   return `<span class="hl-sw" id="hlSw" role="tablist" aria-label="Home layout"><i></i>${HL_KINDS.map(([k, n, ic]) => `<button role="tab" data-hlk="${k}" class="${k === HL ? "on" : ""}" aria-selected="${k === HL}" title="${n}">${hlSvg(ic)}<span>${n}</span></button>`).join("")}</span>`;
@@ -2301,7 +2306,7 @@ function hlDock(C){
 }
 function hlPopOpen(g, refresh){
   let p = $("#hlPop"); if (!p){ p = document.createElement("div"); p.id = "hlPop"; p.className = "hl-pop"; $("#home").append(p); }
-  const L = APPS.filter(a => a.group === g && !a.hidden);
+  const L = APPS.filter(a => inG(a, g) && !a.hidden);
   p.dataset.g = g; p.innerHTML = `<h3>${esc(g)}</h3><div class="grid4">${L.map(a => hlApp(a)).join("")}</div>`;
   if (!refresh) requestAnimationFrame(() => p.classList.add("on"));
   $("#hlDock").querySelectorAll(".fd").forEach(f => f.classList.toggle("on", f.dataset.dock === g));
@@ -2407,8 +2412,8 @@ function renderHome(){
   const q = $("#q").value.trim().toLowerCase();
   const match = a => !q || [a.name, a.desc, a.group, ...(a.sites ? Object.keys(a.sites) : [])].join(" ").toLowerCase().includes(q);
   let html = "";
-  const groups = [...H.GROUPS, ...new Set(APPS.map(a => a.group).filter(g => !H.GROUPS.includes(g)))]
-    .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => a.group === TOOLS_GROUP))
+  const groups = [...H.GROUPS, ...new Set(APPS.flatMap(a => [a.group, ...(a.also || []).filter(alsoOk)]).filter(g => !H.GROUPS.includes(g)))]
+    .filter(g => q || g !== TOOLS_GROUP || !APPS.some(a => inG(a, TOOLS_GROUP)))
     .filter(g => q || !APPS.some(a => a.kind === "orbit" && a.orbitGroup === g));
   let foldersDone = false;
   const hlG = groups.slice(); hlGroups = () => hlG;
@@ -2418,7 +2423,7 @@ function renderHome(){
   } else hlDock(null);
   if (!q) groups.length = 0;
   for (const g of groups){
-    const list = APPS.filter(a => a.group === g && match(a) && (!a.hidden || q));
+    const list = APPS.filter(a => inG(a, g) && match(a) && (!a.hidden || q));
     if (!q && g === DAY_GROUP && showD2D()){ html += d2dHtml(); continue; }   // management sees these four as normal tiles   // Day to Day Operations: live timeline instead of tiles
     if (!q && FOLDER_GROUPS.includes(g)){
       if (foldersDone) continue; foldersDone = true;

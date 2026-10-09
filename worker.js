@@ -188,6 +188,8 @@ const APP_ACCESS = {
   contractors: ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
   gate: ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
   "contractor-access": ["OM", "SMS", "MS", "MO", "SEC", "LEAD"],
+  "schedule-calendar": ["MM", "OM", "SMS", "MS", "MO", "WH", "LEAD"],
+  "projects-budget": ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   leadership: ["LEAD"],
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
