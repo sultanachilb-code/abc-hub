@@ -322,29 +322,10 @@ main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1e
 .d2d-dot:hover span{color:var(--text)} .d2d-dot.nolbl span{display:none}
 .d2d-dot.on{--dc:#C07A12} .d2d-dot.exp{--dc:#C07A12} .d2d-dot.exp i{background:var(--surface);color:#C07A12} .d2d-dot.left{--dc:#8C8398} .d2d-dot.left span{opacity:.7}
 .d2d-dot.over{--dc:var(--alert)} .d2d-dot.over span{color:var(--alert)}
-.season{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
-.masthead > .mh-inner{position:relative;z-index:1}
-.season svg{position:absolute}
-.season .sz-r{right:0;top:0;height:100%;width:min(320px,45%);opacity:.9}
-.season .sz-f{inset:0;width:100%;height:100%}
-.season .sz-b{left:0;right:0;bottom:-2px;width:100%;height:26px}
-.season .sw{animation:szSw 4s ease-in-out infinite}
-.season .glow{animation:szG 2.4s ease-in-out infinite}
-.season .tw{animation:szT 3s ease-in-out infinite}
-.season .bl{animation:szG 1.6s ease-in-out infinite}
-.season .sun{animation:szR 30s linear infinite}
-.season .fw{animation:szF 2.7s ease-out infinite;opacity:0}
-.season .ht{animation:szU 7s linear infinite;opacity:0}
-.season .sz-st{position:absolute;left:0;right:0;bottom:0;height:5px;display:flex}.season .sz-st i{flex:1}.season .sz-st i:nth-child(1),.season .sz-st i:nth-child(3){background:#E5484D}.season .sz-st i:nth-child(2){background:#fff}
+.sa-layer{position:absolute;left:0;right:0;height:640px;pointer-events:none;z-index:0;overflow:hidden}
+.sa-side{position:absolute;top:0;height:100%}.sa-side.l{left:0}.sa-side.r{right:0}
 .season-chip{background:rgba(243,213,126,.18)!important;color:#FBE7A8!important}
-@keyframes szSw{50%{transform:rotate(4deg)}}
-@keyframes szG{50%{opacity:.35}}
-@keyframes szT{50%{opacity:.15}}
-@keyframes szR{to{transform:rotate(360deg)}}
-@keyframes szF{0%{opacity:0;transform:scale(.2)}20%{opacity:1}100%{opacity:0;transform:scale(1.4)}}
-@keyframes szU{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-90px)}}
-@media (prefers-reduced-motion:reduce){.season *{animation:none!important}.season .fw,.season .ht{opacity:.8}}
-@media (max-width:600px){.season .sz-r{width:52%;opacity:.55}}
+@media (max-width:1100px){.sa-side{display:none}}
 .aic{position:fixed;right:18px;bottom:18px;width:min(420px,calc(100vw - 24px));height:min(620px,calc(100dvh - 90px));z-index:90;display:flex;flex-direction:column;
   background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 60px rgba(20,8,34,.35);overflow:hidden;opacity:0;transform:translateY(16px) scale(.98);pointer-events:none;transition:opacity .2s,transform .25s}
 .aic.on{opacity:1;transform:none;pointer-events:auto}
@@ -883,7 +864,6 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 <!-- HOME -->
 <div id="home" class="view hidden">
   <header class="masthead">
-    <div class="season" id="season" aria-hidden="true"></div>
     <div class="mh-inner">
       <div class="brandmark">
         <div class="tfab" id="tfab">
@@ -923,6 +903,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
       </div>
     </div>
   </header>
+  <div class="sa-layer" id="seasonHang" aria-hidden="true"></div>
   <div class="tfab-veil" id="tfabVeil"></div>
   <div class="orbit" id="orbit" aria-hidden="true"></div>
   <div class="folder-ov" id="folderOv" aria-hidden="true"></div>
@@ -1000,6 +981,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 
 <script src="tools/hubdl.js"></script>
 <script src="apps.js"></script>
+<script src="tools/season-art.js"></script>
 <script>
 (() => {
 "use strict";
@@ -1268,7 +1250,7 @@ function buildMenu(){
     <button data-a="profile" class="pm-i">${pmIcon("user")}<span>Profile settings<small>Picture, password, appearance, alerts</small></span></button>
     <button data-a="welcome" class="pm-i">${pmIcon("device")}<span>Set up this device<small>Alerts, install, camera, Face ID / Windows Hello</small></span></button>
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
-    ${ME.user.role === "ADMIN" ? `<button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>${store.get("hub.season", true) ? "On" : "Off"} · Ramadan, Eid, Christmas, Independence Day…</small></span></button>` : ""}
+    ${ME.user.role === "ADMIN" ? `<button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>Designs and dates · Ramadan, Eid, Christmas, Independence Day…</small></span></button>` : ""}
     <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · Smart cards, Orbit or Glass dock</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
@@ -1287,7 +1269,7 @@ function buildMenu(){
     if (a === "profile") profileSheet();
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));
-    if (a === "season"){ store.set("hub.season", !store.get("hub.season", true)); paintSeason(); return m._paint(); }
+    if (a === "season"){ m.classList.add("hidden"); return launch(byId("seasons")); }
     if (a === "layout"){ const i = HL_KINDS.findIndex(k => k[0] === HL); hlSetLayout(HL_KINDS[(i + 1) % HL_KINDS.length][0]); m._paint(); setTimeout(() => { const sw = $("#hlSw"); if (sw) sw.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50); }   // each tap moves to the next layout
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
@@ -2152,54 +2134,27 @@ function openFolder(g, fromEl){
 }
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").classList.contains("on")) $("#folderOv").onkeydown(e); });
 
-/* ---------- Seasonal themes: automatic by date (Hijri months from the browser's Umm al-Qura calendar; Easter computed) — see docs/FEATURE-seasons.md ---------- */
-function easterWest(y){ const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30,
-  i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), dy = ((h + l - 7 * m + 114) % 31) + 1; return Date.UTC(y, mo - 1, dy); }
-function easterEast(y){ const a = y % 4, b = y % 7, c = y % 19, d = (19 * c + 15) % 30, e = (2 * a + 4 * b - d + 34) % 7, mo = Math.floor((d + e + 114) / 31), dy = ((d + e + 114) % 31) + 1;
-  return Date.UTC(y, mo - 1, dy) + 13 * 864e5; }   /* Julian date + 13 days (1900–2099) */
-function seasonNow(){
-  const now = new Date(), md = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", month: "2-digit", day: "2-digit" }).format(now), y = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", year: "numeric" }).format(now));
-  let hm = 0, hd = 0; try { const p = Object.fromEntries(new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { timeZone: "Asia/Beirut", month: "numeric", day: "numeric" }).formatToParts(now).map(x => [x.type, x.value])); hm = +p.month; hd = +p.day; } catch {}
-  const today = Date.UTC(y, +md.slice(0, 2) - 1, +md.slice(3)), near = (e, a, b) => today >= e - a * 864e5 && today <= e + b * 864e5;
-  if (hm === 10 && hd <= 3) return { k: "eid", t: "Eid Mubarak", ar: "عيد مبارك", e: "🌙" };
-  if (hm === 12 && hd >= 9 && hd <= 13) return { k: "eid", t: "Eid al-Adha Mubarak", ar: "عيد أضحى مبارك", e: "🌙" };
-  if (hm === 9) return { k: "ramadan", t: "Ramadan Kareem", ar: "رمضان كريم", e: "🌙" };
-  if (near(easterWest(y), 2, 1) || near(easterEast(y), 2, 1)) return { k: "easter", t: "Happy Easter", ar: "فصح مجيد", e: "🌷" };
-  if (md >= "12-31" || md <= "01-02") return { k: "newyear", t: "Happy New Year", ar: "سنة سعيدة", e: "✨" };
-  if (md >= "12-01" || md <= "01-06") return { k: "christmas", t: "Happy Holidays", ar: "ميلاد مجيد", e: "🎄" };
-  if (md >= "11-21" && md <= "11-23") return { k: "independence", t: "Happy Independence Day", ar: "عيد استقلال سعيد", e: "🇱🇧" };
-  if (md >= "02-13" && md <= "02-14") return { k: "valentine", t: "Happy Valentine's", ar: "عيد عشاق سعيد", e: "❤" };
-  if (md === "03-21") return { k: "mothers", t: "Happy Mother's Day", ar: "عيد أم سعيد", e: "💐" };
-  if (md >= "07-01" && md <= "08-31") return { k: "summer", t: "Summer at ABC", ar: "صيف حلو", e: "☀" };
-  return null;
+/* ---------- Seasonal decorations: the admin sets each season's design and dates (tools/seasons.html); they hang from the header
+   into the empty side spaces. Admin only. Art in tools/season-art.js — see docs/FEATURE-seasons.md ---------- */
+const SEA = { cfg: null };
+async function paintSeason(){
+  const hang = $("#seasonHang"), chipOld = $("#seasonChip"); if (chipOld) chipOld.remove();
+  if (!hang) return;
+  if (!ME || ME.user.role !== "ADMIN" || !window.SEASON_ART){ hang.innerHTML = ""; return; }
+  if (!SEA.cfg){ try { SEA.cfg = await api("seasons"); } catch { SEA.cfg = { on: false, list: [] }; } }
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
+  const pv = store.get("hub.seasonPreview", null), preview = pv && pv.until > Date.now() ? (SEA.cfg.list || []).find(x => x.id === pv.id) : null;
+  const s = preview || (SEA.cfg.on ? (SEA.cfg.list || []).find(x => x.on && x.from <= today && today <= x.to) : null);
+  document.body.dataset.season = s ? s.design : "";
+  if (!s){ hang.innerHTML = ""; return; }
+  if (!$("#saCss")){ const st = document.createElement("style"); st.id = "saCss"; st.textContent = SEASON_ART.css; document.head.append(st); }
+  const mh = $(".masthead"), gut = Math.floor(Math.max(0, (innerWidth - 1280) / 2 + 22));
+  hang.style.top = (mh ? mh.offsetHeight : 150) + "px";
+  hang.innerHTML = SEASON_ART.extras(s.design) + (gut >= 90 ? `<div class="sa-side l" style="width:${gut}px">${SEASON_ART.hang(s.design, "l", gut)}</div><div class="sa-side r" style="width:${gut}px">${SEASON_ART.hang(s.design, "r", gut)}</div>` : "");
+  const g = $("#greet"); if (g) g.insertAdjacentHTML("beforeend", `<span class="chip season-chip" id="seasonChip">${esc(s.en)} · <span dir="rtl">${esc(s.ar)}</span>${preview ? ` <button id="seaPvX" title="End preview" style="color:inherit;margin-left:4px">✕ preview</button>` : ""}</span>`);
 }
-function paintSeason(){
-  const el = $("#season"); if (!el) return;
-  const s = ME && ME.user && ME.user.role === "ADMIN" && store.get("hub.season", true) ? seasonNow() : null;   // admin only (Oct 2026)
-  document.body.dataset.season = s ? s.k : "";
-  const chip = $("#seasonChip"); if (chip) chip.remove();
-  if (!s){ el.innerHTML = ""; return; }
-  const lantern = (x, d, h) => `<g class="sw" style="transform-origin:${x}px 0;animation-delay:${d}s"><line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="#E8C66A" stroke-width="1.2"/>
-    <path d="M${x - 7} ${h + 4}h14l-3 -4h-8z" fill="#E8C66A"/><rect x="${x - 8}" y="${h + 4}" width="16" height="20" rx="5" fill="rgba(232,198,106,.25)" stroke="#E8C66A" stroke-width="1.4"/>
-    <ellipse cx="${x}" cy="${h + 14}" rx="3.5" ry="5.5" fill="#FFD978" class="glow"/><path d="M${x - 5} ${h + 24}h10l-2 4h-6z" fill="#E8C66A"/></g>`;
-  const stars = n => [...Array(n)].map((_, i) => `<circle class="tw" cx="${(i * 97) % 100}%" cy="${10 + (i * 37) % 70}%" r="${1 + (i % 3) * .6}" fill="#FFE9A8" style="animation-delay:${(i % 7) * .4}s"/>`).join("");
-  const art = {
-    ramadan: `<svg class="sz-r" viewBox="0 0 240 90">${lantern(40, 0, 26)}${lantern(110, .7, 40)}${lantern(180, 1.4, 20)}<path d="M222 22a16 16 0 1 0 6 30 13 13 0 1 1-6-30z" fill="#F3D57E"/></svg><svg class="sz-f">${stars(18)}</svg>`,
-    eid: `<svg class="sz-r" viewBox="0 0 240 90"><path d="M200 18a20 20 0 1 0 8 38 16 16 0 1 1-8-38z" fill="#F3D57E"/>${lantern(130, .3, 22)}</svg><svg class="sz-f">${stars(26)}</svg>`,
-    christmas: `<svg class="sz-b" preserveAspectRatio="none" viewBox="0 0 1000 30"><path d="M0 4 Q125 26 250 4 T500 4 T750 4 T1000 4" fill="none" stroke="#2F5A3A" stroke-width="2"/>
-      ${[...Array(24)].map((_, i) => { const x = 20 + i * 41, yy = 4 + 14 * Math.abs(Math.sin((x / 250) * Math.PI)); return `<circle class="bl" cx="${x}" cy="${yy + 6}" r="4" fill="${["#E5484D", "#F3D57E", "#3FB27F", "#5AA0F0"][i % 4]}" style="animation-delay:${(i % 5) * .3}s"/>`; }).join("")}</svg><svg class="sz-f">${stars(10)}</svg>`,
-    newyear: `<svg class="sz-f">${stars(30)}</svg><svg class="sz-f" viewBox="0 0 1000 120" preserveAspectRatio="xMaxYMid slice">${[[720, 40, "#F3D57E"], [840, 74, "#E5484D"], [930, 34, "#7FD1FF"]].map(([cx, cy, c], i) =>
-      `<g class="fw" style="animation-delay:${i * .9}s;transform-origin:${cx}px ${cy}px">${[...Array(10)].map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${cx + Math.round(Math.cos(k * .628) * 26)}" y2="${cy + Math.round(Math.sin(k * .628) * 26)}" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>`).join("")}</g>`).join("")}</svg>`,
-    independence: `<svg class="sz-r" viewBox="0 0 240 90"><g transform="translate(180 8)"><path d="M30 6 L48 26 H38 L56 44 H40 L60 64 H0 L20 44 H4 L22 26 H12 Z" fill="#2E8B57"/><rect x="26" y="64" width="8" height="12" fill="#8A5A1F"/></g></svg>
-      <div class="sz-st"><i></i><i></i><i></i></div>`,
-    summer: `<svg class="sz-r" viewBox="0 0 240 90"><g class="sun" style="transform-origin:200px 34px">${[...Array(12)].map((_, k) => `<line x1="200" y1="34" x2="${200 + Math.cos(k * .5236) * 30}" y2="${34 + Math.sin(k * .5236) * 30}" stroke="#F3D57E" stroke-width="2.5" stroke-linecap="round"/>`).join("")}</g><circle cx="200" cy="34" r="15" fill="#F7C948"/></svg>`,
-    valentine: `<svg class="sz-f">${[...Array(10)].map((_, i) => `<text class="ht" x="${8 + i * 9.5}%" y="95%" style="animation-delay:${i * .7}s" font-size="${12 + (i % 3) * 5}" fill="#FF8FA3">❤</text>`).join("")}</svg>`,
-    mothers: `<svg class="sz-f">${[...Array(8)].map((_, i) => `<text class="ht" x="${10 + i * 11}%" y="95%" style="animation-delay:${i * .8}s" font-size="16">${["🌷", "🌸", "💐"][i % 3]}</text>`).join("")}</svg>`,
-    easter: `<svg class="sz-r" viewBox="0 0 240 90">${[150, 180, 210].map((x, i) => `<ellipse cx="${x}" cy="60" rx="11" ry="15" fill="${["#F7B2D9", "#A7E3C9", "#FFE08A"][i]}" class="sw" style="transform-origin:${x}px 75px;animation-delay:${i * .5}s"/>`).join("")}</svg>`
-  }[s.k] || "";
-  el.innerHTML = art;
-  const g = $("#greet"); if (g) g.insertAdjacentHTML("beforeend", `<span class="chip season-chip" id="seasonChip">${s.e} ${esc(s.t)} · <span dir="rtl">${esc(s.ar)}</span></span>`);
-}
+addEventListener("resize", () => { clearTimeout(SEA.t); SEA.t = setTimeout(paintSeason, 250); });
+document.addEventListener("click", e => { if (e.target.id === "seaPvX"){ store.set("hub.seasonPreview", null); paintSeason(); } });
 
 /* ---------- Message of the moment: a friendly line above Day to Day for the operations team, 5 minutes per person (see docs/FEATURE-moments.md) ---------- */
 const MOM = { m: null, t: 0 };

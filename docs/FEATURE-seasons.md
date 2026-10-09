@@ -1,18 +1,12 @@
-# Seasonal themes
+# Seasonal decorations (admin only)
 
-Light decorations on the hub's header and a greeting chip, switched automatically by date:
+Decorations hang on gold ropes from the bottom of the header into the empty white spaces on the left and right of the home page, with the greeting next to your name. They sway gently (and stop for people who ask for reduced motion). On narrow screens only the greeting shows.
 
-| Theme | When |
-|---|---|
-| Ramadan Kareem · رمضان كريم | Hijri month of Ramadan (Umm al-Qura calendar of the browser) |
-| Eid Mubarak · عيد مبارك | 1–3 Shawwal |
-| Eid al-Adha Mubarak | 9–13 Dhu al-Hijjah |
-| Happy Easter · فصح مجيد | Western and Orthodox Easter (Friday → Monday) |
-| Happy Holidays · ميلاد مجيد | 1 December → 6 January |
-| Happy New Year | 31 December → 2 January |
-| Happy Independence Day | 21–23 November |
-| Valentine's / Mother's Day | 13–14 February / 21 March |
-| Summer at ABC | July and August |
+## Admin page — Operations Tools › Seasonal Decorations (also in the profile menu)
+For each season: **design**, **From / To** dates, greeting in **English** and **Arabic**, on/off, and **Preview** (shows it on your hub now for 10 minutes; *✕ preview* ends it). **+ Add a season** for more. *Show decorations* switches all of them off.
 
-Shown to the **admin only** (switch them off in the profile menu, **Seasonal decorations**). To show them to everyone, remove the admin check in `paintSeason()`. Animations stop for people who ask for reduced motion.
-Technical: `seasonNow()` / `paintSeason()` in `index.html`.
+Designs: Santa, baubles & snow · Lanterns & crescent · Crescent, stars & lantern · Cedar, flag & bunting · Eggs & spring flowers · Hearts · Flowers · Sun & waves · Fireworks & stars.
+
+Starting list (edit the dates each year): Independence Day 21–23 Nov · Christmas & New Year 1 Dec–6 Jan · Ramadan 8 Feb–9 Mar 2027 · Eid al-Fitr 10–12 Mar · Easter 26–29 Mar · Eid al-Adha 16–19 May · Summer (off).
+
+Only the admin sees the decorations. Technical: `modules/seasons.js` (meta `seasons`), routes `GET /api/seasons`, `GET/POST /api/admin/seasons`; artwork in `tools/season-art.js` (original drawings); `paintSeason()` in `index.html`.

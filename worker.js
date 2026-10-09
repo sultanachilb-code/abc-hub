@@ -38,6 +38,7 @@ import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js"; 
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
 import { aiRoute } from "./modules/ai.js";   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
+import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
 import { momentFor, momentsAdmin } from "./modules/moments.js";   // Message of the moment — see docs/FEATURE-moments.md
 import { patrolSchema, patrolRoute, patrolPublic, patrolRun, patrolDay } from "./modules/patrol.js";   // Security Patrol — see docs/FEATURE-security-patrol.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
@@ -561,6 +562,7 @@ async function route(request, env, ctx, url) {
       roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
       todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`) }));
   }
+  if (path === "seasons") return ok(await seasonsFor(env, me));   // Seasonal decorations (admin only)
   if (path === "moment") return ok({ moment: await momentFor(env, me, beirutHM()) });   // Message of the moment (operations team)
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
   if (path === "sso") return ok(await ssoLink(env, me, url.searchParams.get("app")));
@@ -591,6 +593,7 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("admin/")) {
     if (me.role !== "ADMIN") throw fail("Administrator access only", 403);
     const a = path.slice(6);
+    if (a === "seasons") return ok(await seasonsAdmin(env, method, body, me, nowIso));   // Seasonal decorations
     if (a === "moments") return ok(await momentsAdmin(env, method, body, me, nowIso));   // Message of the moment
     if (a === "users" && method === "GET") return ok(await listUsers(env));
     if (a === "users" && method === "POST") {   // Change history: people & roles
