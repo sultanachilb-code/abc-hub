@@ -13,3 +13,8 @@ A short summary of the shift in English and Arabic from the day's hub data and t
 
 Technical: `modules/ai.js`, routes `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/summary`.
 If the GitHub deploy ever fails on the AI binding, give the Cloudflare API token used by the deploy the **Workers AI** permission.
+
+## When it does not answer
+- The admin sees Cloudflare's own error message in the chat (everyone else: "try again in a minute").
+- Open `/api/ai/status?test=1` signed in as admin for a one-tap check (`"ok": true` = working).
+- If the first model fails, the hub tries a second free model (`@cf/meta/llama-3.2-3b-instruct`) once.
