@@ -9,8 +9,8 @@
    ===================================================================== */
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
-export const AI_MODEL = "@cf/meta/llama-3.1-8b-instruct";   // change with the AI_MODEL variable (e.g. @cf/meta/llama-3.3-70b-instruct-fp8-fast — better, uses more of the allowance)
-const AI_DAILY = 30;
+export const AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";   // the stronger free model (about 1.7× the allowance of the small one)   // change with the AI_MODEL variable (e.g. @cf/meta/llama-3.3-70b-instruct-fp8-fast — better, uses more of the allowance)
+const AI_DAILY = 25;
 const hm = iso => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)).replace(/^24/, "00"); } catch { return ""; } };
 const dShort = iso => { try { return new Date(iso).toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short" }); } catch { return ""; } };
 const rows = async q => { try { return (await q.all()).results || []; } catch { return []; } };
@@ -22,7 +22,7 @@ async function quota(env, me, day, use) {
   if (use) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, String(n + 1)).run().catch(() => {});
   return n;
 }
-const AI_FALLBACK = "@cf/meta/llama-3.2-3b-instruct";   // a second free model, tried once when the first one fails
+const AI_FALLBACK = "@cf/meta/llama-3.1-8b-instruct";   // a second free model, tried once when the first one fails
 const textOf = r => String((r && (typeof r === "string" ? r : r.response || (r.result && r.result.response)
   || (r.choices && r.choices[0] && (r.choices[0].message && r.choices[0].message.content || r.choices[0].text)))) || "").trim();
 async function ask(env, messages, maxTokens, me) {
@@ -68,6 +68,21 @@ async function siteFacts(env, site, me, d) {
     if (T.closing && T.closing.length) L.push(`Tenants closing today: ${T.closing.map(c => c.brand).join(", ")}.`);
     if (T.meetings && T.meetings.length) L.push(`Meetings today: ${T.meetings.map(m => `${m.title}${m.from ? " at " + m.from : ""}`).join("; ")}.`);
     if (T.events && T.events.length) L.push(`Events / activities today: ${T.events.map(e => `${e.title}${e.from ? " " + e.from : ""}`).join("; ")}.`);
+  }
+  if (can("gla")) {
+    const g = await rows(env.DB.prepare("SELECT level, status, section, area FROM gla_units WHERE site = ? AND active = 1").bind(site));
+    if (g.length) {
+      const lease = g.filter(u => !u.section || /leas/i.test(u.section)), area = L2 => L2.reduce((a, u) => a + (Number(u.area) || 0), 0);
+      const by = {}; for (const u of lease) { by[u.status] = by[u.status] || { n: 0, a: 0 }; by[u.status].n++; by[u.status].a += Number(u.area) || 0; }
+      const total = area(lease), vac = ["Vacant", "Terminated"].reduce((a, k) => a + (by[k] ? by[k].a : 0), 0);
+      L.push(`GLA & occupancy (leasing units): ${lease.length} units, ${Math.round(total)} m² leasable; occupancy ${total ? Math.round((total - vac) / total * 1000) / 10 : 0}% by area. By status: ${Object.entries(by).map(([k, v]) => `${k} ${v.n} units / ${Math.round(v.a)} m²`).join("; ")}.`);
+      const lv = {}; for (const u of lease) { lv[u.level] = lv[u.level] || { n: 0, v: 0 }; lv[u.level].n++; if (["Vacant", "Terminated"].includes(u.status)) lv[u.level].v++; }
+      L.push(`Units per level (vacant): ${Object.entries(lv).map(([k, v]) => `${k} ${v.n} (${v.v} vacant)`).join("; ")}.`);
+    }
+  }
+  if (d.systems) {   // Snaglist, Incident Report System, Restroom inspections — the same figures as the morning brief
+    const S = await d.systems(site).catch(() => null);
+    if (S) for (const [id, r] of Object.entries(S)) if (r && r.ok && r.brief && r.brief.length && can(id)) L.push(`${{ snaglist: "Snaglist", incidents: "Incident reports", restroom: "Restroom inspections" }[id] || id}: ${r.brief.map(b => `${b.label} ${b.value}`).join("; ")}.`);
   }
   if (can("malfunctions")) {
     const mf = await rows(env.DB.prepare(`SELECT r.category, r.location, r.asset, r.description, r.priority, r.status, r.found_at, p.name AS provider FROM mf_records r LEFT JOIN mf_providers p ON p.id = r.provider_id
@@ -120,8 +135,12 @@ export async function aiRoute(env, p, method, b, url, d) {
     if (!hist.length || hist[hist.length - 1].role !== "user") throw err("Write your question");
     const facts = await siteFacts(env, site, me, d);
     const sys = `You are the assistant of the ABC Operations Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon).
-Answer ONLY from the DATA below. If the answer is not in the DATA, say you do not see it in the hub and name the hub tool to open (Malfunction Records, Contractors, Shift Handover, Tenant Feedback, Security Patrol, Quick Access Pass, Operations Schedule, Contracts Near Ending).
-Never invent names, times or numbers. Be short and practical: a few lines or bullets. Answer in the language of the question (English, Arabic or Lebanese Arabic).
+Facts about the flagship come ONLY from the DATA below — never invent names, times or numbers.
+- For a broad question ("what is still open?", "what should I follow up?", "any issues today?") go through ALL of the DATA and list every open or pending item, grouped (malfunctions, handover follow-ups, deadlines not done, contractors not attended, Snaglist, incidents, patrol, meeting actions, tenant violations). Never answer a broad question with "I do not see it".
+- For figures (occupancy, vacant units, open findings…) use the numbers in the DATA and show them clearly.
+- Only when the DATA really has nothing on the subject, say so in one line and name the hub tool to open.
+- General know-how questions (how to handle a situation, write a message) may be answered from your own knowledge.
+Be practical: short bullets with the numbers. Answer in the language of the question (English, Arabic or Lebanese Arabic).
 The person asking: ${me.full_name} (${d.posLabel || me.role}).
 DATA:
 ${facts}`;

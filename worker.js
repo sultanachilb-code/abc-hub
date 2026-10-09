@@ -560,7 +560,9 @@ async function route(request, env, ctx, url) {
     const sub = (p, s2, extra = "") => opsRoute(env, me, p, "GET", {}, new URL(`${url.origin}/api/ops/${p}?site=${s2}${extra}`));
     return ok(await aiRoute(env, path, method, body, url, { me, site, can: rights(me, site), canSite, siteName, today: beirutToday, hm: beirutHM, posLabel: posLabel(me.position),
       roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
-      todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`) }));
+      todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`),
+      systems: async s2 => { const ids = ["snaglist", "incidents", "restroom"].filter(id => CONNECTORS[id] && CONNECTORS[id].stats);
+        const r = await Promise.all(ids.map(id => pull(env, id, CONNECTORS[id], s2))); return Object.fromEntries(ids.map((id, i) => [id, r[i]])); } }));
   }
   if (path === "seasons") return ok(await seasonsFor(env, me));   // Seasonal decorations (admin only)
   if (path === "moment") return ok({ moment: await momentFor(env, me, beirutHM()) });   // Message of the moment (operations team)
