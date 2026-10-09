@@ -99,3 +99,6 @@ A scan without signal shows the booking found on the phone (or warns that it is 
 `/api/ops/today` returns the day's gate counts and every refused scan. The timeline shows a red ✕ at the time of each refusal
 (refusals within 20 minutes share one mark; the popup lists contractor, REQ, time, agent and reason with "Open Loading Gate"),
 and the Contractor Access card adds "gate N in · M refused".
+
+## Quick Access Pass (October 2026)
+The gate also reads **Quick Passes** (`…/qp/<token>` or typed `QP-ABCDEF`): valid for 30 minutes from approval, one entry. See FEATURE-quick-pass.md.

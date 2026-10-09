@@ -19,6 +19,7 @@
    Routes : /api/ops/gate/lookup · gate/decide · gate/day      Page : /tools/gate
    ===================================================================== */
 import { dayList } from "./contractors.js";
+import { qpCode, qpFind, qpGateInfo, qpUse } from "./quickpass.js";   // Quick Access Pass: one-entry QR, 30 minutes
 
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
@@ -331,6 +332,41 @@ export async function gatePublic(env, request, p, method, b, url, deps) {
   return gateRoute(env, "gate/" + p, method, b, url, { ...deps, site: dev.site, me, full: false, canSite: (_, s) => s === dev.site });
 }
 
+/* Quick Access Pass at the gate: one entry. "Approved in" uses the pass, logs the contractor access (Contractors) and the gate scan. */
+async function quickPassDecide(env, site, me, d, o) {
+  const r = await qpFind(env, site, o.qc);
+  if (!r) throw err("This Quick Pass is not for this flagship, or it does not exist");
+  const { info, verdict } = qpGateInfo(r);   // the same decision sent twice is caught earlier by its clientId
+  let reason = o.reason;
+  const override = (o.decision === "in" && !verdict.ok) || (o.decision === "out" && verdict.ok);
+  if (o.decision === "out" && !reason) reason = verdict.ok ? "" : verdict.label;
+  if (o.decision === "out" && !reason) throw err("This Quick Pass is valid — choose the reason for the rejection");
+  if (override && !reason && o.offline) reason = "Offline — Quick Pass not checked at the gate";
+  if (override && !reason) throw err(`${verdict.label} — write why you let them in`);
+  let visitId = r.visit_id || 0;
+  if (o.decision === "in") {
+    if (!visitId) {
+      const v = await env.DB.prepare(`INSERT INTO contractor_visits (contractor_id, company, tenant, work, descr, day_from, day_to, time_from, time_to, site, req, src, created_at, created_name)
+        VALUES (0,?,?,?,?,?,?,?,?,?,'','quickpass',?,?)`).bind(r.company || r.name, r.tenant, info.work, `${info.desc} · ${info.req} · approved by ${r.dec_name || r.req_name}`, o.day, o.day,
+        info.from ? info.from.time : "", info.to ? info.to.time : "", site, o.at, me.full_name).run();
+      visitId = v.meta.last_row_id;
+    }
+    const first = await qpUse(env, r, o.at, me.full_name, visitId);
+    if (first) await env.DB.prepare(`INSERT INTO contractor_checks (visit_id, day, site, workers, in_at, in_name, out_at, out_name, note) VALUES (?,?,?,?,?,?,'','',?)
+      ON CONFLICT(visit_id, day) DO UPDATE SET workers = excluded.workers, in_at = excluded.in_at, in_name = excluded.in_name, note = excluded.note`)
+      .bind(visitId, o.day, site, o.workers || 1, o.at, me.full_name, override ? "Quick Pass override: " + reason : "Quick Pass · loading gate").run();
+  }
+  if (o.decision === "leave" && visitId) await env.DB.prepare("UPDATE contractor_checks SET out_at = ?, out_name = ? WHERE visit_id = ? AND day = ? AND out_at = ''").bind(o.at, me.full_name, visitId, o.day).run();
+  const w = x => x ? `${x.day}${x.time ? " " + x.time : ""}` : "";
+  const res = await env.DB.prepare(`INSERT INTO gate_scans (site, day, at, client_id, decision, reason, override, verdict, sf_id, req, tenant, contractor, work, valid_from, valid_to, workers, visit_id, by_name, by_email, scanned_at)
+    VALUES (?,?,?,?,?,?,?,?,'',?,?,?,?,?,?,?,?,?,?,?)`).bind(site, o.day, o.at, o.clientId, o.decision, reason, override ? 1 : 0, verdict.code, info.req, info.tenant, info.contractor, info.work,
+    w(info.from), w(info.to), o.decision === "in" ? o.workers || 1 : 0, visitId, me.full_name, me.email || "", o.at).run();
+  if (override && o.decision === "in" && d.raiseEvent) await d.raiseEvent(env, { site, app: "gate", tone: "warn", title: `Let in on a Quick Pass that is not valid · ${r.name}`,
+    body: `${verdict.label} — ${reason} · ${me.full_name}` }).catch(() => {});
+  const row = await env.DB.prepare("SELECT * FROM gate_scans WHERE id = ?").bind(res.meta.last_row_id).first();
+  return { scan: scanOut(row), ...(await gateDay(env, site, o.day)) };
+}
+
 /* the day's gate log — also read by the Shift Handover (handover/live) */
 export async function gateDay(env, site, day) {
   const { results } = await env.DB.prepare("SELECT * FROM gate_scans WHERE site = ? AND day = ? ORDER BY at DESC, id DESC LIMIT 400").bind(site, day).all().catch(() => ({ results: [] }));
@@ -357,12 +393,23 @@ export async function gateRoute(env, p, method, b, url, d) {
     const next = new Date(Date.parse(today + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
     const { results } = await env.DB.prepare(`SELECT id, company, tenant, work, req, day_from, day_to, time_from, time_to FROM contractor_visits
       WHERE site = ? AND deleted = 0 AND day_from <= ? AND day_to >= ? ORDER BY day_from, time_from LIMIT 600`).bind(site, next, today).all().catch(() => ({ results: [] }));
+    const qp = await env.DB.prepare("SELECT token, code, name, company, tenant, reason, expires_at FROM quick_passes WHERE site = ? AND status = 'approved' AND used_at = '' AND expires_at > ?")
+      .bind(site, new Date().toISOString()).all().catch(() => ({ results: [] }));
     return { site, today, at: new Date().toISOString(), list: (results || []).map(v => ({ id: v.id, req: v.req, tenant: v.tenant, company: v.company, work: v.work,
-      from: { day: v.day_from, time: v.time_from }, to: { day: v.day_to, time: v.time_to } })) };
+      from: { day: v.day_from, time: v.time_from }, to: { day: v.day_to, time: v.time_to } })),
+      quickPasses: (qp.results || []).map(q => ({ token: q.token, code: "QP-" + q.code, name: q.name, company: q.company, tenant: q.tenant, reason: q.reason, until: q.expires_at })) };
   }
   if (method !== "POST") throw err("Unknown request", 404);
 
   if (p === "gate/lookup") {
+    const qc = qpCode(b.code);
+    if (qc) {   // Quick Access Pass
+      const r = await qpFind(env, site, qc);
+      if (!r) throw err("This Quick Pass is not for this flagship, or it does not exist");
+      const { info, verdict } = qpGateInfo(r);
+      const last = await env.DB.prepare("SELECT * FROM gate_scans WHERE site = ? AND req = ? ORDER BY id DESC LIMIT 1").bind(site, info.req).first();
+      return { code: { raw: clip(b.code, 200), sfId: "", req: info.req }, source: "quickpass", sfError: "", salesforce: sfOn(env), info, verdict, now, visit: null, last: last ? scanOut(last) : null, quickPass: true };
+    }
     const c = parseCode(b.code);
     if (!c.sfId && !c.req && !b.visitId) throw err("This QR code is not a Tenant Connect pass");
     let info = null, source = "none", sfError = "", sfFields = null;
@@ -403,6 +450,8 @@ export async function gateRoute(env, p, method, b, url, d) {
     const sc = new Date(String(b.scannedAt || "")), late = !isNaN(sc) && Date.now() - sc < 864e5 && sc <= Date.now() + 120000;
     const when = late ? beirut(sc) : now;
     const at = late ? sc.toISOString() : d.now(), day = when.day;
+    const qc = qpCode(b.code);
+    if (qc) return quickPassDecide(env, site, me, d, { qc, decision, clientId, at, day, when, reason: clip(b.reason, 200), workers: Math.max(0, Math.min(500, Number(b.workers) || 0)), offline: !!b.offline });
     const cl = b.info || {};
     /* seen = what the agent read on the pass when Salesforce is not connected (Approved / Rejected) */
     const seen = ["Approved", "Rejected"].includes(b.seen) ? b.seen : "";

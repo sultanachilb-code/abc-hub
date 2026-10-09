@@ -127,6 +127,7 @@ dialog.wide{width:min(760px,calc(100% - 20px))}
 <dialog id="dImp" class="wide"></dialog>
 <dialog id="dMail"></dialog>
 <dialog id="dShifts"></dialog>
+<dialog id="dAi" class="wide"></dialog>
 
 <script src="common.js"></script>
 <script>
@@ -304,9 +305,18 @@ function liveHtml(){
     ${gl.length ? gl.map(x => `<tr><td><b>${esc(x.contractor || x.tenant || x.req)}</b> <small class="muted">${hm(x.at)} · ${esc(x.by)}</small></td><td>${esc(x.tenant)}${x.req ? ` <small class="muted">· ${esc(x.req)}</small>` : ""}</td>
       <td>${x.decision === "in" ? `<span class="done">Approved in</span>${x.workers ? ` <small class="muted">· ${x.workers} workers</small>` : ""}${x.override ? ` <small class="nd">· override: ${esc(x.reason)}</small>` : ""}` : `<span class="nd">Rejected out</span> <small class="muted">· ${esc(x.reason)}</small>`}</td></tr>`).join("")
       : `<tr><td colspan="3" class="emptyrow" style="padding:8px">No QR scanned at the loading gate today.</td></tr>`}</table>` : "";
+  /* Contractor access of the day that no handover line covers yet (approved later than the handover was written, Quick Passes, hand check-ins) */
+  const lineTxt = H && H.doc ? ["today", "ongoing", "tomorrow"].flatMap(k => H.doc[k] || []) : [];
+  const keys = new Set(lineTxt.map(reqKey).filter(Boolean)), allTxt = lineTxt.map(x => String(x.text || "")).join("\n").toUpperCase();
+  const inDoc = a => /^QP-/i.test(a.req || "") ? allTxt.includes(String(a.req).toUpperCase()) : !!(a.req && keys.has(String(a.req).replace(/\D/g, "").replace(/^0+/, "")));
+  const ACC = (LIVE.access || []).map((a, i) => ({ ...a, i })).filter(a => !inDoc(a));
+  const accT = ACC.length ? `<table class="t live"><tr><th>Contractor access not in this handover · ${ACC.length}</th><th style="width:34%">Tenant · request</th><th style="width:30%"></th></tr>
+    ${ACC.map(a => `<tr><td><b>${esc(a.who)}</b> <small class="muted">${esc(a.at)} · ${a.kind === "qp" ? "Quick Pass" : a.kind === "hand" ? "checked in on Contractors" : "loading gate"}${a.by ? " · " + esc(a.by) : ""}</small></td>
+      <td>${esc(a.tenant || "")}${a.req ? ` <small class="muted">· ${esc(a.req)}</small>` : ""}<br><small class="${a.decision === "out" ? "nd" : "done"}">${a.decision === "out" ? "Refused · " + esc(a.reason) : a.decision === "approved" ? "Approved · valid until " + esc(a.until) : "Attended " + esc(a.at)}</small></td>
+      <td>${H.can && H.can.handover ? `<button class="btn small" data-acc="${a.i}">+ Add to handover</button>` : ""}</td></tr>`).join("")}</table>` : "";
   const wrow = w => { const cls = (n) => n >= R.rooms ? "done" : w.state === "closed" ? "nd" : w.state === "open" ? "pr" : ""; const cell = (n, by) => R.rooms ? `<span class="${cls(n)}">${n}/${R.rooms}</span>${by.length ? ` <small class="muted">${esc(by.join(", "))}</small>` : ""}` : "—";
     return `<tr><td>${esc(w.label)} <small class="muted">${esc(w.time)}</small></td><td>${cell(w.ops, w.opsBy)}</td><td>${cell(w.ss, w.ssBy)}</td></tr>`; };
-  return incT + fbT + gateT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
+  return incT + fbT + gateT + accT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
     <tr><td><b>AM Checklist</b></td><td colspan="2">${ckCell(LIVE.am)}</td></tr>
     <tr><td><b>PM Checklist</b></td><td colspan="2">${ckCell(LIVE.pm)}</td></tr></table>
     <table class="t live"><tr><th>Restroom inspections${R.rooms ? ` · ${R.rooms} restrooms` : ""}</th><th style="width:34%">OPS</th><th style="width:30%">S.S</th></tr>
@@ -334,6 +344,7 @@ function render(){
     <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy === "Auto-closed" ? "Closed" : H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
     <span style="flex:1"></span>
     ${ro ? "" : `<button class="btn ghost small" id="impBtn" title="Salesforce Handover Report (.xlsx)">⤓ Import tenant requests</button>`}
+    ${ro ? "" : `<button class="btn ghost small" id="aiSum" title="A short summary of the shift in English and Arabic, written by the hub's free AI">✦ AI shift summary</button>`}
     <button class="btn ghost small" id="mailBtn">✉ Email in Outlook</button>
     <button class="btn ghost small" id="printBtn">Print / PDF</button>
   </div>
@@ -523,6 +534,13 @@ app.addEventListener("click", async e => {
   if (t.id === "printBtn") return print();
   if (t.id === "liveRef"){ LIVE = null; $("#liveBox").innerHTML = liveHtml(); return loadLive(); }
   if (t.id === "impBtn") return $("#impFile").click();
+  if (t.id === "aiSum") return aiSummary(t);
+  const acc = t.closest("[data-acc]"); if (acc && LIVE && LIVE.access){ const a = LIVE.access[+acc.dataset.acc]; if (!a) return;
+    const what = [a.who, a.tenant && a.tenant !== a.who ? "for " + a.tenant : "", a.work].filter(Boolean).join(" · ");
+    const mark = a.decision === "out" ? ` — ✕ Refused at gate ${a.at} · ${a.reason}` : a.decision === "approved" ? ` — approved ${a.at}${a.by ? " by " + a.by : ""}, valid until ${a.until}`
+      : ` — ✓ Attended ${a.at}${a.workers ? ` · ${a.workers} worker${a.workers === 1 ? "" : "s"}` : ""}${a.left ? " → left " + a.left : ""}`;
+    H.doc.today.push({ id: newId(), ...blank.today(), text: `${what}${a.req ? ` (${a.req})` : ""}${mark}`.slice(0, 500), ...(a.req && /^REQ/i.test(a.req) ? { req: a.req } : {}) });
+    touch(); render(); return toast("Added to Today"); }
   if (t.id === "mailBtn") return mailDialog();
   const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add;
     H.doc[k].push({ id: newId(), ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}), ...(add.dataset.src === "portal" && k === "today" ? { manual: true, cols: { tenant: "", req: "", task: "", contractor: "", time: "", m: "" } } : {}) }); touch(); render();
@@ -556,6 +574,25 @@ async function save(submit, quiet, email, shift){
     const m = $("#savedMsg"); if (m) m.textContent = `Saved ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
     if (first) open(H.id);
   } catch (er){ toast(er.message, true); }
+}
+
+/* Hub Assistant: the shift summary in English and Arabic, from today's hub data (docs/FEATURE-ai.md) */
+async function aiSummary(btn){
+  btn.disabled = true; const was = btn.textContent; btn.textContent = "✦ Writing…";
+  try {
+    const r = await api("ai/summary", { site: CTX.site, day: H.day });
+    const d = $("#dAi");
+    d.innerHTML = `<div class="dlg-h"><b>✦ Shift summary · ${esc(r.at)}</b><small>Written by the hub's AI from today's data — check it before you hand over.</small></div>
+      <div class="dlg-b"><textarea id="aiTx" dir="auto" style="width:100%;min-height:300px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:.88rem;line-height:1.55;background:var(--surface);color:var(--text)">${esc(r.text)}</textarea></div>
+      <div class="dlg-f"><button class="btn ghost" data-v="c">Copy</button><button class="btn ghost" data-v="0">Close</button>${H.can.handover ? `<button class="btn" data-v="1">Add to the handover notes</button>` : ""}</div>`;
+    d.onclick = async e => { const b = e.target.closest("[data-v]"); if (!b) return;
+      const txt = $("#aiTx").value.trim();
+      if (b.dataset.v === "c"){ await navigator.clipboard.writeText(txt).catch(() => {}); return toast("Copied"); }
+      if (b.dataset.v === "1"){ H.doc.notes = (`✦ Shift summary ${r.at} — ${r.by}\n${txt}` + (H.doc.notes ? "\n\n" + H.doc.notes : "")).slice(0, 4000); touch(); render(); toast("Added to the notes"); }
+      d.close(); };
+    d.showModal();
+  } catch (e){ toast(e.message, true); }
+  btn.disabled = false; btn.textContent = was;
 }
 
 /* =====================================================================
@@ -663,7 +700,7 @@ $("#impFile").addEventListener("change", async e => {
         IMP.upcoming.forEach(q => H.doc.upcoming.push(mk(q, true)));
         H.doc.upcoming.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
         touch(); render(); toast(`${n} request${n === 1 ? "" : "s"} added — save to keep them`);
-        if (H.day === CTX.today) loadLive();   // requests already scanned at the loading gate today get their feedback straight away
+        loadLive();   // requests already scanned at the loading gate (or checked in on Contractors) that day get their loading area feedback straight away
       } };
     d.showModal();
   } catch (er){ toast(er.message, true); }

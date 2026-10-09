@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A0F45">
+<title>Security Patrol · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="/tools/tools.css">
+<!-- Security Patrol: hub view (/tools/patrol) and the guards' shared link (/patrol/<key>, works offline) — see docs/FEATURE-security-patrol.md -->
+<style>
+/* ---------- hub view ---------- */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:7px 14px;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.rnds{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:14px}
+.rnd{padding:14px 16px}.rnd b{font-size:1rem}.rnd small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.rnd .big{font-size:1.8rem;font-weight:900;margin-top:6px}.rnd .big.ok{color:var(--ok)}.rnd .big.warn{color:var(--warn)}.rnd .big.al{color:var(--alert)}
+.meter{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:8px}.meter i{display:block;height:100%;background:var(--ok)}
+.scr{overflow:auto}
+table.pg{width:100%;border-collapse:collapse;font-size:.84rem}
+table.pg th,table.pg td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+table.pg th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.cell{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.78rem;border-radius:999px;padding:3px 10px;cursor:pointer;border:0;font-family:inherit}
+.cell.ok{background:rgba(46,139,87,.13);color:var(--ok)}.cell.issue{background:rgba(192,122,18,.15);color:var(--warn)}.cell.miss{background:rgba(192,57,43,.1);color:var(--alert)}.cell.next{background:var(--paper);color:var(--muted);cursor:default}
+.iss{padding:12px 14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:10px}.iss:first-child{border-top:0}
+.iss b{font-size:.92rem}.iss small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}.iss .ar{direction:rtl;font-size:.86rem}
+.thumb{width:74px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line);cursor:pointer;background:var(--paper)}
+.fg{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
+.fg label{display:flex;flex-direction:column;gap:4px;font-size:.74rem;font-weight:700;color:var(--muted)}
+.fg input{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}
+.box{padding:16px 18px;margin-bottom:14px}.box h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.lnk{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.lnk .q{width:150px;height:150px;background:#fff;border-radius:12px;padding:8px}.lnk .q svg{width:100%;height:100%}
+.lnk code{font-size:.78rem;word-break:break-all;background:var(--paper);padding:6px 8px;border-radius:8px;display:block;margin:6px 0 10px}
+.rw{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:8px;margin-bottom:8px}
+.rw input{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit}
+#print{display:none}
+@media print{
+  body>*:not(#print){display:none!important} #print{display:block}
+  .stk-page{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8mm;height:277mm;page-break-after:always;padding:0}
+  .stk{border:1.5px dashed #999;border-radius:6mm;padding:6mm;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Segoe UI",Arial,sans-serif;color:#000}
+  .stk .hd{background:#2A0F45;color:#fff;border-radius:3mm;padding:2mm 4mm;font-size:9pt;font-weight:700;width:100%}
+  .stk .ar{direction:rtl;font-size:10pt}.stk b{font-size:13pt;margin-top:2mm}.stk small{font-size:8pt;color:#444}
+  .stk .q{width:52mm;height:52mm;margin:2mm 0}.stk .q svg{width:100%;height:100%}
+  @page{size:A4;margin:10mm}
+}
+@media (max-width:700px){.fg{grid-template-columns:1fr 1fr}.rw{grid-template-columns:1fr 1fr}}
+
+/* ---------- guard mode (/patrol/<key>) ---------- */
+body.guard{background:#120B1B;color:#F2EDF8;min-height:100dvh}
+.g-hd{background:linear-gradient(140deg,#2A0F45,#4A1F73);padding:16px 18px 18px;display:flex;align-items:center;gap:12px}
+.g-hd img{height:28px}.g-hd b{display:block;font-size:1.05rem}.g-hd small{display:block;font-size:.8rem;opacity:.8}.g-hd .ar{direction:rtl}
+.g-net{margin-left:auto;font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:999px;background:rgba(95,208,138,.18);color:#7FE0A4;white-space:nowrap}
+.g-net.off{background:rgba(255,122,107,.18);color:#FF9A8C}
+.g-wrap{padding:16px;max-width:560px;margin:0 auto}
+.g-card{background:#1F1730;border:1px solid #342A45;border-radius:18px;padding:14px 16px;margin-bottom:12px}
+.g-card h2{font-size:1rem;display:flex;justify-content:space-between;gap:10px;align-items:baseline}.g-card h2 small{font-size:.8rem;color:#A99EB8;font-weight:600}
+.g-prog{height:9px;border-radius:5px;background:#342A45;overflow:hidden;margin:10px 0 4px}.g-prog i{display:block;height:100%;background:#5FD08A;transition:width .4s}
+.g-pt{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #2C2340;font-size:.9rem}.g-pt:first-of-type{border-top:0}
+.g-pt i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:.8rem;flex:none;background:#342A45;color:#A99EB8}
+.g-pt i.ok{background:#1E7B45;color:#fff}.g-pt i.issue{background:#B5740F;color:#fff}
+.g-pt small{display:block;color:#A99EB8;font-size:.74rem}
+.g-scan{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:120px;border-radius:22px;border:0;font:inherit;font-size:1.25rem;font-weight:900;color:#2A0F45;
+  background:linear-gradient(135deg,#E8C66A,#B08A2E);box-shadow:0 12px 30px rgba(176,138,46,.35);margin:6px 0 14px;cursor:pointer}
+.g-scan .ar{font-size:1.05rem;direction:rtl;margin-top:4px}
+.g-small{display:block;width:100%;background:none;border:1px solid #342A45;color:#D8CFE6;border-radius:14px;padding:12px;font:inherit;font-weight:700;margin-bottom:12px;cursor:pointer}
+.g-pend{font-size:.8rem;color:#F0B44C;text-align:center;margin-bottom:10px}
+.g-ov{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column}
+.g-ov video{flex:1;width:100%;object-fit:cover}
+.g-ov .frame{position:absolute;left:50%;top:44%;width:66vmin;height:66vmin;transform:translate(-50%,-50%);border:3px solid #E8C66A;border-radius:24px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.g-ov .bar{position:absolute;left:0;right:0;bottom:0;padding:16px;display:flex;gap:10px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.g-ov .bar button{flex:1;height:52px;border-radius:14px;border:0;font:inherit;font-weight:800;font-size:.95rem}
+.g-ov .msg{position:absolute;top:18px;left:16px;right:16px;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 4px #000}
+.g-sheet{position:fixed;inset:0;z-index:60;background:#120B1B;overflow:auto;padding:0 0 30px}
+.g-sheet .top2{background:#1F1730;padding:16px 18px;border-bottom:1px solid #342A45}
+.g-sheet .top2 b{font-size:1.15rem;display:block}.g-sheet .top2 small{color:#A99EB8}
+.g-big{display:flex;align-items:center;justify-content:center;flex-direction:column;width:100%;height:96px;border-radius:20px;border:0;font:inherit;font-weight:900;font-size:1.2rem;margin-bottom:12px;cursor:pointer}
+.g-big .ar{direction:rtl;font-size:1.05rem;margin-top:3px}
+.g-big.ok{background:#1E7B45;color:#fff}.g-big.issue{background:#B5740F;color:#fff}.g-big.back{background:#2C2340;color:#D8CFE6;height:56px;font-size:.95rem}
+.g-chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.g-chips button{border:2px solid #342A45;background:#1F1730;color:#F2EDF8;border-radius:14px;padding:12px 10px;font:inherit;text-align:right;direction:rtl;cursor:pointer;min-height:64px}
+.g-chips button b{display:block;font-size:.98rem}.g-chips button small{display:block;direction:ltr;text-align:left;color:#A99EB8;font-size:.7rem;margin-top:3px}
+.g-chips button.on{border-color:#F0B44C;background:#3A2A12}
+.g-ph{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+.g-ph img{width:90px;height:90px;object-fit:cover;border-radius:12px}
+.g-ph button{flex:1;height:56px;border-radius:14px;border:1px dashed #6D6479;background:none;color:#D8CFE6;font:inherit;font-weight:800;cursor:pointer}
+.g-note{width:100%;min-height:74px;border-radius:14px;border:1px solid #342A45;background:#1F1730;color:#F2EDF8;padding:12px;font:inherit;margin-bottom:12px}
+.g-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1E7B45;color:#fff;font-weight:800;padding:12px 18px;border-radius:14px;z-index:80;max-width:92vw;text-align:center}
+.g-toast.warn{background:#B5740F}
+.g-name input{width:100%;height:54px;border-radius:14px;border:1px solid #342A45;background:#1F1730;color:#fff;font:inherit;font-size:1.1rem;padding:0 14px;margin:10px 0}
+.g-off{font-size:.72rem;color:#7FE0A4;text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="print"></div>
+<dialog id="dlg"></dialog>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+<canvas id="cv" hidden></canvas>
+<script src="/tools/common.js"></script>
+<script src="/tools/qrcode.js"></script>
+<script>
+const GKEY = (location.pathname.match(/^\/patrol\/([A-Za-z0-9]{24})/) || [])[1] || "";
+const G_MODE = !!GKEY;
+const hmNow = () => new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" });
+const dayNow = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+const minsOf = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+const qrSvg = (text, cell = 5) => { try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: cell, margin: 1 }); } catch { return ""; } };
+/* shrink a photo to ~700 px JPEG (fits the hub and a weak signal) */
+function shrink(file){ return new Promise(res => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => {
+  const s = Math.min(1, 700 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+  c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); let q = .72, d = c.toDataURL("image/jpeg", q); while (d.length > 240000 && q > .3){ q -= .1; d = c.toDataURL("image/jpeg", q); } res(d); }; im.onerror = () => res(""); im.src = r.result; }; r.readAsDataURL(file); }); }
+
+/* =====================================================================
+   GUARD MODE — the shared link on any phone, with or without signal
+   ===================================================================== */
+const K = n => `patrol.${GKEY}.${n}`;
+const ls = { get: (k, d) => { try { const v = localStorage.getItem(K(k)); return v == null ? d : JSON.parse(v); } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(K(k), JSON.stringify(v)); } catch {} } };
+let PK = null, QUEUE = [], CUR = null, SEL = [], PH = "", sending = false;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function gToast(t, warn){ const e = document.createElement("div"); e.className = "g-toast" + (warn ? " warn" : ""); e.textContent = t; document.body.append(e); setTimeout(() => e.remove(), 3200); }
+function gBoot(){
+  document.body.classList.add("guard");
+  PK = ls.get("pack", null); QUEUE = ls.get("queue", []);
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").then(() => navigator.serviceWorker.ready).then(() => {   // keep this page and the scanner on the phone for no signal
+    Promise.all([fetch(location.pathname, { cache: "no-cache" }), fetch("/tools/jsqr.min.js"), fetch("/tools/tools.css"), fetch("/tools/common.js"), fetch("/tools/qrcode.js"), fetch("/icons/abc-logo-white.png")].map(p => p.catch(() => null)))
+      .then(() => { ls.set("offlineReady", true); gDraw(); });
+  }).catch(() => {});
+  addEventListener("online", () => { gNet(); gPack(); gSend(); }); addEventListener("offline", gNet);
+  gDraw(); gPack(); gSend();
+  setInterval(() => { gPack(); gSend(); }, 60000);
+  setInterval(gDraw, 30000);
+}
+async function gPack(){
+  if (!navigator.onLine) return;
+  try { const r = await fetch(`/api/patrol-ext/${GKEY}/pack`, { cache: "no-store" }); const j = await r.json();
+    if (!j.ok){ if (r.status === 403){ PK = { dead: j.error }; ls.set("pack", PK); gDraw(); } return; }
+    PK = { ...j.data, at: new Date().toISOString() }; ls.set("pack", PK); gDraw(); } catch {}
+}
+async function gSend(){
+  if (sending || !QUEUE.length || !navigator.onLine) return gNet();
+  sending = true;
+  try {
+    const batch = QUEUE.slice(0, 20);
+    const r = await fetch(`/api/patrol-ext/${GKEY}/sync`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ scans: batch }) });
+    const j = await r.json();
+    if (j.ok){ const ok = new Set(j.data.saved); QUEUE = QUEUE.filter(x => !ok.has(x.clientId)); ls.set("queue", QUEUE); if (QUEUE.length){ sending = false; return gSend(); } gPack(); }
+  } catch {}
+  sending = false; gNet(); gDraw();
+}
+function gNet(){ const n = document.getElementById("gNet"); if (n){ n.className = "g-net" + (navigator.onLine ? "" : " off"); n.textContent = navigator.onLine ? "Online · متصل" : "No signal · لا إنترنت"; } }
+/* done this round: from the hub (when last online) and from this phone */
+function doneMap(){
+  const today = dayNow(), m = new Map();
+  if (PK && PK.day === today) for (const d of PK.done || []) m.set(d.pointId + "|" + d.round, d);
+  for (const x of [...ls.get("mine", []), ...QUEUE]) if (x.day === today) m.set(x.pointId + "|" + x.round, { hm: x.hm, status: x.status });
+  return m;
+}
+const roundNow = () => { if (!PK || !PK.rounds) return -1; const t = minsOf(hmNow()); return PK.rounds.findIndex(r => t >= minsOf(r.from) && t <= minsOf(r.to)); };
+function gDraw(){
+  const root = document.getElementById("root");
+  if (PK && PK.dead) return root.innerHTML = `<div class="g-hd"><img src="/icons/abc-logo-white.png" alt="ABC"><div><b>Security Patrol</b><small class="ar">دورية الأمن</small></div></div>
+    <div class="g-wrap"><div class="g-card">${esc(PK.dead)}<p class="ar" style="direction:rtl;margin-top:8px">هذا الرابط لم يعد صالحاً — اطلب الرابط الجديد من فريق العمليات.</p></div></div>`;
+  const name = ls.get("guard", "");
+  const head = `<div class="g-hd"><img src="/icons/abc-logo-white.png" alt="ABC"><div><b>Security Patrol <span class="ar">· دورية الأمن</span></b><small>${esc(PK ? PK.siteName : "Loading…")}${name ? " · " + esc(name) : ""}</small></div><span class="g-net" id="gNet"></span></div>`;
+  if (!PK) return root.innerHTML = head + `<div class="g-wrap"><div class="g-card">Open this link once with signal to load the checkpoints.<br><span class="ar" style="direction:rtl;display:block;margin-top:6px">افتح الرابط مرة واحدة مع إنترنت لتحميل نقاط التفتيش.</span></div></div>`, gNet();
+  if (!name) { root.innerHTML = head + `<div class="g-wrap"><div class="g-card g-name"><b>Your name · اسمك</b><input id="gName" autocomplete="name" placeholder="e.g. Hassan"><button class="g-scan" id="gNameOk" style="height:64px">Start · ابدأ</button></div></div>`;
+    document.getElementById("gNameOk").onclick = () => { const v = document.getElementById("gName").value.trim(); if (!v) return; ls.set("guard", v); gDraw(); }; return gNet(); }
+  const ri = roundNow(), R = ri >= 0 ? PK.rounds[ri] : null, M = doneMap(), pts = PK.points || [];
+  const nextR = !R ? PK.rounds.find(r => minsOf(r.from) > minsOf(hmNow())) : null;
+  const doneN = R ? pts.filter(p => M.has(p.id + "|" + ri)).length : 0;
+  const list = pts.map(p => { const d = R && M.get(p.id + "|" + ri);
+    return `<div class="g-pt"><i class="${d ? d.status === "issue" ? "issue" : "ok" : ""}">${d ? d.status === "issue" ? "!" : "✓" : "○"}</i><div><b>${esc(p.label)}</b><small>${esc([p.level, p.area].filter(Boolean).join(" · "))}${d ? " · " + esc(d.hm) : ""}</small></div></div>`; }).join("");
+  root.innerHTML = head + `<div class="g-wrap">
+    ${R ? `<div class="g-card"><h2>${esc(R.name)} <small>${esc(R.from)}–${esc(R.to)}</small></h2><div class="g-prog"><i style="width:${pts.length ? doneN / pts.length * 100 : 0}%"></i></div><small style="color:#A99EB8">${doneN} of ${pts.length} checkpoints · ${doneN} من ${pts.length}</small></div>`
+      : `<div class="g-card"><h2>No round now <small>${nextR ? `next: ${esc(nextR.name)} at ${esc(nextR.from)}` : "rounds done for today"}</small></h2><small style="color:#A99EB8">You can still scan — it is logged as an extra check. · يمكنك المسح كفحص إضافي.</small></div>`}
+    <button class="g-scan" id="gScan">📷 Scan checkpoint<span class="ar">امسح نقطة التفتيش</span></button>
+    ${QUEUE.length ? `<div class="g-pend">${QUEUE.length} saved on this phone — sent when the signal is back · محفوظ على الهاتف</div>` : ""}
+    <div class="g-card">${list || "No checkpoints yet — ask the operations team."}</div>
+    <button class="g-small" id="gPick">Can't scan? Choose the checkpoint · لا يمكن المسح؟ اختر النقطة</button>
+    <button class="g-small" id="gWho">Not ${esc(name)}? Change name · تغيير الاسم</button>
+    ${ls.get("offlineReady", false) ? `<div class="g-off">✓ Ready to work without signal · جاهز للعمل بدون إنترنت</div>` : ""}</div>`;
+  document.getElementById("gScan").onclick = gCam;
+  document.getElementById("gPick").onclick = gPickList;
+  document.getElementById("gWho").onclick = () => { ls.set("guard", ""); gDraw(); };
+  gNet();
+}
+/* ---- camera ---- */
+let stream = null, loopT = 0, detector = null;
+async function gCam(){
+  const ov = document.createElement("div"); ov.className = "g-ov"; ov.id = "gOv";
+  ov.innerHTML = `<video id="vid" playsinline muted></video><div class="frame"></div><div class="msg" id="gMsg">Point at the checkpoint QR · وجّه الكاميرا نحو الرمز</div>
+    <div class="bar"><button id="gClose" style="background:#2C2340;color:#fff">Close · إغلاق</button><button id="gList" style="background:#E8C66A;color:#2A0F45">Choose from list · اختر</button></div>`;
+  document.body.append(ov);
+  document.getElementById("gClose").onclick = gCamStop; document.getElementById("gList").onclick = () => { gCamStop(); gPickList(); };
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    const v = document.getElementById("vid"); v.srcObject = stream; await v.play();
+    if ("BarcodeDetector" in window){ try { const f = await BarcodeDetector.getSupportedFormats(); if (f.includes("qr_code")) detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch {} }
+    if (!detector && !window.jsQR) await new Promise(r => { const s = document.createElement("script"); s.src = "/tools/jsqr.min.js"; s.onload = r; s.onerror = r; document.head.append(s); });
+    gLoop();
+  } catch (e){ document.getElementById("gMsg").textContent = e.name === "NotAllowedError" ? "Allow the camera for this page · اسمح باستخدام الكاميرا" : "The camera could not start · تعذر تشغيل الكاميرا"; }
+}
+function gCamStop(){ clearTimeout(loopT); if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; } const o = document.getElementById("gOv"); o && o.remove(); }
+async function gLoop(){
+  if (!stream) return;
+  const v = document.getElementById("vid"); let code = "";
+  try {
+    if (v.readyState >= 2){
+      if (detector){ const r = await detector.detect(v); if (r && r[0]) code = r[0].rawValue; }
+      else if (window.jsQR){ const cv = document.getElementById("cv"), s = Math.min(v.videoWidth, v.videoHeight), side = Math.min(640, s); cv.width = cv.height = side;
+        const c = cv.getContext("2d", { willReadFrequently: true }); c.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, side, side);
+        const q = jsQR(c.getImageData(0, 0, side, side).data, side, side, { inversionAttempts: "dontInvert" }); if (q) code = q.data; }
+    }
+  } catch {}
+  if (code){ const t = (code.match(/ABCPATROL:([A-Za-z0-9]{12})/) || [])[1], p = t && (PK.points || []).find(x => x.token === t);
+    if (p){ if (navigator.vibrate) navigator.vibrate(80); gCamStop(); return gPoint(p, false); }
+    document.getElementById("gMsg").textContent = "Not a checkpoint of this flagship · ليست نقطة تفتيش لهذا الفرع"; }
+  loopT = setTimeout(gLoop, 160);
+}
+function gPickList(){
+  const sh = document.createElement("div"); sh.className = "g-sheet"; sh.id = "gSh";
+  sh.innerHTML = `<div class="top2"><b>Choose the checkpoint · اختر نقطة التفتيش</b><small>Only when the QR cannot be scanned — it is marked as chosen by hand.</small></div><div class="g-wrap">
+    ${(PK.points || []).map(p => `<button class="g-small" data-p="${p.id}" style="text-align:left">${esc(p.label)}<br><small style="color:#A99EB8">${esc([p.level, p.area].filter(Boolean).join(" · "))}</small></button>`).join("")}
+    <button class="g-big back" id="gBk">Back · رجوع</button></div>`;
+  document.body.append(sh);
+  sh.onclick = e => { const b = e.target.closest("[data-p]"); if (b){ sh.remove(); gPoint(PK.points.find(x => x.id === +b.dataset.p), true); } if (e.target.id === "gBk") sh.remove(); };
+}
+function gPoint(p, manual){
+  CUR = { p, manual }; SEL = []; PH = "";
+  const sh = document.createElement("div"); sh.className = "g-sheet"; sh.id = "gSh";
+  sh.innerHTML = `<div class="top2"><b>${esc(p.label)}</b><small>${esc([p.level, p.area].filter(Boolean).join(" · "))} · ${hmNow()}</small></div>
+    <div class="g-wrap" id="gStep"><button class="g-big ok" id="gOk">✓ All clear<span class="ar">كل شيء سليم</span></button>
+      <button class="g-big issue" id="gIs">⚠ Report issue<span class="ar">الإبلاغ عن مشكلة</span></button><button class="g-big back" id="gBk">Back · رجوع</button></div>`;
+  document.body.append(sh);
+  document.getElementById("gOk").onclick = () => gSave("clear");
+  document.getElementById("gIs").onclick = gIssue;
+  document.getElementById("gBk").onclick = () => sh.remove();
+}
+function gIssue(){
+  const st = document.getElementById("gStep");
+  st.innerHTML = `<p style="direction:rtl;font-weight:800;margin-bottom:8px">اختر المشكلة · Choose what you see</p>
+    <div class="g-chips">${(PK.issues || []).map(([k, ar, en]) => `<button data-k="${k}"><b>${esc(ar)}</b><small>${esc(en)}</small></button>`).join("")}</div>
+    <div class="g-ph"><span id="gPhImg"></span><button id="gPhBtn">📷 Photo · صورة</button></div>
+    <textarea class="g-note" id="gNote" placeholder="ملاحظة (اختياري) · Note (optional)"></textarea>
+    <button class="g-big issue" id="gSend">Save · حفظ</button><button class="g-big back" id="gBk2">Back · رجوع</button>`;
+  st.querySelector(".g-chips").onclick = e => { const b = e.target.closest("[data-k]"); if (!b) return; const k = b.dataset.k; SEL = SEL.includes(k) ? SEL.filter(x => x !== k) : [...SEL, k]; b.classList.toggle("on", SEL.includes(k)); };
+  document.getElementById("gPhBtn").onclick = () => document.getElementById("cam").click();
+  document.getElementById("gSend").onclick = () => { if (!SEL.length && !document.getElementById("gNote").value.trim()) return gToast("Choose the issue · اختر المشكلة", true); gSave("issue"); };
+  document.getElementById("gBk2").onclick = () => { document.getElementById("gSh").remove(); gPoint(CUR.p, CUR.manual); };
+}
+document.getElementById("cam").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return; PH = await shrink(f);
+  const i = document.getElementById("gPhImg"); if (i) i.innerHTML = PH ? `<img src="${PH}" alt="">` : ""; });
+function gSave(status){
+  const hm = hmNow(), ri = roundNow();
+  const x = { clientId: uid(), pointId: CUR.p.id, at: new Date().toISOString(), day: dayNow(), hm, round: ri, guard: ls.get("guard", ""), status, issues: status === "issue" ? SEL : [],
+    note: status === "issue" ? (document.getElementById("gNote").value || "").trim() : "", photo: status === "issue" ? PH : "", manual: !!CUR.manual };
+  QUEUE.push(x); ls.set("queue", QUEUE);
+  const mine = ls.get("mine", []).filter(m => m.day === x.day); mine.push({ pointId: x.pointId, round: ri, day: x.day, hm, status }); ls.set("mine", mine);
+  document.getElementById("gSh").remove();
+  gToast(navigator.onLine ? (status === "clear" ? "Saved ✓ · تم الحفظ" : "Issue reported ✓ · تم الإبلاغ") : "Saved on the phone · محفوظ على الهاتف — sent later", !navigator.onLine);
+  gDraw(); gSend();
+}
+
+/* =====================================================================
+   HUB VIEW (/tools/patrol) — the day, checkpoints, rounds and the link
+   ===================================================================== */
+const UP = new URLSearchParams(location.search);
+let ctx = null, site = UP.get("site") || "", P = null, tab = "day", day = "";
+async function hBoot(){
+  document.getElementById("root").innerHTML = `<div class="top"><h1>🛡 Security Patrol <small id="sub"></small></h1><input type="date" id="dPick" class="btn ghost small" style="font-weight:600"><span id="sitePick"></span></div>
+    <div class="wrap"><div class="tabs" id="tabs"></div><div id="app"><div class="empty">Loading…</div></div></div>`;
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
+    if (!site || site === "ALL") site = ctx.site;
+    document.getElementById("sitePick").innerHTML = siteSelect(ctx, v => { site = v; history.replaceState(null, "", `?site=${site}`); load(); });
+    day = ctx.today; document.getElementById("dPick").value = day; document.getElementById("dPick").onchange = e => { day = e.target.value || ctx.today; load(); };
+    load();
+  } catch (e){ document.getElementById("app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){ try { P = await api(`ops/patrol/day?site=${site}&day=${day}`); document.getElementById("sub").textContent = P.siteName; draw(); } catch (e){ document.getElementById("app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; } }
+function draw(){
+  const T = [["day", "Day"], ["issues", `Issues${P.scans.filter(s => s.status === "issue").length ? " · " + P.scans.filter(s => s.status === "issue").length : ""}`], ["points", "Checkpoints & stickers"], ...(P.lead ? [["setup", "Rounds & guards' link"]] : [])];
+  document.getElementById("tabs").innerHTML = T.map(([k, t]) => `<button data-t="${k}" class="${k === tab ? "on" : ""}">${t}</button>`).join("");
+  const A = document.getElementById("app");
+  if (tab === "day") A.innerHTML = dayHtml(); else if (tab === "issues") A.innerHTML = issuesHtml(); else if (tab === "points") A.innerHTML = pointsHtml(); else A.innerHTML = setupHtml();
+  if (tab === "setup") { const q = document.getElementById("lnkQ"); if (q) q.innerHTML = qrSvg(P.link, 4); }
+  loadThumbs();
+}
+const nowM = () => minsOf(hmNow());
+function dayHtml(){
+  if (!P.points.length) return `<div class="card empty">No checkpoints yet. ${P.lead ? "Add them in <b>Checkpoints & stickers</b>, print the stickers and send the guards' link from <b>Rounds & guards' link</b>." : ""}</div>`;
+  const live = day === P.today;
+  const cards = P.rounds.map(r => { const over = !live || nowM() > minsOf(r.to), pc = r.total ? Math.round(r.done / r.total * 100) : 0;
+    const tone = r.done === r.total ? "ok" : over ? "al" : "warn";
+    return `<div class="card rnd"><b>${esc(r.name)}</b><small>${esc(r.from)}–${esc(r.to)}${r.guards.length ? " · " + esc(r.guards.join(", ")) : ""}</small>
+      <div class="big ${tone}">${r.done}/${r.total}</div><small>${r.total - r.done} ${over ? "missed" : "to go"} · ${r.issues} issue${r.issues === 1 ? "" : "s"}</small><div class="meter"><i style="width:${pc}%"></i></div></div>`; }).join("");
+  const head = `<tr><th>Checkpoint</th>${P.rounds.map(r => `<th>${esc(r.name)} <span style="font-weight:600">${esc(r.from)}–${esc(r.to)}</span></th>`).join("")}<th>Extra checks</th></tr>`;
+  const rows = P.points.map(p => `<tr><td><b>${esc(p.label)}</b><br><small class="muted">${esc([p.level, p.area].filter(Boolean).join(" · "))}</small></td>
+    ${P.rounds.map((r, i) => { const L = P.scans.filter(s => s.pointId === p.id && s.round === i), last = L[L.length - 1];
+      if (!last) return `<td>${!live || nowM() > minsOf(r.to) ? `<span class="cell miss">Missed</span>` : `<span class="cell next">—</span>`}</td>`;
+      return `<td><button class="cell ${last.status === "issue" ? "issue" : "ok"}" data-sc="${last.id}">${last.status === "issue" ? "⚠" : "✓"} ${esc(last.hm)}</button><br><small class="muted">${esc(last.guard)}${last.manual ? " · chosen by hand" : ""}</small></td>`; }).join("")}
+    <td>${P.scans.filter(s => s.pointId === p.id && s.round < 0).map(s => `<button class="cell ${s.status === "issue" ? "issue" : "ok"}" data-sc="${s.id}">${esc(s.hm)}</button>`).join(" ") || `<small class="muted">—</small>`}</td></tr>`).join("");
+  return `<div class="rnds">${cards}</div><div class="card scr"><table class="pg">${head}${rows}</table></div>
+    <p class="muted" style="font-size:.76rem;margin-top:10px">Every scan reaches the hub bell; issues as alerts. 30 minutes after each round ends, its report goes to the bell and by email to the flagship's management and the Senior Mall Supervisor. Scans saved on a phone without signal are added when it is back online.</p>`;
+}
+function issuesHtml(){
+  const L = P.scans.filter(s => s.status === "issue").slice().reverse();
+  if (!L.length) return `<div class="card empty">No issue reported on ${esc(D.fmt(day))}.</div>`;
+  const AR = Object.fromEntries((P.issues || []).map(x => [x[0], x[1]]));
+  return `<div class="card">${L.map(s => { const p = P.points.find(x => x.id === s.pointId) || {};
+    return `<div class="iss"><div><b>${esc(p.label || "Checkpoint")}</b> <span class="pill warn">${esc(s.issuesEn.join(", ") || "Issue")}</span>
+      <small class="ar">${esc(s.issues.map(k => AR[k] || "").filter(Boolean).join(" · "))}</small>${s.note ? `<small style="color:var(--text)">${esc(s.note)}</small>` : ""}
+      <small>${esc(s.hm)} · ${esc(s.guard || "Guard")}${s.round >= 0 && P.rounds[s.round] ? " · " + esc(P.rounds[s.round].name) : " · extra check"}${s.manual ? " · chosen by hand" : ""}</small></div>
+      ${s.photo ? `<img class="thumb" data-ph="${s.id}" alt="Photo">` : ""}</div>`; }).join("")}</div>`;
+}
+function pointsHtml(){
+  return `${P.lead ? `<div class="card box"><h3>Add a checkpoint</h3><div class="fg"><label>Name<input id="nLabel" placeholder="e.g. Service corridor B — door 3"></label><label>Level<input id="nLevel" placeholder="e.g. B1"></label>
+      <label>Area<input id="nArea" placeholder="e.g. Back area"></label><button class="btn" id="nAdd">Add</button></div></div>` : ""}
+    <div class="card box"><h3 style="display:flex;justify-content:space-between;align-items:center">Checkpoints · ${P.points.length}<button class="btn small" id="pPrint" ${P.points.length ? "" : "disabled"}>🖨 Print QR stickers</button></h3>
+    ${P.points.length ? `<table class="pg"><tr><th>#</th><th>Checkpoint</th><th>Level · area</th><th></th></tr>${P.points.map((p, i) => `<tr><td>${i + 1}</td><td><b>${esc(p.label)}</b></td><td>${esc([p.level, p.area].filter(Boolean).join(" · "))}</td>
+      <td style="text-align:right">${P.lead ? `<button class="btn small ghost" data-ed="${p.id}">Edit</button> <button class="btn small ghost danger" data-off="${p.id}">Remove</button>` : ""}</td></tr>`).join("")}</table>` : `<div class="empty" style="padding:16px">No checkpoints yet.</div>`}
+    <p class="muted" style="font-size:.76rem;margin-top:8px">Stick each QR at the checkpoint, at eye level, out of the rain. A removed checkpoint stops counting at once; its sticker no longer scans.</p></div>`;
+}
+function setupHtml(){
+  return `<div class="card box"><h3>Rounds</h3><div id="rws">${P.rounds.map(r => rowR(r)).join("")}</div>
+    <button class="btn small ghost" id="rAdd">+ Round</button> <button class="btn small" id="rSave">Save rounds</button>
+    <p class="muted" style="font-size:.76rem;margin-top:8px">Every checkpoint is to be scanned once in each round. A scan outside the rounds counts as an extra check.</p></div>
+    <div class="card box"><h3>The guards' link</h3><div class="lnk"><div class="q" id="lnkQ"></div><div style="flex:1;min-width:220px">
+      <p style="font-size:.86rem">One link for every guard of this flagship — no account, no set-up. Open it once with signal; after that it works in the back areas without signal and sends the scans when the signal is back.</p>
+      <code>${esc(P.link)}</code><button class="btn small" id="lCopy">Copy link</button> <a class="btn small" style="background:#1E9E55" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent("Security Patrol — " + P.siteName + "\nافتح الرابط مرة واحدة مع إنترنت ثم امسح نقاط التفتيش:\n" + P.link)}">Send on WhatsApp</a>
+      <button class="btn small ghost danger" id="lNew">Replace link</button></div></div></div>`;
+}
+const rowR = r => `<div class="rw"><input class="rN" value="${esc(r.name)}" placeholder="Round name"><input class="rF" type="time" value="${esc(r.from)}"><input class="rT" type="time" value="${esc(r.to)}"><button class="btn small ghost danger rX">✕</button></div>`;
+async function loadThumbs(){ for (const im of document.querySelectorAll("img[data-ph]")){ try { const r = await api(`ops/patrol/photo?site=${site}&id=${im.dataset.ph}`); im.src = r.data; } catch {} } }
+function printStickers(){
+  const pages = []; for (let i = 0; i < P.points.length; i += 6) pages.push(P.points.slice(i, i + 6));
+  document.getElementById("print").innerHTML = pages.map(L => `<div class="stk-page">${L.map(p => `<div class="stk"><div class="hd">ABC ${esc(P.siteName)} · Security Patrol</div>
+    <div class="ar" style="margin-top:2mm">نقطة تفتيش الحراسة</div><b>${esc(p.label)}</b><small>${esc([p.level, p.area].filter(Boolean).join(" · "))}</small>
+    <div class="q">${qrSvg(p.qr, 5)}</div><small>Scan with the patrol link · امسح باستخدام رابط الدورية</small></div>`).join("")}</div>`).join("");
+  setTimeout(() => print(), 150);
+}
+document.addEventListener("click", async e => {
+  if (G_MODE) return;
+  const t = e.target;
+  const tb = t.closest("[data-t]"); if (tb){ tab = tb.dataset.t; return draw(); }
+  try {
+    if (t.id === "nAdd"){ const label = document.getElementById("nLabel").value.trim(); if (!label) return toast("Name the checkpoint", true);
+      await api("ops/patrol/point", { site, label, level: document.getElementById("nLevel").value, area: document.getElementById("nArea").value, seq: P.points.length + 1 }); toast("Checkpoint added"); return load(); }
+    if (t.id === "pPrint") return printStickers();
+    const ed = t.closest("[data-ed]"); if (ed){ const p = P.points.find(x => x.id === +ed.dataset.ed); const d = document.getElementById("dlg");
+      d.innerHTML = `<div class="dlg-h"><b>Edit checkpoint</b></div><div class="dlg-b fg" style="grid-template-columns:1fr"><label>Name<input id="eL" value="${esc(p.label)}"></label><label>Level<input id="eV" value="${esc(p.level)}"></label><label>Area<input id="eA" value="${esc(p.area)}"></label></div>
+        <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Save</button></div>`;
+      d.onclick = async ev => { const b = ev.target.closest("[data-v]"); if (!b) return; if (b.dataset.v === "1"){ try { await api("ops/patrol/point", { site, id: p.id, label: document.getElementById("eL").value, level: document.getElementById("eV").value, area: document.getElementById("eA").value, seq: p.seq }); toast("Saved"); load(); } catch (er){ return toast(er.message, true); } } d.close(); };
+      return d.showModal(); }
+    const off = t.closest("[data-off]"); if (off){ const p = P.points.find(x => x.id === +off.dataset.off);
+      if (!(await confirmBox("Remove this checkpoint?", `${p.label} stops counting in the rounds. Its past scans stay in the reports.`, "Remove"))) return;
+      await api("ops/patrol/point", { site, id: p.id, label: p.label, level: p.level, area: p.area, seq: p.seq, active: false }); toast("Removed"); return load(); }
+    if (t.id === "rAdd") return document.getElementById("rws").insertAdjacentHTML("beforeend", rowR({ name: "", from: "", to: "" }));
+    if (t.classList.contains("rX")) return t.closest(".rw").remove();
+    if (t.id === "rSave"){ const rounds = [...document.querySelectorAll(".rw")].map(r => ({ name: r.querySelector(".rN").value, from: r.querySelector(".rF").value, to: r.querySelector(".rT").value }));
+      await api("ops/patrol/rounds", { site, rounds }); toast("Rounds saved"); return load(); }
+    if (t.id === "lCopy"){ await navigator.clipboard.writeText(P.link); return toast("Link copied"); }
+    if (t.id === "lNew"){ if (!(await confirmBox("Replace the guards' link?", "The old link stops working at once. Send the new link to the guards.", "Replace link"))) return; await api("ops/patrol/newlink", { site }); toast("New link ready"); return load(); }
+    const sc = t.closest("[data-sc]"); if (sc){ const s = P.scans.find(x => x.id === +sc.dataset.sc), p = P.points.find(x => x.id === s.pointId) || {}; const d = document.getElementById("dlg");
+      d.innerHTML = `<div class="dlg-h"><b>${esc(p.label || "")}</b><small>${esc(s.hm)} · ${esc(s.guard || "Guard")}${s.manual ? " · chosen by hand" : ""}</small></div>
+        <div class="dlg-b">${s.status === "issue" ? `<p><span class="pill warn">${esc(s.issuesEn.join(", ") || "Issue")}</span></p>${s.note ? `<p style="margin-top:8px">${esc(s.note)}</p>` : ""}${s.photo ? `<img data-ph="${s.id}" style="width:100%;border-radius:12px;margin-top:10px" alt="Photo">` : ""}` : `<p><span class="pill ok">All clear</span></p>`}</div>
+        <div class="dlg-f"><button class="btn" data-v="1">Close</button></div>`;
+      d.onclick = ev => { if (ev.target.closest("[data-v]") || ev.target === d) d.close(); }; d.showModal(); return loadThumbs(); }
+    const ph = t.closest("img[data-ph]"); if (ph && ph.src){ const w = open(); if (w) w.document.write(`<img src="${ph.src}" style="max-width:100%">`); }
+  } catch (er){ toast(er.message, true); }
+});
+if (G_MODE) gBoot(); else hBoot();
+</script>
+</body>
+</html>

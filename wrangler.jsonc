@@ -17,6 +17,8 @@
   "vars": {
     "MAIL_RELAY_URL": "https://script.google.com/macros/s/AKfycbwXyT6w5JgPIaW3XX-XbKovyBY1FADZ79wC84JduLHgWndNpgp_UCaB-4KHkzHPo9NiaA/exec"
   },
+  /* Hub Assistant (docs/FEATURE-ai.md): Cloudflare Workers AI — free daily allowance, no API key, no card */
+  "ai": { "binding": "AI" },
   "triggers": { "crons": ["*/2 * * * *"] },
   "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" } ] },
   "migrations": [ { "tag": "v1-emergency-pager", "new_sqlite_classes": ["EmergencyPager"] } ]

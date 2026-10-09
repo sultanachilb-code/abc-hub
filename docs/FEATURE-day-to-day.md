@@ -63,3 +63,11 @@ Changing the date box on an open handover used to re-date that handover (yesterd
 Now the date box opens the handover of the chosen day (today's is created from the last one as usual; a past day opens only if it exists),
 and saving never changes a handover's day. A handover already moved by the old behaviour (all its hand-overs and its creation before its day)
 is put back on the day of its last hand-over the next time today's handover is opened, and today starts from it.
+
+
+## October 2026 additions
+- **Malfunctions found today**: a bar from the time found to the time fixed (still open: striped, up to now). Tap for details.
+- **Security Patrol rounds**: one bar per round with the checkpoints done and issues.
+- **Quick Access Passes**: a green *QP* pin at the approval time (hollow once used at the gate).
+- **Contractor access is information only**: a small grey dot at the time each contractor attended ("Attended 09:12"), no overdue / late alerts, no live highlight. The "still on site" reminder is off (`CON_OVERDUE_ALERTS = "1"` brings it back).
+- **Message of the moment** above the timeline (see FEATURE-moments.md).
