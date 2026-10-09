@@ -18,7 +18,7 @@ export const MOMENT_SEED = [
   { time: "18:00", text: "Evening team, welcome aboard 🌙 · أهلا وسهلا بفريق المسا" },
   { time: "21:30", text: "Almost closing — great work today 👏 · يعطيكم ألف عافية" }
 ];
-const OPS_ROLES = ["ADMIN", "MANAGER", "SUPERVISOR"];   // the operations team (and the admin, to preview)
+const OPS_ROLES = ["ADMIN"];   // admin only (Oct 2026) — add "MANAGER", "SUPERVISOR" to show it to the operations team
 const mins = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 
 async function readAll(env) {

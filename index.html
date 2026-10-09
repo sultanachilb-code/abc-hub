@@ -1268,7 +1268,7 @@ function buildMenu(){
     <button data-a="profile" class="pm-i">${pmIcon("user")}<span>Profile settings<small>Picture, password, appearance, alerts</small></span></button>
     <button data-a="welcome" class="pm-i">${pmIcon("device")}<span>Set up this device<small>Alerts, install, camera, Face ID / Windows Hello</small></span></button>
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
-    <button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>${store.get("hub.season", true) ? "On" : "Off"} · Ramadan, Eid, Christmas, Independence Day…</small></span></button>
+    ${ME.user.role === "ADMIN" ? `<button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>${store.get("hub.season", true) ? "On" : "Off"} · Ramadan, Eid, Christmas, Independence Day…</small></span></button>` : ""}
     <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · Smart cards, Orbit or Glass dock</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
@@ -2175,7 +2175,7 @@ function seasonNow(){
 }
 function paintSeason(){
   const el = $("#season"); if (!el) return;
-  const s = store.get("hub.season", true) ? seasonNow() : null;
+  const s = ME && ME.user && ME.user.role === "ADMIN" && store.get("hub.season", true) ? seasonNow() : null;   // admin only (Oct 2026)
   document.body.dataset.season = s ? s.k : "";
   const chip = $("#seasonChip"); if (chip) chip.remove();
   if (!s){ el.innerHTML = ""; return; }

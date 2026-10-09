@@ -186,7 +186,7 @@ window.HUB = {
     /* Quick Access Pass — one-entry QR for a contractor or visitor, live 30 minutes, sent by WhatsApp (see docs/FEATURE-quick-pass.md). Everyone can open it. */
     { id: "quickpass", name: "Quick Access Pass", desc: "One-entry QR for a contractor or visitor — 30 minutes, sent by WhatsApp", group: "Operations Tools", also: ["Contractor Access"], icon: "qr", color: "#1E8A4C", url: "/tools/quickpass" },
     /* Message of the moment — the admin writes the friendly lines shown above Day to Day (see docs/FEATURE-moments.md) */
-    { id: "moments", name: "Message of the Moment", desc: "Friendly lines above Day to Day for the operations team — with their time", group: "Operations Tools", icon: "megaphone", color: "#B08A2E", url: "/tools/moments" },
+    { id: "moments", name: "Message of the Moment", desc: "Friendly lines above Day to Day (admin only) — with their time", group: "Operations Tools", icon: "megaphone", color: "#B08A2E", url: "/tools/moments" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
     { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Contractor Access", icon: "hardhat", color: "#C07A12", url: "/tools/contractors" },
     /* Loading Gate feature — see docs/FEATURE-gate.md */

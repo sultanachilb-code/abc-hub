@@ -1,6 +1,6 @@
 # Message of the moment
 
-A short friendly line above **Day to Day Operations**, for the operations team (management and the operations team; not Security or leadership).
+A short friendly line above **Day to Day Operations** — shown to the **admin only** (to show it to the operations team, add `"MANAGER", "SUPERVISOR"` to `OPS_ROLES` in `modules/moments.js`).
 
 - The admin writes the messages with their time on the **Message of the Moment** tile (Operations Tools, admin only). English, Lebanese Arabic or both.
 - The newest message whose time has passed is shown until the next message's time.
