@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seasonal Decorations · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Seasonal decorations: the admin chooses each season's design, dates and greeting — see docs/FEATURE-seasons.md -->
+<style>
+.box{padding:12px 16px;margin-bottom:14px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:900px}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px}
+td{padding:8px 5px;border-top:1px solid var(--line);vertical-align:middle}
+td input,td select{font:inherit;font-size:.82rem;padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text)}
+.thumb{width:78px;height:50px;border-radius:10px;background:#2A0F45;display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden}
+.thumb svg{max-height:40px;width:auto}
+.live{font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(46,139,87,.14);color:var(--ok);white-space:nowrap}
+.sw{display:flex;align-items:center;gap:6px;font-weight:700;font-size:.8rem}
+.lead{color:var(--muted);font-size:.86rem;line-height:1.5;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="top"><h1>✦ Seasonal Decorations <small>Admin only</small></h1><label class="sw" style="font-size:.88rem"><input type="checkbox" id="on"> Show decorations</label><button class="btn" id="save">Save</button></div>
+<div class="wrap" style="max-width:1440px">
+  <p class="lead">Pick each season's design and dates. On the home page the decorations hang on gold ropes from the header into the empty white spaces on the left and right, with the greeting next to your name.
+    <b>Preview</b> shows a season on your hub now, for 10 minutes, without waiting for its date. Only you see the decorations.</p>
+  <div class="card box"><table><thead><tr><th></th><th>Season</th><th>Design</th><th>From</th><th>To</th><th>Greeting · English</th><th>Greeting · Arabic</th><th>On</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+    <div style="display:flex;gap:8px;margin:12px 0 4px"><button class="btn ghost small" id="add">+ Add a season</button></div></div>
+</div>
+<script src="common.js"></script>
+<script src="season-art.js"></script>
+<script>
+let S = null;
+const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
+const row = s => `<tr data-id="${esc(s.id || "")}">
+  <td><div class="thumb">${SEASON_ART.thumb(s.design)}</div></td>
+  <td><input class="n" value="${esc(s.name)}" placeholder="e.g. Eid al-Adha" style="width:150px"></td>
+  <td><select class="d">${Object.entries(S.designs).map(([k, t]) => `<option value="${k}" ${k === s.design ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></td>
+  <td><input class="f" type="date" value="${esc(s.from)}"></td><td><input class="t" type="date" value="${esc(s.to)}"></td>
+  <td><input class="en" value="${esc(s.en)}" style="width:150px"></td><td><input class="ar" dir="rtl" value="${esc(s.ar)}" style="width:120px"></td>
+  <td><label class="sw"><input type="checkbox" class="o" ${s.on !== false ? "checked" : ""}>${s.on !== false && s.from <= today && today <= s.to ? ` <span class="live">Now</span>` : ""}</label></td>
+  <td style="white-space:nowrap"><button class="btn ghost small pv">👁 Preview</button> <button class="btn ghost small danger rm" aria-label="Remove">✕</button></td></tr>`;
+const read = () => [...document.querySelectorAll("#rows tr")].map(r => ({ id: r.dataset.id, name: r.querySelector(".n").value.trim(), design: r.querySelector(".d").value,
+  from: r.querySelector(".f").value, to: r.querySelector(".t").value, en: r.querySelector(".en").value.trim(), ar: r.querySelector(".ar").value.trim(), on: r.querySelector(".o").checked }));
+function draw(){ $("#on").checked = S.on !== false; $("#rows").innerHTML = (S.list || []).slice().sort((a, b) => a.from.localeCompare(b.from)).map(row).join(""); }
+async function save(quiet){
+  const list = read();
+  if (list.some(s => s.name && (!s.from || !s.to))) { toast("Give every season a From and a To date", true); return false; }
+  S = await api("admin/seasons", { on: $("#on").checked, list }); draw(); if (!quiet) toast("Saved"); return true;
+}
+document.addEventListener("change", e => { if (e.target.classList.contains("d")) e.target.closest("tr").querySelector(".thumb").innerHTML = SEASON_ART.thumb(e.target.value); });
+document.addEventListener("click", async e => {
+  const t = e.target;
+  try {
+    if (t.id === "save") return save();
+    if (t.id === "add"){ $("#rows").insertAdjacentHTML("beforeend", row({ id: "", name: "", design: "lanterns", from: today, to: today, en: "", ar: "", on: true })); return $("#rows").lastElementChild.querySelector(".n").focus(); }
+    if (t.classList.contains("rm")) return t.closest("tr").remove();
+    if (t.classList.contains("pv")){
+      const tr = t.closest("tr"); if (!tr.querySelector(".n").value.trim()) return toast("Name the season first", true);
+      if (!(await save(true))) return;
+      const s = S.list.find(x => x.name === tr.querySelector(".n").value.trim()) || S.list[0];
+      localStorage.setItem("hub.seasonPreview", JSON.stringify({ id: s.id, until: Date.now() + 10 * 60000 }));
+      (window.top || window).location.href = "/";
+    }
+  } catch (er){ toast(er.message, true); }
+});
+(async () => { try { S = await api("admin/seasons"); draw(); } catch (e){ document.querySelector(".wrap").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; } })();
+</script>
+</body>
+</html>
