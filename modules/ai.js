@@ -22,18 +22,26 @@ async function quota(env, me, day, use) {
   if (use) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, String(n + 1)).run().catch(() => {});
   return n;
 }
-async function ask(env, messages, maxTokens) {
-  if (!env.AI) throw err("The hub's AI is not switched on yet (the AI binding is missing in wrangler.jsonc)", 503);
-  try {
-    const r = await env.AI.run(env.AI_MODEL || AI_MODEL, { messages, max_tokens: maxTokens || 600, temperature: 0.2 });
-    const t = String((r && (r.response || (r.result && r.result.response))) || "").trim();
-    if (!t) throw new Error("empty");
-    return t;
-  } catch (e) {
-    const m = String(e && e.message || e);
-    if (/neuron|quota|limit|4006|exceeded/i.test(m)) throw err("The free AI allowance for today is used up — try again tomorrow (it resets overnight).", 429);
-    throw err("The AI could not answer right now — try again in a minute.", 502);
+const AI_FALLBACK = "@cf/meta/llama-3.2-3b-instruct";   // a second free model, tried once when the first one fails
+const textOf = r => String((r && (typeof r === "string" ? r : r.response || (r.result && r.result.response)
+  || (r.choices && r.choices[0] && (r.choices[0].message && r.choices[0].message.content || r.choices[0].text)))) || "").trim();
+async function ask(env, messages, maxTokens, me) {
+  if (!env.AI) throw err("The hub's AI is not switched on (the AI binding is missing on the Worker — check wrangler.jsonc and redeploy)", 503);
+  const models = [...new Set([env.AI_MODEL || AI_MODEL, AI_FALLBACK])];
+  let last = "";
+  for (const model of models) {
+    try {
+      const t = textOf(await env.AI.run(model, { messages, max_tokens: maxTokens || 600, temperature: 0.2 }));
+      if (t) return t;
+      last = `${model}: empty answer`;
+    } catch (e) {
+      last = `${model}: ${String(e && e.message || e).slice(0, 220)}`;
+      console.error("AI", last);
+      if (/4006|neurons|daily free allocation/i.test(last)) throw err("The free AI allowance for today is used up — try again tomorrow (it resets overnight).", 429);
+    }
   }
+  /* the admin sees Cloudflare's own message, to fix it; everyone else a plain one */
+  throw err(me && me.role === "ADMIN" ? `The AI did not answer — Cloudflare said: ${last}` : "The AI could not answer right now — try again in a minute.", 502);
 }
 
 /* what the hub knows today at one flagship, in short lines — only the parts this person may open */
@@ -97,7 +105,13 @@ export async function aiRoute(env, p, method, b, url, d) {
   const site = d.site;
   if (!d.canSite(me, site)) throw err("No access to this flagship", 403);
   const day = d.today();
-  if (p === "ai/status") return { on: !!env.AI, used: await quota(env, me, day, false), daily: AI_DAILY, model: env.AI_MODEL || AI_MODEL };
+  if (p === "ai/status") {
+    const out = { on: !!env.AI, used: await quota(env, me, day, false), daily: AI_DAILY, model: env.AI_MODEL || AI_MODEL };
+    if (me.role === "ADMIN" && url.searchParams.get("test") === "1") {   // /api/ai/status?test=1 — the admin checks the AI in one tap
+      try { out.test = { ok: true, answer: await ask(env, [{ role: "user", content: "Reply with the single word: ready" }], 10, me) }; } catch (e) { out.test = { ok: false, error: e.message }; }
+    }
+    return out;
+  }
   if (method !== "POST") throw err("Unknown request", 404);
   if (await quota(env, me, day, false) >= AI_DAILY) throw err(`You have asked ${AI_DAILY} questions today — the assistant is back tomorrow.`, 429);
 
@@ -111,7 +125,7 @@ Never invent names, times or numbers. Be short and practical: a few lines or bul
 The person asking: ${me.full_name} (${d.posLabel || me.role}).
 DATA:
 ${facts}`;
-    const answer = await ask(env, [{ role: "system", content: sys }, ...hist], 600);
+    const answer = await ask(env, [{ role: "system", content: sys }, ...hist], 600, me);
     await quota(env, me, day, true);
     return { answer, left: AI_DAILY - (await quota(env, me, day, false)) };
   }
@@ -132,7 +146,7 @@ No greetings, no invented facts, no names of visitors. Keep each bullet under 20
 DATA:
 ${facts}
 ${extra.join("\n")}`;
-    const text = await ask(env, [{ role: "system", content: sys }, { role: "user", content: `Write the shift summary for ${day} at ${d.hm()}.` }], 900);
+    const text = await ask(env, [{ role: "system", content: sys }, { role: "user", content: `Write the shift summary for ${day} at ${d.hm()}.` }], 900, me);
     await quota(env, me, day, true);
     return { text, at: d.hm(), by: me.full_name };
   }
