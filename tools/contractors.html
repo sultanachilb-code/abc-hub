@@ -160,13 +160,15 @@ function visitBox(v){
       <div><label class="lbl">To</label><input class="inp" type="date" id="vTo" value="${esc(v.to && v.to !== v.from ? v.to : "")}"></div>
       <div><label class="lbl">Start</label><input class="inp" type="time" id="vS" value="${esc(v.timeFrom)}"></div>
       <div><label class="lbl">End</label><input class="inp" type="time" id="vE" value="${esc(v.timeTo)}"></div>
+      <div><label class="lbl">Tenant Connect request</label><input class="inp" id="vR" maxlength="20" value="${esc(v.req || "")}" placeholder="REQ-008935 (optional)" ${v.req && v.src !== "manual" ? "readonly" : ""}></div>
+      <div><label class="lbl">&nbsp;</label><small class="muted" style="font-size:.74rem">With the REQ, checking in here also writes “✓ Attended” on its Shift Handover line.</small></div>
       <div class="full"><label class="lbl">Description</label><input class="inp" id="vD" maxlength="500" value="${esc(v.desc)}"></div></div>
       <div id="vErr" style="color:var(--alert);font-size:.84rem;margin-top:8px"></div></div>
     <div class="dlg-f">${v.id ? `<button class="btn ghost danger" id="vDel" style="margin-right:auto">Remove</button>` : ""}<button class="btn ghost" data-x>Cancel</button><button class="btn" id="vOk">Save</button></div>`;
   d.querySelector("[data-x]").onclick = () => d.close();
   (REG ? Promise.resolve(REG) : api(`ops/con/register?site=${site}`).then(r => REG = r)).then(r => { $("#regList").innerHTML = r.list.map(c => `<option value="${esc(c.company)}">`).join(""); }).catch(() => {});
   d.querySelector("#vOk").onclick = async () => {
-    try { await api("ops/con/visit", { site, id: v.id, company: $("#vC").value, tenant: $("#vT").value, work: $("#vW").value, desc: $("#vD").value, from: $("#vF").value, to: $("#vTo").value, timeFrom: $("#vS").value, timeTo: $("#vE").value });
+    try { await api("ops/con/visit", { site, id: v.id, company: $("#vC").value, tenant: $("#vT").value, work: $("#vW").value, desc: $("#vD").value, from: $("#vF").value, to: $("#vTo").value, timeFrom: $("#vS").value, timeTo: $("#vE").value, req: $("#vR").value });
       d.close(); toast("Saved"); REG = null; loadDay(); } catch (e){ $("#vErr").textContent = e.message; }
   };
   const del = d.querySelector("#vDel"); if (del) del.onclick = async () => { d.close(); if (!await confirmBox("Remove this visit?", esc(v.company), "Remove")) return;

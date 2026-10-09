@@ -97,7 +97,7 @@ export async function backupData(env) {
   for (const { name } of results || []) {
     if (SKIP_TABLES.has(name)) continue;
     const rows = (await env.DB.prepare(`SELECT * FROM "${name}"`).all()).results || [];
-    out.tables[name] = name === "users" ? rows.map(({ salt, hash, iterations, ...u }) => u) : name === "meta" ? rows.filter(r => r.k !== "vapid") : rows;
+    out.tables[name] = name === "users" ? rows.map(({ salt, hash, iterations, ...u }) => u) : name === "meta" ? rows.filter(r => r.k !== "vapid" && !/^gate:sftoken$/.test(r.k)).map(r => /^patrol:cfg:/.test(r.k) ? { ...r, v: (() => { try { const c = JSON.parse(r.v); delete c.key; return JSON.stringify(c); } catch { return ""; } })() } : r) : rows;   // no guards' link key in Drive
   }
   return out;
 }

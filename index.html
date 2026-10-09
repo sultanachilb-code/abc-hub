@@ -322,6 +322,69 @@ main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1e
 .d2d-dot:hover span{color:var(--text)} .d2d-dot.nolbl span{display:none}
 .d2d-dot.on{--dc:#C07A12} .d2d-dot.exp{--dc:#C07A12} .d2d-dot.exp i{background:var(--surface);color:#C07A12} .d2d-dot.left{--dc:#8C8398} .d2d-dot.left span{opacity:.7}
 .d2d-dot.over{--dc:var(--alert)} .d2d-dot.over span{color:var(--alert)}
+.season{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.masthead > .mh-inner{position:relative;z-index:1}
+.season svg{position:absolute}
+.season .sz-r{right:0;top:0;height:100%;width:min(320px,45%);opacity:.9}
+.season .sz-f{inset:0;width:100%;height:100%}
+.season .sz-b{left:0;right:0;bottom:-2px;width:100%;height:26px}
+.season .sw{animation:szSw 4s ease-in-out infinite}
+.season .glow{animation:szG 2.4s ease-in-out infinite}
+.season .tw{animation:szT 3s ease-in-out infinite}
+.season .bl{animation:szG 1.6s ease-in-out infinite}
+.season .sun{animation:szR 30s linear infinite}
+.season .fw{animation:szF 2.7s ease-out infinite;opacity:0}
+.season .ht{animation:szU 7s linear infinite;opacity:0}
+.season .sz-st{position:absolute;left:0;right:0;bottom:0;height:5px;display:flex}.season .sz-st i{flex:1}.season .sz-st i:nth-child(1),.season .sz-st i:nth-child(3){background:#E5484D}.season .sz-st i:nth-child(2){background:#fff}
+.season-chip{background:rgba(243,213,126,.18)!important;color:#FBE7A8!important}
+@keyframes szSw{50%{transform:rotate(4deg)}}
+@keyframes szG{50%{opacity:.35}}
+@keyframes szT{50%{opacity:.15}}
+@keyframes szR{to{transform:rotate(360deg)}}
+@keyframes szF{0%{opacity:0;transform:scale(.2)}20%{opacity:1}100%{opacity:0;transform:scale(1.4)}}
+@keyframes szU{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-90px)}}
+@media (prefers-reduced-motion:reduce){.season *{animation:none!important}.season .fw,.season .ht{opacity:.8}}
+@media (max-width:600px){.season .sz-r{width:52%;opacity:.55}}
+.aic{position:fixed;right:18px;bottom:18px;width:min(420px,calc(100vw - 24px));height:min(620px,calc(100dvh - 90px));z-index:90;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 60px rgba(20,8,34,.35);overflow:hidden;opacity:0;transform:translateY(16px) scale(.98);pointer-events:none;transition:opacity .2s,transform .25s}
+.aic.on{opacity:1;transform:none;pointer-events:auto}
+.aic-h{display:flex;align-items:center;gap:10px;padding:14px 14px 12px;background:linear-gradient(120deg,#2A0F45,#5B2A86);color:#fff}
+.aic-h b{display:block;font-size:.98rem}.aic-h small{display:block;font-size:.72rem;opacity:.75}
+.aic-l{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,#7B4BB0,#B08A2E);font-size:1.1rem}
+.aic-h select{margin-left:auto;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:9px;padding:5px 6px;font:inherit;font-size:.76rem;max-width:140px}
+.aic-h select option{color:#000}
+.aic-x{margin-left:6px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff}
+.aic-h select + .aic-x{margin-left:6px}.aic-h > div + .aic-x{margin-left:auto}
+.aic-b{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.aic-m{max-width:88%;padding:10px 13px;border-radius:16px;font-size:.88rem;line-height:1.5;white-space:normal;word-wrap:break-word}
+.aic-m.user{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:5px}
+.aic-m.assistant{align-self:flex-start;background:var(--paper);border-bottom-left-radius:5px}
+.aic-m.typing{display:flex;gap:4px}.aic-m.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:aicT 1s infinite}
+.aic-m.typing i:nth-child(2){animation-delay:.15s}.aic-m.typing i:nth-child(3){animation-delay:.3s}
+@keyframes aicT{50%{transform:translateY(-4px);opacity:.4}}
+.aic-hi b{display:block;font-size:.95rem}.aic-hi small{display:block;color:var(--muted);font-size:.8rem;margin-top:4px;line-height:1.45}
+.aic-sg{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.aic-sg button{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:700;color:var(--brand-2)}
+.aic-f{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.aic-f textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:.9rem;background:var(--surface);color:var(--text);max-height:110px}
+.aic-s{width:44px;border-radius:14px;background:var(--brand);color:#fff;font-size:1rem}
+@media (max-width:600px){.aic{right:0;left:0;bottom:0;width:100%;height:calc(100dvh - 60px);border-radius:22px 22px 0 0}}
+.moment{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:14px 46px 16px 18px;border-radius:20px;color:#fff;
+  background:linear-gradient(120deg,#2A0F45 0%,#5B2A86 55%,#B08A2E 140%);box-shadow:0 10px 28px rgba(42,15,69,.18);animation:moIn .55s cubic-bezier(.2,.9,.3,1.2)}
+.moment .mo-sp{font-size:1.5rem;color:#F3D57E;animation:moSp 3s ease-in-out infinite;flex:none}
+.moment small{display:block;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.moment p{font-size:1rem;font-weight:700;line-height:1.4;margin:2px 0 0}
+.moment .mo-x{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:.8rem}
+.moment .mo-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:#F3D57E;transform-origin:left;animation:moBar linear forwards}
+@keyframes moIn{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+@keyframes moSp{50%{transform:rotate(20deg) scale(1.2);opacity:.7}}
+@keyframes moBar{to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.moment,.moment .mo-sp{animation:none}}
+.d2d-dot.info{--dc:#8C8398} .d2d-dot.info i{width:14px;height:14px;border-width:2px;font-size:.5rem}   /* contractor access: quiet, information only */
+.d2d-dot.qp{--dc:#1E8A4C} .d2d-dot.qp i{border-radius:6px;font-size:.5rem;width:22px} .d2d-dot.qp.used i{background:var(--surface);color:#1E8A4C}
+.d2d-b.mfopen{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 8px,transparent 8px 16px);animation:mfB 2.4s ease-in-out infinite}
+.d2d-b.mfdone{opacity:.7}
+@keyframes mfB{50%{filter:brightness(1.15)}}
+@media (prefers-reduced-motion:reduce){.d2d-b.mfopen{animation:none}}
 .d2d-dl.close{--dc:#8E2B2B;background:rgba(142,43,43,.1)}
 .d2d-plist{max-height:260px;overflow:auto;margin-top:8px;display:grid;gap:8px}
 .d2d-plist>div{border:1px solid var(--line);border-radius:12px;padding:8px 10px}.d2d-plist b{font-size:.84rem}.d2d-plist p{margin:2px 0 4px}
@@ -820,6 +883,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
 <!-- HOME -->
 <div id="home" class="view hidden">
   <header class="masthead">
+    <div class="season" id="season" aria-hidden="true"></div>
     <div class="mh-inner">
       <div class="brandmark">
         <div class="tfab" id="tfab">
@@ -1102,11 +1166,13 @@ function startHub(){
   $("#greet").innerHTML = `${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(first)}` +
     `<span class="chip">${esc(ME.user.positionLabel || ME.user.roleLabel)}${["DIRECTOR", "CDSO"].includes(ME.user.role) ? " · " + esc(ME.user.sitesLabel) : ME.user.siteName ? " · " + esc(ME.user.siteName) : ""}</span>`;
   paintAvatar();
+  paintSeason();   // Seasonal themes
   $("#foot").textContent = `${H.org} · ${APPS.length} systems available to you`;
   buildMenu();
   renderHome();
   loadAnnouncements();
   loadBrief();
+  loadMoment(); setInterval(loadMoment, 5 * 60000);   // Message of the moment
   loadHealth();
   loadNotifications();
   buildToolsMenu();
@@ -1202,6 +1268,7 @@ function buildMenu(){
     <button data-a="profile" class="pm-i">${pmIcon("user")}<span>Profile settings<small>Picture, password, appearance, alerts</small></span></button>
     <button data-a="welcome" class="pm-i">${pmIcon("device")}<span>Set up this device<small>Alerts, install, camera, Face ID / Windows Hello</small></span></button>
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
+    <button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>${store.get("hub.season", true) ? "On" : "Off"} · Ramadan, Eid, Christmas, Independence Day…</small></span></button>
     <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · Smart cards, Orbit or Glass dock</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
@@ -1220,6 +1287,7 @@ function buildMenu(){
     if (a === "profile") profileSheet();
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));
+    if (a === "season"){ store.set("hub.season", !store.get("hub.season", true)); paintSeason(); return m._paint(); }
     if (a === "layout"){ const i = HL_KINDS.findIndex(k => k[0] === HL); hlSetLayout(HL_KINDS[(i + 1) % HL_KINDS.length][0]); m._paint(); setTimeout(() => { const sw = $("#hlSw"); if (sw) sw.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50); }   // each tap moves to the next layout
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
@@ -1709,15 +1777,54 @@ const AI_TOOLS = [
 ];
 function buildAiMenu(){
   const m = $("#aiMenu");
-  m.innerHTML = `<div class="who"><b>AI assistants</b><small>Opens in its own window</small></div>` +
+  m.innerHTML = `<div class="who"><b>AI assistants</b><small>Hub Assistant answers from the hub's data</small></div>
+    <button data-ai="hub" class="ai-i"><span class="ai-dot" style="background:linear-gradient(135deg,#4A1F73,#B08A2E)">✦</span><span>Hub Assistant<small>Ask about today · English / عربي</small></span></button>` +
     AI_TOOLS.map(t => `<button data-ai="${t.id}" class="ai-i"><span class="ai-dot" style="background:${t.bg}">${t.mark}</span><span>${esc(t.name)}<small>${esc(t.by)}</small></span></button>`).join("");
   $("#aiBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.add("hidden"); $("#npanel").classList.add("hidden"); placePops($("#aiBtn")); m.classList.toggle("hidden"); };
   m.onclick = e => {
     const b = e.target.closest("[data-ai]"); if (!b) return;
     e.stopPropagation(); m.classList.add("hidden");
+    if (b.dataset.ai === "hub") return aiChat();
     const t = AI_TOOLS.find(x => x.id === b.dataset.ai);
     openWindow(t.url, "ai_" + t.id);
   };
+}
+
+/* ---------- Hub Assistant: free AI chat over the hub's data (see docs/FEATURE-ai.md) ---------- */
+const AIC = { msgs: [], busy: false, site: "" };
+const AI_SUGGEST = ["What is still open today?", "Which contractors attended today?", "Any malfunctions still open?", "شو صار بالدورية اليوم؟"];
+function aiChat(){
+  let p = $("#aiChat");
+  if (!p){ p = document.createElement("div"); p.id = "aiChat"; p.className = "aic"; document.body.append(p); }
+  AIC.site = AIC.site || D2D.site || ME.user.site || Object.keys(sitesOfMe())[0] || "";
+  const sites = sitesOfMe();
+  p.innerHTML = `<div class="aic-h"><span class="aic-l">✦</span><div><b>Hub Assistant</b><small>Answers from the hub · free AI</small></div>
+      ${Object.keys(sites).length > 1 ? `<select id="aicSite">${Object.entries(sites).map(([c, n]) => `<option value="${esc(c)}" ${c === AIC.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}
+      <button class="aic-x" id="aicX" aria-label="Close">✕</button></div>
+    <div class="aic-b" id="aicB"></div>
+    <form class="aic-f" id="aicF"><textarea id="aicQ" rows="1" dir="auto" placeholder="Ask about today… · اسأل عن اليوم"></textarea><button class="aic-s" aria-label="Send">➤</button></form>`;
+  aiDraw(); p.classList.add("on"); setTimeout(() => $("#aicQ").focus(), 60);
+  $("#aicX").onclick = () => p.classList.remove("on");
+  const ss = $("#aicSite"); if (ss) ss.onchange = e => { AIC.site = e.target.value; AIC.msgs = []; aiDraw(); };
+  $("#aicF").onsubmit = e => { e.preventDefault(); aiSend($("#aicQ").value); };
+  $("#aicQ").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); aiSend($("#aicQ").value); } };
+}
+function sitesOfMe(){ return (D2D.data && D2D.data.sites) || (ME.user.site ? { [ME.user.site]: ME.user.siteName } : SITES || {}); }
+function aiDraw(){
+  const b = $("#aicB"); if (!b) return;
+  b.innerHTML = (AIC.msgs.length ? "" : `<div class="aic-hi"><b>Ask me about today at the flagship</b><small>Shifts, handover, contractors, malfunctions, patrol, tenant feedback, meetings and contracts — only what you can see in the hub.</small>
+      <div class="aic-sg">${AI_SUGGEST.map(q => `<button data-q="${esc(q)}" dir="auto">${esc(q)}</button>`).join("")}</div></div>`)
+    + AIC.msgs.map(m => `<div class="aic-m ${m.role}" dir="auto">${esc(m.content).replace(/\n/g, "<br>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>`).join("")
+    + (AIC.busy ? `<div class="aic-m assistant typing"><i></i><i></i><i></i></div>` : "");
+  b.scrollTop = b.scrollHeight;
+  b.querySelectorAll("[data-q]").forEach(x => x.onclick = () => aiSend(x.dataset.q));
+}
+async function aiSend(q){
+  q = String(q || "").trim(); if (!q || AIC.busy) return;
+  AIC.msgs.push({ role: "user", content: q }); AIC.busy = true; const qa = $("#aicQ"); if (qa) qa.value = ""; aiDraw();
+  try { const r = await api("ai/chat", { site: AIC.site, messages: AIC.msgs }); AIC.msgs.push({ role: "assistant", content: r.answer }); }
+  catch (e){ AIC.msgs.push({ role: "assistant", content: "⚠ " + e.message, err: true }); }
+  AIC.busy = false; aiDraw();
 }
 
 function changePwDialog(){
@@ -2045,6 +2152,70 @@ function openFolder(g, fromEl){
 }
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").classList.contains("on")) $("#folderOv").onkeydown(e); });
 
+/* ---------- Seasonal themes: automatic by date (Hijri months from the browser's Umm al-Qura calendar; Easter computed) — see docs/FEATURE-seasons.md ---------- */
+function easterWest(y){ const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30,
+  i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), dy = ((h + l - 7 * m + 114) % 31) + 1; return Date.UTC(y, mo - 1, dy); }
+function easterEast(y){ const a = y % 4, b = y % 7, c = y % 19, d = (19 * c + 15) % 30, e = (2 * a + 4 * b - d + 34) % 7, mo = Math.floor((d + e + 114) / 31), dy = ((d + e + 114) % 31) + 1;
+  return Date.UTC(y, mo - 1, dy) + 13 * 864e5; }   /* Julian date + 13 days (1900–2099) */
+function seasonNow(){
+  const now = new Date(), md = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", month: "2-digit", day: "2-digit" }).format(now), y = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", year: "numeric" }).format(now));
+  let hm = 0, hd = 0; try { const p = Object.fromEntries(new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { timeZone: "Asia/Beirut", month: "numeric", day: "numeric" }).formatToParts(now).map(x => [x.type, x.value])); hm = +p.month; hd = +p.day; } catch {}
+  const today = Date.UTC(y, +md.slice(0, 2) - 1, +md.slice(3)), near = (e, a, b) => today >= e - a * 864e5 && today <= e + b * 864e5;
+  if (hm === 10 && hd <= 3) return { k: "eid", t: "Eid Mubarak", ar: "عيد مبارك", e: "🌙" };
+  if (hm === 12 && hd >= 9 && hd <= 13) return { k: "eid", t: "Eid al-Adha Mubarak", ar: "عيد أضحى مبارك", e: "🌙" };
+  if (hm === 9) return { k: "ramadan", t: "Ramadan Kareem", ar: "رمضان كريم", e: "🌙" };
+  if (near(easterWest(y), 2, 1) || near(easterEast(y), 2, 1)) return { k: "easter", t: "Happy Easter", ar: "فصح مجيد", e: "🌷" };
+  if (md >= "12-31" || md <= "01-02") return { k: "newyear", t: "Happy New Year", ar: "سنة سعيدة", e: "✨" };
+  if (md >= "12-01" || md <= "01-06") return { k: "christmas", t: "Happy Holidays", ar: "ميلاد مجيد", e: "🎄" };
+  if (md >= "11-21" && md <= "11-23") return { k: "independence", t: "Happy Independence Day", ar: "عيد استقلال سعيد", e: "🇱🇧" };
+  if (md >= "02-13" && md <= "02-14") return { k: "valentine", t: "Happy Valentine's", ar: "عيد عشاق سعيد", e: "❤" };
+  if (md === "03-21") return { k: "mothers", t: "Happy Mother's Day", ar: "عيد أم سعيد", e: "💐" };
+  if (md >= "07-01" && md <= "08-31") return { k: "summer", t: "Summer at ABC", ar: "صيف حلو", e: "☀" };
+  return null;
+}
+function paintSeason(){
+  const el = $("#season"); if (!el) return;
+  const s = store.get("hub.season", true) ? seasonNow() : null;
+  document.body.dataset.season = s ? s.k : "";
+  const chip = $("#seasonChip"); if (chip) chip.remove();
+  if (!s){ el.innerHTML = ""; return; }
+  const lantern = (x, d, h) => `<g class="sw" style="transform-origin:${x}px 0;animation-delay:${d}s"><line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="#E8C66A" stroke-width="1.2"/>
+    <path d="M${x - 7} ${h + 4}h14l-3 -4h-8z" fill="#E8C66A"/><rect x="${x - 8}" y="${h + 4}" width="16" height="20" rx="5" fill="rgba(232,198,106,.25)" stroke="#E8C66A" stroke-width="1.4"/>
+    <ellipse cx="${x}" cy="${h + 14}" rx="3.5" ry="5.5" fill="#FFD978" class="glow"/><path d="M${x - 5} ${h + 24}h10l-2 4h-6z" fill="#E8C66A"/></g>`;
+  const stars = n => [...Array(n)].map((_, i) => `<circle class="tw" cx="${(i * 97) % 100}%" cy="${10 + (i * 37) % 70}%" r="${1 + (i % 3) * .6}" fill="#FFE9A8" style="animation-delay:${(i % 7) * .4}s"/>`).join("");
+  const art = {
+    ramadan: `<svg class="sz-r" viewBox="0 0 240 90">${lantern(40, 0, 26)}${lantern(110, .7, 40)}${lantern(180, 1.4, 20)}<path d="M222 22a16 16 0 1 0 6 30 13 13 0 1 1-6-30z" fill="#F3D57E"/></svg><svg class="sz-f">${stars(18)}</svg>`,
+    eid: `<svg class="sz-r" viewBox="0 0 240 90"><path d="M200 18a20 20 0 1 0 8 38 16 16 0 1 1-8-38z" fill="#F3D57E"/>${lantern(130, .3, 22)}</svg><svg class="sz-f">${stars(26)}</svg>`,
+    christmas: `<svg class="sz-b" preserveAspectRatio="none" viewBox="0 0 1000 30"><path d="M0 4 Q125 26 250 4 T500 4 T750 4 T1000 4" fill="none" stroke="#2F5A3A" stroke-width="2"/>
+      ${[...Array(24)].map((_, i) => { const x = 20 + i * 41, yy = 4 + 14 * Math.abs(Math.sin((x / 250) * Math.PI)); return `<circle class="bl" cx="${x}" cy="${yy + 6}" r="4" fill="${["#E5484D", "#F3D57E", "#3FB27F", "#5AA0F0"][i % 4]}" style="animation-delay:${(i % 5) * .3}s"/>`; }).join("")}</svg><svg class="sz-f">${stars(10)}</svg>`,
+    newyear: `<svg class="sz-f">${stars(30)}</svg><svg class="sz-f" viewBox="0 0 1000 120" preserveAspectRatio="xMaxYMid slice">${[[720, 40, "#F3D57E"], [840, 74, "#E5484D"], [930, 34, "#7FD1FF"]].map(([cx, cy, c], i) =>
+      `<g class="fw" style="animation-delay:${i * .9}s;transform-origin:${cx}px ${cy}px">${[...Array(10)].map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${cx + Math.round(Math.cos(k * .628) * 26)}" y2="${cy + Math.round(Math.sin(k * .628) * 26)}" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>`).join("")}</g>`).join("")}</svg>`,
+    independence: `<svg class="sz-r" viewBox="0 0 240 90"><g transform="translate(180 8)"><path d="M30 6 L48 26 H38 L56 44 H40 L60 64 H0 L20 44 H4 L22 26 H12 Z" fill="#2E8B57"/><rect x="26" y="64" width="8" height="12" fill="#8A5A1F"/></g></svg>
+      <div class="sz-st"><i></i><i></i><i></i></div>`,
+    summer: `<svg class="sz-r" viewBox="0 0 240 90"><g class="sun" style="transform-origin:200px 34px">${[...Array(12)].map((_, k) => `<line x1="200" y1="34" x2="${200 + Math.cos(k * .5236) * 30}" y2="${34 + Math.sin(k * .5236) * 30}" stroke="#F3D57E" stroke-width="2.5" stroke-linecap="round"/>`).join("")}</g><circle cx="200" cy="34" r="15" fill="#F7C948"/></svg>`,
+    valentine: `<svg class="sz-f">${[...Array(10)].map((_, i) => `<text class="ht" x="${8 + i * 9.5}%" y="95%" style="animation-delay:${i * .7}s" font-size="${12 + (i % 3) * 5}" fill="#FF8FA3">❤</text>`).join("")}</svg>`,
+    mothers: `<svg class="sz-f">${[...Array(8)].map((_, i) => `<text class="ht" x="${10 + i * 11}%" y="95%" style="animation-delay:${i * .8}s" font-size="16">${["🌷", "🌸", "💐"][i % 3]}</text>`).join("")}</svg>`,
+    easter: `<svg class="sz-r" viewBox="0 0 240 90">${[150, 180, 210].map((x, i) => `<ellipse cx="${x}" cy="60" rx="11" ry="15" fill="${["#F7B2D9", "#A7E3C9", "#FFE08A"][i]}" class="sw" style="transform-origin:${x}px 75px;animation-delay:${i * .5}s"/>`).join("")}</svg>`
+  }[s.k] || "";
+  el.innerHTML = art;
+  const g = $("#greet"); if (g) g.insertAdjacentHTML("beforeend", `<span class="chip season-chip" id="seasonChip">${s.e} ${esc(s.t)} · <span dir="rtl">${esc(s.ar)}</span></span>`);
+}
+
+/* ---------- Message of the moment: a friendly line above Day to Day for the operations team, 5 minutes per person (see docs/FEATURE-moments.md) ---------- */
+const MOM = { m: null, t: 0 };
+const momKey = m => `hub.moment.${new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date())}.${m.id}`;
+async function loadMoment(){ try { MOM.m = (await api("moment")).moment; } catch { MOM.m = null; } paintMoment(); }
+function momentLeft(mark){ const m = MOM.m; if (!m) return 0; let t = store.get(momKey(m), 0); if (!t && mark){ t = Date.now(); store.set(momKey(m), t); } return t ? Math.max(0, t + m.minutes * 60000 - Date.now()) : m.minutes * 60000; }
+function momentHtml(){
+  const m = MOM.m; if (!m) return "";
+  const left = momentLeft(true); if (!left) return "";
+  clearTimeout(MOM.t); MOM.t = setTimeout(paintMoment, left + 200);
+  return `<section class="moment" role="status"><span class="mo-sp" aria-hidden="true">✦</span><div class="mo-tx"><small>Message of the moment · ${esc(m.time)}</small><p dir="auto">${esc(m.text)}</p></div>
+    <button class="mo-x" id="moX" aria-label="Close">✕</button><i class="mo-bar" style="animation-duration:${Math.round(left / 1000)}s"></i></section>`;
+}
+function paintMoment(){ const sl = $("#momentSlot"); if (sl) sl.innerHTML = momentHtml(); }
+document.addEventListener("click", e => { if (e.target.id === "moX" && MOM.m){ store.set(momKey(MOM.m), 1); paintMoment(); } });
+
 /* ---------- Day to Day Operations: today's live timeline above Leadership (see docs/FEATURE-day-to-day.md) ---------- */
 const DAY_GROUP = "Day to Day Operations";
 const D2D = { data: null, err: "", site: store.get("hub.d2dSite", ""), scrolled: false, t: 0 };
@@ -2097,14 +2268,25 @@ function d2dHtml(){
   let ci = 0;
   const shiftBars = [...groups.values()].sort((a, b) => hmM(a.from) - hmM(b.from)).map(g => ({ t: "shift", from: g.from, to: g.to, carry: g.carry, g,
     c: SH_COL[g.carry ? 2 : (ci++ % SH_COL.length)], label: `${g.carry ? "→ " + g.to : g.from + "–" + (g.to === "24:00" ? "00:00" : g.to)} · ${g.people.map(p => p.first).join(", ")}` }));
-  /* contractors: one dot at the time each permit ends ("Tenant - Contractor"); several at the same time share one dot */
-  const conG = new Map();
-  if (has("contractors") && D.contractors) for (const v of D.contractors){ const t = v.to || "18:00"; if (!conG.has(t)) conG.set(t, []); conG.get(t).push(v); }
+  /* contractor access — information only: one small dot at the time each contractor attended ("Attended 09:12"); several within 20 minutes share one dot */
   const mm0 = m => `${String(Math.min(23, Math.floor(m / 60))).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-  const conDots = [...conG.entries()].map(([t, L]) => ({ t: "cdot", at: t, L, from: t, lbl: L.length > 1 ? 14 : `${L[0].tenant || ""} - ${L[0].company}`.length,
-    st: L.some(v => v.overdue) ? "over" : L.some(v => v.state === "onsite") ? "on" : L.every(v => v.state === "left") ? "left" : "exp",
-    label: L.length > 1 ? `${L.length} contractors` : `${L[0].tenant && L[0].tenant !== L[0].company ? L[0].tenant + " - " : ""}${L[0].company}` }))
+  const conG = [];
+  if ((has("contractors") || has("contractor-access")) && D.contractors) for (const v of D.contractors.filter(v => v.inAt && v.src !== "quickpass").sort((a, b) => hmM(a.inAt) - hmM(b.inAt))){
+    const g = conG.find(x => Math.abs(hmM(x.at) - hmM(v.inAt)) <= 20); if (g) g.L.push(v); else conG.push({ at: v.inAt, L: [v] }); }
+  const conDots = conG.map(({ at, L }) => ({ t: "cdot", at, L, from: at, lbl: L.length > 1 ? 16 : `${L[0].tenant || ""} - ${L[0].company}`.length + 9, st: "info",
+    label: L.length > 1 ? `${L.length} attended` : `Attended ${at} · ${L[0].tenant && L[0].tenant !== L[0].company ? L[0].tenant + " - " : ""}${L[0].company}` }))
     .map(d => ({ ...d, to: mm0(Math.min(1439, hmM(d.at) + 25 + d.lbl * 9)) }));   // room for the label (≈9 min a letter on a phone)
+  /* Quick Access Passes: a pin at the time each pass was approved */
+  const qpDots = (D.quickPasses || []).map(q => ({ t: "qp", q, at: q.at, from: q.at, label: `Quick Pass · ${q.name}` })).map(d => ({ ...d, to: mm0(Math.min(1439, hmM(d.at) + 25 + d.label.length * 9)) }));
+  /* Malfunctions found today: a bar from the time found to the time fixed — still open runs to now */
+  const MF_C = { Critical: "#B3261E", High: "#C2410C", Medium: "#B5452B", Low: "#8C6B5A" };
+  const mfBars = has("malfunctions") ? (D.malfunctions || []).map(m => { const open = !m.fixed, to = m.to || now;
+    return { t: "mf", m, from: m.from, to: mm0(Math.max(hmM(to), hmM(m.from) + 45)), c: MF_C[m.priority] || MF_C.Medium, cls: open ? "mfopen" : "mfdone",
+      label: `${open ? "⚠ " : "✓ "}${m.what}${m.location ? " · " + m.location : ""}${open ? " · still open" : ""}` }; }) : [];
+  /* Security Patrol rounds: one bar per round with the checkpoints done */
+  const ptBars = has("patrol") ? (D.patrol || []).map(r => { const full = r.total && r.done >= r.total, over = nm > hmM(r.to), on = nm >= hmM(r.from) && !over;
+    return { t: "pt", r, from: r.from, to: r.to, c: full ? "#2E8B57" : over ? "#C0392B" : on ? "#C07A12" : "#5B4A78", cls: on && !full ? "pulse" : "",
+      label: `🛡 ${r.name} · ${r.done}/${r.total}${r.issues ? ` · ${r.issues} issue${r.issues === 1 ? "" : "s"}` : ""}` }; }) : [];
   const conBars = [];
   /* tenants on their final operating day — a flag at mall closing */
   const tcBars = (D.closing || []).map(c => ({ t: "tc", c, st: "close", from: mm0(Math.max(0, hmM(c.at) - 200)), to: c.at, label: `${c.brand} · final operating day ${c.at}` }));
@@ -2114,13 +2296,13 @@ function d2dHtml(){
     c: x.kind === "mom" ? "#8A5A1F" : x.kind === "marketing" ? "#C2185B" : "#2F6F7E", label: (x.kind === "mom" ? "MOM · " : "") + x.title }));
   const allDay = [...(has("mom") ? D.meetings : []), ...D.events].filter(x => !x.from);
   /* hours shown: from 06:00 (earlier if needed) to midnight */
-  const all = [...shiftBars, ...conBars, ...evBars];
+  const all = [...shiftBars, ...conBars, ...evBars, ...mfBars, ...ptBars];
   const h0 = Math.min(6, ...all.filter(b => !b.carry).map(b => Math.floor(hmM(b.from) / 60))), h1 = 24, span = (h1 - h0) * 60;
   const hs = String(h0).padStart(2, "0") + ":00";
   all.forEach(b => { if (hmM(b.from) < h0 * 60) b.from = hs; });   // last night's shift: shown from the left edge
   const X = t => ((hmM(t) - h0 * 60) / span * 100).toFixed(3) + "%";
   const W = (a, b) => `calc(${((hmM(b) - hmM(a)) / span * 100).toFixed(3)}% - 3px)`;
-  const bar = (b, i) => { const past = b.t === "con" ? b.v.state === "left" : b.t === "rr" ? ["done", "past"].includes(b.st) : hmM(b.to) <= nm, cur = hmM(b.from) <= nm && nm < hmM(b.to);
+  const bar = (b, i) => { const past = b.t === "pt" ? false : b.t === "mf" ? !b.m.fixed ? false : true : b.t === "con" ? b.v.state === "left" : b.t === "rr" ? ["done", "past"].includes(b.st) : hmM(b.to) <= nm, cur = hmM(b.from) <= nm && nm < hmM(b.to);
     return `<button class="d2d-b ${b.cls || ""} ${b.carry ? "carry" : ""} ${past ? "past" : cur && b.t === "shift" ? "now" : ""}" data-b="${i}" style="left:${X(b.from)};width:${W(b.from, b.to)};--c:${b.c}" title="${esc(b.label)}">${esc(b.label)}</button>`; };
   const BARS = []; const lane = (rows, gap) => rows.map((r, k) => `<div class="d2d-ln ${gap && k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b); return bar(b, BARS.length - 1); }).join("")}</div>`).join("");
   /* reminders: restroom windows + deadlines (AM / PM checklist, AM / PM handover) */
@@ -2138,6 +2320,10 @@ function d2dHtml(){
   if (rrBars.length) lanes += lane([rrBars], false);
   if (dlBars.length) lanes += d2dPack(dlBars, 3).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl ${b.st}" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">${esc(b.label)}</button>`; }).join("")}</div>`).join("");
   if (has("schedule")) lanes += lane(d2dPack(shiftBars, 4), !!lanes);
+  if (mfBars.length) lanes += lane(d2dPack(mfBars, 3), !!lanes);
+  if (ptBars.length) lanes += lane([ptBars], !mfBars.length && !!lanes);
+  if (qpDots.length) lanes += d2dPack(qpDots, 2).map((r, k) => `<div class="d2d-ln ${k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b);
+    return `<button class="d2d-dot qp ${b.q.usedAt ? "used" : ""}" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>QP</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
   if (conDots.length) lanes += d2dPack(conDots, 3).map((r, k) => `<div class="d2d-ln ${k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b);
     return `<button class="d2d-dot ${b.st} ${b.over ? "nolbl" : ""}" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>${b.L.length > 1 ? b.L.length : ""}</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
   /* Loading Gate: contractors refused at the gate — a red ✕ at the time of the scan (several in the same 20 min share one mark) */
@@ -2145,7 +2331,7 @@ function d2dHtml(){
     const g = gRef.find(x => Math.abs(hmM(x.at) - hmM(r.at)) <= 20); if (g) g.L.push(r); else gRef.push({ t: "gref", at: r.at, L: [r] }); }
   const gBars = gRef.map(g => ({ ...g, from: g.at, to: mm0(Math.min(1439, hmM(g.at) + 25 + 14 * 9)), label: g.L.length > 1 ? `${g.L.length} refused at the gate` : `Refused · ${g.L[0].contractor || g.L[0].tenant || g.L[0].req}` }));
   if (gBars.length) lanes += d2dPack(gBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b);
-    return `<button class="d2d-dot over gref" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>✕</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
+    return `<button class="d2d-dot info gref" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>✕</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
   if (tcBars.length) lanes += d2dPack(tcBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl close" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">🏁 ${esc(b.label)}</button>`; }).join("")}</div>`).join("");
   if (evBars.length) lanes += lane(d2dPack(evBars, 2), true);
   if (!lanes) lanes = `<div class="d2d-ln"></div>`;
@@ -2156,11 +2342,11 @@ function d2dHtml(){
   const hours = [...Array(h1 - h0)].map((_, i) => `<span class="${h0 + i >= 12 ? "pm" : ""}">${String(h0 + i).padStart(2, "0")}</span>`).join("");
   const offTxt = D.off.length ? `<span>Off / leave: <b>${esc(D.off.map(o => o.name.split(" ")[0] + " (" + o.code + ")").join(", "))}</b></span>` : "";
   const chips = allDay.map(x => `<span>${x.kind === "mom" ? "Meeting" : x.kind === "marketing" ? "Event" : "Activity"}: <b>${esc(x.title)}</b></span>`).join("") + offTxt;
-  const empty = !all.length && !rrBars.length && !dlBars.length && !conDots.length && !tcBars.length ? `<p class="brief-empty" style="position:absolute;left:16px;top:44px;font-size:.82rem">Nothing on today's schedule yet — add the shifts in Operations Schedule.</p>` : "";
+  const empty = !all.length && !rrBars.length && !dlBars.length && !conDots.length && !tcBars.length && !qpDots.length ? `<p class="brief-empty" style="position:absolute;left:16px;top:44px;font-size:.82rem">Nothing on today's schedule yet — add the shifts in Operations Schedule.</p>` : "";
   return `<section class="d2d" id="d2d">${head}${chips ? `<div class="d2d-day">${chips}</div>` : ""}
     <div class="d2d-sc"><div class="d2d-tr" style="--n:${h1 - h0};--mw:${(h1 - h0) * 46}px"><div class="d2d-hr">${hours}</div>${lanes}${pins}${empty}
       <div class="d2d-now" style="left:${X(now)}"><b>NOW ${esc(now)}</b></div></div></div>
-    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#C07A12"></i>Contractor permit ends</span>` : ""}${gBars.length ? `<span><i class="pn" style="background:#C0392B"></i>Refused at the gate</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
+    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${mfBars.length ? `<span><i style="background:#B5452B"></i>Malfunctions</span>` : ""}${ptBars.length ? `<span><i style="background:#2E8B57"></i>Security patrol rounds</span>` : ""}${qpDots.length ? `<span><i class="pn" style="background:#1E8A4C"></i>Quick Pass approved</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#8C8398"></i>Contractor attended</span>` : ""}${gBars.length ? `<span><i class="pn" style="background:#8C8398"></i>Refused at the gate</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
     ${d2dCards(apps, D, nm)}</section>`;
 }
 function d2dCards(apps, D, nm){
@@ -2189,14 +2375,14 @@ function d2dCards(apps, D, nm){
     },
     contractors: () => {
       if (!D || !D.contractors) return ["…", ""];
-      const L = D.contractors, n = s => L.filter(v => v.state === s).length, over = L.filter(v => v.overdue).length, late = L.filter(v => v.late).length;
-      if (!L.length) return ["No contractors booked today", `<em class="ok">Clear</em>`];
-      const w = L.filter(v => v.state === "onsite").reduce((a, v) => a + (v.workers || 0), 0);
-      return [`${n("onsite")} in the mall now${w ? " · " + w + " workers" : ""} · ${n("expected")} expected`, over ? `<em class="al">${over} over permit time</em>` : late ? `<em class="warn">${late} late</em>` : `<em class="ok">On track</em>`];
+      const L = D.contractors.filter(v => v.src !== "quickpass"), att = L.filter(v => v.inAt);   // information only: who attended, no alerts
+      if (!L.length) return ["No contractors booked today", ""];
+      const last = att.slice().sort((a, b) => hmM(b.inAt) - hmM(a.inAt))[0];
+      return [`${att.length} attended · ${L.length} booked today${last ? ` · last at ${last.inAt}` : ""}`, ""];
     } };
   line["schedule-calendar"] = line.schedule;   // the Schedule & Calendar tile shows who is on duty
-  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (a.id === "contractor-access" ? (() => { const [t0, p0] = line.contractors(); const G = D && D.gate;
-      return [t0 + (G && (G.in || G.out) ? ` · gate ${G.in} in${G.out ? " · " + G.out + " refused" : ""}` : ""), G && G.out && !/al/.test(p0) ? `<em class="al">${G.out} refused at the gate</em>` : p0]; }) : line[a.id] || (() => [a.desc, ""]))(); const live = a.id === "contractors";   // the Contractor Access folder shows today's contractor count
+  return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (a.id === "contractor-access" ? (() => { const [t0] = line.contractors(); const G = D && D.gate, Q = D && D.quickPasses || [];
+      return [t0 + (Q.length ? ` · ${Q.length} Quick Pass${Q.length === 1 ? "" : "es"}` : "") + (G && G.out ? ` · ${G.out} refused at the gate` : ""), ""]; }) : line[a.id] || (() => [a.desc, ""]))(); const live = false;   // contractor access is information only (no live highlight)
     return `<button class="d2d-c" data-id="${esc(a.id)}" ${live ? "data-live" : ""}><span class="ico" style="background:${esc(a.color)}">${appIcon(a)}${live ? `<span class="lv"></span>` : ""}</span><span class="tx"><b>${live ? "Live contractor access" : esc(a.name)}</b><small>${esc(t)}</small>${p}</span></button>`; }).join("")}</div>`;
 }
 function d2dPop(b, el){
@@ -2217,9 +2403,18 @@ function d2dPop(b, el){
   else if (b.t === "gref"){ app = "gate";
     h = `<h4>Refused at the loading gate</h4><div class="d2d-plist">${b.L.map(r => `<div><b>${esc(r.tenant && r.tenant !== r.contractor ? r.tenant + " - " : "")}${esc(r.contractor || r.req || "Contractor")}</b>
       <p>${esc([r.req, r.at, r.by && "by " + r.by].filter(Boolean).join(" · "))}</p><em class="al">${esc(r.reason || "Refused")}</em></div>`).join("")}</div>`; }
+  else if (b.t === "mf"){ const m = b.m; app = "malfunctions";
+    h = `<h4>${esc(m.what)}${m.location ? " · " + esc(m.location) : ""}</h4><p>${esc(m.desc || m.category)}</p><p>Found ${esc(m.from)}${m.fixed ? (m.to ? " · fixed " + esc(m.to) : " · fixed") : ""}${m.provider ? " · " + esc(m.provider) : ""}</p>
+      <p><em class="${m.fixed ? "ok" : m.priority === "Critical" || m.priority === "High" ? "al" : "warn"}">${esc(m.status)} · ${esc(m.priority)}</em></p>`; }
+  else if (b.t === "pt"){ const r = b.r; app = "patrol";
+    h = `<h4>Security Patrol · ${esc(r.name)}</h4><p>${esc(r.from)} – ${esc(r.to)}${r.guards.length ? " · " + esc(r.guards.join(", ")) : ""}</p><p><b style="color:var(--text)">${r.done}/${r.total}</b> checkpoints scanned · ${r.issues} issue${r.issues === 1 ? "" : "s"}</p>
+      <p><em class="${r.done >= r.total ? "ok" : nowHM() > r.to ? "al" : "warn"}">${r.done >= r.total ? "Round complete" : nowHM() > r.to ? `${r.total - r.done} missed` : nowHM() >= r.from ? "Round in progress" : "Upcoming"}</em></p>`; }
+  else if (b.t === "qp"){ const q = b.q; app = "quickpass";
+    h = `<h4>Quick Pass · ${esc(q.name)}</h4><p>${esc([q.company, q.tenant && "for " + q.tenant, q.reason].filter(Boolean).join(" · "))}</p><p>Approved ${esc(q.at)}${q.by ? " by " + esc(q.by) : ""} · valid until ${esc(q.until)} · ${esc(q.code)}</p>
+      <p><em class="${q.usedAt ? "ok" : "mu"}">${q.usedAt ? "Entered at the gate " + esc(q.usedAt) : q.state === "live" ? "Not used yet" : "Not used · " + esc(q.state)}</em></p>`; }
   else if (b.t === "cdot"){ app = "contractors";
-    const tag = v => v.overdue ? `<em class="al">Over permit time</em>` : v.state === "onsite" ? `<em class="ok">In the mall since ${esc(v.inAt)}</em>` : v.state === "left" ? `<em class="mu">Left ${esc(v.outAt)}</em>` : v.late ? `<em class="warn">Late — not checked in</em>` : `<em class="mu">Expected</em>`;
-    h = `<h4>${b.L.length > 1 ? b.L.length + " contractors · permits end " : "Permit ends "}${esc(b.at)}</h4><div class="d2d-plist">${b.L.map(v => `<div><b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b>
+    const tag = v => v.state === "left" ? `<em class="mu">Attended ${esc(v.inAt)} · left ${esc(v.outAt)}</em>` : `<em class="mu">Attended ${esc(v.inAt)}</em>`;
+    h = `<h4>${b.L.length > 1 ? b.L.length + " contractors attended · from " : "Contractor attended "}${esc(b.at)}</h4><div class="d2d-plist">${b.L.map(v => `<div><b>${esc(v.tenant && v.tenant !== v.company ? v.tenant + " - " : "")}${esc(v.company)}</b>
       <p>${esc([v.work, (v.from || "—") + " – " + (v.to || "—"), v.workers ? v.workers + " workers" : ""].filter(Boolean).join(" · "))}</p>${tag(v)}</div>`).join("")}</div>`; }
   else if (b.t === "tc"){ const c = b.c; app = "tenants"; h = `<h4>${esc(c.brand)}</h4><p>${esc(c.why)}${c.unit ? " · " + esc(c.unit) : ""}</p><p>Closes at <b style="color:var(--text)">${esc(c.at)}</b> — check the unit is handed back after closing.</p>`; }
   else if (b.t === "live"){ app = "contractors"; const L = b.L;
@@ -2321,6 +2516,7 @@ function hlMarkSwitch(){ const sw = $("#hlSw"); if (!sw) return; const b = sw.qu
 document.addEventListener("click", e => {
   if (!$("#home") || $("#home").classList.contains("hidden")) return;
   const sw = e.target.closest("[data-hlk]"); if (sw) return hlSetLayout(sw.dataset.hlk);
+  const inCard = e.target.closest(".hl-card"); if (inCard) return openFolder(inCard.dataset.hlg, inCard.querySelector(".q"));   // a smart card always opens its folder, even when an icon inside it is pressed
   const ap = e.target.closest("[data-hl]"); if (ap){ hlPopClose(); return launch(byId(ap.dataset.hl), undefined, (() => { const r = ap.querySelector(".ico").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()); }
   const card = e.target.closest(".hl-card"); if (card) return openFolder(card.dataset.hlg, card.querySelector(".q"));
   const oc = e.target.closest("[data-orb]"); if (oc){ HLS.orb = HLS.orb === oc.dataset.orb ? null : oc.dataset.orb; return hlRedrawOrbit(); }
@@ -2418,6 +2614,7 @@ function renderHome(){
   let foldersDone = false;
   const hlG = groups.slice(); hlGroups = () => hlG;
   if (!q){   // Home layouts: Smart cards · Orbit · Glass dock (search keeps the plain list below)
+    html += `<div id="momentSlot">${momentHtml()}</div>`;   // Message of the moment, above Day to Day
     if (groups.includes(DAY_GROUP) && showD2D()) html += d2dHtml();
     html += hlHtml(groups);
   } else hlDock(null);

@@ -1,7 +1,7 @@
 /* ABC Operations Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v18";
+const CACHE = "abc-hub-v19";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
   "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png",
   /* works offline: the checklists and the handover open without signal once visited */

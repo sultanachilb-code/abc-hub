@@ -43,6 +43,8 @@ window.HUB = {
     "contractor-access": ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
     "schedule-calendar": ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],   /* Schedule + Calendar in one tile */
     "projects-budget": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   /* Operations Projects + Budget in one tile */
+    "patrol":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
+    "moments":         [],   /* Admin only */
     "leadership":      ["LEAD"],
     "eod":             ["MM",  "OM"],
     "forms":           ["MM",  "OM",  "SMS",  "MS",  "MO"],
@@ -181,12 +183,18 @@ window.HUB = {
     /* Operations Calendar feature — see docs/FEATURE-calendar.md */
     /* Downloads feature — see docs/FEATURE-downloads.md */
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Operations Tools", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
+    /* Quick Access Pass — one-entry QR for a contractor or visitor, live 30 minutes, sent by WhatsApp (see docs/FEATURE-quick-pass.md). Everyone can open it. */
+    { id: "quickpass", name: "Quick Access Pass", desc: "One-entry QR for a contractor or visitor — 30 minutes, sent by WhatsApp", group: "Operations Tools", also: ["Contractor Access"], icon: "qr", color: "#1E8A4C", url: "/tools/quickpass" },
+    /* Message of the moment — the admin writes the friendly lines shown above Day to Day (see docs/FEATURE-moments.md) */
+    { id: "moments", name: "Message of the Moment", desc: "Friendly lines above Day to Day for the operations team — with their time", group: "Operations Tools", icon: "megaphone", color: "#B08A2E", url: "/tools/moments" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
     { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Contractor Access", icon: "hardhat", color: "#C07A12", url: "/tools/contractors" },
     /* Loading Gate feature — see docs/FEATURE-gate.md */
     { id: "gate", name: "Loading Gate", desc: "Scan the contractor QR — Approved in or Rejected out", group: "Contractor Access", icon: "qr", color: "#2E8B57", url: "/tools/gate" },
     /* Projects feature — see docs/FEATURE-projects.md */
     { id: "projects", name: "Operations Projects", desc: "Future projects and the project tracker — from idea to done", group: "Operations Projects and Budget", icon: "target", color: "#4A1F73", url: "/tools/projects" },
+    /* Security Patrol — QR checkpoints, rounds, offline guards' link, round reports (see docs/FEATURE-security-patrol.md) */
+    { id: "patrol", name: "Security Patrol", desc: "QR checkpoints in the back areas — rounds, issues with photos, round reports", group: "Incidents, Security & Footfall", icon: "shield", color: "#2A0F45", url: "/tools/patrol" },
     /* Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md */
     { id: "evacuation", name: "Tenant Evacuation Plan", desc: "Service corridor and assembly point for every active tenant", group: "Incidents, Security & Footfall", icon: "exit", color: "#2E7D32", url: "/tools/evacuation" },
     /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */

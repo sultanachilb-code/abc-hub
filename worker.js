@@ -35,6 +35,11 @@ import { todayRoute } from "./modules/today.js";   // Day to Day Operations time
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
 import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
+import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
+import { aiRoute } from "./modules/ai.js";   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
+import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
+import { momentFor, momentsAdmin } from "./modules/moments.js";   // Message of the moment — see docs/FEATURE-moments.md
+import { patrolSchema, patrolRoute, patrolPublic, patrolRun, patrolDay } from "./modules/patrol.js";   // Security Patrol — see docs/FEATURE-security-patrol.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
    ABC Operations Hub — backend (Cloudflare Worker + D1)
@@ -190,6 +195,8 @@ const APP_ACCESS = {
   "contractor-access": ["OM", "SMS", "MS", "MO", "SEC", "LEAD"],
   "schedule-calendar": ["MM", "OM", "SMS", "MS", "MO", "WH", "LEAD"],
   "projects-budget": ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  quickpass: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  patrol: ["MM", "OM", "SMS", "MS", "MO", "SEC", "LEAD"],   // push only: "Quick Pass to approve" goes to the operations team (anyone can open the tile and ask)
   leadership: ["LEAD"],
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
@@ -246,6 +253,7 @@ const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
 
 /* Morning email */
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
+const beirutHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 const MAIL_HOUR = 8;   // Beirut time
 /* Weekly digest per person (modules/digest.js) */
 const DIGEST_DEPS = { today: () => beirutToday(), sitesOf: u => sitesOf(u), staff: (env, s) => siteStaff(env, s), posKey: u => accessKey(u), isFull: u => isFull(u), siteName: s => siteName(s), relay: (env, m) => relay(env, m), hubUrl: HUB_URL };
@@ -334,6 +342,8 @@ async function ensureSchema(env) {
   await evacSchema(env);   // Tenant Evacuation Plan feature
   await contractorsSchema(env);   // Contractors feature
   await gateSchema(env);   // Loading Gate feature (after Contractors: adds sf_id to contractor_visits)
+  await quickPassSchema(env);   // Quick Access Pass
+  await patrolSchema(env);   // Security Patrol
   await projectsSchema(env);   // Projects feature
   await addinSchema(env);   // Outlook add-in feature
   await contractsSchema(env);   // Contracts near ending
@@ -433,6 +443,18 @@ export default {
       catch (e) { return json({ ok: false, error: e.message || String(e), ...(e.extra || {}) }, e.status || 500); }
     }
     /* Tenants Directory feature: the reception link opens the directory page (no hub account) */
+    /* Security Patrol: the guards' shared link opens the patrol page (no hub account; works offline once opened) */
+    if (/^\/patrol\/[A-Za-z0-9]{24}\/?$/.test(url.pathname)) {
+      const r = await env.ASSETS.fetch(new Request(new URL("/tools/patrol", url), request));
+      const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-cache");
+      return new Response(r.body, { status: r.status, headers: h });
+    }
+    /* Quick Access Pass: the link sent by WhatsApp opens the pass page with the QR (no hub account) */
+    if (/^\/qp\/[A-Za-z0-9]{20,40}\/?$/.test(url.pathname)) {
+      const r = await env.ASSETS.fetch(new Request(new URL("/tools/qpass", url), request));
+      const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
+      return new Response(r.body, { status: r.status, headers: h });
+    }
     if (/^\/reception\/[\w-]{16,40}\/?$/.test(url.pathname)) {
       const r = await env.ASSETS.fetch(new Request(new URL("/tools/directory", url), request));
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
@@ -455,6 +477,7 @@ export default {
       await schedMailRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent, SITES }).catch(e => console.error("schedmail", e && e.message));   // Weekly schedule email reminders
       await contractsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contracts", e && e.message));   // Contracts near ending
       await contractorsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("contractors", e && e.message));   // Contractors feature
+      await patrolRun(env, { raiseEvent, relay, siteName, hubUrl: HUB_URL, recipients: patrolRecipients }).catch(e => console.error("patrol", e && e.message));   // Security Patrol: round reports
       await storageRun(env, { today: beirutToday, hour: beirutHour, now: nowIso, raiseEvent }).catch(e => console.error("storage", e && e.message));   // Cloudflare storage meter
       await digestRun(env, DIGEST_DEPS).catch(e => console.error("digest", e && e.message));
       await snagReportRun(env, { base: CONNECTORS.snaglist.base, relay: (e, m) => relay(e, m), hubUrl: HUB_URL }).catch(e => console.error("snagreport", e && e.message));   // Snaglist weekly email   // Weekly digest per person
@@ -491,12 +514,14 @@ async function route(request, env, ctx, url) {
     const key = request.headers.get("x-inbox-key") || "";
     if (key.length !== env.INBOX_KEY.length || key !== env.INBOX_KEY) throw fail("Wrong inbox key", 403);
     const data = await backupData(env);
-    for (const t of ["mf_photos", "push_subs", "sessions", "twofa_codes", "twofa_keys", "addin_pairs", "gate_devices"]) delete data.tables[t];   // pictures and secrets stay out of Drive
+    for (const t of ["mf_photos", "patrol_photos", "push_subs", "sessions", "twofa_codes", "twofa_keys", "addin_pairs", "gate_devices"]) delete data.tables[t];   // pictures and secrets stay out of Drive
     return ok(data);
   }
   if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
   if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
     { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
+  if (path.startsWith("patrol-ext/")) return ok(await patrolPublic(env, path.slice(11), method, body, { siteName, today: beirutToday, raiseEvent }));   // Security Patrol: the guards' shared link
+  if (path.startsWith("qp-pass/") && method === "GET") return ok(await qpPublic(env, path.slice(8), { siteName }));   // Quick Access Pass: the visitor's page (the token is the key)
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
   if (path === "addin/pair" && method === "POST") return ok(await addinPair(env, body, request));   // Outlook add-in: email + 6-digit code → token
@@ -529,6 +554,14 @@ async function route(request, env, ctx, url) {
   }
   if (path === "password" && method === "POST") return ok(await changePassword(env, me, body));
   if (path === "announcements") return ok(await activeAnnouncements(env, me));
+  if (path.startsWith("ai/")) {   // Hub Assistant (free Workers AI): chat over the hub's data, shift summary
+    const site = opsSite(me, method === "GET" ? url.searchParams.get("site") : body.site);
+    const sub = (p, s2, extra = "") => opsRoute(env, me, p, "GET", {}, new URL(`${url.origin}/api/ops/${p}?site=${s2}${extra}`));
+    return ok(await aiRoute(env, path, method, body, url, { me, site, can: rights(me, site), canSite, siteName, today: beirutToday, hm: beirutHM, posLabel: posLabel(me.position),
+      roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
+      todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`) }));
+  }
+  if (path === "moment") return ok({ moment: await momentFor(env, me, beirutHM()) });   // Message of the moment (operations team)
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
   if (path === "sso") return ok(await ssoLink(env, me, url.searchParams.get("app")));
   if (path === "health") return ok(await health(env));
@@ -558,6 +591,7 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("admin/")) {
     if (me.role !== "ADMIN") throw fail("Administrator access only", 403);
     const a = path.slice(6);
+    if (a === "moments") return ok(await momentsAdmin(env, method, body, me, nowIso));   // Message of the moment
     if (a === "users" && method === "GET") return ok(await listUsers(env));
     if (a === "users" && method === "POST") {   // Change history: people & roles
       const before = await env.DB.prepare("SELECT email, full_name AS name, role, site_code AS site, position FROM users WHERE email = ?").bind(String(body.email || "").trim().toLowerCase()).first().catch(() => null);
@@ -1232,12 +1266,12 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
       (e.to === sub.email || !e.site || (MULTI_ROLES.includes(sub.role) ? sitesOf(sub).includes(e.site) : (!sub.site_code || e.site === sub.site_code))) &&
-      roleAllows(sub, e.app) && e.app !== "emergency" &&   /* Emergency Alert feature pushes its own alerts */
+      (e.to === sub.email || roleAllows(sub, e.app)) && e.app !== "emergency" &&   /* a message to one person (e.g. "your Quick Pass is approved") always reaches them */   /* Emergency Alert feature pushes its own alerts */
       (sub.level === "all" || e.tone === "alert" || e.tone === "warn"));
     if (!mine.length) continue;
     if (mine.length <= 3) {
@@ -1312,6 +1346,7 @@ function rights(me, site) {
   const wh = isWarehouse(me);   // Warehouse: sees the flagship's data, changes nothing
   const team = full || (mine && me.role === "SUPERVISOR" && !wh);
   return {
+    team,                           // the operations team at this flagship (approves Quick Passes)
     schedule: opsLead,
     scheduleOwn: team && me.role === "SUPERVISOR",   // the operations team fills its own shifts (the whole schedule stays with the Manager / Senior Mall Supervisor)
     mom: team,
@@ -1524,6 +1559,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "eod") return eodReport(env, me, site, isDay(q("date")) ? q("date") : beirutToday());
 
   /* ----- Mall Layouts feature (modules/layouts.js) ----- */
+  if (p === "layouts/hot") { if (!canSite(me, site) || isWarehouse(me) || me.role === "SECURITY") throw fail("Not allowed", 403);
+    return hotspots(env, site, url, { today: beirutToday, pullDay, snagBase: CONNECTORS.snaglist.base }); }   // Hotspot map on the layouts
   if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso });
 
   /* ----- Property Details feature (modules/property.js) ----- */
@@ -1566,6 +1603,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday });   // Tenant 360
   if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
+  if (p.startsWith("patrol/")) return patrolRoute(env, p, method, b, url, { site, me, can, canSite, full: isFull(me), now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Security Patrol
+  if (p.startsWith("qp/")) return qpRoute(env, p, method, b, url, { site, me, can, canSite, now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Quick Access Pass
   if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover });   // Loading Gate feature
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
   if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
@@ -1867,7 +1906,8 @@ async function opsRoute(env, me, p, method, b, url) {
     const hd = await env.DB.prepare("SELECT doc FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first().catch(() => null);
     let gateMarks = {}; try { gateMarks = hd ? gateMarksOf(JSON.parse(hd.doc || "{}")) : {}; } catch {}   // the open page shows new gate marks without reloading
     gateMarks = { ...gateMarks, ...(await gateScanMarks(env, site, day).catch(() => ({}))) };   // and approvals scanned before their REQ was imported
-    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks };
+    const access = await accessLog(env, site, day, hd).catch(() => []);   // every contractor access of the day, flagged when no handover line covers it
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks, access };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
@@ -2112,13 +2152,50 @@ async function gateScanMarks(env, site, day) {   // { "8935": " — ✓ Attended
   if (!isDay(day)) return {};
   const { results } = await env.DB.prepare("SELECT at, decision, reason, override, workers, req FROM gate_scans WHERE site = ? AND day = ? AND req != '' ORDER BY id").bind(site, day).all();
   const marks = {};
+  /* checked in / out by hand in the Contractors tool (no gate scan): the same feedback on the handover line */
+  const hand = await env.DB.prepare(`SELECT v.req, c.in_at, c.out_at, c.workers FROM contractor_checks c JOIN contractor_visits v ON v.id = c.visit_id
+    WHERE c.site = ? AND c.day = ? AND v.req != '' AND c.in_at != ''`).bind(site, day).all().catch(() => ({ results: [] }));
+  for (const r of hand.results || []) {
+    const k = String(r.req).replace(/\D/g, "").replace(/^0+/, ""); if (!k || !/^REQ/i.test(r.req)) continue;
+    marks[k] = ` — ✓ Attended ${gateHm(r.in_at)}${r.workers ? ` · ${r.workers} worker${r.workers === 1 ? "" : "s"}` : ""}${r.out_at ? " → left " + gateHm(r.out_at) : ""}`;
+  }
   for (const r of results || []) {
+    if (!/^REQ/i.test(r.req)) continue;   // Quick Passes (QP-…) have no handover line of their own
     const k = String(r.req).replace(/\D/g, "").replace(/^0+/, ""), t = gateHm(r.at); if (!k) continue;
     if (r.decision === "in") marks[k] = ` — ✓ Attended ${t}${r.workers ? ` · ${r.workers} worker${r.workers === 1 ? "" : "s"}` : ""}${r.override ? ` · override: ${r.reason}` : ""}`;
     else if (r.decision === "out") marks[k] = ` — ✕ Refused at gate ${t} · ${r.reason}`;
     else if (r.decision === "leave") { const base = (marks[k] || "").replace(/ → left.*$/, ""); marks[k] = base ? base + " → left " + t : ` — → Left ${t}`; }
   }
   return marks;
+}
+/* Security Patrol round report by email: the flagship's management and Senior Mall Supervisor (and the admin based there) */
+async function patrolRecipients(env, site) {
+  const { results } = await env.DB.prepare(`SELECT email FROM users WHERE active = 1 AND site_code = ? AND (role IN ('MANAGER','ADMIN') OR (role = 'SUPERVISOR' AND position = 'SMS'))`).bind(site).all();
+  return (results || []).map(r => r.email);
+}
+/* Contractor access of the day for the Shift Handover: gate scans, check-ins made by hand in Contractors, Quick Passes.
+   inHandover = a handover line carries the same REQ (or the Quick Pass code) — the rest is shown so it can be added in one tap. */
+async function accessLog(env, site, day, hd) {
+  let doc = {}; try { doc = hd ? JSON.parse(hd.doc || "{}") : {}; } catch {}
+  const lines = ["today", "ongoing", "tomorrow"].flatMap(k => doc[k] || []);
+  const reqs = new Set(lines.map(reqKeyOf).filter(Boolean)), text = lines.map(x => String(x.text || "")).join("\n").toUpperCase();
+  const covered = req => { const r = String(req || ""); if (/^QP-/i.test(r)) return text.includes(r.toUpperCase()); const k = r.replace(/\D/g, "").replace(/^0+/, ""); return !!k && reqs.has(k); };
+  const [scans, hand, qps] = await Promise.all([
+    env.DB.prepare("SELECT at, decision, reason, override, workers, req, tenant, contractor, work, by_name FROM gate_scans WHERE site = ? AND day = ? AND decision IN ('in','out') ORDER BY at").bind(site, day).all(),
+    env.DB.prepare(`SELECT v.id, v.req, v.company, v.tenant, v.work, v.src, c.in_at, c.in_name, c.out_at, c.workers, c.note FROM contractor_checks c JOIN contractor_visits v ON v.id = c.visit_id
+      WHERE c.site = ? AND c.day = ? AND c.in_at != '' ORDER BY c.in_at`).bind(site, day).all(),
+    qpDay(env, site, day)
+  ]);
+  const L = [], seenVisit = new Set();
+  for (const r of scans.results || []) L.push({ kind: r.req && /^QP-/i.test(r.req) ? "qp" : "gate", at: gateHm(r.at), decision: r.decision, req: r.req, who: r.contractor || r.tenant || r.req, tenant: r.tenant,
+    work: r.work, workers: r.workers, reason: r.reason, override: !!r.override, by: r.by_name });
+  for (const r of hand.results || []) {
+    if (/Loading gate|Quick Pass/i.test(r.note || "") || r.src === "gate" || r.src === "quickpass") continue;   // already listed from the gate scan
+    if (seenVisit.has(r.id)) continue; seenVisit.add(r.id);
+    L.push({ kind: "hand", at: gateHm(r.in_at), decision: "in", req: r.req, who: r.company || r.tenant, tenant: r.tenant, work: r.work, workers: r.workers, by: r.in_name, left: r.out_at ? gateHm(r.out_at) : "" });
+  }
+  for (const q of qps) if (!q.usedAt) L.push({ kind: "qp", at: q.at, decision: "approved", req: q.code, who: q.company ? `${q.name} · ${q.company}` : q.name, tenant: q.tenant, work: "Quick Pass" + (q.reason ? " · " + q.reason : ""), by: q.decidedBy, until: q.until });
+  return L.sort((a, b) => a.at.localeCompare(b.at)).map(x => ({ ...x, inHandover: covered(x.req) }));
 }
 async function fillGateMarks(env, site, day, doc) {
   const lines = ["today", "ongoing", "tomorrow"].flatMap(k => doc[k] || []).filter(x => reqKeyOf(x));

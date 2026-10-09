@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Access Pass · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<!-- Quick Access Pass: the visitor's page, opened from the WhatsApp link /qp/<token> (no hub account). See docs/FEATURE-quick-pass.md -->
+<style>
+:root{--brand:#4A1F73;--deep:#2A0F45;--gold:#B08A2E;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--ok:#1E8A4C;--warn:#B8740F;--bad:#B03A2E}
+@media (prefers-color-scheme:dark){:root{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--ok:#5FD08A;--warn:#F0B44C;--bad:#FF7A6B}}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:0 0 30px}
+.hd{width:100%;background:linear-gradient(140deg,var(--deep),var(--brand));color:#fff;padding:22px 20px 70px;text-align:center}
+.hd img{height:34px}.hd small{display:block;opacity:.8;font-size:.8rem;margin-top:8px;letter-spacing:.06em;text-transform:uppercase}
+.card{width:min(420px,calc(100% - 28px));background:var(--card);border-radius:24px;margin-top:-52px;box-shadow:0 18px 50px rgba(42,15,69,.18);padding:22px 20px 20px;text-align:center}
+.st{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:.86rem;padding:6px 14px;border-radius:999px;background:rgba(30,138,76,.12);color:var(--ok)}
+.st i{width:9px;height:9px;border-radius:50%;background:currentColor;animation:p 1.6s infinite}
+.st.warn{background:rgba(184,116,15,.13);color:var(--warn)}.st.bad{background:rgba(176,58,46,.12);color:var(--bad)}.st.mu{background:rgba(109,100,121,.13);color:var(--muted)}
+.st.bad i,.st.mu i{animation:none}
+@keyframes p{50%{opacity:.3}}
+h1{font-size:1.35rem;margin:14px 0 2px}.sub{color:var(--muted);font-size:.9rem}
+.qrw{position:relative;width:260px;height:260px;margin:18px auto 10px;border-radius:22px;background:#fff;padding:14px}
+.qrw svg{width:100%;height:100%;display:block}
+.qrw.off svg{filter:grayscale(1) blur(3px);opacity:.25}
+.qrw .ov{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:1.1rem;color:#555;text-align:center;padding:30px}
+.code{font-size:1.5rem;font-weight:900;letter-spacing:.16em;color:var(--brand)}
+@media (prefers-color-scheme:dark){.code{color:#C9A8F0}}
+.cd{margin:14px auto 0;font-size:2.3rem;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ok)}
+.cd small{display:block;font-size:.78rem;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.bar{height:6px;border-radius:3px;background:rgba(127,127,127,.18);overflow:hidden;margin:10px 6px 0}.bar i{display:block;height:100%;background:var(--ok);transition:width 1s linear}
+.note{font-size:.84rem;color:var(--muted);line-height:1.55;margin-top:16px}
+.ar{direction:rtl;font-family:"Segoe UI",Tahoma,Arial,sans-serif}
+.foot{margin-top:18px;font-size:.72rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><small id="site">Access pass</small></div>
+<div class="card" id="c"><p class="sub">Loading your pass…</p></div>
+<p class="foot">One entry at the loading area · ABC Operations</p>
+<script src="/tools/qrcode.js"></script>
+<script>
+const token = (location.pathname.match(/\/qp\/([A-Za-z0-9]{20,40})/) || [])[1] || "";
+let P = null, skew = 0, total = 30 * 60;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hm = iso => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" });
+const now = () => Date.now() + skew;
+async function load(){
+  try {
+    const r = await fetch(`/api/qp-pass/${token}`, { cache: "no-store" }); const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "This pass link is not valid");
+    P = j.data; skew = Date.parse(P.serverNow) - Date.now(); total = (P.minutes || 30) * 60; draw();
+  } catch (e){ document.getElementById("c").innerHTML = `<span class="st bad"><i></i>Not valid</span><h1>Pass not found</h1><p class="note">${esc(e.message)}<br><span class="ar">رابط التصريح غير صالح</span></p>`; }
+}
+const S = {
+  live: ["", "Valid now", "صالح الآن"], requested: ["warn", "Waiting for approval", "بانتظار الموافقة"], used: ["mu", "Already used", "تم استخدامه"],
+  expired: ["bad", "Expired", "منتهي الصلاحية"], rejected: ["bad", "Not approved", "لم تتم الموافقة"], cancelled: ["bad", "Cancelled", "ملغى"]
+};
+function draw(){
+  const [cls, en, ar] = S[P.state] || S.expired, live = P.state === "live";
+  document.getElementById("site").textContent = `ABC ${P.siteName} · Access pass`;
+  const msg = { live: [`Show this QR code at the loading area. One entry only.`, `يرجى إبراز رمز QR عند منطقة التحميل. دخول واحد فقط.`],
+    requested: [`The operations team is checking your request. Keep this page open — it turns live by itself.`, `فريق العمليات يراجع طلبك. أبقِ هذه الصفحة مفتوحة وستُفعّل تلقائياً.`],
+    used: [`This pass was used at ${P.usedAt ? hm(P.usedAt) : "the gate"}.`, `تم استخدام هذا التصريح.`],
+    expired: [`This pass has expired. Ask the person who sent it for a new one.`, `انتهت صلاحية التصريح. اطلب تصريحاً جديداً.`],
+    rejected: [`This pass was not approved.`, `لم تتم الموافقة على هذا التصريح.`], cancelled: [`This pass was cancelled.`, `تم إلغاء هذا التصريح.`] }[P.state] || ["", ""];
+  document.getElementById("c").innerHTML = `<span class="st ${cls}"><i></i>${en} · <span class="ar">${ar}</span></span>
+    <h1>${esc(P.name)}</h1><p class="sub">${esc([P.company, P.tenant && "for " + P.tenant].filter(Boolean).join(" · ")) || "&nbsp;"}</p>
+    <div class="qrw ${live ? "" : "off"}" id="qr">${live ? "" : `<div class="ov">${en}<br><span class="ar">${ar}</span></div>`}</div>
+    <div class="code">${esc(P.code)}</div>
+    ${live ? `<div class="cd" id="cd">--:--<small>left · valid until ${hm(P.expiresAt)}</small></div><div class="bar"><i id="bar"></i></div>` : ""}
+    <p class="note">${msg[0]}<br><span class="ar">${msg[1]}</span></p>`;
+  try { const q = qrcode(0, "M"); q.addData(`${location.origin}/qp/${token}`); q.make(); document.getElementById("qr").insertAdjacentHTML("afterbegin", q.createSvgTag({ cellSize: 6, margin: 0 })); } catch {}
+  tick();
+}
+function tick(){
+  if (!P || P.state !== "live") return;
+  const s = Math.round((Date.parse(P.expiresAt) - now()) / 1000);
+  if (s <= 0){ P.state = "expired"; return draw(); }
+  const el = document.getElementById("cd"); if (el) el.firstChild.nodeValue = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const b = document.getElementById("bar"); if (b) b.style.width = Math.min(100, s / total * 100) + "%";
+}
+setInterval(tick, 1000);
+setInterval(() => { if (P && ["requested", "live"].includes(P.state) && document.visibilityState === "visible") load(); }, 10000);   // turns live after the approval, shows "used" after the gate
+if ("wakeLock" in navigator) navigator.wakeLock.request("screen").catch(() => {});
+load();
+</script>
+</body>
+</html>

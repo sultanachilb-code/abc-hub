@@ -86,8 +86,9 @@ async function contractorFor(env, site, company, trade, now, name) {
 
 export async function contractorsRun(env, deps) {
   const today = deps.today(), now = beirutHM();
-  /* overdue: still on site 30 min after the permit end */
-  const { results } = await env.DB.prepare(`SELECT v.*, c.in_at, c.out_at FROM contractor_visits v JOIN contractor_checks c ON c.visit_id = v.id AND c.day = ?
+  /* overdue: still on site 30 min after the permit end — switched off (Oct 2026): contractor access is information only, no reminders.
+     Set CON_OVERDUE_ALERTS = "1" on the hub to bring the alert back. */
+  const { results } = env.CON_OVERDUE_ALERTS !== "1" ? { results: [] } : await env.DB.prepare(`SELECT v.*, c.in_at, c.out_at FROM contractor_visits v JOIN contractor_checks c ON c.visit_id = v.id AND c.day = ?
     WHERE v.deleted = 0 AND v.day_to = ? AND v.time_to != '' AND c.in_at != '' AND c.out_at = ''`).bind(today, today).all().catch(() => ({ results: [] }));
   for (const v of results || []) {
     if (hmMin(now) <= hmMin(v.time_to) + 30) continue;
@@ -211,10 +212,11 @@ export async function contractorsRoute(env, p, method, b, url, d) {
     const to = isDay(b.to) && b.to >= b.from ? b.to : b.from;
     const now = d.now();
     const cid = Number(b.contractorId) || await contractorFor(env, site, company, b.work, now, me.full_name);
-    const vals = [cid, company, tenant, clip(b.work, 120), clip(b.desc, 500), b.from, to, isHM(b.timeFrom) ? b.timeFrom : "", isHM(b.timeTo) ? b.timeTo : ""];
-    if (b.id) await env.DB.prepare("UPDATE contractor_visits SET contractor_id=?, company=?, tenant=?, work=?, descr=?, day_from=?, day_to=?, time_from=?, time_to=? WHERE id=? AND site=?").bind(...vals, Number(b.id), site).run();
-    else await env.DB.prepare(`INSERT INTO contractor_visits (contractor_id, company, tenant, work, descr, day_from, day_to, time_from, time_to, site, src, created_at, created_name)
-      VALUES (?,?,?,?,?,?,?,?,?,?,'manual',?,?)`).bind(...vals, site, now, me.full_name).run();
+    const rq = String(b.req || "").toUpperCase().match(/REQ[-\s]?(\d{3,})/), req = rq ? "REQ-" + rq[1] : "";   // the Tenant Connect request, so the handover line gets the loading area feedback
+    const vals = [cid, company, tenant, clip(b.work, 120), clip(b.desc, 500), b.from, to, isHM(b.timeFrom) ? b.timeFrom : "", isHM(b.timeTo) ? b.timeTo : "", req];
+    if (b.id) await env.DB.prepare("UPDATE contractor_visits SET contractor_id=?, company=?, tenant=?, work=?, descr=?, day_from=?, day_to=?, time_from=?, time_to=?, req=CASE WHEN ? != '' THEN ? ELSE req END WHERE id=? AND site=?").bind(...vals, req, Number(b.id), site).run();
+    else await env.DB.prepare(`INSERT INTO contractor_visits (contractor_id, company, tenant, work, descr, day_from, day_to, time_from, time_to, req, site, src, created_at, created_name)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,'manual',?,?)`).bind(...vals, site, now, me.full_name).run();
     return { saved: true };
   }
 

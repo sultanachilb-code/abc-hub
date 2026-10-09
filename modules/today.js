@@ -7,6 +7,8 @@
    ===================================================================== */
 import { dayList } from "./contractors.js";
 import { gateDay } from "./gate.js";   // Loading Gate scans on the timeline
+import { qpDay } from "./quickpass.js";   // Quick Access Passes pinned on the timeline
+import { patrolDay } from "./patrol.js";   // Security Patrol rounds on the timeline
 
 const isShift = v => /^([01]\d|2[0-4]):[03]0-([01]\d|2[0-4]):[03]0$/.test(String(v || ""));
 const hm = iso => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)).replace(/^24/, "00"); } catch { return ""; } };
@@ -46,6 +48,11 @@ export async function todayRoute(env, d) {
   const full = d.isFull(me);
   const seeCon = full || ["SUPERVISOR", "SECURITY", "MANAGER"].includes(me.role);
   const seeRR = full || ["SUPERVISOR", "MANAGER"].includes(me.role);
+  const seeMf = full || me.role === "SUPERVISOR";
+  /* Malfunction Records found today: a bar from the time found to the time fixed (or now, while still open) */
+  const dayStart = new Date(Date.parse(day + "T00:00:00+03:00") - 3600e3).toISOString(), dayEnd = new Date(Date.parse(day + "T23:59:59+03:00") + 3600e3).toISOString();
+  const mfP = seeMf ? env.DB.prepare(`SELECT r.id, r.category, r.location, r.asset, r.description, r.priority, r.status, r.found_at, r.fixed_at, r.closed_at, p.name AS provider
+    FROM mf_records r LEFT JOIN mf_providers p ON p.id = r.provider_id WHERE r.site = ? AND r.deleted = 0 AND r.found_at >= ? AND r.found_at <= ? ORDER BY r.found_at`).bind(site, dayStart, dayEnd).all().catch(() => ({ results: [] })) : Promise.resolve({ results: [] });
 
   const [staff, cells, hov, momToday, calToday, acts, cons, runs, restroom, closeAnn, closeCon, gate] = await Promise.all([
     d.schedStaff(env, site),
@@ -62,6 +69,11 @@ export async function todayRoute(env, d) {
     env.DB.prepare("SELECT tenant, account FROM contracts_ending WHERE site = ? AND active = 1 AND departure_day = ?").bind(site, day).all().catch(() => ({ results: [] })),
     seeCon ? gateDay(env, site, day).catch(() => null) : Promise.resolve(null)
   ]);
+  const [mfRows, qps, pat] = await Promise.all([mfP, seeCon ? qpDay(env, site, day).catch(() => []) : Promise.resolve([]), seeCon ? patrolDay(env, site, day).catch(() => null) : Promise.resolve(null)]);
+  const isToday = iso => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso)) === day; } catch { return false; } };
+  const malfunctions = (mfRows.results || []).filter(r => isToday(r.found_at)).map(r => { const end = r.fixed_at || r.closed_at;
+    return { id: r.id, what: r.asset || r.category, category: r.category, location: r.location, desc: String(r.description || "").slice(0, 200), priority: r.priority, status: r.status, provider: r.provider || "",
+      from: hm(r.found_at), to: end && isToday(end) ? hm(end) : "", fixed: !!end }; });
   /* tenants closing today (closure / relocation announcement, or the contracts report's departure date) */
   const nb = x => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
   const closing = [];
@@ -114,8 +126,12 @@ export async function todayRoute(env, d) {
     handover, reminders, restroom, closing,
     meetings, events: items.filter(x => x.kind !== "mom"),
     actions: { open: Number(acts && acts.n || 0), late: Number(acts && acts.late || 0) },
-    contractors: cons && cons.map(v => ({ id: v.id, company: v.company || v.tenant, tenant: v.tenant, work: v.work, from: v.timeFrom, to: v.timeTo,
-      state: v.state, overdue: v.overdue, late: v.late, workers: v.workers, inAt: v.inAt ? hm(v.inAt) : "", outAt: v.outAt ? hm(v.outAt) : "" })),
+    /* contractor access is information only: who attended and when (no overdue / late flags) */
+    contractors: cons && cons.map(v => ({ id: v.id, company: v.company || v.tenant, tenant: v.tenant, work: v.work, from: v.timeFrom, to: v.timeTo, src: v.src,
+      state: v.state, workers: v.workers, inAt: v.inAt ? hm(v.inAt) : "", outAt: v.outAt ? hm(v.outAt) : "" })),
+    malfunctions,
+    patrol: pat && pat.points.length ? pat.rounds.map(r => ({ name: r.name, from: r.from, to: r.to, done: r.done, total: r.total, issues: r.issues, guards: r.guards })) : [],
+    quickPasses: qps.map(q => ({ id: q.id, at: q.at, until: q.until, name: q.name, company: q.company, tenant: q.tenant, reason: q.reason, by: q.decidedBy, usedAt: q.usedHm, code: q.code, state: q.state })),
     /* Loading Gate: today's counts and every refused scan (a red mark on the timeline at the time of the scan) */
     gate: gate && { in: gate.counts.in, out: gate.counts.out, workers: gate.counts.workers,
       refused: gate.list.filter(x => x.decision === "out").map(x => ({ at: hm(x.at), contractor: x.contractor || "", tenant: x.tenant || "", req: x.req || "", reason: x.reason || "", by: x.by || "" })) },

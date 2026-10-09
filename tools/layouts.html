@@ -66,6 +66,25 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .upl .inp{height:32px;width:80px}
 .prog{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:10px}.prog i{display:block;height:100%;background:var(--brand-2);width:0;transition:width .3s}
 .sheetbtn{display:none}
+/* ---------- Hotspot map (see docs/FEATURE-hotspots.md) ---------- */
+#hotBtn.on{background:#B3261E;color:#fff;border-color:#B3261E}
+.heat{position:absolute;inset:0;pointer-events:none}
+.hot .pins,.hot .pin{pointer-events:none}.hot .pin{opacity:.22}   /* in hotspot mode a tap opens the hotspot, not the pin */
+.hspot{position:absolute;border-radius:50%;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;
+  background:radial-gradient(circle,rgba(214,40,40,.78) 0%,rgba(240,120,30,.5) 35%,rgba(250,190,60,.22) 58%,rgba(250,190,60,0) 72%);animation:hsIn .5s ease-out}
+.hspot b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--inv,1));min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:#fff;color:#B3261E;
+  font-size:.8rem;font-weight:900;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hspot.sel b{outline:3px solid var(--gold)}
+@keyframes hsIn{from{opacity:0;transform:translate(-50%,-50%) scale(.4)}}
+.levels button .hn{font-size:.66rem;font-weight:900;margin-left:5px;background:#B3261E;color:#fff;border-radius:999px;padding:1px 6px}
+.hchips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.hchips button{border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:.74rem;font-weight:800;color:var(--muted)}
+.hchips button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hsrc button.on{background:var(--c);border-color:var(--c)}
+.hlist button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;font-size:.8rem;padding:7px 8px;border-radius:8px;border:1px solid var(--line);margin-bottom:4px}
+.hlist button b{color:#B3261E}
+.hit{font-size:.78rem;padding:6px 0;border-bottom:1px solid var(--line)}.hit small{display:block;color:var(--muted);font-size:.72rem}
+.hit .s{display:inline-block;font-size:.64rem;font-weight:900;border-radius:999px;padding:1px 6px;color:#fff;margin-right:5px}
 @media (max-width:820px){
   .side{position:absolute;left:0;right:0;bottom:0;width:auto;max-height:55%;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;transform:translateY(calc(100% - 46px));transition:transform .25s;z-index:15}
   .side.open{transform:none}
@@ -83,13 +102,14 @@ body{display:flex;flex-direction:column;overflow:hidden}
   <div class="srch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input class="inp" id="q" placeholder="Where is… (brand, unit or place)" autocomplete="off"><div class="res hidden" id="res"></div></div>
   <span id="siteBox"></span>
+  <button class="btn ghost small" id="hotBtn" title="Where snags, malfunctions, patrol issues and incidents keep happening">🔥 Hotspots</button>
   <button class="btn ghost small hidden" id="adjBtn">Adjust pins</button>
   <button class="btn ghost small hidden" id="uplBtn">Upload layout PDF</button>
 </div>
 <div class="levels" id="levels"></div>
 <div class="main">
   <div class="vp" id="vp">
-    <div class="world" id="world"><img id="plan" alt=""><div class="pins" id="pins"></div></div>
+    <div class="world" id="world"><img id="plan" alt=""><div class="heat" id="heat"></div><div class="pins" id="pins"></div></div>
     <div class="banner hidden" id="banner"></div>
     <div class="zoom"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Fit" style="font-size:.8rem">Fit</button></div>
     <div class="card hidden" id="card"></div>
@@ -132,8 +152,8 @@ async function boot(site){
   const f = params.get("focus"); if (f){ params.delete("focus"); const pin = L.pins.find(p => norm(p.code) === norm(f)); if (pin) focusPin(pin); }
 }
 function renderLevels(){
-  $("#levels").innerHTML = L.levels.map(x => { const n = L.pins.filter(p => p.level === x.level).length;
-    return `<button data-lv="${esc(x.level)}" class="${x.level === LEVEL ? "on" : ""}">${esc(x.level)}${n ? `<span class="n">${n}</span>` : ""}</button>`; }).join("");
+  $("#levels").innerHTML = L.levels.map(x => { const n = L.pins.filter(p => p.level === x.level).length, h = HOT && HOT.data ? hotSpots().filter(s => s.level === x.level).reduce((a, s) => a + s.k, 0) : 0;
+    return `<button data-lv="${esc(x.level)}" class="${x.level === LEVEL ? "on" : ""}">${esc(x.level)}${HOT ? (h ? `<span class="hn">${h}</span>` : "") : n ? `<span class="n">${n}</span>` : ""}</button>`; }).join("");
 }
 function showLevel(lv){
   LEVEL = lv; renderLevels(); hideCard();
@@ -151,8 +171,10 @@ function drawPins(){
     const title = p.kind === "place" ? p.label : u ? `${u.brand || "Vacant"} · ${u.code} · ${u.status}` : `${p.code} · not in the GLA`;
     return `<button class="pin ${cls}" data-id="${p.id}" style="left:${p.x * 100}%;top:${p.y * 100}%" title="${esc(title)}" aria-label="${esc(title)}"></button>`;
   }).join("");
+  drawHeat();
 }
 function renderSide(){
+  if (HOT) return hotSide();
   const meta = L.levels.find(x => x.level === LEVEL), f = meta.figures || {};
   const map = byCode(), pinsHere = L.pins.filter(p => p.level === LEVEL && p.kind === "unit");
   const pinned = new Set(L.pins.filter(p => p.kind === "unit").map(p => norm(p.code)));
@@ -202,7 +224,9 @@ vp.addEventListener("pointerup", async e => {
     try { await api("ops/layouts/pin", { site: CTX.site, id: p.id, x: p.x, y: p.y }); p.source = "manual"; toast("Pin moved"); } catch (er){ toast(er.message, true); } dragPin = null; return; }
   dragPin = null;
   if (moved) return;
-  const pin = e.target.closest(".pin");
+  const under = document.elementFromPoint(e.clientX, e.clientY) || e.target;   // the map holds the pointer while dragging: find what is really under the finger
+  const hs = under.closest && under.closest(".hspot"); if (hs && HOT && HOT.data) return hotCard(HOT.data.spots.find(x => x.pinId === Number(hs.dataset.pin)));
+  const pin = (under.closest && under.closest(".pin")) || e.target.closest(".pin");
   if (pin) return openCard(L.pins.find(x => x.id === Number(pin.dataset.id)));
   if (e.target.closest(".card,.zoom,.banner")) return;
   hideCard();
@@ -216,6 +240,68 @@ $("#zIn").onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(1.4, r.
 $("#zOut").onclick = () => { const r = vp.getBoundingClientRect(); zoomAt(1 / 1.4, r.width / 2, r.height / 2); };
 $("#zFit").onclick = fit;
 addEventListener("resize", () => V.w && fit());
+
+/* ---------------- Hotspot map ---------------- */
+const HSRC = { snag: ["Snags", "#7B4BB0"], mf: ["Malfunctions", "#B5452B"], patrol: ["Patrol issues", "#2A0F45"], inc: ["Incidents", "#C2185B"] };
+const HPER = { d7: "Last 7 days", month: "This month", d30: "Last 30 days", last: "Last month", d90: "Last 90 days" };
+let HOT = null;
+function hotRange(k){ const t = CTX.today, [y, m] = t.split("-").map(Number), add = n => new Date(Date.parse(t + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  if (k === "month") return [t.slice(0, 8) + "01", t]; if (k === "d30") return [add(-29), t]; if (k === "d90") return [add(-89), t];
+  if (k === "last") return [new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10)]; return [add(-6), t]; }
+/* spots with the count for the sources switched on */
+const hotSpots = () => HOT && HOT.data ? HOT.data.spots.map(s => ({ ...s, k: Object.entries(s.by).filter(([src]) => HOT.src.has(src)).reduce((a, [, n]) => a + n, 0) })).filter(s => s.k) : [];
+async function hotLoad(){
+  const [f, t] = hotRange(HOT.per); HOT.loading = true; HOT.data = null; renderSide(); drawHeat();
+  try { HOT.data = await api(`ops/layouts/hot?site=${CTX.site}&from=${f}&to=${t}`); } catch (e){ HOT.err = e.message; }
+  HOT.loading = false; renderLevels(); drawPins(); renderSide();
+}
+function hotToggle(){
+  HOT = HOT ? null : { per: "d30", src: new Set(Object.keys(HSRC)), data: null };
+  document.body.classList.toggle("hot", !!HOT); $("#hotBtn").classList.toggle("on", !!HOT); hideCard();
+  if (HOT) hotLoad(); else { renderLevels(); drawPins(); renderSide(); }
+}
+$("#hotBtn").onclick = hotToggle;
+function drawHeat(){
+  const h = $("#heat"); if (!h) return;
+  if (!HOT || !HOT.data){ h.innerHTML = ""; return; }
+  const S = hotSpots(), max = Math.max(1, ...S.map(s => s.k));
+  h.innerHTML = S.filter(s => s.level === LEVEL).map(s => { const d = (4 + 9 * Math.sqrt(s.k / max)).toFixed(2);   /* % of the plan width */
+    return `<div class="hspot" data-pin="${s.pinId}" style="left:${s.x * 100}%;top:${s.y * 100}%;width:${d}%;aspect-ratio:1" title="${esc(s.label)} · ${s.k}"><b>${s.k}</b></div>`; }).join("");
+}
+function hotSide(){
+  const D = HOT.data, S = hotSpots(), here = S.filter(s => s.level === LEVEL).sort((a, b) => b.k - a.k), all = S.slice().sort((a, b) => b.k - a.k);
+  const on = k => HOT.src.has(k), cnt = k => D ? D.counts[k] : 0;
+  const unpl = D ? D.unplaced.map(g => ({ ...g, k: Object.entries(g.by).filter(([src]) => on(src)).reduce((a, [, n]) => a + n, 0) })).filter(g => g.k) : [];
+  $("#side").innerHTML = `<button class="sheetbtn" id="sheetBtn">🔥 Hotspots · ${esc(HPER[HOT.per])} ▴</button>
+    <h3>Hotspots · period</h3><div class="hchips">${Object.entries(HPER).map(([k, t]) => `<button data-hper="${k}" class="${k === HOT.per ? "on" : ""}">${t}</button>`).join("")}</div>
+    <h3>What to show</h3><div class="hchips hsrc">${Object.entries(HSRC).map(([k, [t, c]]) => `<button data-hsrc="${k}" class="${on(k) ? "on" : ""}" style="--c:${c}">${t}${D ? " · " + cnt(k) : ""}</button>`).join("")}</div>
+    ${HOT.loading ? `<p class="muted" style="font-size:.84rem">Reading snags, malfunctions, patrol issues and incidents…</p>` : HOT.err ? `<p style="color:var(--alert);font-size:.84rem">${esc(HOT.err)}</p>` : D ? `
+    <p class="muted" style="font-size:.76rem">${D.placed} of ${D.total} placed on the plans · ${esc(D.from)} → ${esc(D.to)}</p>
+    ${Object.entries(D.errors || {}).map(([k, e]) => `<p style="color:var(--warn);font-size:.74rem">${esc(HSRC[k] ? HSRC[k][0] : k)}: ${esc(e)}</p>`).join("")}
+    <h3>Level ${esc(LEVEL)} · hottest</h3><div class="hlist">${here.length ? here.slice(0, 10).map(s => `<button data-hs="${s.pinId}"><span>${esc(s.label)}</span><b>${s.k}</b></button>`).join("") : `<p class="muted" style="font-size:.8rem">Nothing on this level.</p>`}</div>
+    ${all.length ? `<h3>All levels · top 5</h3><div class="hlist">${all.slice(0, 5).map(s => `<button data-hs="${s.pinId}"><span>${esc(s.level)} · ${esc(s.label)}</span><b>${s.k}</b></button>`).join("")}</div>` : ""}
+    ${unpl.length ? `<h3>Not placed — no pin matches · ${unpl.reduce((a, g) => a + g.k, 0)}</h3><div class="hlist">${unpl.slice(0, 15).map(g => `<button disabled style="cursor:default"><span>${esc(g.where)}${g.level ? ` <small class="muted">· ${esc(g.level)}</small>` : ""}</span><b>${g.k}</b></button>`).join("")}</div>
+      <p class="muted" style="font-size:.72rem">${CAN.layouts ? "Add a place pin with this name (Adjust pins → tap the plan) and these will show on the map next time." : "The Manager or Senior Mall Supervisor can add a place pin with this name so these show on the map."}</p>` : ""}` : ""}`;
+}
+function hotCard(s){
+  if (!s) return;
+  document.querySelectorAll(".hspot.sel").forEach(x => x.classList.remove("sel")); const el = document.querySelector(`.hspot[data-pin="${s.pinId}"]`); if (el) el.classList.add("sel");
+  const L2 = s.items.filter(x => HOT.src.has(x.src)), c = $("#card"), when = a => { try { return new Date(a).toLocaleDateString("en-GB", { day: "numeric", month: "short" }); } catch { return ""; } };
+  c.innerHTML = `<button class="x" id="cx">×</button><h4>${esc(s.label)}</h4><p class="muted" style="font-size:.78rem;margin:4px 0 8px">Level ${esc(s.level)} · ${L2.length} in ${esc(HPER[HOT.per].toLowerCase())}</p>
+    <div style="max-height:260px;overflow:auto">${L2.map(x => `<div class="hit"><span class="s" style="background:${HSRC[x.src][1]}">${HSRC[x.src][0].replace(/s$/, "")}</span>${esc(x.text || x.where)}<small>${when(x.at)}${x.where ? " · " + esc(x.where) : ""}${x.tone ? " · " + esc(x.tone) : ""}</small></div>`).join("")}</div>`;
+  c.classList.remove("hidden");
+  const r = vp.getBoundingClientRect(), px = V.x + s.x * V.w * V.s, py = V.y + s.y * V.h * V.s;
+  c.style.left = Math.max(10, Math.min(r.width - 280, px + 16)) + "px"; c.style.top = Math.max(10, Math.min(r.height - c.offsetHeight - 10, py - 30)) + "px";
+  c.onclick = e => { if (e.target.id === "cx") hideCard(); };
+}
+$("#side").addEventListener("click", e => {
+  if (!HOT) return;
+  const p = e.target.closest("[data-hper]"); if (p){ HOT.per = p.dataset.hper; return hotLoad(); }
+  const sr = e.target.closest("[data-hsrc]"); if (sr){ const k = sr.dataset.hsrc; HOT.src.has(k) ? HOT.src.delete(k) : HOT.src.add(k); if (!HOT.src.size) HOT.src.add(k); renderLevels(); drawHeat(); return renderSide(); }
+  const hs = e.target.closest("[data-hs]"); if (hs){ const s = HOT.data.spots.find(x => x.pinId === Number(hs.dataset.hs)); if (!s) return;
+    const go = async () => { if (s.level !== LEVEL) await showLevel(s.level); const r = vp.getBoundingClientRect(); V.s = Math.min(Math.max(V.s, Math.min(r.width / V.w, r.height / V.h) * 2.2), 3);
+      V.x = r.width / 2 - s.x * V.w * V.s; V.y = r.height / 2 - s.y * V.h * V.s; apply(); hotCard(s); }; go(); }
+});
 
 /* ---------------- pin card ---------------- */
 function openCard(p){

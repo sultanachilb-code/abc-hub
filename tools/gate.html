@@ -153,6 +153,9 @@ async function packSave(){ if (!navigator.onLine || !site) return; try { const P
 function packFind(code, visitId){
   let P = null; try { P = JSON.parse(localStorage.getItem(PACK_KEY()) || "null"); } catch {}
   if (!P || !P.list) return null;
+  /* Quick Access Pass: …/qp/<token> or QP-ABCDEF, from the live passes saved on this phone */
+  const raw = String(code && code.raw || code || ""), qt = (raw.match(/\/qp\/([A-Za-z0-9]{20,40})/) || [])[1], qc = (raw.match(/^QP[-\s]?([A-Z]{6})$/i) || [])[1];
+  if (qt || qc){ const q = (P.quickPasses || []).find(x => (qt && x.token === qt) || (qc && x.code === "QP-" + qc.toUpperCase())); return q ? { q, at: P.at } : null; }
   const n = (String(code && code.raw || code || "").match(/REQ-?0*(\d{3,})/i) || [])[1];
   const v = P.list.find(x => (visitId && x.id === Number(visitId)) || (n && String(x.req || "").replace(/\D/g, "").replace(/^0+/, "") === n));
   return v ? { v, at: P.at } : null;
@@ -288,10 +291,10 @@ async function loop(){
 /* ---------- typed by hand ---------- */
 function typeBox(){
   const d = $("#dlg");
-  d.innerHTML = `<div class="dlg-h"><b>Type the request number</b><small>As printed under the QR code, e.g. REQ-0012345</small></div>
+  d.innerHTML = `<div class="dlg-h"><b>Type the request number</b><small>As printed under the QR code, e.g. REQ-0012345 — or a Quick Pass code, e.g. QP-ABCDEF</small></div>
     <div class="dlg-b"><input class="inp" id="tReq" inputmode="text" autocomplete="off" placeholder="REQ-…" style="width:100%;height:48px;font-size:1.1rem;text-transform:uppercase"></div>
     <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Find</button></div>`;
-  d.onclick = e => { const b = e.target.closest("[data-v]"); if (!b && e.target !== d) return; const v = $("#tReq").value.trim(); d.close(); if (b && b.dataset.v === "1" && v) scanned(/^req/i.test(v) ? v : "REQ-" + v.replace(/\D/g, "")); };
+  d.onclick = e => { const b = e.target.closest("[data-v]"); if (!b && e.target !== d) return; const v = $("#tReq").value.trim(); d.close(); if (b && b.dataset.v === "1" && v) scanned(/^qp/i.test(v) ? v.toUpperCase().replace(/^QP[-\s]?/, "QP-") : /^req/i.test(v) ? v : "REQ-" + v.replace(/\D/g, "")); };
   d.querySelector("#tReq").onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); d.querySelector('[data-v="1"]').click(); } };
   d.showModal(); setTimeout(() => $("#tReq").focus(), 50);
 }
@@ -303,7 +306,11 @@ async function scanned(code, visitId){
   drawRes();
   try { const r = await api("ops/gate/lookup", { site, code, visitId }); R = { ...R, ...r, loading: false, workers: (r.visit && r.visit.workers) || 1 }; }
   catch (e){ R = { ...R, loading: false, offline: !e.status, error: e.status ? e.message : "", workers: 1 };
-    if (R.offline){ const hit = packFind(code, visitId); if (hit){ R.info = { req: hit.v.req, tenant: hit.v.tenant, contractor: hit.v.company, work: hit.v.work, from: hit.v.from, to: hit.v.to }; R.cached = hit.at; } } }
+    if (R.offline){ const hit = packFind(code, visitId);
+      if (hit && hit.q){ const q = hit.q, ok = Date.parse(q.until) > Date.now(), t = new Date(q.until).toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" });
+        R.info = { req: q.code, contractor: q.company || q.name, tenant: q.tenant, work: "Quick Pass" + (q.reason ? " · " + q.reason : ""), desc: q.name, status: "Approved", quickPass: true };
+        R.verdict = ok ? { code: "valid", label: `Quick Pass valid until ${t}`, ok: true } : { code: "expired", label: `Quick Pass expired at ${t}`, ok: false }; R.cached = hit.at; R.qpOffline = true; }
+      else if (hit){ R.info = { req: hit.v.req, tenant: hit.v.tenant, contractor: hit.v.company, work: hit.v.work, from: hit.v.from, to: hit.v.to }; R.cached = hit.at; } } }
   busy = false;
   drawRes();
 }
@@ -315,6 +322,7 @@ const VD = {
   "not-approved": ["early", "!", "Not approved yet", "الطلب غير موافق عليه بعد"],
   check: ["unknown", "?", "Check the pass", "تحقق من التصريح"],
   blocked: ["bad", "✕", "Contractor blocked", "المتعهد محظور"],
+  used: ["bad", "✕", "Quick Pass already used", "التصريح السريع مستخدم"],
   unknown: ["unknown", "?", "Request not found", "الطلب غير موجود"]
 };
 function drawRes(){
@@ -329,18 +337,20 @@ function drawRes(){
 
   const I = R.info || {}, v = R.visit;
   /* no live status (Salesforce not connected, or no signal): the agent reads the pass and says what it shows */
-  R.noLive = !!(R.offline || !I.status);
+  R.noLive = !!((R.offline && !R.qpOffline) || !I.status);
   const vk = R.noLive && !(R.verdict && R.verdict.ok) ? "check" : (R.verdict && R.verdict.code) || "unknown";
   const [cls, ic, title, ar] = VD[vk] || VD.unknown;
   const vc = R.verdict && R.verdict.code;
   const sub = vk === "check" ? (R.offline ? "No signal — open the pass on the contractor's phone" : "Open the pass and look at the stamp: Approved or Rejected")
+    : I.quickPass ? (R.verdict && R.verdict.label) || ""
     : vc === "valid" ? (I.to && I.to.day ? `Approved · valid until ${when(I.to)}` : "Approved in Salesforce")
     : vc === "rejected" ? `Salesforce status: ${I.status}` : vc === "expired" ? `Approved, but the permit ended ${when(I.to && I.to.day ? I.to : I.from)}` : vc === "early" ? `Approved, but the permit starts ${when(I.from)}`
     : vc === "not-approved" ? `Salesforce status: ${I.status || "—"}` : (R.verdict && R.verdict.label) || "";
   const passUrl = /^https:\/\/[\w.-]+\.(my\.)?site\.com\//.test((R.code && R.code.raw) || "") ? R.code.raw : "";
   const notes = [];
   if (R.offline) notes.push(["warn", "No signal. Your decision is saved on this phone and sent when the signal is back."]);
-  if (R.offline && R.cached) notes.push(["ok", `Booked in the hub list saved on this phone at ${hm(R.cached)}: <b>${esc(I.contractor || "")}</b>${I.tenant ? " for " + esc(I.tenant) : ""} · ${esc(I.work || "")} · ${esc(when(I.from))} – ${esc(when(I.to))}. Still check the pass stamp.`]);
+  if (R.qpOffline) notes.push(["ok", `Quick Pass from the list saved on this phone at ${hm(R.cached)} — one entry only.`]);
+  else if (R.offline && R.cached) notes.push(["ok", `Booked in the hub list saved on this phone at ${hm(R.cached)}: <b>${esc(I.contractor || "")}</b>${I.tenant ? " for " + esc(I.tenant) : ""} · ${esc(I.work || "")} · ${esc(when(I.from))} – ${esc(when(I.to))}. Still check the pass stamp.`]);
   else if (R.offline) notes.push(["alert", "Not in the hub list saved on this phone — check the pass carefully or call the supervisor."]);
   else if (vk === "check" && !R.sfError) notes.push(["info", "The pass could not be read automatically — open it to see Approved / Rejected."]);
   if (R.last) notes.push([R.last.decision === "out" ? "alert" : "info", `Scanned before today at ${hm(R.last.at)} — ${R.last.decision === "in" ? "approved in" : R.last.decision === "out" ? "rejected (" + esc(R.last.reason) + ")" : "left"} by ${esc(R.last.by)}.`]);
@@ -364,7 +374,7 @@ function drawRes(){
         ${f("From", esc(when(I.from)))}
         ${f("To", esc(when(I.to)))}
         ${f("Status", I.status ? esc(I.status) : "")}
-        ${f("Checked by", R.offline ? "" : R.source === "pass" ? "Tenant Connect pass · live" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
+        ${f("Checked by", R.offline ? "" : R.source === "quickpass" ? "Hub · Quick Access Pass (one entry)" : R.source === "pass" ? "Tenant Connect pass · live" : R.source === "salesforce" ? "Salesforce · live" : R.source === "hub" ? "Hub · approved requests list" : "")}
       </div>` : ""}
       ${R.sfFields && R.sfFields.length ? `<details class="card" style="margin:12px 14px 0;padding:10px 14px"><summary style="font-weight:800;font-size:.84rem;cursor:pointer">Salesforce fields read <span class="muted" style="font-weight:600">· managers only</span></summary>
         <div style="font-size:.78rem;line-height:1.5;margin-top:8px;word-break:break-word">${R.sfFields.map(x => `<div><b>${esc(x[0])}</b> <span class="muted">${esc(x[1])}</span></div>`).join("")}</div></details>` : ""}
