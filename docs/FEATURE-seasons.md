@@ -14,5 +14,5 @@ Light decorations on the hub's header and a greeting chip, switched automaticall
 | Valentine's / Mother's Day | 13–14 February / 21 March |
 | Summer at ABC | July and August |
 
-Each person can switch them off in the profile menu (**Seasonal decorations**). Animations stop for people who ask for reduced motion.
+Shown to the **admin only** (switch them off in the profile menu, **Seasonal decorations**). To show them to everyone, remove the admin check in `paintSeason()`. Animations stop for people who ask for reduced motion.
 Technical: `seasonNow()` / `paintSeason()` in `index.html`.
