@@ -97,6 +97,25 @@ h2.sec .sp{flex:1}
 .flash b{display:block;font-size:1.7rem;margin-top:10px}
 .flash small{display:block;font-size:1.05rem;margin-top:6px;opacity:.92;padding:0 24px}
 @keyframes fl{from{opacity:0;transform:scale(1.04)}}
+/* expired: the rejected page */
+.res.xp{background:#B3261E;color:#fff}
+.res.xp .x{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;font-size:1.2rem;z-index:2}
+.xp-top{padding:calc(34px + env(safe-area-inset-top)) 20px 18px;text-align:center}
+.xp-ic{width:96px;height:96px;margin:0 auto 12px;border-radius:50%;border:5px solid #fff;display:grid;place-items:center;font-size:3.4rem;font-weight:900;line-height:1}
+.xp-top b{display:block;font-size:2rem;font-weight:900;letter-spacing:.04em}
+.xp-top .ar{display:block;font-size:1.25rem;font-weight:800;margin-top:2px}
+.xp-why{margin-top:10px;font-weight:800;font-size:1rem;opacity:.95}.xp-why .ar{display:block;font-size:.95rem;margin-top:2px}
+.xp-end{margin:14px auto 0;display:inline-block;background:rgba(0,0,0,.22);border-radius:14px;padding:10px 18px;font-size:1.35rem;font-weight:900}
+.xp-end small{display:block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+.xp-now{margin-top:8px;font-weight:700;font-size:.9rem;opacity:.85}
+.xp-det{flex:1;overflow-y:auto;margin:0 14px 12px;background:rgba(255,255,255,.1);border-radius:16px;padding:6px 16px}
+.xp-det div{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.xp-det span{font-size:.7rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;opacity:.8;padding-top:2px}
+.xp-det p{font-size:.88rem;font-weight:700;line-height:1.5;margin:10px 0}
+.xp-det .xp-off{opacity:.85;font-weight:600}
+.res.xp .acts{background:rgba(0,0,0,.18);border-top:0}
+.res.xp .big-btn.out{background:#fff;color:#B3261E}
+.res.xp .acts .btn.ghost{color:#fff;border-color:rgba(255,255,255,.5);background:transparent}
 @media (max-width:640px){ #sub{display:none} }
 .ph{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px}
 .ph b{display:block;font-size:.95rem} .ph small{display:block;color:var(--muted);font-size:.78rem;line-height:1.45}
@@ -310,9 +329,35 @@ async function scanned(code, visitId){
       if (hit && hit.q){ const q = hit.q, ok = Date.parse(q.until) > Date.now(), t = new Date(q.until).toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" });
         R.info = { req: q.code, contractor: q.company || q.name, tenant: q.tenant, work: "Quick Pass" + (q.reason ? " · " + q.reason : ""), desc: q.name, status: "Approved", quickPass: true };
         R.verdict = ok ? { code: "valid", label: `Quick Pass valid until ${t}`, ok: true } : { code: "expired", label: `Quick Pass expired at ${t}`, ok: false }; R.cached = hit.at; R.qpOffline = true; }
-      else if (hit){ R.info = { req: hit.v.req, tenant: hit.v.tenant, contractor: hit.v.company, work: hit.v.work, from: hit.v.from, to: hit.v.to }; R.cached = hit.at; } } }
+      else if (hit){ R.info = { req: hit.v.req, tenant: hit.v.tenant, contractor: hit.v.company, work: hit.v.work, from: hit.v.from, to: hit.v.to }; R.cached = hit.at;
+        if (ended(hit.v.to)) R.verdict = { code: "expired", label: "Permit expired", ok: false }; } } }
   busy = false;
   drawRes();
+}
+/* has the permit's end (date + time, Beirut) passed? No time → the end of that day */
+const nowKey = () => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`; };
+const ended = w => !!(w && w.day && nowKey() > `${w.day} ${w.time || "23:59"}`);
+/* EXPIRED = no entry. Only a rejected page: no "Approved · In", no override (Oct 2026) */
+function drawExpired(box){
+  const I = R.info || {}, end = I.to && I.to.day ? I.to : I.from;
+  const endTxt = I.quickPass ? ((R.verdict && R.verdict.label) || "").replace(/^Quick Pass expired at /, "") : when(end);
+  box.innerHTML = `<div class="res xp">
+    <button class="x" id="rx" aria-label="Close">✕</button>
+    <div class="xp-top"><div class="xp-ic">✕</div>
+      <b>ENTRY REJECTED</b><span class="ar">الدخول مرفوض</span>
+      <div class="xp-why">${I.quickPass ? "Quick Pass expired" : "Permit expired"}<span class="ar">التصريح منتهي الصلاحية</span></div>
+      <div class="xp-end"><small>Valid until · صالح حتى</small>${esc(endTxt || "—")}</div>
+      <div class="xp-now">Now · الآن ${esc(nowKey().slice(11))}</div></div>
+    <div class="xp-det">
+      ${[["Request", I.req || (R.code && R.code.req)], ["Contractor", I.contractor], ["Tenant", I.tenant], ["Work", I.work]].filter(x => x[1]).map(x => `<div><span>${x[0]}</span><b>${esc(x[1])}</b></div>`).join("")}
+      <p>The contractor cannot enter. Ask them to request a new permit from the tenant / operations.<br><span class="ar">لا يمكن للمتعهد الدخول. يجب طلب تصريح جديد.</span></p>
+      ${R.offline ? `<p class="xp-off">No signal — checked against the list saved on this phone at ${hm(R.cached)}.</p>` : ""}</div>
+    <div class="acts"><button class="big-btn out" id="bOut" style="height:72px">REJECTED · OUT — record<small class="ar">تسجيل الرفض</small></button>
+      <button class="btn ghost" id="rBack">Scan again</button></div></div>`;
+  $("#rx").onclick = $("#rBack").onclick = closeRes;
+  $("#bOut").onclick = () => send("out", I.quickPass ? "Quick Pass expired" : "Permit expired");
+  buzz([200, 100, 200]);
 }
 const VD = {
   valid: ["valid", "✓", "Permit valid", "التصريح ساري"],
@@ -335,6 +380,7 @@ function drawRes(){
       <div class="acts"><button class="btn ghost" id="rType">⌨ Type request number</button><button class="btn" id="rBack">Scan again</button></div></div>`;
     $("#rx").onclick = $("#rBack").onclick = closeRes; $("#rType").onclick = () => { closeRes(); typeBox(); }; return; }
 
+  if (R.verdict && R.verdict.code === "expired") return drawExpired(box);
   const I = R.info || {}, v = R.visit;
   /* no live status (Salesforce not connected, or no signal): the agent reads the pass and says what it shows */
   R.noLive = !!((R.offline && !R.qpOffline) || !I.status);
@@ -457,6 +503,7 @@ async function send(decision, reason, seen){
   } catch (e){
     pendWrite(pendRead().filter(x => x.clientId !== body.clientId));
     busy = false;
+    if (/entry not allowed/.test(e.message)){ R.verdict = { code: "expired", label: "Permit expired", ok: false }; return drawRes(); }   // the hub says the permit has ended
     if (/write why you let them in/.test(e.message)) return reasonBox("in", seen);   // e.g. approved on the pass but the permit time has passed
     if (/choose the reason for the rejection/.test(e.message)) return reasonBox("out", seen);
     toast(e.message, true); return;

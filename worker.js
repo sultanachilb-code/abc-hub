@@ -2184,7 +2184,9 @@ async function accessLog(env, site, day, hd) {
   let doc = {}; try { doc = hd ? JSON.parse(hd.doc || "{}") : {}; } catch {}
   const lines = ["today", "ongoing", "tomorrow"].flatMap(k => doc[k] || []);
   const reqs = new Set(lines.map(reqKeyOf).filter(Boolean)), text = lines.map(x => String(x.text || "")).join("\n").toUpperCase();
-  const covered = req => { const r = String(req || ""); if (/^QP-/i.test(r)) return text.includes(r.toUpperCase()); const k = r.replace(/\D/g, "").replace(/^0+/, ""); return !!k && reqs.has(k); };
+  /* a REQ matches its handover line by number; a CP (a pass operations / technical create for tenants or our own contractors) or a QP is its own entry,
+     matched only by its exact code — never linked to a REQ with the same digits */
+  const covered = req => { const r = String(req || ""); if (!/^REQ/i.test(r)) return !!r && text.includes(r.toUpperCase()); const k = r.replace(/\D/g, "").replace(/^0+/, ""); return !!k && reqs.has(k); };
   const [scans, hand, qps] = await Promise.all([
     env.DB.prepare("SELECT at, decision, reason, override, workers, req, tenant, contractor, work, by_name FROM gate_scans WHERE site = ? AND day = ? AND decision IN ('in','out') ORDER BY at").bind(site, day).all(),
     env.DB.prepare(`SELECT v.id, v.req, v.company, v.tenant, v.work, v.src, c.in_at, c.in_name, c.out_at, c.workers, c.note FROM contractor_checks c JOIN contractor_visits v ON v.id = c.visit_id

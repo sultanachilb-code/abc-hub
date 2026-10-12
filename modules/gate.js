@@ -7,7 +7,8 @@
    contractor, tenant, sender and permit window. The agent presses  APPROVED · IN  (green)  or  REJECTED · OUT  (red).
 
    • Approved request → one tap to let in.     Rejected request → one tap to refuse.
-   • Letting in a rejected / not-approved / out-of-time request needs a reason (override → the flagship is notified).
+   • Letting in a rejected / not-approved / not-started request needs a reason (override → the flagship is notified).
+   • An EXPIRED permit (its end date and time have passed) cannot be let in at all — the gate shows a rejected page.
    • Refusing an approved request needs a reason too.
    • Approved in → the contractor is checked in on Contractors (Day to Day timeline shows "On site").
    • Every decision appears live in the Shift Handover ("Loading area gate") and in the handover email.
@@ -341,7 +342,8 @@ async function quickPassDecide(env, site, me, d, o) {
   const override = (o.decision === "in" && !verdict.ok) || (o.decision === "out" && verdict.ok);
   if (o.decision === "out" && !reason) reason = verdict.ok ? "" : verdict.label;
   if (o.decision === "out" && !reason) throw err("This Quick Pass is valid — choose the reason for the rejection");
-  if (override && !reason && o.offline) reason = "Offline — Quick Pass not checked at the gate";
+  if (o.decision === "in" && verdict.code === "expired" && !o.offline) throw err(`${verdict.label} — entry not allowed`, 403);   // expired = no entry, no override (Oct 2026)
+  if (override && !reason && o.offline) reason = verdict.code === "expired" ? "Offline — Quick Pass had expired (not checked at the gate)" : "Offline — Quick Pass not checked at the gate";
   if (override && !reason) throw err(`${verdict.label} — write why you let them in`);
   let visitId = r.visit_id || 0;
   if (o.decision === "in") {
@@ -469,7 +471,11 @@ export async function gateRoute(env, p, method, b, url, d) {
     const override = (decision === "in" && !verdict.ok) || (decision === "out" && verdict.ok);
     if (decision === "out" && !reason && verdict.ok) throw err("This request is approved — choose the reason for the rejection");
     if (decision === "out" && !reason) reason = verdict.code === "rejected" ? "Rejected in Salesforce" : verdict.label;
-    if (override && !reason && b.offline) reason = "Offline — permit not checked at the gate";
+    /* the permit's end date and time have passed → no entry, not even with a reason (Oct 2026).
+       A decision made offline has already happened at the gate: it is kept, marked, and the flagship is told. */
+    if (decision === "in" && verdict.code === "expired" && !b.offline)
+      throw err(`Permit expired${info.to && info.to.day ? " on " + info.to.day + (info.to.time ? " at " + info.to.time : "") : ""} — entry not allowed`, 403);
+    if (override && !reason && b.offline) reason = verdict.code === "expired" ? "Offline — the permit had expired (not checked at the gate)" : "Offline — permit not checked at the gate";
     if (override && !reason) throw err("This request is not approved or not valid now — write why you let them in");
     const workers = Math.max(0, Math.min(500, Number(b.workers) || 0));
 
