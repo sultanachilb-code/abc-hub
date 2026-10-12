@@ -308,10 +308,12 @@ function liveHtml(){
   /* Contractor access of the day that no handover line covers yet (approved later than the handover was written, Quick Passes, hand check-ins) */
   const lineTxt = H && H.doc ? ["today", "ongoing", "tomorrow"].flatMap(k => H.doc[k] || []) : [];
   const keys = new Set(lineTxt.map(reqKey).filter(Boolean)), allTxt = lineTxt.map(x => String(x.text || "")).join("\n").toUpperCase();
-  const inDoc = a => /^QP-/i.test(a.req || "") ? allTxt.includes(String(a.req).toUpperCase()) : !!(a.req && keys.has(String(a.req).replace(/\D/g, "").replace(/^0+/, "")));
+  /* REQ → matched by number. CP (operations / technical pass) and QP → their own entry, matched by the exact code only (a CP is not a REQ) */
+  const inDoc = a => !a.req ? false : !/^REQ/i.test(a.req) ? allTxt.includes(String(a.req).toUpperCase()) : keys.has(String(a.req).replace(/\D/g, "").replace(/^0+/, ""));
+  const accKind = a => a.kind === "qp" ? "Quick Pass" : a.kind === "hand" ? "checked in on Contractors" : /^CP/i.test(a.req || "") ? "loading gate · CP operations pass" : "loading gate";
   const ACC = (LIVE.access || []).map((a, i) => ({ ...a, i })).filter(a => !inDoc(a));
   const accT = ACC.length ? `<table class="t live"><tr><th>Contractor access not in this handover · ${ACC.length}</th><th style="width:34%">Tenant · request</th><th style="width:30%"></th></tr>
-    ${ACC.map(a => `<tr><td><b>${esc(a.who)}</b> <small class="muted">${esc(a.at)} · ${a.kind === "qp" ? "Quick Pass" : a.kind === "hand" ? "checked in on Contractors" : "loading gate"}${a.by ? " · " + esc(a.by) : ""}</small></td>
+    ${ACC.map(a => `<tr><td><b>${esc(a.who)}</b> <small class="muted">${esc(a.at)} · ${accKind(a)}${a.by ? " · " + esc(a.by) : ""}</small></td>
       <td>${esc(a.tenant || "")}${a.req ? ` <small class="muted">· ${esc(a.req)}</small>` : ""}<br><small class="${a.decision === "out" ? "nd" : "done"}">${a.decision === "out" ? "Refused · " + esc(a.reason) : a.decision === "approved" ? "Approved · valid until " + esc(a.until) : "Attended " + esc(a.at)}</small></td>
       <td>${H.can && H.can.handover ? `<button class="btn small" data-acc="${a.i}">+ Add to handover</button>` : ""}</td></tr>`).join("")}</table>` : "";
   const wrow = w => { const cls = (n) => n >= R.rooms ? "done" : w.state === "closed" ? "nd" : w.state === "open" ? "pr" : ""; const cell = (n, by) => R.rooms ? `<span class="${cls(n)}">${n}/${R.rooms}</span>${by.length ? ` <small class="muted">${esc(by.join(", "))}</small>` : ""}` : "—";

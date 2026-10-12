@@ -32,7 +32,8 @@
 4. Set the number of workers and press:
    * **APPROVED · IN** (green, دخول مسموح) — one tap for an approved request. The contractor is checked in on Contractors.
    * **REJECTED · OUT** (red, رفض الدخول) — one tap for a rejected request.
-   * **Letting in a rejected / not-approved / out-of-time request needs a reason** (duty manager approval, operations by phone, permit extension, emergency works, other). It is saved as an *override* and the flagship is notified.
+   * **An expired permit cannot be let in** (Oct 2026): once the permit's end date and time have passed (e.g. valid until 10:00, the contractor arrives at 11:00), the phone shows a full red **ENTRY REJECTED** page with the end time, and only **Rejected · Out** / **Scan again**. There is no Approved · In button and no override; the hub refuses it too (`gate/decide` → "entry not allowed"). The same applies to an expired Quick Pass, and offline when the booking saved on the phone has ended. A decision already made offline (no signal, permit not checked) is still recorded when it syncs, marked as an override, and the flagship is told.
+   * **Letting in a rejected / not-approved / not-started request needs a reason** (duty manager approval, operations by phone, permit extension, emergency works, other). It is saved as an *override* and the flagship is notified.
    * Refusing an approved request also needs a reason.
    * **Leaving** appears when the contractor is already on site — it checks them out.
 5. A full-screen ✓ / ✕ confirms, and the scanner is ready for the next pass.
@@ -102,3 +103,8 @@ and the Contractor Access card adds "gate N in · M refused".
 
 ## Quick Access Pass (October 2026)
 The gate also reads **Quick Passes** (`…/qp/<token>` or typed `QP-ABCDEF`): valid for 30 minutes from approval, one entry. See FEATURE-quick-pass.md.
+
+## CP passes in the handover
+A **CP-xxxxxx** code is a pass the operations or technical team creates for tenants or our own contractors. It is **not** a Tenant Connect REQ:
+gate scans with a CP number are never linked to a REQ line (even with the same digits). They are listed in *Contractor access not in this handover* as
+"loading gate · CP operations pass", and **+ Add to handover** adds them as their own line; that line is matched by the exact CP code.
