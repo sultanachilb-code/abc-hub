@@ -167,7 +167,7 @@ async function openDay(day){
   try {
     const d = await api(`ops/handover/new?site=${CTX.site}&day=${day}`);
     if (d.existing) return open(d.handover.id);
-    H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin;
+    H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin; H.cctvMail = d.cctvMail || [];
     dirty = true; LIVE = null; setBase(H); render(); loadLive();
     if (H.can.handover) save(false, true);
   } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
@@ -207,7 +207,7 @@ async function history(){
   run();
 }
 async function open(id){
-  const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin;
+  const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin; H.cctvMail = d.cctvMail || [];
   setTabs(BACK === "hist" || H.day !== CTX.today ? "hist" : "today");
   dirty = false; LIVE = null; setBase(H); PENDING = null; render(); loadLive();
 }
@@ -238,7 +238,7 @@ function redraw(){
   };
 }
 function adopt(h){
-  const keep = { can: H.can, shifts: H.shifts, shiftNames: H.shiftNames, admin: H.admin }, done = redraw();
+  const keep = { can: H.can, shifts: H.shifts, shiftNames: H.shiftNames, admin: H.admin, cctvMail: H.cctvMail }, done = redraw();
   H = Object.assign(h, keep); setBase(h); dirty = false; PENDING = null;
   done();
   const m = $("#savedMsg"); if (m && h.updatedName) m.textContent = `Updated live · ${h.updatedName} ${hm(h.updatedAt)}`;
@@ -447,8 +447,8 @@ function shiftTable(){
   return `<div class="shifts"><div class="sh-h">Shift handovers · ${esc(D.fmt(H.day, { weekday: "short" }))}<span class="sp"></span>${H.admin ? `<button class="btn small ghost" id="shSet" title="Choose this flagship's shifts">⚙ Shifts</button>` : ""}</div>${rows}</div>`;
 }
 async function submitShift(c){
-  let R = null; try { R = await api("ops/handover/mailto?site=" + CTX.site); } catch {}
-  const who = R && R.auto && R.relay && R.to.length ? `<br><br>✉︎ It is also <b>emailed</b> to <b>${esc(R.to.join(", "))}</b>${R.cc.length ? `, Cc <b>${esc(R.cc.join(", "))}</b>` : ""}.` : "";
+  let R = null; try { R = await api(`ops/handover/mailto?site=${CTX.site}&shift=${c}`); } catch {}
+  const who = R && R.auto && R.relay && R.to.length ? `<br><br>✉︎ It is also <b>emailed</b> to <b>${esc(R.to.join(", "))}</b>${R.cc.length ? `, Cc <b>${esc(R.cc.join(", "))}</b>` : ""}.${R.cctv && R.cctv.length ? ` <small>(PM: the CCTV room is included.)</small>` : ""}` : "";
   const again = (H.handoffs || []).some(x => x.shift === c);
   const chk = await shiftEndCheck(c);
   if (!(await confirmBox(`${again ? "Submit again" : "Submit"} the ${shName(c)} handover?`, chk + `The time is recorded and everyone at the flagship is notified that the ${shName(c)} handover is ready to receive.` + who, chk.includes("se-open") ? "Submit anyway" : "Submit"))) return;
@@ -771,8 +771,10 @@ function emlFile(){
   const { title, html } = mailHtml();
   const subj = "=?UTF-8?B?" + btoa(String.fromCharCode(...new TextEncoder().encode(title))) + "?=";
   const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
-  return { title, text: ["To: ", `Subject: ${subj}`, "X-Unsent: 1", "MIME-Version: 1.0", "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64utf8(doc)].join("\r\n") };
+  const to = MAIL_SHIFT === "PM" ? (H.cctvMail || []).join(", ") : "";   // the PM handover goes to the CCTV room (Hub administration → ABC Operations Groups)
+  return { title, text: [`To: ${to}`, `Subject: ${subj}`, "X-Unsent: 1", "MIME-Version: 1.0", "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64utf8(doc)].join("\r\n") };
 }
+const mailSubjHtml = () => `<span class="muted">Subject:</span> <b>${esc(mailSubject())}</b>${MAIL_SHIFT === "PM" && (H.cctvMail || []).length ? `<br><span class="muted">To (CCTV):</span> <b>${esc(H.cctvMail.join(", "))}</b>` : ""}`;
 async function mailDialog(){
   if (!LIVE || LIVE.error) await loadLive();
   { const S = H.shifts || ["AM", "PM"], L = H.handoffs || [], nx = S.find(c => !L.some(x => x.shift === c)) || S[S.length - 1]; MAIL_SHIFT = shName(nx); }
@@ -781,7 +783,7 @@ async function mailDialog(){
     <div class="dlg-b" style="display:grid;gap:10px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="muted" style="font-size:.85rem">Shift</span>
         <span class="seg" style="display:inline-flex;border:1px solid var(--line,#ccc);border-radius:10px;overflow:hidden">${(H.shifts || ["AM", "PM"]).map(shName).map(x => `<button type="button" class="btn small ${MAIL_SHIFT === x ? "gold" : "ghost"}" data-sh="${x}" style="border-radius:0;border:0">${x}</button>`).join("")}</span></div>
-      <div id="mailSubj" style="font-size:.85rem;padding:8px 10px;border-radius:10px;background:var(--paper,#f5f5f5)"><span class="muted">Subject:</span> <b>${esc(mailSubject())}</b></div>
+      <div id="mailSubj" style="font-size:.85rem;padding:8px 10px;border-radius:10px;background:var(--paper,#f5f5f5)">${mailSubjHtml()}</div>
       <button class="btn gold" data-m="eml">Open in Outlook (desktop)</button>
       <p class="muted" style="font-size:.8rem;margin-top:-4px">Downloads <b>handover.eml</b>. Open it and Outlook shows a new, unsent email.</p>
       <button class="btn ghost" data-m="copy">Copy the handover, then open a new email</button>
@@ -791,7 +793,7 @@ async function mailDialog(){
   d.onclick = async ev => {
     const sh = ev.target.closest("[data-sh]");
     if (sh){ MAIL_SHIFT = sh.dataset.sh; d.querySelectorAll("[data-sh]").forEach(x => x.className = `btn small ${x.dataset.sh === MAIL_SHIFT ? "gold" : "ghost"}`);
-      d.querySelector("#mailSubj").innerHTML = `<span class="muted">Subject:</span> <b>${esc(mailSubject())}</b>`; return; }
+      d.querySelector("#mailSubj").innerHTML = mailSubjHtml(); return; }
     const b = ev.target.closest("[data-m]"); if (!b && ev.target !== d) return;
     const m = b ? b.dataset.m : "x";
     if (m === "eml"){
@@ -807,7 +809,7 @@ async function mailDialog(){
         toast("Handover copied — paste it into the email");
       } catch { const w = document.createElement("div"); w.innerHTML = html; w.style.position = "fixed"; w.style.left = "-9999px"; document.body.append(w);
         const r = document.createRange(); r.selectNodeContents(w); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand("copy"); sel.removeAllRanges(); w.remove(); toast("Handover copied — paste it into the email"); }
-      location.href = "mailto:?subject=" + encodeURIComponent(title);
+      location.href = "mailto:" + (MAIL_SHIFT === "PM" ? (H.cctvMail || []).join(",") : "") + "?subject=" + encodeURIComponent(title);
     }
     d.close();
   };

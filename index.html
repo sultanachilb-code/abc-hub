@@ -269,6 +269,106 @@ body.hl-docked main{padding-bottom:110px}
   .hl-sw button span{display:none}
 }
 @media (prefers-reduced-motion:reduce){.hl-card,.hl-dock,.hl-orb .sheet{animation:none}.hl-orb .cat,.hl-orb .sat,.hl-pop{transition:none}}
+/* ---------- Home layouts, Oct 2026: Honeycomb · Bookshelf · Shutters · 3D Carousel (picked in Profile settings) ---------- */
+.hl-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px;margin-bottom:18px}
+.hl-pick button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--muted);font-size:.76rem;font-weight:700;transition:.15s}
+.hl-pick button svg{width:22px;height:22px}
+.hl-pick button:hover{border-color:var(--brand-2);color:var(--text)}
+.hl-pick button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+/* honeycomb */
+.hl-hive{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 16px}
+.hx-comb{position:relative;width:300px;height:282px;margin:0 auto}
+.hx{position:absolute;width:94px;height:108px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;color:#fff;transition:transform .25s cubic-bezier(.3,1.4,.5,1),filter .2s;animation:hxIn .55s cubic-bezier(.3,1.5,.5,1) both}
+.hx:hover{transform:scale(1.12);filter:brightness(1.12);z-index:2}
+.hx.locked{opacity:.45;pointer-events:none}
+.hx-i{display:grid;place-items:center;position:relative}
+.hx-i svg{width:22px;height:22px}
+.hx-i img{width:30px;height:30px;object-fit:cover;border-radius:8px;background:#fff}
+.hx-i img + svg{display:none}
+.hx-t{font-size:.6rem;font-weight:800;line-height:1.15;padding:0 12px;max-height:3.5em;overflow:hidden}
+.hx-b{position:absolute;top:13px;background:var(--alert);color:#fff;font-size:.58rem;font-weight:800;border-radius:999px;padding:0 5px;border:1.5px solid #fff}
+.hx.core{background:linear-gradient(135deg,var(--c),#2A0F45);z-index:1;animation:hxIn .55s cubic-bezier(.3,1.5,.5,1) both,hxGlow 3.2s 1.2s ease-in-out infinite}
+.hx.core b{font-size:.66rem;line-height:1.15;padding:0 12px}
+.hx.core em{font-style:normal;font-size:.6rem;color:var(--gold);font-weight:800}
+.hx.more{background:var(--line);color:var(--brand)}
+:root[data-theme="dark"] .hx.more{color:#fff}
+.hx.more b{font-size:1rem}
+@keyframes hxIn{from{opacity:0;transform:scale(.3) rotate(-30deg)}}
+@keyframes hxGlow{50%{filter:brightness(1.25)}}
+/* bookshelf */
+.hl-books{background:linear-gradient(#6B4423,#4E2F15);border-radius:22px;padding:20px 18px 2px;box-shadow:inset 0 0 0 8px #3E240F}
+.bk-row{display:flex;align-items:flex-end;justify-content:center;gap:10px;min-height:236px;padding:0 6px;border-bottom:16px solid #8A5A2B;box-shadow:0 10px 0 -2px #3E240F;margin-bottom:24px}
+.bk{position:relative;width:66px;flex:none;border-radius:5px 5px 2px 2px;background:linear-gradient(90deg,rgba(0,0,0,.25),transparent 18%,transparent 80%,rgba(0,0,0,.3)),var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;padding:14px 0 10px;box-shadow:2px 0 4px rgba(0,0,0,.35);transition:transform .35s cubic-bezier(.3,1.5,.5,1);animation:bkIn .5s both;animation-delay:calc(var(--n) * 45ms)}
+.bk:before,.bk:after{content:"";position:absolute;left:0;right:0;height:5px;background:var(--gold);opacity:.85}
+.bk:before{top:30px}.bk:after{bottom:34px}
+.bk-t{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;font-size:.82rem;flex:1;display:flex;align-items:center;margin-top:24px;max-height:140px;overflow:hidden;text-align:center}
+.bk-n{font-weight:900;font-size:.8rem;color:var(--gold);margin-top:6px}
+.bk .hl-n{position:absolute;top:-8px;right:-6px;background:var(--alert);color:#fff;font-size:.62rem;font-weight:800;border-radius:999px;padding:1px 6px}
+.bk:hover{transform:translateY(-12px)}
+.bk.on{transform:translateY(-26px) rotate(-4deg)}
+@keyframes bkIn{from{opacity:0;transform:translateY(-40px)}}
+.bk-open{margin:-10px auto 26px;max-width:1000px;perspective:1600px}
+.bk-pages{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);background:#FBF7EE;color:#221A2E;border-radius:10px;box-shadow:0 20px 40px rgba(0,0,0,.35);position:relative;min-height:260px}
+.bk-pages:after{content:"";position:absolute;left:40%;top:0;bottom:0;width:40px;margin-left:-20px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.12),transparent);pointer-events:none}
+.bk-pg{padding:24px 28px}
+.bk-pg small{font-weight:900;color:#B08A2E;letter-spacing:.08em;font-size:.74rem}
+.bk-pg h3{font-size:1.45rem;color:#2A0F45;margin:6px 0}
+.bk-pg p{color:#6D6479;font-size:.88rem;line-height:1.6}
+.bk-pg .btn{margin-top:14px}
+.bk-pg.r{transform-origin:left center;animation:bkFlip .7s cubic-bezier(.3,.9,.4,1) both}
+.bk-pg.r .hl-app b{color:#221A2E}.bk-pg.r .hl-app:hover{background:rgba(42,15,69,.06)}
+.bk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+@keyframes bkFlip{from{transform:rotateY(-110deg);opacity:.4}}
+/* roller shutters */
+.sh-bar{display:flex;gap:8px;margin:-4px 0 12px}
+.hl-street{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.sh-store{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 8px 20px rgba(42,15,69,.07);animation:hlIn .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--n) * 40ms)}
+.sh-sign{width:100%;background:var(--c);color:#fff;padding:11px 14px 13px;display:flex;align-items:center;gap:10px;position:relative;text-align:left}
+.sh-si{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.18);display:grid;place-items:center;flex:none;overflow:hidden}
+.sh-si svg{width:17px;height:17px}.sh-si img{width:100%;height:100%;object-fit:cover;background:#fff}.sh-si img + svg{display:none}
+.sh-sign b{font-size:.94rem;flex:1;line-height:1.2}
+.sh-c{font-size:.7rem;font-weight:900;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.25)}
+.sh-sign .hl-n{background:var(--alert);color:#fff;font-size:.66rem;font-weight:800;border-radius:999px;padding:1px 6px}
+.sh-bulbs{position:absolute;left:8px;right:8px;bottom:3px;height:3px;background:radial-gradient(circle,#FFE9A8 1.5px,transparent 2px) 0 0/12px 3px repeat-x;opacity:.3;transition:opacity .4s}
+.sh-store.open .sh-bulbs{opacity:1;animation:shBl 1.4s infinite}
+@keyframes shBl{50%{opacity:.45}}
+.sh-win{flex:1;position:relative;min-height:214px;background:var(--paper);padding:14px 10px;overflow:hidden}
+.sh-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.sh-grid .hl-app .ico{width:44px;height:44px;border-radius:13px}.sh-grid .hl-app .ico svg{width:21px;height:21px}
+.sh-grid .hl-app b{font-size:.66rem}
+.sh-shut{position:absolute;left:0;right:0;top:0;height:100%;background:repeating-linear-gradient(#B9B4C2 0 9px,#9D97A8 9px 11px,#C9C4D1 11px 13px);transition:height .9s cubic-bezier(.6,.05,.3,1);display:flex;align-items:flex-end;justify-content:center;box-shadow:0 6px 10px rgba(0,0,0,.22);z-index:2}
+:root[data-theme="dark"] .sh-shut{background:repeating-linear-gradient(#57506A 0 9px,#433C55 9px 11px,#635C77 11px 13px)}
+.sh-shut span{margin-bottom:16px;background:var(--ink);color:#fff;font-weight:800;font-size:.76rem;padding:6px 14px;border-radius:999px;transition:opacity .3s}
+.sh-shut:hover{height:86%}
+.sh-store.open .sh-shut{height:10px}
+.sh-store.open .sh-shut span{opacity:0}
+/* 3D carousel */
+.hl-car{position:relative;height:420px;perspective:1300px;overflow:hidden;background:radial-gradient(ellipse at 50% 60%,var(--surface),var(--paper));border:1px solid var(--line);border-radius:26px;touch-action:pan-y;user-select:none}
+.cr-ring{position:absolute;left:50%;top:56px;width:var(--pw);height:280px;margin-left:calc(var(--pw) / -2);transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,1.1,.4,1)}
+.cr-p{position:absolute;inset:0;border-radius:22px;background:linear-gradient(160deg,var(--c),#1a0830);color:#fff;padding:18px;backface-visibility:hidden;box-shadow:0 20px 34px rgba(42,15,69,.3);display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;transition:filter .5s}
+.cr-p .cr-i{width:70px;height:70px;border-radius:21px;background:rgba(255,255,255,.16);display:grid;place-items:center;margin-top:12px;overflow:hidden}
+.cr-p .cr-i svg{width:32px;height:32px}.cr-p .cr-i img{width:100%;height:100%;object-fit:cover;background:#fff}.cr-p .cr-i img + svg{display:none}
+.cr-p b{font-size:1.05rem;line-height:1.2;margin-top:6px}
+.cr-p small{color:var(--gold);font-weight:800}
+.cr-p .cr-m{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:auto}
+.cr-p .cr-m i{width:20px;height:20px;border-radius:6px}
+.cr-p .hl-n{background:var(--alert);color:#fff;font-size:.66rem;font-weight:800;border-radius:999px;padding:1px 7px}
+.cr-p.dim{filter:brightness(.55) saturate(.7)}
+.cr-nav{position:absolute;top:50%;margin-top:-24px;width:48px;height:48px;border-radius:50%;background:var(--surface);box-shadow:0 6px 16px rgba(42,15,69,.18);font-size:1.4rem;font-weight:900;color:var(--brand-2);z-index:5}
+.cr-nav.l{left:14px}.cr-nav.r{right:14px}
+.cr-tray{background:var(--surface);border:1px solid var(--line);border-radius:20px;margin:-34px auto 0;position:relative;z-index:4;padding:16px;max-width:920px;box-shadow:0 12px 30px rgba(42,15,69,.12)}
+.cr-tray h3{text-align:center;font-size:1rem;font-weight:800;margin-bottom:10px}
+.cr-tray .cr-g{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px}
+.cr-tray .hl-app{width:104px;animation:crPop .45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes crPop{from{opacity:0;transform:scale(.6) translateY(10px)}}
+@media (max-width:760px){
+  .hl-hive{grid-template-columns:1fr}
+  .bk-row{justify-content:flex-start;overflow-x:auto;gap:6px;scrollbar-width:none}.bk{width:54px}
+  .bk-pages{grid-template-columns:1fr}.bk-pages:after{display:none}
+  .hl-car{height:380px}.cr-ring{height:250px;top:44px}
+  .cr-tray .hl-app{width:92px}
+}
+@media (prefers-reduced-motion:reduce){.hx,.bk,.bk-pg.r,.sh-store,.cr-tray .hl-app{animation:none}.cr-ring,.sh-shut{transition:none}}
 /* ---------- daily brief ---------- */
 .brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
@@ -1251,7 +1351,7 @@ function buildMenu(){
     <button data-a="welcome" class="pm-i">${pmIcon("device")}<span>Set up this device<small>Alerts, install, camera, Face ID / Windows Hello</small></span></button>
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>Designs and dates · Ramadan, Eid, Christmas, Independence Day…</small></span></button>` : ""}
-    <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · Smart cards, Orbit or Glass dock</small></span></button>
+    <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · ${HL_KINDS.length} layouts to choose from</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
   paint(); m._paint = paint;
@@ -1270,7 +1370,7 @@ function buildMenu(){
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));
     if (a === "season"){ m.classList.add("hidden"); return launch(byId("seasons")); }
-    if (a === "layout"){ const i = HL_KINDS.findIndex(k => k[0] === HL); hlSetLayout(HL_KINDS[(i + 1) % HL_KINDS.length][0]); m._paint(); setTimeout(() => { const sw = $("#hlSw"); if (sw) sw.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50); }   // each tap moves to the next layout
+    if (a === "layout") profileSheet("layout");   // the home layout is chosen in Profile settings
     if (a === "out"){ await api("logout", {}).catch(() => {}); location.hash = ""; location.reload(); }
   };
 }
@@ -1313,6 +1413,8 @@ async function profileSheet(focus){
       <div class="pf-pw" id="pfPw"><button class="btn ghost small" id="pwOpen">Change password</button></div>
       <div class="set-label">Appearance</div>
       <div class="seg" id="segTheme">${["light","dark","system"].map(t => `<button data-v="${t}" class="${theme === t ? "on" : ""}">${t === "system" ? "Automatic" : t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div>
+      <div class="set-label" id="pfLayout">Home layout</div>
+      <div class="hl-pick" id="hlPick">${HL_KINDS.map(([k, n, ic]) => `<button data-v="${k}" class="${k === HL ? "on" : ""}">${hlSvg(ic)}${esc(n)}</button>`).join("")}</div>
       <div class="set-label">Daily brief</div>
       <div class="seg" id="segBrief" style="grid-template-columns:1fr 1fr">
         <button data-v="0" class="${collapsed ? "" : "on"}">Show everything</button>
@@ -1335,6 +1437,8 @@ async function profileSheet(focus){
     if (e.target === sheet || e.target.closest("[data-close]")) return sheet.close();
     const t = e.target.closest("#segTheme button");
     if (t){ store.set("hub.theme", t.dataset.v); applyTheme(t.dataset.v); $("#segTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b === t)); }
+    const lp = e.target.closest("#hlPick button");   // Home layout
+    if (lp){ hlSetLayout(lp.dataset.v); $("#hlPick").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === lp)); $("#menu")._paint && $("#menu")._paint(); return; }
     const dg = e.target.closest("#segDigest button");   // Weekly digest per person
     if (dg){
       if (dg.dataset.v === "p"){ try { const r = await api("ops/digest/preview"); const w = window.open("", "digest"); if (w){ w.document.write(r.count ? r.html : "<p style='font-family:sans-serif;padding:20px'>Nothing for you this week — no email would be sent.</p>"); w.document.close(); } } catch (er){ msg(er.message); } return; }
@@ -1371,6 +1475,7 @@ async function profileSheet(focus){
   renderTwofaBox();
   renderOutlookBox();
   if (focus === "alerts") setTimeout(() => $("#pfAlerts") && $("#pfAlerts").scrollIntoView({ block: "start", behavior: "smooth" }), 250);
+  if (focus === "layout") setTimeout(() => $("#pfLayout") && $("#pfLayout").scrollIntoView({ block: "start", behavior: "smooth" }), 250);
 }
 /* the drawn cover: atrium rings, a gold arc like the hub's Recent line, a floor scale, a dot grid — then the logo and the flagship */
 function defaultCover(siteName){
@@ -2401,11 +2506,16 @@ document.addEventListener("scroll", e => { if (e.target.classList && e.target.cl
 
 /* =====================================================================
    HOME LAYOUTS — every person picks how the tools are laid out (stored on this device):
-   Smart cards (default) · Orbit · Glass dock. Search always shows the plain list. See docs/FEATURE-home-layouts.md
+   Smart cards (default) · Orbit · Glass dock · Honeycomb · Bookshelf · Shutters · 3D Carousel — picked in Profile settings.
+   Search always shows the plain list. See docs/FEATURE-home-layouts.md
    ===================================================================== */
 const HL_KINDS = [["cards", "Smart cards", '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>'],
   ["orbit", "Orbit", '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/><circle cx="12" cy="3" r="1.5" fill="currentColor"/>'],
-  ["dock", "Glass dock", '<rect x="2" y="15" width="20" height="6" rx="3"/><rect x="5" y="17" width="3" height="2"/><rect x="10.5" y="17" width="3" height="2"/><rect x="16" y="17" width="3" height="2"/><path d="M8 4h8v7H8z"/>']];
+  ["dock", "Glass dock", '<rect x="2" y="15" width="20" height="6" rx="3"/><rect x="5" y="17" width="3" height="2"/><rect x="10.5" y="17" width="3" height="2"/><rect x="16" y="17" width="3" height="2"/><path d="M8 4h8v7H8z"/>'],
+  ["honey", "Honeycomb", '<path d="M12 2l8.5 5v10L12 22l-8.5-5V7z"/><path d="M12 8l3.5 2v4L12 16l-3.5-2v-4z"/>'],
+  ["books", "Bookshelf", '<path d="M4 4h4v16H4zM10 6h4v14h-4zM15.5 6.5l3.6-1 3 13.6-3.6.9zM2 21h20"/>'],
+  ["shutters", "Shutters", '<path d="M3 4h18v4H3z"/><path d="M4 8v12h16V8M7 11h10M7 14h10M7 17h10"/>'],
+  ["carousel", "3D Carousel", '<rect x="8" y="5" width="8" height="14" rx="2"/><path d="M5 7v10M19 7v10M2 9v6M22 9v6"/>']];
 let HL = (() => { const v = store.get("hub.layout", "cards"); return HL_KINDS.some(k => k[0] === v) ? v : "cards"; })();
 const HLS = { orb: null };
 const HL_SHORT = { "Operations Tools": "Ops Tools", "Incidents, Security & Footfall": "Incidents & Footfall",
@@ -2424,10 +2534,14 @@ function hlSwitch(){
 function hlHtml(groups){
   const C = hlCats(groups);
   document.body.classList.toggle("hl-docked", HL === "dock");
-  const head = `<div class="hl-h"><h2>${HL === "dock" ? "All tools are in the dock below" : "All tools"}</h2>${hlSwitch()}</div>`;
+  const head = `<div class="hl-h"><h2>${HL === "dock" ? "All tools are in the dock below" : "All tools"}</h2></div>`;   // the layout is chosen in Profile settings (Oct 2026)
   if (HL === "dock"){ hlDock(C); return `<section>${head}</section>`; }
   hlDock(null);
   if (HL === "orbit") return `<section>${head}${hlOrbit(C)}</section>`;
+  if (HL === "honey") return `<section>${head}${hlHive(C)}</section>`;
+  if (HL === "books") return `<section>${head}<div id="hlBooks">${hlBooks(C)}</div></section>`;
+  if (HL === "shutters") return `<section>${head}${hlShutters(C)}</section>`;
+  if (HL === "carousel") return `<section>${head}${hlCarousel(C)}</section>`;
   return `<section>${head}<div class="hl-cards">${C.map((c, i) => { const n = hlCount(c.L);
     return `<div class="hl-card" data-hlg="${esc(c.g)}" role="button" tabindex="0" style="--n:${i}"><h3>${esc(c.g)}${n ? `<span class="hl-n">${n > 99 ? "99+" : n}</span>` : ""}<small>${c.L.length}</small></h3>
       <div class="q">${c.L.slice(0, 4).map(a => hlApp(a)).join("")}</div>${c.L.length > 4 ? `<div class="more">+${c.L.length - 4} more</div>` : ""}</div>`; }).join("")}</div></section>`;
@@ -2445,6 +2559,68 @@ function hlOrbit(C){
   return `<div class="hl-orb ${sel ? "open" : ""}" id="hlOrb"><div class="ring" style="width:${rr * 2}px;height:${rr * 2}px"></div><div class="ring" style="width:${rr * 1.25}px;height:${rr * 1.25}px"></div>
     <button class="core" id="hlCore">${sel ? "‹ All<br>categories" : "ABC<br>Operations Hub"}</button>${cats}${tools}</div>`;
 }
+/* a folder's colour and picture: those of its first tool */
+const hlTint = c => esc((c.L[0] && c.L[0].color) || "#4A1F73");
+const hlNum = n => n ? `<span class="hl-n">${n > 99 ? "99+" : n}</span>` : "";
+/* Honeycomb: each folder is a hive — the folder in the centre cell, its tools around it */
+const HX_NB = [[-49, -84], [49, -84], [98, 0], [49, 84], [-49, 84], [-98, 0]];
+function hlHive(C){
+  return `<div class="hl-hive">${C.map((c, i) => {
+    const big = c.L.length > 6, L = big ? c.L.slice(0, 5) : c.L, n = hlCount(c.L);
+    const cell = (k, inner, attrs, bg, cls = "") => `<button class="hx ${cls}" ${attrs} style="left:${150 + HX_NB[k][0] - 47}px;top:${141 + HX_NB[k][1] - 54}px;${bg ? `background:${bg};` : ""}animation-delay:${i * 50 + 150 + k * 60}ms">${inner}</button>`;
+    const cells = L.map((a, k) => { const ok = appReady(a), b = badgeOf(a);
+      return cell(k, `<span class="hx-i">${appIcon(a)}</span><span class="hx-t">${esc(a.name)}</span>${b && b.count ? `<span class="hx-b">${b.count > 99 ? "99+" : esc(b.count)}</span>` : ""}`,
+        ok ? `data-hl="${esc(a.id)}" title="${esc(a.desc || "")}"` : 'aria-disabled="true"', esc(a.color || "#4A1F73"), ok ? "" : "locked"); }).join("")
+      + (big ? cell(5, `<b>+${c.L.length - 5}</b><span class="hx-t">more</span>`, `data-hlf="${esc(c.g)}" title="All ${c.L.length} tools"`, "", "more") : "");
+    return `<div class="hx-comb">${cells}<button class="hx core" data-hlf="${esc(c.g)}" title="${esc(c.g)}" style="--c:${hlTint(c)};left:103px;top:87px;animation-delay:${i * 50}ms">
+      ${n ? `<span class="hx-b">${n > 99 ? "99+" : n}</span>` : ""}<b>${esc(c.g)}</b><em>${c.L.length} tool${c.L.length > 1 ? "s" : ""}</em></button></div>`;
+  }).join("")}</div>`;
+}
+/* Bookshelf: folders are books; the chosen one opens below its shelf */
+function hlBooks(C){
+  const w = (($("#list") || document.body).clientWidth || innerWidth) - 50, per = Math.max(4, Math.min(C.length, Math.floor(w / (innerWidth < 760 ? 60 : 76))));
+  if (!C.some(c => c.g === HLS.book)) HLS.book = null;
+  const rows = []; for (let i = 0; i < C.length; i += per) rows.push(C.slice(i, i + per));
+  const hgt = g => 176 + [...g].reduce((t, ch) => t + ch.charCodeAt(0), 0) % 52;
+  return `<div class="hl-books">${rows.map((R, r) => {
+    const open = R.find(c => c.g === HLS.book), k = open ? C.indexOf(open) + 1 : 0;
+    return `<div class="bk-row">${R.map(c => `<button class="bk ${c.g === HLS.book ? "on" : ""}" data-book="${esc(c.g)}" title="${esc(c.g)}" style="--c:${hlTint(c)};--n:${C.indexOf(c)};height:${hgt(c.g)}px">${hlNum(hlCount(c.L))}<span class="bk-t">${esc(c.g)}</span><span class="bk-n">${c.L.length}</span></button>`).join("")}</div>`
+      + (open ? `<div class="bk-open"><div class="bk-pages"><div class="bk-pg"><small>CHAPTER ${k}</small><h3>${esc(open.g)}</h3><p>${open.L.length} tool${open.L.length > 1 ? "s" : ""} in this book.</p>
+          <button class="btn ghost small" data-book="">Put the book back</button></div><div class="bk-pg r"><div class="bk-grid">${open.L.map(a => hlApp(a)).join("")}</div></div></div></div>` : "");
+  }).join("")}</div>`;
+}
+/* Roller shutters: a street of shops, one per folder; a shutter rolls up to show the tools (remembered on this device) */
+function hlShutters(C){
+  if (!HLS.shut) HLS.shut = new Set(store.get("hub.shutOpen", []));
+  return `<div class="sh-bar"><button class="btn small" data-shall="1">Open all shutters</button><button class="btn small ghost" data-shall="0">Close all</button></div>
+    <div class="hl-street">${C.map((c, i) => `<div class="sh-store ${HLS.shut.has(c.g) ? "open" : ""}" data-shg="${esc(c.g)}" style="--c:${hlTint(c)};--n:${i}">
+      <button class="sh-sign" data-shsign="${esc(c.g)}"><span class="sh-si">${appIcon(c.L[0])}</span><b>${esc(c.g)}</b>${hlNum(hlCount(c.L))}<span class="sh-c">${c.L.length}</span><i class="sh-bulbs"></i></button>
+      <div class="sh-win"><div class="sh-grid">${c.L.map(a => hlApp(a)).join("")}</div><button class="sh-shut" data-shut="${esc(c.g)}" aria-label="Open ${esc(c.g)}"><span>Tap to open ↑</span></button></div></div>`).join("")}</div>`;
+}
+function hlShutSet(g, open){
+  HLS.shut[open ? "add" : "delete"](g); store.set("hub.shutOpen", [...HLS.shut]);
+  const el = [...document.querySelectorAll(".sh-store")].find(x => x.dataset.shg === g); if (el) el.classList.toggle("open", open);
+}
+/* 3D carousel: the folders stand in a ring; the one in front shows its tools in the tray */
+function hlCarGeo(n){ const pw = innerWidth < 760 ? 176 : 220; return { pw, R: Math.round((pw / 2 + 14) / Math.tan(Math.PI / Math.max(3, n))) }; }
+function hlCarousel(C){
+  const n = C.length, { pw, R } = hlCarGeo(n), pos = HLS.car || 0, k = ((pos % n) + n) % n;
+  return `<div class="hl-car" id="hlCar"><button class="cr-nav l" data-car="-1" aria-label="Previous folder">‹</button><button class="cr-nav r" data-car="1" aria-label="Next folder">›</button>
+    <div class="cr-ring" id="crRing" style="--pw:${pw}px;transform:translateZ(-${R}px) rotateY(${-pos * 360 / n}deg)">${C.map((c, i) => `<div class="cr-p ${i === k ? "" : "dim"}" data-carp="${i}" style="--c:${hlTint(c)};transform:rotateY(${i * 360 / n}deg) translateZ(${R}px)">
+      <span class="cr-i">${appIcon(c.L[0])}</span><b>${esc(c.g)}</b><small>${c.L.length} tool${c.L.length > 1 ? "s" : ""}</small>${hlNum(hlCount(c.L))}
+      <span class="cr-m">${c.L.slice(0, 8).map(a => `<i style="background:${esc(a.color || "#4A1F73")}"></i>`).join("")}</span></div>`).join("")}</div></div>
+    <div class="cr-tray" id="crTray">${hlCarTray(C[k])}</div>`;
+}
+const hlCarTray = c => `<h3>${esc(c.g)}</h3><div class="cr-g">${c.L.map((a, i) => hlApp(a, "", `animation-delay:${i * 50}ms`)).join("")}</div>`;
+function hlCarSpin(d){
+  const C = hlCats(hlGroups()), n = C.length; if (!n) return;
+  HLS.car = (HLS.car || 0) + d; const k = ((HLS.car % n) + n) % n, { R } = hlCarGeo(n);
+  const ring = $("#crRing"); if (!ring) return renderHome();
+  ring.style.transform = `translateZ(-${R}px) rotateY(${-HLS.car * 360 / n}deg)`;
+  ring.querySelectorAll(".cr-p").forEach(p => p.classList.toggle("dim", +p.dataset.carp !== k));
+  $("#crTray").innerHTML = hlCarTray(C[k]);
+}
+function hlCarTo(i){ const n = hlCats(hlGroups()).length, cur = (((HLS.car || 0) % n) + n) % n; let d = i - cur; if (d > n / 2) d -= n; if (d < -n / 2) d += n; if (d) hlCarSpin(d); }
 function hlDock(C){
   const d = $("#hlDock"); if (!d) return;
   if (!C){ d.classList.add("hidden"); d.innerHTML = ""; hlPopClose(); return; }
@@ -2464,13 +2640,19 @@ function hlPopOpen(g, refresh){
 function hlPopClose(){ const p = $("#hlPop"); if (p) p.classList.remove("on"); const d = $("#hlDock"); if (d) d.querySelectorAll(".fd.on").forEach(f => f.classList.remove("on")); }
 function hlSetLayout(k){
   if (!HL_KINDS.some(x => x[0] === k) || k === HL) return;
-  HL = k; store.set("hub.layout", k); HLS.orb = null; hlPopClose(); renderHome();
+  HL = k; store.set("hub.layout", k); HLS.orb = null; HLS.book = null; hlPopClose(); renderHome();
 }
 function hlMarkSwitch(){ const sw = $("#hlSw"); if (!sw) return; const b = sw.querySelector("button.on"), i = sw.querySelector("i"); if (b && i){ i.style.left = b.offsetLeft + "px"; i.style.width = b.offsetWidth + "px"; } }
 /* clicks: tools open; a smart card opens its folder; orbit turns; the dock pops up */
 document.addEventListener("click", e => {
   if (!$("#home") || $("#home").classList.contains("hidden")) return;
-  const sw = e.target.closest("[data-hlk]"); if (sw) return hlSetLayout(sw.dataset.hlk);
+  const hf = e.target.closest("[data-hlf]"); if (hf) return openFolder(hf.dataset.hlf, hf);   // Honeycomb: the centre cell / "+N more" opens the folder
+  const bk = e.target.closest("[data-book]"); if (bk){ HLS.book = HLS.book === bk.dataset.book || !bk.dataset.book ? null : bk.dataset.book; const w = $("#hlBooks"); if (w) w.innerHTML = hlBooks(hlCats(hlGroups())); return; }
+  const shut = e.target.closest("[data-shut]"); if (shut) return hlShutSet(shut.dataset.shut, true);
+  const sign = e.target.closest("[data-shsign]"); if (sign) return hlShutSet(sign.dataset.shsign, !HLS.shut.has(sign.dataset.shsign));
+  const sa = e.target.closest("[data-shall]"); if (sa){ const open = sa.dataset.shall === "1"; [...document.querySelectorAll(".sh-store")].forEach((x, i) => setTimeout(() => hlShutSet(x.dataset.shg, open), i * (open ? 120 : 70))); return; }
+  const cn = e.target.closest("[data-car]"); if (cn) return hlCarSpin(+cn.dataset.car);
+  const cp = e.target.closest("[data-carp]"); if (cp) return hlCarTo(+cp.dataset.carp);
   const inCard = e.target.closest(".hl-card"); if (inCard) return openFolder(inCard.dataset.hlg, inCard.querySelector(".q"));   // a smart card always opens its folder, even when an icon inside it is pressed
   const ap = e.target.closest("[data-hl]"); if (ap){ hlPopClose(); return launch(byId(ap.dataset.hl), undefined, (() => { const r = ap.querySelector(".ico").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()); }
   const card = e.target.closest(".hl-card"); if (card) return openFolder(card.dataset.hlg, card.querySelector(".q"));
@@ -2479,7 +2661,14 @@ document.addEventListener("click", e => {
   const fd = e.target.closest("[data-dock]"); if (fd){ const p = $("#hlPop"); if (p && p.classList.contains("on") && p.dataset.g === fd.dataset.dock) return hlPopClose(); return hlPopOpen(fd.dataset.dock); }
   if (!e.target.closest("#hlPop")) hlPopClose();
 });
-addEventListener("keydown", e => { if (e.key === "Escape"){ hlPopClose(); if (HLS.orb && HL === "orbit"){ HLS.orb = null; hlRedrawOrbit(); } } });
+addEventListener("keydown", e => { if (e.key === "Escape"){ hlPopClose(); if (HLS.orb && HL === "orbit"){ HLS.orb = null; hlRedrawOrbit(); } }
+  if (HL === "carousel" && $("#crRing") && /^Arrow(Left|Right)$/.test(e.key) && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) hlCarSpin(e.key === "ArrowRight" ? 1 : -1); });
+/* 3D carousel: swipe or drag to turn */
+let hlSwX = null;
+document.addEventListener("pointerdown", e => { hlSwX = e.target.closest("#hlCar") && !e.target.closest("button") ? e.clientX : null; });
+document.addEventListener("pointerup", e => { if (hlSwX == null) return; const d = e.clientX - hlSwX; hlSwX = null; if (Math.abs(d) > 40) hlCarSpin(d < 0 ? 1 : -1); });
+/* the bookshelf and the carousel fit the screen width */
+let hlRz = 0; addEventListener("resize", () => { clearTimeout(hlRz); hlRz = setTimeout(() => { if (["books", "carousel"].includes(HL) && !$("#q").value.trim()) renderHome(); }, 250); });
 function hlRedrawOrbit(){
   const o = $("#hlOrb"); if (!o) return renderHome();
   const tmp = document.createElement("div"); tmp.innerHTML = hlOrbit(hlCats(hlGroups()));
@@ -3192,9 +3381,11 @@ async function adminUsers(body, editing){
     main = `<div class="pg og"><div class="pg-h"><h4>ABC Operations Groups</h4></div>
         <p class="pg-n">The flagship's operations group email. When a handover is handed over, the hub emails it from <b>ABC Operations Hub</b> to this group, with the Mall Manager and the Operations Manager in Cc.</p>
         <label class="field"><span>Group email${og.emails.length > 1 ? "s" : ""}</span><input id="ogEmails" type="text" placeholder="e.g. abcverdunoperations@abc.com.lb" value="${esc(og.emails.join(", "))}"></label>
+        <label class="field"><span>CCTV emails · PM handover</span><input id="ogCctv" type="text" placeholder="e.g. cctvverdunmall@abc.com.lb, …  (up to 5, comma separated)" value="${esc((og.cctv || []).join(", "))}"></label>
         <label class="chk"><input type="checkbox" id="ogAuto" ${og.auto ? "checked" : ""}> Email the handover automatically when it is handed over</label>
         <p class="pg-n" style="margin-top:8px">To: <b>${og.emails.length ? esc(og.emails.join(", ")) : `<span style="color:var(--alert)">no group email yet</span>`}</b><br>
-          Cc: ${[mm, om].filter(Boolean).map(u => `<b>${esc(u.name)}</b> <small>(${esc(u.positionLabel)})</small>`).join(" · ") || `<span style="color:var(--muted)">no Mall Manager or Operations Manager assigned</span>`}</p>
+          Cc: ${[mm, om].filter(Boolean).map(u => `<b>${esc(u.name)}</b> <small>(${esc(u.positionLabel)})</small>`).join(" · ") || `<span style="color:var(--muted)">no Mall Manager or Operations Manager assigned</span>`}<br>
+          PM handover also to (CCTV): ${(og.cctv || []).length ? `<b>${esc(og.cctv.join(", "))}</b>` : `<span style="color:var(--muted)">no CCTV email yet</span>`}</p>
         <div id="ogMsg"></div><button class="btn ghost small" id="ogSave">Save group</button></div>`
       + `<div class="pg og" id="scPanel" data-mm="${esc(mm ? mm.name : "")}"><div class="pg-h"><h4>Weekly schedule email · Sunday</h4></div><p class="pg-n">Loading…</p></div>`
       + `<div class="pg"><div class="pg-h"><h4>Flagship management</h4></div><p class="pg-n">${ACCESS_NOTE.MANAGER} One person in each position.</p>
@@ -3244,7 +3435,7 @@ async function adminUsers(body, editing){
     const msg = (t, c = "err") => { $("#fMsg").innerHTML = `<div class="msg ${c}">${esc(t)}</div>`; };
     const ed = ev.target.closest("[data-edit]"), rs = ev.target.closest("[data-reset]"), ac = ev.target.closest("[data-act]"), nw = ev.target.closest("[data-new]"), pt = ev.target.closest("[data-ptab]");
     if (ev.target.id === "ogSave"){   // ABC Operations Groups
-      try { const r = await api("admin/opsgroups", { site: pplTab, emails: $("#ogEmails").value, auto: $("#ogAuto").checked });
+      try { const r = await api("admin/opsgroups", { site: pplTab, emails: $("#ogEmails").value, cctv: $("#ogCctv").value, auto: $("#ogAuto").checked });
         $("#ogMsg").innerHTML = `<div class="msg okm">Saved.</div>`; setTimeout(() => adminUsers(body, editing), 700); }
       catch (er){ $("#ogMsg").innerHTML = `<div class="msg err">${esc(er.message)}</div>`; }
       return;
