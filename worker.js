@@ -987,7 +987,7 @@ const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 async function opsGroups(env) {
   const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'opsgroups'").first().catch(() => null);
   let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
-  return Object.fromEntries(Object.keys(SITES).map(c => [c, { emails: (g[c] && g[c].emails) || [], auto: g[c] ? g[c].auto !== false : true }]));
+  return Object.fromEntries(Object.keys(SITES).map(c => [c, { emails: (g[c] && g[c].emails) || [], auto: g[c] ? g[c].auto !== false : true, cctv: (g[c] && g[c].cctv) || [] }]));
 }
 async function saveOpsGroup(env, b) {
   const site = String(b.site || "").toUpperCase();
@@ -996,17 +996,23 @@ async function saveOpsGroup(env, b) {
   const bad = emails.find(e => !EMAIL_RE.test(e));
   if (bad) throw fail(`Not a valid email: ${bad}`);
   if (emails.length > 5) throw fail("Up to 5 group emails per flagship");
+  /* CCTV room emails: added to the PM handover email (Oct 2026) */
+  const cctv = [...new Set(String(b.cctv || "").split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean))];
+  const badC = cctv.find(e => !EMAIL_RE.test(e));
+  if (badC) throw fail(`Not a valid CCTV email: ${badC}`);
+  if (cctv.length > 5) throw fail("Up to 5 CCTV emails per flagship");
   const g = await opsGroups(env);
-  g[site] = { emails, auto: !!b.auto };
+  g[site] = { emails, auto: !!b.auto, cctv: b.cctv === undefined ? (g[site] && g[site].cctv) || [] : cctv };
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('opsgroups', ?)").bind(JSON.stringify(g)).run();
   return { opsGroups: g };
 }
-async function handoverRecipients(env, site) {
+async function handoverRecipients(env, site, shift) {
   const g = (await opsGroups(env))[site];
+  const cctv = shift === "PM" ? g.cctv || [] : [];   // the PM handover also goes to the CCTV room
   const { results } = await env.DB.prepare("SELECT email, full_name, position FROM users WHERE active = 1 AND role = 'MANAGER' AND site_code = ?").bind(site).all();
   const mgrs = (results || []).filter(u => TITLES[u.position]).sort((a, b) => TITLES[a.position].rank - TITLES[b.position].rank);
-  const to = g.emails.slice(), cc = mgrs.map(u => u.email.toLowerCase()).filter(e => !to.includes(e));
-  return { auto: g.auto, relay: !!(env.MAIL_RELAY_URL && env.MAIL_RELAY_KEY), to: to.length ? to : cc.slice(0, 1), cc: to.length ? cc : cc.slice(1),
+  const to = [...new Set([...g.emails, ...cctv])], cc = mgrs.map(u => u.email.toLowerCase()).filter(e => !to.includes(e));
+  return { auto: g.auto, relay: !!(env.MAIL_RELAY_URL && env.MAIL_RELAY_KEY), to: to.length ? to : cc.slice(0, 1), cc: to.length ? cc : cc.slice(1), cctv,
     names: mgrs.map(u => ({ email: u.email, name: u.full_name, title: TITLES[u.position].label })), group: g.emails };
 }
 
@@ -1837,7 +1843,7 @@ async function opsRoute(env, me, p, method, b, url) {
         }
       }
     }
-    const shiftInfo = { shifts: await handoverShifts(env, site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN" };
+    const shiftInfo = { shifts: await handoverShifts(env, site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN", cctvMail: (await opsGroups(env))[site].cctv };
     if (same) return { handover: handoverOut(same), can, existing: true, ...shiftInfo };
     const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first()
       || await env.DB.prepare("SELECT * FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 1").bind(site).first();
@@ -1869,7 +1875,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "handover/get") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
     if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
-    return { handover: handoverOut(h), can: rights(me, h.site), shifts: await handoverShifts(env, h.site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN" };
+    return { handover: handoverOut(h), can: rights(me, h.site), shifts: await handoverShifts(env, h.site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN", cctvMail: (await opsGroups(env))[h.site].cctv };
   }
   if (p === "handover/shifts" && method === "POST") {   // administrators choose the flagship's handover shifts
     if (me.role !== "ADMIN") throw fail("Only an administrator can change the handover shifts", 403);
@@ -1882,7 +1888,7 @@ async function opsRoute(env, me, p, method, b, url) {
     return { shifts: list };
   }
   /* live rows for the Daily operations checklist tracker: AM / PM checklists and restroom inspections (OPS and S.S) */
-  if (p === "handover/mailto") return handoverRecipients(env, site);   // who receives the handover email
+  if (p === "handover/mailto") return handoverRecipients(env, site, q("shift") || "");   // who receives the handover email
   if (p === "handover/live") {
     const day = isDay(q("day")) ? q("day") : beirutToday();
     const [runs, rr, inc, fb] = await Promise.all([
@@ -1962,7 +1968,7 @@ async function opsRoute(env, me, p, method, b, url) {
       /* ABC Operations Groups: email the handover to the flagship group + its managers */
       let mail = null;
       if (b.mail && b.mail.html) {
-        const R = await handoverRecipients(env, site);
+        const R = await handoverRecipients(env, site, shift);
         if (!R.auto) mail = { sent: false, skipped: true };
         else if (!R.relay) mail = { sent: false, error: "Mail relay not set up" };
         else if (!R.to.length) mail = { sent: false, error: "No group email or manager for this flagship" };
