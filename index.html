@@ -371,7 +371,24 @@ body.hl-docked main{padding-bottom:110px}
   .hl-car{height:380px}.cr-ring{height:250px;top:44px}
   .cr-tray .hl-app{width:92px}
 }
-@media (prefers-reduced-motion:reduce){.hx,.bk,.bk-pg.r,.sh-store,.cr-tray .hl-app{animation:none}.cr-ring,.sh-shut{transition:none}}
+/* the tray under the carousel: soft purple in the light theme so it stands out (Oct 2026) */
+.cr-tray{background:linear-gradient(180deg,#EADFF8,#E2D3F4);border-color:#CDB6EA;box-shadow:0 14px 32px rgba(74,31,115,.18)}
+.cr-tray h3{color:#3B1866}.cr-tray .hl-app b{color:#2A0F45}
+:root[data-theme="dark"] .cr-tray{background:var(--surface);border-color:var(--line);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+:root[data-theme="dark"] .cr-tray h3,:root[data-theme="dark"] .cr-tray .hl-app b{color:inherit}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .cr-tray{background:var(--surface);border-color:var(--line);box-shadow:0 12px 30px rgba(0,0,0,.3)} :root:not([data-theme="light"]) .cr-tray h3,:root:not([data-theme="light"]) .cr-tray .hl-app b{color:inherit} }
+/* phone: the carousel becomes a strip of folder cards you scroll with your finger (native, smooth); the tray below shows the folder in the middle */
+.cr-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px calc(50% - 66px) 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.cr-strip::-webkit-scrollbar{display:none}
+.cr-strip .cr-p{position:relative;inset:auto;flex:none;width:132px;height:172px;scroll-snap-align:center;padding:12px 10px;border-radius:20px;box-shadow:0 10px 22px rgba(42,15,69,.25);transform:scale(.9);transition:transform .25s,filter .25s}
+.cr-strip .cr-p.on{transform:none;filter:none}
+.cr-strip .cr-p .cr-i{width:50px;height:50px;border-radius:15px;margin-top:4px}.cr-strip .cr-p .cr-i svg{width:24px;height:24px}
+.cr-strip .cr-p b{font-size:.86rem}.cr-strip .cr-p small{font-size:.72rem}.cr-strip .cr-p .cr-m i{width:13px;height:13px;border-radius:4px}
+.cr-dots{display:flex;justify-content:center;gap:5px;margin:-4px 0 10px}.cr-dots i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:width .2s}.cr-dots i.on{width:18px;border-radius:9px;background:var(--brand-2)}
+.cr-strip + .cr-dots + .cr-tray{margin-top:0}
+.cr-phone .cr-tray .cr-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 4px}.cr-phone .cr-tray .hl-app{width:auto}
+@media (max-width:380px){.cr-phone .cr-tray .cr-g{grid-template-columns:repeat(3,1fr)}}
+@media (prefers-reduced-motion:reduce){.hx,.bk,.bk-pg.r,.sh-store,.cr-tray .hl-app{animation:none}.cr-ring,.sh-shut,.cr-strip .cr-p{transition:none}}
 /* ---------- daily brief ---------- */
 .brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
@@ -2061,7 +2078,7 @@ async function aiTeach(){
 /* ABCON bubble: bottom right of the home page only; the Emergency button stays where it is (above it on a phone) */
 (() => {
   const b = document.createElement("button"); b.id = "sanadFab"; b.type = "button"; b.setAttribute("aria-label", "Ask ABCON, the hub assistant");
-  b.innerHTML = `<span class="sf-ic"><img src="${ABC_LOGO}" alt=""><u></u></span><span class="sf-lb">Ask ABC<em>ON</em><small>Operations Control</small></span>`;
+  b.innerHTML = `<span class="sf-ic"><img src="${ABC_LOGO}" alt=""><u></u></span><span class="sf-lb"><span>Ask ABC<em>ON</em></span><small>Operations Control</small></span>`;
   b.onclick = () => aiChat();
   const paint = () => { const home = document.getElementById("home"); b.classList.toggle("on", (typeof ME !== "undefined" && !!ME && !!ME.user) && !!home && !home.classList.contains("hidden") && !/^#\/app\//.test(location.hash) && !($("#aiChat") && $("#aiChat").classList.contains("on"))); };
   addEventListener("DOMContentLoaded", () => { document.body.append(b); paint(); const home = document.getElementById("home"); if (home) new MutationObserver(paint).observe(home, { attributes: true, attributeFilter: ["class"] }); });
@@ -2768,8 +2785,17 @@ function hlShutSet(g, open){
 }
 /* 3D carousel: the folders stand in a ring; the one in front shows its tools in the tray */
 function hlCarGeo(n){ const pw = innerWidth < 760 ? 176 : 220; return { pw, R: Math.round((pw / 2 + 14) / Math.tan(Math.PI / Math.max(3, n))) }; }
+const hlCarPhone = () => innerWidth < 760;
 function hlCarousel(C){
   const n = C.length, { pw, R } = hlCarGeo(n), pos = HLS.car || 0, k = ((pos % n) + n) % n;
+  if (hlCarPhone()) {   // phone (Oct 2026): native finger scrolling, no 3D ring
+    setTimeout(hlStripInit, 0);
+    return `<div class="cr-phone"><div class="cr-strip" id="crStrip">${C.map((c, i) => `<div class="cr-p ${i === k ? "on" : "dim"}" data-carp="${i}" style="--c:${hlTint(c)}">
+      <span class="cr-i">${appIcon(c.L[0])}</span><b>${esc(c.g)}</b><small>${c.L.length} tool${c.L.length > 1 ? "s" : ""}</small>${hlNum(hlCount(c.L))}
+      <span class="cr-m">${c.L.slice(0, 6).map(a => `<i style="background:${esc(a.color || "#4A1F73")}"></i>`).join("")}</span></div>`).join("")}</div>
+      <div class="cr-dots">${C.map((c, i) => `<i class="${i === k ? "on" : ""}"></i>`).join("")}</div>
+      <div class="cr-tray" id="crTray">${hlCarTray(C[k])}</div></div>`;
+  }
   return `<div class="hl-car" id="hlCar"><button class="cr-nav l" data-car="-1" aria-label="Previous folder">‹</button><button class="cr-nav r" data-car="1" aria-label="Next folder">›</button>
     <div class="cr-ring" id="crRing" style="--pw:${pw}px;transform:translateZ(-${R}px) rotateY(${-pos * 360 / n}deg)">${C.map((c, i) => `<div class="cr-p ${i === k ? "" : "dim"}" data-carp="${i}" style="--c:${hlTint(c)};transform:rotateY(${i * 360 / n}deg) translateZ(${R}px)">
       <span class="cr-i">${appIcon(c.L[0])}</span><b>${esc(c.g)}</b><small>${c.L.length} tool${c.L.length > 1 ? "s" : ""}</small>${hlNum(hlCount(c.L))}
@@ -2779,13 +2805,33 @@ function hlCarousel(C){
 const hlCarTray = c => `<h3>${esc(c.g)}</h3><div class="cr-g">${c.L.map((a, i) => hlApp(a, "", `animation-delay:${i * 50}ms`)).join("")}</div>`;
 function hlCarSpin(d){
   const C = hlCats(hlGroups()), n = C.length; if (!n) return;
+  if ($("#crStrip")) return hlStripSel((((((HLS.car || 0) + d) % n) + n) % n), true);
   HLS.car = (HLS.car || 0) + d; const k = ((HLS.car % n) + n) % n, { R } = hlCarGeo(n);
   const ring = $("#crRing"); if (!ring) return renderHome();
   ring.style.transform = `translateZ(-${R}px) rotateY(${-HLS.car * 360 / n}deg)`;
   ring.querySelectorAll(".cr-p").forEach(p => p.classList.toggle("dim", +p.dataset.carp !== k));
   $("#crTray").innerHTML = hlCarTray(C[k]);
 }
-function hlCarTo(i){ const n = hlCats(hlGroups()).length, cur = (((HLS.car || 0) % n) + n) % n; let d = i - cur; if (d > n / 2) d -= n; if (d < -n / 2) d += n; if (d) hlCarSpin(d); }
+/* phone strip: the card in the middle is the open folder */
+function hlStripSel(k, scroll){
+  const st = $("#crStrip"); if (!st) return; const C = hlCats(hlGroups()); if (!C[k]) return;
+  const changed = (((HLS.car || 0) % C.length) + C.length) % C.length !== k; HLS.car = k;
+  st.querySelectorAll(".cr-p").forEach(p => { const on = +p.dataset.carp === k; p.classList.toggle("on", on); p.classList.toggle("dim", !on); });
+  document.querySelectorAll(".cr-dots i").forEach((d, i) => d.classList.toggle("on", i === k));
+  if (changed || scroll) $("#crTray").innerHTML = hlCarTray(C[k]);
+  if (scroll){ const el = st.querySelector(`[data-carp="${k}"]`); if (el) st.scrollTo({ left: el.offsetLeft - (st.clientWidth - el.offsetWidth) / 2, behavior: "smooth" }); }
+}
+function hlStripInit(){
+  const st = $("#crStrip"); if (!st || st.dataset.on) return; st.dataset.on = "1";
+  const k = (((HLS.car || 0) % st.children.length) + st.children.length) % st.children.length, el = st.children[k];
+  if (el) st.scrollLeft = el.offsetLeft - (st.clientWidth - el.offsetWidth) / 2;
+  let t = 0;
+  st.addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(() => {
+    const mid = st.scrollLeft + st.clientWidth / 2; let best = 0, bd = 1e9;
+    [...st.children].forEach((c, i) => { const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid); if (d < bd){ bd = d; best = i; } });
+    hlStripSel(best, false); }, 90); }, { passive: true });
+}
+function hlCarTo(i){ if ($("#crStrip")) return hlStripSel(i, true); const n = hlCats(hlGroups()).length, cur = (((HLS.car || 0) % n) + n) % n; let d = i - cur; if (d > n / 2) d -= n; if (d < -n / 2) d += n; if (d) hlCarSpin(d); }
 function hlDock(C){
   const d = $("#hlDock"); if (!d) return;
   if (!C){ d.classList.add("hidden"); d.innerHTML = ""; hlPopClose(); return; }
@@ -2844,7 +2890,9 @@ let hlSwX = null;
 document.addEventListener("pointerdown", e => { hlSwX = e.target.closest("#hlCar") && !e.target.closest("button") ? e.clientX : null; });
 document.addEventListener("pointerup", e => { if (hlSwX == null) return; const d = e.clientX - hlSwX; hlSwX = null; if (Math.abs(d) > 40) hlCarSpin(d < 0 ? 1 : -1); });
 /* the bookshelf and the carousel fit the screen width */
-let hlRz = 0; addEventListener("resize", () => { clearTimeout(hlRz); hlRz = setTimeout(() => { if (["books", "carousel"].includes(HL) && !$("#q").value.trim()) renderHome(); }, 250); });
+let hlRz = 0, hlRzW = innerWidth; addEventListener("resize", () => { clearTimeout(hlRz); hlRz = setTimeout(() => {
+  const crossed = (hlRzW < 760) !== (innerWidth < 760), wide = Math.abs(innerWidth - hlRzW) > 40; hlRzW = innerWidth;   // phones fire resize when the address bar hides: ignore those
+  if (["books", "carousel"].includes(HL) && !$("#q").value.trim() && (crossed || (wide && innerWidth >= 760))) renderHome(); }, 250); });
 function hlRedrawOrbit(){
   const o = $("#hlOrb"); if (!o) return renderHome();
   const tmp = document.createElement("div"); tmp.innerHTML = hlOrbit(hlCats(hlGroups()));
