@@ -354,7 +354,7 @@ function render(){
     <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy === "Auto-closed" ? "Closed" : H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
     <span style="flex:1"></span>
     ${ro ? "" : `<button class="btn ghost small" id="impBtn" title="Salesforce Handover Report (.xlsx)">⤓ Import tenant requests</button>`}
-    ${ro ? "" : `<button class="btn ghost small" id="aiSum" title="A short summary of the shift in English and Arabic, written by Sanad, the hub's free AI">✦ Sanad · shift summary</button>`}
+    ${ro ? "" : `<button class="btn ghost small" id="aiSum" title="A short summary of the shift in English and Arabic, written by ABCON, the hub's free AI">✦ ABCON · shift summary</button>`}
     <button class="btn ghost small" id="printBtn">Print / PDF</button>
   </div>
   ${!H.id && H.from ? `<div class="banner">Started from the handover of ${esc(D.fmt(H.from.day, { weekday: "short" }))} — review, then save.</div>` : ""}

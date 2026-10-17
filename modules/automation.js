@@ -95,9 +95,9 @@ export async function backupData(env) {
   const { results } = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
   const out = { hub: "ABC Operations Hub", at: new Date().toISOString(), tables: {} };
   for (const { name } of results || []) {
-    if (SKIP_TABLES.has(name)) continue;
+    if (SKIP_TABLES.has(name) || name.startsWith("pol_fts")) continue;   // the policies search index is rebuilt from pol_chunks
     const rows = (await env.DB.prepare(`SELECT * FROM "${name}"`).all()).results || [];
-    out.tables[name] = name === "users" ? rows.map(({ salt, hash, iterations, ...u }) => u) : name === "meta" ? rows.filter(r => r.k !== "vapid" && !/^gate:sftoken$/.test(r.k)).map(r => /^patrol:cfg:/.test(r.k) ? { ...r, v: (() => { try { const c = JSON.parse(r.v); delete c.key; return JSON.stringify(c); } catch { return ""; } })() } : r) : rows;   // no guards' link key in Drive
+    out.tables[name] = name === "users" ? rows.map(({ salt, hash, iterations, ...u }) => u) : name === "meta" ? rows.filter(r => r.k !== "vapid" && r.k !== "cc:sign" && !/^gate:sftoken$/.test(r.k) && !/^ai:(c|u):/.test(r.k)).map(r => /^patrol:cfg:/.test(r.k) ? { ...r, v: (() => { try { const c = JSON.parse(r.v); delete c.key; return JSON.stringify(c); } catch { return ""; } })() } : r) : rows;   // no guards' link key in Drive
   }
   return out;
 }

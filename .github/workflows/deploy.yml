@@ -19,6 +19,16 @@ jobs:
       - name: Get the files
         uses: actions/checkout@v4
 
+      # Policies & Procedures files (R2 bucket of the hub) — created once; the step is ignored when it already exists
+      - name: Create the hub files bucket (once; ignored when it exists)
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          command: r2 bucket create abc-hub-files
+
       - name: Deploy with Wrangler
         uses: cloudflare/wrangler-action@v3
         with:

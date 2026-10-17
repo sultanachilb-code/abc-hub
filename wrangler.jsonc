@@ -6,6 +6,8 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "hub-db", "database_id": "e7ae150f-de70-4376-a15b-65390159f65c" }
   ],
+  /* Policies & Procedures: the original PDF / Word files (docs/FEATURE-policies.md). The deploy creates the bucket if it is missing. */
+  "r2_buckets": [ { "binding": "FILES", "bucket_name": "abc-hub-files" } ],
   "services": [
     { "binding": "INCIDENTS", "service": "abc-incident-system" },
     { "binding": "RESTROOM", "service": "abc-restroom-report" },

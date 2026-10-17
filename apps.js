@@ -91,7 +91,7 @@ window.HUB = {
     "pack":            ["MM",  "OM",  "LEAD"],
     "downloads":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "footfall":        [],
-    "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "SEC", "LEAD"],
     "form-am":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-pm":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -427,7 +427,7 @@ window.HUB = {
     /* Policies & Procedures — the three systems are placeholders until their content is built */
     /* Training & induction tracker (see docs/FEATURE-training.md) */
     { id: "training", name: "Training Tracker", desc: "Who completed which training, what expires, what is still needed", group: "Policies & Procedures", icon: "book", color: "#2E6B4F", url: "/tools/training" },
-    { id: "policies", name: "Policies & Procedures", desc: "Owner, Assist and ABC General policies in one place", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies" }
+    { id: "policies", name: "Policies & Procedures", desc: "Owner, Assist, ABC General policies and the Verdun Tenant Manual — searchable, and ABCON answers from them", group: "Policies & Procedures", icon: "scale", color: "#4A1F73", url: "/tools/policies" }
 
     /* Next system goes here — add a comma after the } above, then paste:
     ,{
