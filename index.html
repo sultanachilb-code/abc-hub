@@ -429,29 +429,6 @@ main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1e
 .sa-side{position:absolute;top:0;height:100%}.sa-side.l{left:0}.sa-side.r{right:0}
 .season-chip{background:rgba(243,213,126,.18)!important;color:#FBE7A8!important}
 @media (max-width:1100px){.sa-side{display:none}}
-.aic{position:fixed;right:18px;bottom:18px;width:min(420px,calc(100vw - 24px));height:min(620px,calc(100dvh - 90px));z-index:90;display:flex;flex-direction:column;
-  background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 60px rgba(20,8,34,.35);overflow:hidden;opacity:0;transform:translateY(16px) scale(.98);pointer-events:none;transition:opacity .2s,transform .25s}
-.aic.on{opacity:1;transform:none;pointer-events:auto}
-.aic-h{display:flex;align-items:center;gap:10px;padding:14px 14px 12px;background:linear-gradient(120deg,#2A0F45,#5B2A86);color:#fff}
-.aic-h b{display:block;font-size:.98rem}.aic-h small{display:block;font-size:.72rem;opacity:.75}
-.aic-l{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,#7B4BB0,#B08A2E);font-size:1.1rem}
-.aic-h select{margin-left:auto;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:9px;padding:5px 6px;font:inherit;font-size:.76rem;max-width:140px}
-.aic-h select option{color:#000}
-.aic-x{margin-left:6px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff}
-.aic-h select + .aic-x{margin-left:6px}.aic-h > div + .aic-x{margin-left:auto}
-.aic-b{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
-.aic-m{max-width:88%;padding:10px 13px;border-radius:16px;font-size:.88rem;line-height:1.5;white-space:normal;word-wrap:break-word}
-.aic-m.user{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:5px}
-.aic-m.assistant{align-self:flex-start;background:var(--paper);border-bottom-left-radius:5px}
-.aic-m.typing{display:flex;gap:4px}.aic-m.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:aicT 1s infinite}
-.aic-m.typing i:nth-child(2){animation-delay:.15s}.aic-m.typing i:nth-child(3){animation-delay:.3s}
-@keyframes aicT{50%{transform:translateY(-4px);opacity:.4}}
-.aic-hi b{display:block;font-size:.95rem}.aic-hi small{display:block;color:var(--muted);font-size:.8rem;margin-top:4px;line-height:1.45}
-.aic-sg{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.aic-sg button{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:700;color:var(--brand-2)}
-.aic-f{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
-.aic-f textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:.9rem;background:var(--surface);color:var(--text);max-height:110px}
-.aic-s{width:44px;border-radius:14px;background:var(--brand);color:#fff;font-size:1rem}
-@media (max-width:600px){.aic{right:0;left:0;bottom:0;width:100%;height:calc(100dvh - 60px);border-radius:22px 22px 0 0}}
 .moment{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:14px 46px 16px 18px;border-radius:20px;color:#fff;
   background:linear-gradient(120deg,#2A0F45 0%,#5B2A86 55%,#B08A2E 140%);box-shadow:0 10px 28px rgba(42,15,69,.18);animation:moIn .55s cubic-bezier(.2,.9,.3,1.2)}
 .moment .mo-sp{font-size:1.5rem;color:#F3D57E;animation:moSp 3s ease-in-out infinite;flex:none}
@@ -1879,30 +1856,212 @@ function buildAiMenu(){
   };
 }
 
-/* ---------- ABCON (ABC Operations Control), the Hub Assistant: free AI chat over the hub's data and the policies (see docs/FEATURE-ai.md) ---------- */
-const AIC = { msgs: [], busy: false, site: "" };
-const AI_SUGGEST = ["What is still open today?", "Which contractors attended today?", "What are the tenant delivery hours?", "شو صار بالدورية اليوم؟"];
+/* ---------- ABCON (ABC Operations Control), the Hub Assistant: free AI chat over the hub's data and the policies (see docs/FEATURE-ai.md) ----------
+   Window: header with the ABC|ON wordmark · tabs Chat / Teach (Admin, MM, OM) / History · structured answer cards written word by word
+   (Server-Sent Events from /api/ai/chat) · source cards · Copy / Share / 👍 👎 · follow-up questions · limits line. */
+const ABC_LOGO = "icons/abc-logo-white.png";
+const AIC = { msgs: [], busy: false, site: "", tab: "chat", id: "", big: false, st: null };
+const AI_SUGGEST = ["What is still open today?", "Any repeated problems this month?", "What are the core trading hours?", "شو صار بالدورية اليوم؟"];
+const aiNewId = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function toast(msg, bad){   // a short message at the bottom of the ABCON window
+  let t = $("#abxToast"); if (!t){ t = document.createElement("div"); t.id = "abxToast"; document.body.append(t); }
+  t.textContent = msg; t.className = "on" + (bad ? " bad" : ""); clearTimeout(t._h); t._h = setTimeout(() => t.className = "", 2600);
+}
 function aiChat(){
   let p = $("#aiChat");
-  if (!p){ p = document.createElement("div"); p.id = "aiChat"; p.className = "aic"; document.body.append(p); }
+  if (!p){ p = document.createElement("div"); p.id = "aiChat"; document.body.append(p); }
   AIC.site = AIC.site || D2D.site || ME.user.site || Object.keys(sitesOfMe())[0] || "";
-  const sites = sitesOfMe();
-  p.innerHTML = `<div class="aic-h"><span class="aic-l">✦</span><div><b>ABCON</b><small>ABC Operations Control · answers from the hub and the policies</small></div>
-      ${Object.keys(sites).length > 1 ? `<select id="aicSite">${Object.entries(sites).map(([c, n]) => `<option value="${esc(c)}" ${c === AIC.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}
-      <button class="aic-x" id="aicX" aria-label="Close">✕</button></div>
-    <div class="aic-b" id="aicB"></div>
-    <div class="aic-st" id="aicSt"></div>
-    <form class="aic-f" id="aicF"><textarea id="aicQ" rows="1" dir="auto" placeholder="Ask about today… · اسأل عن اليوم"></textarea><button class="aic-s" aria-label="Send">➤</button></form>`;
-  aiDraw(); aiStatus(); p.classList.add("on"); window.sanadPaint && sanadPaint(); setTimeout(() => $("#aicQ").focus(), 60);
-  $("#aicX").onclick = () => { p.classList.remove("on"); window.sanadPaint && sanadPaint(); };
-  const ss = $("#aicSite"); if (ss) ss.onchange = e => { AIC.site = e.target.value; AIC.msgs = []; aiDraw(); };
-  $("#aicF").onsubmit = e => { e.preventDefault(); aiSend($("#aicQ").value); };
-  $("#aicQ").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); aiSend($("#aicQ").value); } };
+  if (!AIC.id) AIC.id = aiNewId();
+  aiFrame(); window.sanadPaint && sanadPaint(); aiStatus();
+  setTimeout(() => { const q = $("#aicQ"); if (q && matchMedia("(min-width:700px)").matches) q.focus(); }, 80);
 }
-/* ABCON bubble: bottom right of the home page only (Oct 2026); the Emergency button stays where it is (above it on a phone) */
+function aiFrame(){
+  const p = $("#aiChat"); if (!p) return;
+  const sites = sitesOfMe(), st = AIC.st || {};
+  p.className = "abx on" + (AIC.big ? " big" : "");
+  p.innerHTML = `<div class="abx-h">
+      <div class="abx-top"><div class="abx-wm"><img src="${ABC_LOGO}" alt=""><span>ABC<em>ON</em></span><u title="Online"></u></div>
+        <small class="abx-sub">Operations Control</small><span style="flex:1"></span>
+        <button class="abx-ib" id="aicNew" title="New chat" aria-label="New chat">↺</button>
+        <button class="abx-ib abx-big" id="aicBig" title="${AIC.big ? "Smaller" : "Expand"}" aria-label="Expand">${AIC.big ? "⤡" : "⤢"}</button>
+        <button class="abx-ib" id="aicX" title="Close" aria-label="Close">✕</button></div>
+      <div class="abx-tabs"><button data-tab="chat" class="${AIC.tab === "chat" ? "on" : ""}">Chat</button>
+        ${st.canTeach ? `<button data-tab="teach" class="${AIC.tab === "teach" ? "on" : ""}">Teach${st.reviews ? `<b>${st.reviews}</b>` : ""}</button>` : ""}
+        <button data-tab="hist" class="${AIC.tab === "hist" ? "on" : ""}">History</button>
+        ${Object.keys(sites).length > 1 ? `<select id="aicSite" aria-label="Flagship">${Object.entries(sites).map(([c, n]) => `<option value="${esc(c)}" ${c === AIC.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : `<span class="abx-site">${esc(Object.values(sites)[0] || "")}</span>`}</div></div>
+    <div class="abx-b" id="aicB"></div>
+    ${AIC.tab === "chat" ? `<div class="abx-st" id="aicSt"></div>
+    <form class="abx-f" id="aicF"><textarea id="aicQ" rows="1" dir="auto" placeholder="Ask ABCON… · اسأل ABCON"></textarea><button class="abx-s" aria-label="Send">➤</button></form>` : ""}`;
+  $("#aicX").onclick = () => { p.classList.remove("on"); window.sanadPaint && sanadPaint(); };
+  $("#aicBig").onclick = () => { AIC.big = !AIC.big; aiFrame(); };
+  $("#aicNew").onclick = () => { if (AIC.busy) return; AIC.msgs = []; AIC.id = aiNewId(); AIC.tab = "chat"; aiFrame(); };
+  p.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { AIC.tab = b.dataset.tab; aiFrame(); });
+  const ss = $("#aicSite"); if (ss) ss.onchange = e => { AIC.site = e.target.value; AIC.msgs = []; AIC.id = aiNewId(); aiFrame(); };
+  if (AIC.tab === "chat"){
+    const q = $("#aicQ");
+    $("#aicF").onsubmit = e => { e.preventDefault(); aiSend(q.value); };
+    q.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); aiSend(q.value); } };
+    q.oninput = () => { q.style.height = "auto"; q.style.height = Math.min(120, q.scrollHeight) + "px"; };
+    aiDraw(); aiPaintStatus();
+  } else if (AIC.tab === "teach") aiTeach(); else aiHistory();
+}
+
+/* ----- answer text (ABCON's Markdown format) → card HTML ----- */
+function aiInline(s){
+  return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([PT]\d)\]/g, '<sup class="abx-ref">$1</sup>');
+}
+function aiMd(text, streaming){
+  const L = String(text || "").replace(/\r/g, "").split("\n"); let h = "", title = "", kind = "", i = 0;
+  const flushList = (items, tag) => `<${tag} class="abx-l">${items.map(x => `<li dir="auto"><span>${aiInline(x)}</span></li>`).join("")}</${tag}>`;
+  while (i < L.length){
+    let l = L[i].trim();
+    if (!l){ i++; continue; }
+    if (/^\**follow[- ]?ups?\**\s*:/i.test(l)){ i++; continue; }
+    let m;
+    if (!title && (m = l.match(/^#{1,3}\s+(.+)/)) && !h){ title = m[1].replace(/\*\*/g, ""); i++; continue; }
+    if ((m = l.match(/^\**type\**\s*:\s*(.+)$/i))){ kind = m[1].replace(/\*/g, "").trim(); i++; continue; }
+    if ((m = l.match(/^#{1,4}\s+(.+)/))){ h += `<div class="abx-h3" dir="auto">${aiInline(m[1])}</div>`; i++; continue; }
+    if (l.startsWith("|")){
+      const rowsT = []; while (i < L.length && L[i].trim().startsWith("|")){ const r = L[i].trim(); if (!/^\|[\s:|-]+\|?$/.test(r)) rowsT.push(r.replace(/^\||\|$/g, "").split("|").map(c => c.trim())); i++; }
+      if (rowsT.length){ const [hd, ...bd] = rowsT;
+        h += `<div class="abx-tw"><table class="abx-tbl"><thead><tr>${hd.map(c => `<th dir="auto">${aiInline(c)}</th>`).join("")}</tr></thead><tbody>${bd.map(r => `<tr>${r.map(c => `<td dir="auto">${aiInline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`; }
+      continue;
+    }
+    if (l.startsWith(">")){
+      const q = []; while (i < L.length && L[i].trim().startsWith(">")){ q.push(L[i].trim().replace(/^>\s?/, "")); i++; }
+      const t = q.join(" ").replace(/^\**rule\**\s*:\s*/i, "");
+      h += `<div class="abx-rule" dir="auto"><b>The rule</b>${aiInline(t)}</div>`; continue;
+    }
+    if (/^[-*•]\s+/.test(l)){ const it = []; while (i < L.length && /^\s*[-*•]\s+/.test(L[i])){ it.push(L[i].trim().replace(/^[-*•]\s+/, "")); i++; } h += flushList(it, "ul"); continue; }
+    if (/^\d+[.)]\s+/.test(l)){ const it = []; while (i < L.length && /^\s*\d+[.)]\s+/.test(L[i])){ it.push(L[i].trim().replace(/^\d+[.)]\s+/, "")); i++; } h += flushList(it, "ol"); continue; }
+    h += `<p dir="auto">${aiInline(l)}</p>`; i++;
+  }
+  const K = /policy/i.test(kind) ? "pol" : /live/i.test(kind) ? "live" : /general/i.test(kind) ? "gen" : kind ? "mix" : "";
+  return (title ? `<div class="abx-t" dir="auto"><span>${aiInline(title)}</span>${K ? `<em class="k-${K}">${esc(kind.slice(0, 20))}</em>` : ""}</div>` : "") + h + (streaming ? `<span class="abx-cur"></span>` : "");
+}
+const aiPlain = t => String(t || "").split("\n").filter(l => !/^\**(type|follow[- ]?ups?)\**\s*:/i.test(l.trim()) && !/^\|[\s:|-]+\|?$/.test(l.trim()))
+  .map(l => l.trim().startsWith("|") ? l.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim()).join(" · ") : l).join("\n").replace(/^#+\s*/gm, "").replace(/\*\*/g, "").replace(/\s?\[[PT]\d\]/g, "").replace(/^>\s?(\**rule\**\s*:\s*)?/gim, "").trim();
+function aiSrc(s){
+  if (s.kind === "fact") return `<div class="abx-sc fact"><i>📌</i><span><b>Taught fact <sup>${esc(s.n)}</sup></b><small dir="auto">${esc(s.text)}${s.by ? " — " + esc(s.by) : ""}</small></span></div>`;
+  return `<a class="abx-sc" href="/tools/policies?doc=${s.doc}${s.page ? "&p=" + s.page : ""}" target="_blank" rel="noopener"><i>PDF</i><span><b>${esc(s.title)} <sup>${esc(s.n)}</sup></b><small>${s.section ? esc(s.section.slice(0, 60)) + " · " : ""}${s.page ? "page " + s.page : esc(s.coll || "")}</small></span><em>Open ›</em></a>`;
+}
+function aiCard(m, idx, last){
+  const live = m.streaming && !m.content;
+  return `<div class="abx-ai" data-i="${idx}"><div class="abx-av"><img src="${ABC_LOGO}" alt=""></div><div class="abx-card${m.err ? " err" : ""}">
+    ${live ? `<span class="abx-typing"><i></i><i></i><i></i> ABCON is thinking…</span>` : m.err ? `<p dir="auto">${esc(m.content)}</p>` : aiMd(m.content, m.streaming)}
+    ${!m.streaming && m.sources && m.sources.length ? `<div class="abx-srcs">${m.sources.map(aiSrc).join("")}</div>` : ""}
+    ${!m.streaming && !m.err && m.content ? `<div class="abx-acts"><button data-act="copy">⧉ Copy</button><button data-act="share">↗ Share</button>${m.cached ? `<small>Same answer as at ${esc(m.cachedAt || "")} · not counted</small>` : ""}<span></span>
+      ${m.voted ? `<small>${m.voted > 0 ? "Thanks 👍" : "Sent for review 👎"}</small>` : `<button data-act="up" title="Good answer">👍</button><button data-act="down" title="Wrong or not helpful">👎</button>`}</div>
+      <div class="abx-why" hidden><textarea rows="2" dir="auto" placeholder="What was wrong? The right answer helps the managers teach ABCON (optional)"></textarea><button data-act="send-down">Send</button></div>` : ""}
+  </div></div>${last && !m.streaming && m.follow && m.follow.length ? `<div class="abx-fu">${m.follow.map(f => `<button data-q="${esc(f)}" dir="auto">${esc(f)}</button>`).join("")}</div>` : ""}`;
+}
+function aiDraw(){
+  const b = $("#aicB"); if (!b || AIC.tab !== "chat") return;
+  const lastA = AIC.msgs.map(m => m.role).lastIndexOf("assistant");
+  b.innerHTML = (AIC.msgs.length ? "" : `<div class="abx-hi"><div class="abx-hi-l"><img src="${ABC_LOGO}" alt=""></div>
+      <b>Hi ${esc((ME.user.name || "").split(" ")[0])}, I'm ABCON</b><span dir="rtl">أهلاً، أنا ABCON</span>
+      <p>Ask me about today at the flagship, the last 30 days, or ABC policies and procedures — every rule comes with its source.</p>
+      <div class="abx-sg">${AI_SUGGEST.map(q => `<button data-q="${esc(q)}" dir="auto">${esc(q)}</button>`).join("")}</div></div>`)
+    + AIC.msgs.map((m, i) => m.role === "user" ? `<div class="abx-me" dir="auto">${esc(m.content)}</div>` : aiCard(m, i, i === lastA)).join("");
+  b.scrollTop = b.scrollHeight;
+  b.querySelectorAll("[data-q]").forEach(x => x.onclick = () => aiSend(x.dataset.q));
+  b.querySelectorAll(".abx-ai").forEach(card => {
+    const i = Number(card.dataset.i), m = AIC.msgs[i], q = (AIC.msgs.slice(0, i).reverse().find(x => x.role === "user") || {}).content || "";
+    const act = card.querySelector.bind(card);
+    card.querySelectorAll("[data-act]").forEach(btn => btn.onclick = async () => {
+      const a = btn.dataset.act;
+      if (a === "copy"){ try { await navigator.clipboard.writeText(aiPlain(m.content)); btn.textContent = "✓ Copied"; } catch { btn.textContent = "Copy failed"; } }
+      if (a === "share"){ const text = `${q}\n\n${aiPlain(m.content)}\n\n— ABCON · ABC Operations Hub`;
+        if (navigator.share) navigator.share({ title: "ABCON", text }).catch(() => {}); else location.href = `mailto:?subject=${encodeURIComponent("ABCON: " + q.slice(0, 60))}&body=${encodeURIComponent(text)}`; }
+      if (a === "up"){ m.voted = 1; api("ai/feedback", { site: AIC.site, vote: 1, q, a: m.content }).catch(() => {}); aiDraw(); aiSave(); }
+      if (a === "down"){ const w = act(".abx-why"); w.hidden = !w.hidden; if (!w.hidden) w.querySelector("textarea").focus(); }
+      if (a === "send-down"){ m.voted = -1; api("ai/feedback", { site: AIC.site, vote: -1, q, a: m.content, note: act(".abx-why textarea").value }).catch(() => {}); aiDraw(); aiSave(); }
+    });
+  });
+}
+/* paint only the answer being written (fast while streaming) */
+function aiPaintLive(){
+  const i = AIC.msgs.length - 1, card = document.querySelector(`#aicB .abx-ai[data-i="${i}"] .abx-card`);
+  if (!card) return aiDraw();
+  card.innerHTML = aiMd(AIC.msgs[i].content, true);
+  const b = $("#aicB"); if (b) b.scrollTop = b.scrollHeight;
+}
+async function aiSend(q){
+  q = String(q || "").trim(); if (!q || AIC.busy) return;
+  if (AIC.st && AIC.st.open === false) return aiPaintStatus();
+  AIC.msgs.push({ role: "user", content: q });
+  const m = { role: "assistant", content: "", streaming: true }; AIC.msgs.push(m);
+  AIC.busy = true; const qa = $("#aicQ"); if (qa){ qa.value = ""; qa.style.height = ""; } aiDraw();
+  const fill = d => Object.assign(m, { content: d.answer, sources: d.sources || [], follow: d.follow || [], cached: !!d.cached, cachedAt: d.cachedAt, streaming: false });
+  try {
+    const r = await fetch("/api/ai/chat", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ site: AIC.site, stream: true, messages: AIC.msgs.slice(0, -1).map(({ role, content, err }) => ({ role, content, err })) }) });
+    if (/json/.test(r.headers.get("content-type") || "")){
+      const j = await r.json().catch(() => null); if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || `Error ${r.status}`); fill(j.data);
+    } else {
+      const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", raf = 0;
+      for (;;){ const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true }); let k;
+        while ((k = buf.indexOf("\n\n")) >= 0){ const ev = buf.slice(0, k).trim(); buf = buf.slice(k + 2); if (!ev.startsWith("data:")) continue;
+          let j; try { j = JSON.parse(ev.slice(5)); } catch { continue; }
+          if (j.t){ m.content += j.t; if (!raf) raf = requestAnimationFrame(() => { raf = 0; aiPaintLive(); }); }
+          else if (j.done) fill(j); else if (j.err) throw new Error(j.err); } }
+      if (m.streaming){ if (m.content) m.streaming = false; else throw new Error("ABCON could not answer right now — try again in a minute."); }
+    }
+  } catch (e){ Object.assign(m, { content: "⚠ " + e.message, err: true, streaming: false }); }
+  AIC.busy = false; aiDraw(); aiStatus(); aiSave();
+}
+function aiSave(){ if (AIC.msgs.some(m => m.role === "assistant" && !m.err)) api("ai/history/save", { id: AIC.id, site: AIC.site, msgs: AIC.msgs }).catch(() => {}); }
+/* limits: questions left for this person, the team's share of the free allowance, and when it is back */
+async function aiStatus(){
+  try { AIC.st = await api(`ai/status?site=${encodeURIComponent(AIC.site)}`); } catch { return; }
+  const p = $("#aiChat"); if (p && !p.querySelector('[data-tab="teach"]') && AIC.st.canTeach) return aiFrame();
+  aiPaintStatus();
+}
+function aiPaintStatus(){
+  const el = $("#aicSt"), s = AIC.st; if (!el || !s) return;
+  el.classList.toggle("off", !s.open);
+  el.innerHTML = s.open ? `<span>${ME.user.role === "ADMIN" ? "Admin · no personal limit" : `${s.left} of ${s.daily} questions left today`}</span><span class="abx-bar" title="Team use of today's free AI allowance — ABCON rests at 100 % here (80 % of the free allowance)"><i style="width:${Math.max(2, s.teamPct)}%" class="${s.teamPct >= 85 ? "hi" : s.teamPct >= 60 ? "md" : ""}"></i></span><span>Team ${s.teamPct}%</span>`
+    : `<b>⏸ ${esc(s.msg)}</b>`;
+  const q = $("#aicQ"), sb = document.querySelector("#aicF .abx-s"); if (q) q.disabled = !s.open; if (sb) sb.disabled = !s.open;
+}
+
+/* ----- History: your chats, 30 days ----- */
+async function aiHistory(){
+  const b = $("#aicB"); b.innerHTML = `<div class="abx-empty">Loading…</div>`;
+  try { const { chats } = await api("ai/history"); const sites = sitesOfMe();
+    b.innerHTML = `<div class="abx-sec"><b>Your chats</b><small>kept 30 days · only you see them</small></div>` + (chats.length ? chats.map(c => `<div class="abx-hrow" data-id="${esc(c.id)}"><div><b dir="auto">${esc(c.title)}</b><small>${esc(sites[c.site] || c.site)} · ${new Date(c.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></div><button data-del="${esc(c.id)}" aria-label="Delete">✕</button></div>`).join("")
+      : `<div class="abx-empty">No chats yet — ask ABCON something.</div>`);
+    b.querySelectorAll(".abx-hrow").forEach(r => r.onclick = async e => {
+      if (e.target.closest("[data-del]")){ e.stopPropagation(); await api("ai/history/remove", { id: r.dataset.id }).catch(() => {}); if (r.dataset.id === AIC.id){ AIC.msgs = []; AIC.id = aiNewId(); } return aiHistory(); }
+      try { const { chat } = await api(`ai/history/get?id=${encodeURIComponent(r.dataset.id)}`); AIC.msgs = chat.msgs; AIC.id = chat.id; if (chat.site) AIC.site = chat.site; AIC.tab = "chat"; aiFrame(); } catch (er){ toast(er.message, true); } });
+  } catch (e){ b.innerHTML = `<div class="abx-empty">${esc(e.message)}</div>`; }
+}
+
+/* ----- Teach ABCON (Admin, Mall Manager, Operations Manager) ----- */
+async function aiTeach(){
+  const b = $("#aicB"); b.innerHTML = `<div class="abx-empty">Loading…</div>`;
+  let F, R; try { [F, R] = await Promise.all([api("ai/facts"), api("ai/reviews")]); } catch (e){ return b.innerHTML = `<div class="abx-empty">${esc(e.message)}</div>`; }
+  const sites = sitesOfMe(), scope = (id, sel) => `<select id="${id}"><option value="${esc(AIC.site)}" ${sel !== "" ? "selected" : ""}>${esc(sites[AIC.site] || AIC.site)} only</option><option value="ALL" ${sel === "" ? "selected" : ""}>All flagships</option></select>`;
+  b.innerHTML = `<div class="abx-sec"><b>Answers to review</b><small>${R.open.length ? R.open.length + " 👎 waiting" : "nothing waiting"} · ${R.liked} 👍 in 30 days</small></div>
+    ${R.open.map(f => `<div class="abx-rv" data-id="${f.id}"><div class="abx-rv-q" dir="auto">“${esc(f.q)}”</div><div class="abx-rv-a" dir="auto">${esc(aiPlain(f.a).slice(0, 260))}${f.a.length > 260 ? "…" : ""}</div>
+      ${f.note ? `<div class="abx-rv-n" dir="auto">👎 ${esc(f.note)}</div>` : ""}<small>${esc(f.by_name)}${f.pos ? " · " + esc(f.pos) : ""} · ${esc(sites[f.site] || f.site)} · ${new Date(f.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</small>
+      <textarea rows="2" dir="auto" placeholder="The correct answer, as a fact ABCON should know">${esc(f.note || "")}</textarea>
+      <div class="abx-row">${scope("rs" + f.id, f.site)}<span style="flex:1"></span><button class="ghost" data-dis="${f.id}">Dismiss</button><button data-fix="${f.id}">Teach ABCON</button></div></div>`).join("")}
+    <div class="abx-sec"><b>Taught facts</b><small>${F.facts.length} · ABCON reads these before every answer</small></div>
+    <div class="abx-add"><textarea id="tfT" rows="2" dir="auto" placeholder="e.g. The loading bay key is kept with security at Gate 2 after 22:00."></textarea>
+      <div class="abx-row">${scope("tfS", AIC.site)}<span style="flex:1"></span><button id="tfGo">+ Teach</button></div></div>
+    ${F.facts.map(f => `<div class="abx-fact"><i>📌</i><div><span dir="auto">${esc(f.text)}</span><small>${f.site ? esc(sites[f.site] || f.site) : "All flagships"} · ${esc(f.by_name)}${f.source === "feedback" ? " · from a 👎" : ""} · ${new Date(f.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</small></div><button data-rm="${f.id}" aria-label="Remove">✕</button></div>`).join("") || `<div class="abx-empty">No facts yet.</div>`}`;
+  const site = v => v === "ALL" ? "" : v;
+  $("#tfGo").onclick = async () => { try { await api("ai/fact/save", { text: $("#tfT").value, site: site($("#tfS").value) }); toast("ABCON learned it"); aiTeach(); } catch (e){ toast(e.message, true); } };
+  b.querySelectorAll("[data-rm]").forEach(x => x.onclick = async () => { if (!confirm("Remove this fact? ABCON stops using it.")) return; await api("ai/fact/remove", { id: Number(x.dataset.rm) }).catch(() => {}); aiTeach(); });
+  b.querySelectorAll("[data-fix]").forEach(x => x.onclick = async () => { const id = x.dataset.fix, card = x.closest(".abx-rv");
+    try { await api("ai/review/fix", { id: Number(id), text: card.querySelector("textarea").value, site: $("#rs" + id).value === "ALL" ? "ALL" : "" }); toast("Corrected — ABCON learned it"); aiStatus(); aiTeach(); } catch (e){ toast(e.message, true); } });
+  b.querySelectorAll("[data-dis]").forEach(x => x.onclick = async () => { await api("ai/review/dismiss", { id: Number(x.dataset.dis) }).catch(() => {}); aiStatus(); aiTeach(); });
+}
+/* ABCON bubble: bottom right of the home page only; the Emergency button stays where it is (above it on a phone) */
 (() => {
   const b = document.createElement("button"); b.id = "sanadFab"; b.type = "button"; b.setAttribute("aria-label", "Ask ABCON, the hub assistant");
-  b.innerHTML = `<span class="sf-ic">✦</span><span class="sf-lb">Ask ABCON<small>Operations Control</small></span>`;
+  b.innerHTML = `<span class="sf-ic"><img src="${ABC_LOGO}" alt=""><u></u></span><span class="sf-lb">Ask ABC<em>ON</em><small>Operations Control</small></span>`;
   b.onclick = () => aiChat();
   const paint = () => { const home = document.getElementById("home"); b.classList.toggle("on", (typeof ME !== "undefined" && !!ME && !!ME.user) && !!home && !home.classList.contains("hidden") && !/^#\/app\//.test(location.hash) && !($("#aiChat") && $("#aiChat").classList.contains("on"))); };
   addEventListener("DOMContentLoaded", () => { document.body.append(b); paint(); const home = document.getElementById("home"); if (home) new MutationObserver(paint).observe(home, { attributes: true, attributeFilter: ["class"] }); });
@@ -1911,34 +2070,6 @@ function aiChat(){
   window.sanadPaint = paint;
 })();
 function sitesOfMe(){ return (D2D.data && D2D.data.sites) || (ME.user.site ? { [ME.user.site]: ME.user.siteName } : SITES || {}); }
-function aiDraw(){
-  const b = $("#aicB"); if (!b) return;
-  b.innerHTML = (AIC.msgs.length ? "" : `<div class="aic-hi"><b>Hi, I'm ABCON · أهلاً، أنا ABCON</b><br>Ask me about today at the flagship, or about ABC policies and procedures.<small>Shifts, handover, contractors, malfunctions, patrol, tenant feedback, meetings, contracts — and the Policies &amp; Procedures library, with the source of every rule.</small>
-      <div class="aic-sg">${AI_SUGGEST.map(q => `<button data-q="${esc(q)}" dir="auto">${esc(q)}</button>`).join("")}</div></div>`)
-    + AIC.msgs.map(m => `<div class="aic-m ${m.role}" dir="auto">${esc(m.content).replace(/\n/g, "<br>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[P(\d)\]/g, '<sup class="aic-p">P$1</sup>')}${m.sources && m.sources.length ? `<div class="aic-src">${m.sources.map(x => `<a href="/tools/policies?doc=${x.doc}${x.page ? "&p=" + x.page : ""}" target="_blank" rel="noopener" dir="ltr"><sup>P${x.n}</sup> ${esc(x.title)}${x.section ? " · " + esc(x.section.slice(0, 40)) : ""}${x.page ? " · p." + x.page : ""}</a>`).join("")}</div>` : ""}${m.cached ? `<small class="aic-c">Same question as at ${esc(m.cachedAt)} — same answer, not counted</small>` : ""}</div>`).join("")
-    + (AIC.busy ? `<div class="aic-m assistant typing"><i></i><i></i><i></i></div>` : "");
-  b.scrollTop = b.scrollHeight;
-  b.querySelectorAll("[data-q]").forEach(x => x.onclick = () => aiSend(x.dataset.q));
-}
-async function aiSend(q){
-  q = String(q || "").trim(); if (!q || AIC.busy) return;
-  AIC.msgs.push({ role: "user", content: q }); AIC.busy = true; const qa = $("#aicQ"); if (qa) qa.value = ""; aiDraw();
-  try { const r = await api("ai/chat", { site: AIC.site, messages: AIC.msgs.map(({ role, content, err }) => ({ role, content, err })) });
-    AIC.msgs.push({ role: "assistant", content: r.answer, sources: r.sources || [], cached: !!r.cached, cachedAt: r.cachedAt }); }
-  catch (e){ AIC.msgs.push({ role: "assistant", content: "⚠ " + e.message, err: true }); }
-  AIC.busy = false; aiDraw(); aiStatus();
-}
-/* ABCON limits: questions left for this person, the team's share of the free allowance, and when it is back */
-async function aiStatus(){
-  const el = $("#aicSt"); if (!el) return;
-  try { const s = await api(`ai/status?site=${encodeURIComponent(AIC.site)}`); AIC.st = s;
-    const bar = `<i style="width:${Math.max(2, s.teamPct)}%" class="${s.teamPct >= 85 ? "hi" : s.teamPct >= 60 ? "md" : ""}"></i>`;
-    el.innerHTML = s.open ? `<span>${s.daily && ME.user.role !== "ADMIN" ? `${s.left} of ${s.daily} questions left today` : "Admin"}</span><span class="aic-bar" title="Team use of today's free AI allowance (ABCON closes at 100 % here = 80 % of the free allowance)">${bar}</span><span>Team ${s.teamPct}%</span>`
-      : `<b>⏸ ${esc(s.msg)}</b>`;
-    el.classList.toggle("off", !s.open);
-    const q = $("#aicQ"), sb = document.querySelector("#aicF .aic-s"); if (q) q.disabled = !s.open; if (sb) sb.disabled = !s.open;
-  } catch { el.innerHTML = ""; }
-}
 
 function changePwDialog(){
   sheet.innerHTML = `<div class="sheet-h"><div><b>Change password</b></div></div>
@@ -3603,26 +3734,103 @@ boot();
 @media (max-width:900px){ #emgFab{top:auto;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:60px;height:60px} #emgFab svg{width:27px;height:27px} }
 @media (prefers-reduced-motion:reduce){ #emgFab::after{animation:none} }
 @media print{ #emgFab{display:none!important} }
-/* ABCON chat: limits line + policy sources */
-.aic-st{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--line)}
-.aic-st:empty{display:none}.aic-st.off{background:#FFF4E5;color:#8A4B00;font-size:.78rem;line-height:1.35}
-.aic-bar{flex:1;height:5px;border-radius:9px;background:var(--line);overflow:hidden;max-width:120px;margin-left:auto}.aic-bar i{display:block;height:100%;background:#2E8B57;border-radius:9px}.aic-bar i.md{background:#C07A12}.aic-bar i.hi{background:#C0392B}
-.aic-p{font-size:.62rem;font-weight:800;color:#7B3FB0;margin-left:1px}
-.aic-src{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.aic-src a{font-size:.72rem;font-weight:700;color:#4A1F73;background:#F1EAF8;border-radius:8px;padding:4px 8px;text-decoration:none}
-.aic-src a sup{color:#7B3FB0}.aic-c{display:block;margin-top:6px;font-size:.68rem;color:var(--muted)}
-/* ABCON bubble (Hub Assistant) — bottom right of the home page; above the Emergency button on a phone */
+/* ---------- ABCON window (Oct 2026): ABC|ON wordmark, tabs, structured answer cards ---------- */
+.abx{position:fixed;right:18px;bottom:18px;width:min(440px,calc(100vw - 24px));height:min(700px,calc(100dvh - 40px));z-index:90;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:0 28px 70px rgba(20,8,34,.38);overflow:hidden;opacity:0;transform:translateY(18px) scale(.98);pointer-events:none;transition:.22s}
+.abx.on{opacity:1;transform:none;pointer-events:auto}
+.abx.big{top:12px;bottom:12px;right:12px;height:auto;width:min(620px,calc(100vw - 24px))}
+.abx-h{background:linear-gradient(135deg,#1C0B30,#4A1F73 70%,#6B3A99);color:#fff;padding:12px 12px 0}
+.abx-top{display:flex;align-items:center;gap:8px}
+.abx-wm{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:6px 10px 6px 7px}
+.abx-wm img{width:24px;height:auto}.abx-wm span{font-weight:900;font-size:1.12rem;letter-spacing:.05em}.abx-wm em{font-style:normal;color:#E9CF8A}
+.abx-wm u{width:8px;height:8px;border-radius:50%;background:#3DDC84;box-shadow:0 0 0 3px rgba(61,220,132,.22);align-self:flex-start;margin-top:2px}
+.abx-sub{font-size:.7rem;opacity:.75;font-weight:600}
+.abx-ib{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:.9rem;display:grid;place-items:center}.abx-ib:hover{background:rgba(255,255,255,.22)}
+.abx-tabs{display:flex;align-items:flex-end;gap:2px;margin-top:10px}
+.abx-tabs button{padding:8px 13px;font-size:.8rem;font-weight:700;border-radius:11px 11px 0 0;color:rgba(255,255,255,.75);background:none;display:flex;gap:5px;align-items:center}
+.abx-tabs button.on{background:var(--surface);color:var(--brand)}
+.abx-tabs button b{background:#C0392B;color:#fff;font-size:.62rem;border-radius:99px;padding:1px 6px}
+.abx-tabs select,.abx-site{margin:0 0 6px auto;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:99px;padding:5px 10px;font:inherit;font-size:.72rem;max-width:150px}
+.abx-tabs select option{color:#000}
+.abx-b{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(var(--surface),var(--paper))}
+.abx-me{align-self:flex-end;max-width:84%;background:var(--brand);color:#fff;padding:10px 14px;border-radius:16px 16px 4px 16px;font-size:.88rem;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+.abx-ai{display:flex;gap:8px;align-items:flex-start}
+.abx-av{flex:none;width:28px;height:28px;border-radius:9px;background:linear-gradient(145deg,#4A1F73,#2A1146);display:grid;place-items:center}.abx-av img{width:17px}
+.abx-card{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:12px 14px;font-size:.87rem;line-height:1.55;box-shadow:0 2px 10px rgba(42,17,70,.06);word-wrap:break-word}
+.abx-card.err{background:#FFF4E5;border-color:#F3D9B0;color:#8A4B00}
+.abx-card p{margin:0 0 6px}.abx-card p:last-child{margin-bottom:0}
+.abx-t{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;font-size:.95rem;margin-bottom:8px}
+.abx-t em{font-style:normal;font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:#F1EAF8;color:#4A1F73}
+.abx-t em.k-live{background:#E6F4EC;color:#2E8B57}.abx-t em.k-gen{background:#FFF4E5;color:#8A4B00}.abx-t em.k-mix{background:#EAF0FB;color:#2B5797}
+.abx-h3{font-weight:800;font-size:.84rem;margin:8px 0 4px;color:var(--brand)}
+.abx-l{margin:4px 0 8px;padding:0;list-style:none;display:grid;gap:5px}
+ul.abx-l li{display:flex;gap:8px}ul.abx-l li:before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:#C8A24A;margin-top:8px}
+ol.abx-l{counter-reset:n}ol.abx-l li{display:flex;gap:8px;counter-increment:n}ol.abx-l li:before{content:counter(n);flex:none;width:19px;height:19px;border-radius:50%;background:#F1EAF8;color:#4A1F73;font-size:.68rem;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.abx-tw{overflow-x:auto;margin:6px 0 8px}.abx-tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.abx-tbl th{text-align:start;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--line)}
+.abx-tbl td{padding:6px 7px;border-bottom:1px solid var(--line)}.abx-tbl tr:last-child td{border-bottom:0}.abx-tbl td:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.abx-rule{border-inline-start:3px solid #C8A24A;background:#FBF6E8;color:#3a2f12;border-radius:0 10px 10px 0;padding:8px 11px;margin:8px 0;font-size:.84rem}
+.abx-rule b{display:block;font-size:.64rem;color:#8A6A12;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.abx-ref{font-size:.6rem;font-weight:800;color:#7B3FB0;margin-inline-start:1px}
+.abx-cur{display:inline-block;width:7px;height:14px;background:#7B3FB0;vertical-align:-2px;margin-inline-start:2px;animation:abxBl 1s steps(2) infinite}@keyframes abxBl{50%{opacity:0}}
+.abx-typing{display:inline-flex;gap:4px;align-items:center;font-size:.78rem;color:var(--muted)}.abx-typing i{width:6px;height:6px;border-radius:50%;background:#7B3FB0;animation:aicT 1s infinite}
+.abx-typing i:nth-child(2){animation-delay:.15s}.abx-typing i:nth-child(3){animation-delay:.3s}@keyframes aicT{50%{transform:translateY(-3px);opacity:.35}}
+.abx-srcs{display:grid;gap:6px;margin-top:10px}
+.abx-sc{display:flex;gap:9px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:11px;text-decoration:none;color:var(--text);background:var(--paper)}
+.abx-sc:hover{border-color:#B79AD6}.abx-sc i{flex:none;width:26px;height:30px;border-radius:5px;background:#C0392B;color:#fff;font-style:normal;font-size:.55rem;font-weight:800;display:grid;place-items:center}
+.abx-sc.fact i{background:#F1EAF8;font-size:.85rem}.abx-sc span{min-width:0}.abx-sc b{display:block;font-size:.78rem}.abx-sc b sup{color:#7B3FB0;font-size:.6rem}.abx-sc small{display:block;color:var(--muted);font-size:.72rem;line-height:1.35}
+.abx-sc em{margin-inline-start:auto;font-style:normal;color:#7B3FB0;font-weight:800;font-size:.74rem;white-space:nowrap}
+.abx-acts{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.abx-acts button{font-size:.72rem;color:var(--muted);padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}.abx-acts button:hover{color:var(--text)}
+.abx-acts span{flex:1}.abx-acts small{font-size:.7rem;color:var(--muted)}
+.abx-why{display:flex;gap:6px;margin-top:8px}.abx-why[hidden]{display:none}.abx-why textarea{flex:1;border:1px solid var(--line);border-radius:10px;padding:7px 9px;font:inherit;font-size:.8rem;resize:vertical;background:var(--surface);color:var(--text)}
+.abx-why button{align-self:flex-end;background:var(--brand);color:#fff;border-radius:9px;padding:7px 11px;font-size:.76rem;font-weight:700}
+.abx-fu{display:flex;gap:6px;flex-wrap:wrap;margin-inline-start:36px}
+.abx-fu button,.abx-sg button{font-size:.76rem;font-weight:700;color:var(--brand);background:var(--surface);border:1px solid #DCCDEB;border-radius:99px;padding:6px 11px;text-align:start}
+.abx-fu button:hover,.abx-sg button:hover{background:#F1EAF8}
+.abx-hi{text-align:center;padding:22px 8px 8px;display:grid;justify-items:center;gap:4px}
+.abx-hi-l{width:58px;height:58px;border-radius:18px;background:linear-gradient(145deg,#4A1F73,#1C0B30);display:grid;place-items:center;margin-bottom:6px;box-shadow:0 10px 24px rgba(42,17,70,.3)}.abx-hi-l img{width:34px}
+.abx-hi b{font-size:1.05rem}.abx-hi span{color:var(--muted);font-size:.85rem}.abx-hi p{color:var(--muted);font-size:.82rem;line-height:1.5;max-width:330px;margin:4px 0 6px}
+.abx-sg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.abx-st{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:.7rem;color:var(--muted);border-top:1px solid var(--line);background:var(--surface)}
+.abx-st:empty{display:none}.abx-st.off{background:#FFF4E5;color:#8A4B00;font-size:.78rem;line-height:1.35}
+.abx-bar{flex:1;height:5px;border-radius:9px;background:var(--line);overflow:hidden;max-width:110px;margin-inline-start:auto}.abx-bar i{display:block;height:100%;background:#2E8B57;border-radius:9px}.abx-bar i.md{background:#C07A12}.abx-bar i.hi{background:#C0392B}
+.abx-f{display:flex;gap:8px;align-items:flex-end;padding:8px 12px 12px;background:var(--surface)}
+.abx-f textarea{flex:1;resize:none;border:1.5px solid #DCCDEB;border-radius:16px;padding:10px 13px;font:inherit;font-size:.9rem;background:var(--surface);color:var(--text);max-height:120px}
+.abx-f textarea:focus{outline:none;border-color:#7B3FB0}
+.abx-s{flex:none;width:42px;height:42px;border-radius:13px;background:var(--brand);color:#fff;font-size:1rem}.abx-s:disabled,.abx-f textarea:disabled{opacity:.5}
+.abx-sec{display:flex;align-items:baseline;gap:8px;margin-top:2px}.abx-sec b{font-size:.9rem}.abx-sec small{color:var(--muted);font-size:.72rem}
+.abx-empty{color:var(--muted);font-size:.84rem;text-align:center;padding:18px}
+.abx-hrow{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer}
+.abx-hrow:hover{border-color:#B79AD6}.abx-hrow div{flex:1;min-width:0}.abx-hrow b{display:block;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.abx-hrow small{color:var(--muted);font-size:.72rem}
+.abx-hrow button,.abx-fact button{flex:none;width:28px;height:28px;border-radius:8px;color:var(--muted)}
+.abx-rv{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:6px;background:var(--surface);font-size:.82rem}
+.abx-rv-q{font-weight:700}.abx-rv-a{color:var(--muted);line-height:1.45}.abx-rv-n{background:#FDECEA;color:#C0392B;border-radius:8px;padding:6px 8px}.abx-rv small{color:var(--muted);font-size:.7rem}
+.abx-rv textarea,.abx-add textarea{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-size:.82rem;resize:vertical;background:var(--surface);color:var(--text);width:100%}
+.abx-row{display:flex;gap:6px;align-items:center}.abx-row select{border:1px solid var(--line);border-radius:9px;padding:6px 8px;font:inherit;font-size:.76rem;background:var(--surface);color:var(--text)}
+.abx-row button{background:var(--brand);color:#fff;border-radius:9px;padding:7px 12px;font-size:.78rem;font-weight:700}.abx-row button.ghost{background:var(--surface);color:var(--text);border:1px solid var(--line)}
+.abx-add{display:grid;gap:6px;padding:10px 12px;border:1.5px dashed #DCCDEB;border-radius:12px}
+.abx-fact{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:.83rem;line-height:1.45}
+.abx-fact i{font-style:normal;flex:none;width:28px;height:28px;border-radius:8px;background:#F1EAF8;display:grid;place-items:center}.abx-fact div{flex:1}.abx-fact small{display:block;color:var(--muted);font-size:.7rem;margin-top:2px}
+@media (max-width:700px){.abx,.abx.big{inset:0;width:100%;height:100dvh;border-radius:0;top:0;bottom:0;right:0}.abx-big{display:none}.abx-h{padding-top:calc(env(safe-area-inset-top,0px) + 10px)}.abx-f{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}}
+/* ABCON bubble — bottom right of the home page; above the Emergency button on a phone */
 #sanadFab{position:fixed;z-index:59;right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:none;align-items:center;gap:10px;border:0;cursor:pointer;
-  padding:8px 18px 8px 8px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#4A1F73,#2A0F45);box-shadow:0 12px 28px rgba(42,15,69,.35),0 0 0 4px rgba(200,162,74,.25);animation:sfIn .45s cubic-bezier(.3,1.4,.5,1)}
+  padding:7px 18px 7px 7px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#1C0B30,#4A1F73);box-shadow:0 12px 30px rgba(28,11,48,.4),inset 0 0 0 1px rgba(233,207,138,.35);animation:sfIn .35s ease-out}
 #sanadFab.on{display:flex}
-#sanadFab .sf-ic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.3rem;background:linear-gradient(135deg,#C8A24A,#8A6A12);animation:sfGlow 3s ease-in-out infinite}
-#sanadFab .sf-lb{display:flex;flex-direction:column;align-items:flex-start;font-weight:800;font-size:.92rem;line-height:1.1}
-#sanadFab .sf-lb small{font-size:.74rem;color:#E8C66A;font-weight:700}
+#sanadFab .sf-ic{position:relative;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+#sanadFab .sf-ic img{width:27px}
+#sanadFab .sf-ic u{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:#3DDC84;border:2px solid #2A1146;animation:sfGlow 2.4s ease-in-out infinite}
+#sanadFab .sf-lb{display:flex;flex-direction:column;align-items:flex-start;font-weight:900;font-size:.95rem;line-height:1.1;letter-spacing:.02em}
+#sanadFab .sf-lb em{font-style:normal;color:#E9CF8A}
+#sanadFab .sf-lb small{font-size:.68rem;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:0}
 #sanadFab:hover{transform:translateY(-2px)}
 @keyframes sfIn{from{transform:translateY(30px);opacity:0}}
-@keyframes sfGlow{50%{box-shadow:0 0 0 6px rgba(200,162,74,.25)}}
-@media (max-width:900px){ #sanadFab{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);padding:6px} #sanadFab .sf-lb{display:none} #sanadFab .sf-ic{width:46px;height:46px} }
-@media (prefers-reduced-motion:reduce){ #sanadFab,#sanadFab .sf-ic{animation:none} }
-@media print{ #sanadFab{display:none!important} }
+@keyframes sfGlow{50%{box-shadow:0 0 0 5px rgba(61,220,132,.25)}}
+@media (max-width:900px){ #sanadFab{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);padding:6px} #sanadFab .sf-lb{display:none} #sanadFab .sf-ic{width:48px;height:48px} }
+@media (prefers-reduced-motion:reduce){ #sanadFab,#sanadFab .sf-ic u,.abx-cur{animation:none} }
+#abxToast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:95;background:#1C0B30;color:#fff;padding:10px 16px;border-radius:12px;font-size:.84rem;font-weight:600;opacity:0;pointer-events:none;transition:.2s;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#abxToast.on{opacity:1;transform:translate(-50%,0)}#abxToast.bad{background:#C0392B}
+@media print{ #sanadFab,.abx{display:none!important} }
 </style>
 <div id="emg" role="alertdialog" aria-modal="true" aria-labelledby="emgT"></div>
 <button id="emgBar" type="button"></button>

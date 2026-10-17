@@ -37,8 +37,8 @@ import { packRoute } from "./modules/pack.js";   // Monthly operations pack feat
 import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
-import { aiRoute } from "./modules/ai.js";
-import { polSchema, polRoute, polSearch } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
+import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
+import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
 import { momentFor, momentsAdmin } from "./modules/moments.js";   // Message of the moment — see docs/FEATURE-moments.md
@@ -356,6 +356,7 @@ async function ensureSchema(env) {
   await cleaningSchema(env);   // Cleaning headcount control
   await ccSchema(env);   // Cleaning Control (cleaner app)
   await polSchema(env);   // Policies & Procedures library
+  await aiSchema(env);   // ABCON: taught facts, feedback, chat history
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
@@ -489,6 +490,7 @@ export default {
       await snagReportRun(env, { base: CONNECTORS.snaglist.base, relay: (e, m) => relay(e, m), hubUrl: HUB_URL }).catch(e => console.error("snagreport", e && e.message));   // Snaglist weekly email   // Weekly digest per person
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
+      await polEmbedPending(env, t => embedTexts(env, t), { limit: 48 }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -575,18 +577,20 @@ async function route(request, env, ctx, url) {
   if (path === "announcements") return ok(await activeAnnouncements(env, me));
   if (path.startsWith("pol/")) {   // Policies & Procedures: everyone reads; Admin, Mall Manager and Operations Manager change the library
     if (!roleAllows(me, "policies")) throw fail("Not allowed", 403);
-    const r = await polRoute(env, path, method, body, url, request, { me, now: nowIso, canEdit: me.role === "ADMIN" || me.role === "MANAGER" });
+    const r = await polRoute(env, path, method, body, url, request, { me, now: nowIso, canEdit: me.role === "ADMIN" || me.role === "MANAGER", embed: t => embedTexts(env, t) });
     return r instanceof Response ? r : ok(r);
   }
   if (path.startsWith("ai/")) {   // ABCON, the Hub Assistant (free Workers AI): chat over the hub's data, shift summary
     const site = opsSite(me, method === "GET" ? url.searchParams.get("site") : body.site);
     const sub = (p, s2, extra = "") => opsRoute(env, me, p, "GET", {}, new URL(`${url.origin}/api/ops/${p}?site=${s2}${extra}`));
-    return ok(await aiRoute(env, path, method, body, url, { me, site, can: rights(me, site), canSite, siteName, today: beirutToday, hm: beirutHM, posLabel: posLabel(me.position),
+    const r = await aiRoute(env, path, method, body, url, { me, site, can: rights(me, site), canSite, siteName, today: beirutToday, hm: beirutHM, posLabel: posLabel(me.position),
+      canTeach: me.role === "ADMIN" || me.role === "MANAGER", sites: sitesMap(me),
       roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
-      policies: q2 => polSearch(env, q2, { limit: 5 }),
+      policies: q2 => polSearch(env, q2, { limit: 5, embed: t => embedTexts(env, t) }),
       todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`),
       systems: async s2 => { const ids = ["snaglist", "incidents", "restroom"].filter(id => CONNECTORS[id] && CONNECTORS[id].stats);
-        const r = await Promise.all(ids.map(id => pull(env, id, CONNECTORS[id], s2))); return Object.fromEntries(ids.map((id, i) => [id, r[i]])); } }));
+        const r = await Promise.all(ids.map(id => pull(env, id, CONNECTORS[id], s2))); return Object.fromEntries(ids.map((id, i) => [id, r[i]])); } });
+    return r instanceof Response ? r : ok(r);
   }
   if (path === "seasons") return ok(await seasonsFor(env, me));   // Seasonal decorations (admin only)
   if (path === "moment") return ok({ moment: await momentFor(env, me, beirutHM()) });   // Message of the moment (operations team)
