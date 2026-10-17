@@ -16,7 +16,7 @@ Runs on **Cloudflare Workers AI** — the `AI` binding in `wrangler.jsonc`. No A
 - **Tabs**: Chat · Teach (Admin, Mall Manager, Operations Manager; a red number = 👎 answers waiting) · History (your chats, 30 days, only you see them).
 - **Structured answers**: ABCON answers in a fixed format — title, a type label (Policy · Live data · General advice · Mixed), bullets, tables for times and figures, numbered steps, the exact rule in a gold box. The window turns it into a card.
 - **Written word by word** (streaming, `/api/ai/chat` with `stream: true` returns Server-Sent Events).
-- **Source cards** under the answer: policy (document · section · page → opens the reader on that page) and taught facts (who taught it).
+- **Source cards** under the answer: policy (document · section · page → opens the reader on that page). Taught facts are used silently — never shown or cited to the user.
 - Under each answer: Copy · Share (phone share sheet or email) · 👍 · 👎 (with "what was wrong?"), then 3 follow-up questions to tap.
 - ⤢ expands to a tall side panel on desktop; full screen on phones; ↺ starts a new chat.
 

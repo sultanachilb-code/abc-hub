@@ -1908,7 +1908,7 @@ function aiFrame(){
 
 /* ----- answer text (ABCON's Markdown format) → card HTML ----- */
 function aiInline(s){
-  return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[([PT]\d)\]/g, '<sup class="abx-ref">$1</sup>');
+  return esc(s).replace(/ ?\[T\d*\]?/g, "").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[(P\d)\]/g, '<sup class="abx-ref">$1</sup>');   // taught facts are never shown (also while being written)
 }
 function aiMd(text, streaming){
   const L = String(text || "").replace(/\r/g, "").split("\n"); let h = "", title = "", kind = "", i = 0;
@@ -1949,7 +1949,7 @@ function aiCard(m, idx, last){
   const live = m.streaming && !m.content;
   return `<div class="abx-ai" data-i="${idx}"><div class="abx-av"><img src="${ABC_LOGO}" alt=""></div><div class="abx-card${m.err ? " err" : ""}">
     ${live ? `<span class="abx-typing"><i></i><i></i><i></i> ABCON is thinking…</span>` : m.err ? `<p dir="auto">${esc(m.content)}</p>` : aiMd(m.content, m.streaming)}
-    ${!m.streaming && m.sources && m.sources.length ? `<div class="abx-srcs">${m.sources.map(aiSrc).join("")}</div>` : ""}
+    ${!m.streaming && m.sources && m.sources.some(x => x.kind !== "fact") ? `<div class="abx-srcs">${m.sources.filter(x => x.kind !== "fact").map(aiSrc).join("")}</div>` : ""}
     ${!m.streaming && !m.err && m.content ? `<div class="abx-acts"><button data-act="copy">⧉ Copy</button><button data-act="share">↗ Share</button>${m.cached ? `<small>Same answer as at ${esc(m.cachedAt || "")} · not counted</small>` : ""}<span></span>
       ${m.voted ? `<small>${m.voted > 0 ? "Thanks 👍" : "Sent for review 👎"}</small>` : `<button data-act="up" title="Good answer">👍</button><button data-act="down" title="Wrong or not helpful">👎</button>`}</div>
       <div class="abx-why" hidden><textarea rows="2" dir="auto" placeholder="What was wrong? The right answer helps the managers teach ABCON (optional)"></textarea><button data-act="send-down">Send</button></div>` : ""}

@@ -155,7 +155,7 @@ Type: <one of: Policy | Live data | General advice | Mixed>
 > Rule: <the exact rule quoted word for word — only when the answer comes from a POLICIES passage>
 Follow-up: <short question 1> | <short question 2> | <short question 3>
 - Keep the words "Type:", "> Rule:" and "Follow-up:" in English, even when the answer is in Arabic.
-- Cite each source right after the fact it supports: [P1], [P2] for POLICIES passages, [T1], [T2] for TAUGHT FACTS.
+- Cite each POLICIES passage right after the fact it supports: [P1], [P2]. Never cite or mention TAUGHT FACTS.
 - No greetings, no filler, no repeating the question. Under 180 words unless a list needs more.`;
 
 /* split the model's text into the answer and the follow-up questions */
@@ -328,10 +328,9 @@ export async function aiRoute(env, p, method, b, url, d) {
     const st = await standing(env, me);
     if (!st.open) throw Object.assign(err(st.msg, 429), { backAt: st.backAt });
     const [facts, pol, taught] = await Promise.all([siteFacts(env, site, me, d), policyContext(env, d, qu, me), taughtFacts(env, site)]);
-    const tSources = taught.map((f, i) => ({ n: `T${i + 1}`, kind: "fact", text: clip(f.text, 160), by: f.by_name, at: f.at }));
     const sys = `Your name is ABCON (ABC Operations Control). You are the assistant of the ABC Operations Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon). If asked who you are, say you are ABCON, the ABC Operations assistant.
 Sources, most trusted first:
-1. TAUGHT FACTS — confirmed by ABC management; they override everything else.
+1. TAUGHT FACTS — confirmed by ABC management; they override everything else. Use them silently: state the information as a plain fact, never cite them, never say "taught fact", "T1" or that you were taught it.
 2. POLICIES — passages from the Policies & Procedures library. Quote the exact rule (hours, amounts, approvals); never invent a rule. If they do not cover the question, say the library has nothing on it and who to ask (Mall Management).
 3. DATA — the flagship's live hub data today and the last 30 days. Never invent names, times or numbers. For a broad question ("what is still open?", "any issues?") go through ALL of the DATA and list every open or pending item, grouped. Point out repeated problems (from the 30-day lines).
 4. Your general know-how — only for how to handle a situation or word a message; mark it "Type: General advice".
@@ -343,9 +342,10 @@ ${facts}`;
     const models = isSimple(qu, hist) ? [AI_FAST, env.AI_MODEL || AI_MODEL] : [env.AI_MODEL || AI_MODEL, AI_FALLBACK];
     const msgs = [{ role: "system", content: sys }, ...hist], maxT = 650;
     const after = async (raw, model) => {
-      const { answer, follow } = finish(raw);
-      const used = new Set(answer.match(/\[[PT]\d\]/g) || []);
-      const sources = [...pol.sources, ...tSources].filter(x => used.has(`[${x.n}]`));
+      const fin = finish(raw), follow = fin.follow;
+      const answer = fin.answer.replace(/ ?\[T\d+\]/g, "").replace(/ ?\(taught facts?\)/gi, "");   // taught facts are used, never shown
+      const used = new Set(answer.match(/\[P\d\]/g) || []);
+      const sources = pol.sources.filter(x => used.has(`[${x.n}]`));
       await countQuestion(env, me);
       await metaSet(env, ck, JSON.stringify({ a: answer, s: sources, f: follow, t: Date.now() }));
       env.DB.prepare("DELETE FROM meta WHERE k LIKE 'ai:c:%' AND CAST(json_extract(v, '$.t') AS INTEGER) < ?").bind(Date.now() - 2 * CACHE_MIN * 60e3).run().catch(() => {});
