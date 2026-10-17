@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
 <!-- Policies & Procedures — the library ABCON reads (docs/FEATURE-policies.md)
-     Owner · Assist · ABC General Policies · Verdun Tenant Manual. Search across all of them; Admin / Mall Manager / Operations Manager upload.
+     Owner · Assist · ABC General Policies · Verdun Tenant Manual · SOPs · Emergency Procedures · Contacts · FAQ. Search across all of them; Admin / Mall Manager / Operations Manager upload.
      The browser reads the text of a PDF (pdf.js) or Word file (mammoth) on upload, so search and ABCON can use it. -->
 <style>
 .pw{max-width:1040px;margin:0 auto;padding:16px;display:grid;gap:14px}
@@ -86,7 +86,7 @@ function drawDocs(){
   const by = {}; for (const d of list) (by[d.coll] = by[d.coll] || []).push(d);
   $("#docs").innerHTML = Object.keys(L.colls).filter(k => by[k]).map(k => `<div class="grp">${esc(L.colls[k])}</div><div class="card" style="padding:0">${by[k].map(d => `
     <div class="doc"><div class="ic ${isWord(d) ? "w" : ""}">${isWord(d) ? "DOC" : "PDF"}</div>
-      <div class="t"><b data-open="${d.id}">${esc(d.title)}</b><small>${d.version ? "v" + esc(d.version) + " · " : ""}${d.pages ? d.pages + " pages · " : ""}${fmtSize(d.size)} · updated ${fmtDay(d.at)}${d.by_name ? " by " + esc(d.by_name) : ""}${d.notext ? ` · <span class="warn">no text — ABCON cannot read it</span>` : ""}</small></div>
+      <div class="t"><b data-open="${d.id}">${esc(d.title)}</b><small>${d.version ? "v" + esc(d.version) + " · " : ""}${d.pages ? d.pages + " pages · " : ""}${fmtSize(d.size)} · updated ${fmtDay(d.at)}${d.by_name ? " by " + esc(d.by_name) : ""}${d.notext ? ` · <span class="warn">no text — ABCON cannot read it</span>` : ""}${!d.notext && d.pending ? ` · <span class="muted" title="Meaning search is finished in the background">meaning search: ${d.pending} passages to go</span>` : ""}</small></div>
       <div class="acts"><button class="btn ghost small" data-open="${d.id}">Read</button><a class="btn ghost small" href="/api/pol/file?id=${d.id}" target="_blank" rel="noopener">${isWord(d) ? "Download" : "Open PDF"}</a>
         ${L.canEdit ? `<button class="btn ghost small" data-ver="${d.id}">New version</button><button class="btn ghost small" data-rm="${d.id}" style="color:var(--danger,#C0392B)">Remove</button>` : ""}</div></div>`).join("")}</div>`).join("");
   document.querySelectorAll("[data-open]").forEach(b => b.onclick = () => reader(Number(b.dataset.open), 0, query));
@@ -197,6 +197,9 @@ function upload(old){
       set(0.8, "Uploading the file…");
       const up = await fetch(`/api/pol/file?id=${r.id}`, { method: "PUT", credentials: "same-origin", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
       const j = await up.json().catch(() => null); if (!up.ok || !j || !j.ok) throw new Error((j && j.error) || `Upload failed (${up.status})`);
+      /* meaning search: the hub embeds the passages in batches (the rest is finished in the background if the daily allowance is low) */
+      if (!r.notext) for (let k = 0; k < 80; k++) { const e = await api("pol/embed", { id: r.id }).catch(() => null);
+        if (!e || !e.left || !e.done) break; set(0.85 + 0.15 * (1 - e.left / Math.max(1, r.chunks)), `Teaching ABCON the meaning… ${r.chunks - e.left} / ${r.chunks}`); }
       set(1, r.notext ? "Uploaded — but this file has no readable text (a scanned PDF), so ABCON cannot read it." : `Uploaded — ${r.chunks} passages are now searchable and ABCON can use them.`);
       toast(r.notext ? "Uploaded (no readable text)" : "Uploaded"); setTimeout(() => { d.close(); load(); }, r.notext ? 2600 : 900);
     } catch (e){ msg.textContent = "⚠ " + e.message; $("#ugo").disabled = false; $("#ux").disabled = false; }

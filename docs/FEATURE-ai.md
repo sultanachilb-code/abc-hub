@@ -8,8 +8,24 @@ Runs on **Cloudflare Workers AI** — the `AI` binding in `wrangler.jsonc`. No A
 
 ## What ABCON answers from
 1. **Today's hub data** at the chosen flagship — only what that person can open in the hub (shifts, handover, deadlines, contractors, Quick Passes, patrol, GLA occupancy, Snaglist / incidents / restroom figures, open malfunctions, tenant feedback, meeting actions, contracts ending).
-2. **The Policies & Procedures library** (docs/FEATURE-policies.md): for each question the hub finds the 4 best matching passages and gives them to ABCON. ABCON quotes the rule and cites it as P1, P2…; the chat shows each source (document · section · page) as a link that opens the reader on that page. An Arabic question is turned into English search words first (small model, very cheap).
+2. **The Policies & Procedures library** (docs/FEATURE-policies.md): for each question the hub finds the 4 best matching passages (by meaning and by words) and gives them to ABCON. ABCON quotes the rule and cites it as P1, P2…; the chat shows each source (document · section · page) as a link that opens the reader on that page. An Arabic question is turned into English search words first (small model, very cheap).
 3. General know-how (how to word a message, handle a situation) — ABCON says when that is general advice and not ABC policy.
+
+## The window (Oct 2026)
+- **Logo**: the ABC|ON wordmark (ABC logo + ABC**ON** in gold + green "online" light) in the header; the ABC mark with the green light on the home bubble and next to each answer.
+- **Tabs**: Chat · Teach (Admin, Mall Manager, Operations Manager; a red number = 👎 answers waiting) · History (your chats, 30 days, only you see them).
+- **Structured answers**: ABCON answers in a fixed format — title, a type label (Policy · Live data · General advice · Mixed), bullets, tables for times and figures, numbered steps, the exact rule in a gold box. The window turns it into a card.
+- **Written word by word** (streaming, `/api/ai/chat` with `stream: true` returns Server-Sent Events).
+- **Source cards** under the answer: policy (document · section · page → opens the reader on that page) and taught facts (who taught it).
+- Under each answer: Copy · Share (phone share sheet or email) · 👍 · 👎 (with "what was wrong?"), then 3 follow-up questions to tap.
+- ⤢ expands to a tall side panel on desktop; full screen on phones; ↺ starts a new chat.
+
+## Smarter and faster
+- **Teach ABCON** (`ai_facts`): managers add facts for one flagship or all flagships; ABCON reads them before every answer and trusts them above everything else (cited as T1, T2…).
+- **Review 👎** (`ai_feedback`): every 👎 lands in Teach → "Answers to review"; write the correct answer → **Teach ABCON** turns it into a fact (or Dismiss).
+- **Meaning search**: every policy passage gets an embedding (`@cf/baai/bge-m3`, multilingual) stored in D1 (`pol_vec`, 8-bit); questions are matched by meaning and by words together, so "can shops get stock in the afternoon?" finds the delivery rule, and Arabic questions find English rules. New uploads are embedded right after upload; the cron finishes anything left.
+- **30 days of memory**: repeated malfunctions (same asset and place), how long each open malfunction has been open, tenants with repeated feedback / violations.
+- **Fast routing**: short, simple questions go to `@cf/meta/llama-3.1-8b-instruct-fp8-fast` (about 1/7 of the cost); analysis, lists and drafting go to the 70B model. The big model takes over if the fast one fails.
 
 ## Usage guard — never pay anything
 Cloudflare gives **10,000 free Neurons a day** per account (resets 00:00 UTC = 03:00 Beirut). On the Workers Paid plan anything above is billed, so ABCON guards it:
