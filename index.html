@@ -38,6 +38,9 @@ button{background:none;border:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:8px}
 .hidden{display:none!important}
 .view{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* Home page only (Oct 2026): it scrolls up and down, never sideways, and is not pinch-zoomed (iPhone). Tools, forms and dashboards keep zoom. */
+#home{overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-x pan-y}
+#home .d2d-sc{overscroll-behavior-x:contain}
 
 /* ---------- shared form bits ---------- */
 .field{display:block;margin-bottom:14px}
@@ -2519,7 +2522,7 @@ const HL_KINDS = [["cards", "Smart cards", '<rect x="3" y="3" width="8" height="
 let HL = (() => { const v = store.get("hub.layout", "cards"); return HL_KINDS.some(k => k[0] === v) ? v : "cards"; })();
 const HLS = { orb: null };
 const HL_SHORT = { "Operations Tools": "Ops Tools", "Incidents, Security & Footfall": "Incidents & Footfall",
-  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day" };
+  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day", "Upcoming - Testing": "Testing" };
 const hlSvg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const hlCount = L => L.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
 const hlApp = (a, cls = "", st = "") => { const ok = appReady(a);
@@ -2663,6 +2666,17 @@ document.addEventListener("click", e => {
 });
 addEventListener("keydown", e => { if (e.key === "Escape"){ hlPopClose(); if (HLS.orb && HL === "orbit"){ HLS.orb = null; hlRedrawOrbit(); } }
   if (HL === "carousel" && $("#crRing") && /^Arrow(Left|Right)$/.test(e.key) && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) hlCarSpin(e.key === "ArrowRight" ? 1 : -1); });
+/* iPhone: no pinch-zoom on the home page (Safari's own gesture events); inside tools the zoom stays */
+["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, e => { if (e.target.closest && e.target.closest("#home") && !$("#home").classList.contains("hidden")) e.preventDefault(); }, { passive: false }));
+/* Day to Day timeline: a mostly-downward swipe scrolls the page, not the timeline */
+(() => { let sx = 0, sy = 0, lock = "";
+  document.addEventListener("touchstart", e => { if (!e.target.closest || !e.target.closest("#home .d2d-sc")) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; lock = ""; }, { passive: true });
+  document.addEventListener("touchmove", e => { const sc = e.target.closest && e.target.closest("#home .d2d-sc"); if (!sc) return;
+    const dx = Math.abs(e.touches[0].clientX - sx), dy = Math.abs(e.touches[0].clientY - sy);
+    if (!lock && (dx > 6 || dy > 6)) lock = dy > dx * 1.2 ? "y" : "x";
+    sc.style.overflowX = lock === "y" ? "hidden" : ""; }, { passive: true });
+  document.addEventListener("touchend", () => { document.querySelectorAll("#home .d2d-sc").forEach(x => x.style.overflowX = ""); lock = ""; }, { passive: true });
+})();
 /* 3D carousel: swipe or drag to turn */
 let hlSwX = null;
 document.addEventListener("pointerdown", e => { hlSwX = e.target.closest("#hlCar") && !e.target.closest("button") ? e.clientX : null; });
