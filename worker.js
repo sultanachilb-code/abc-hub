@@ -26,7 +26,7 @@ import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs
 import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
-import { ccSchema, ccHubRoute, ccHandover } from "./modules/cleanctl.js";   // Cleaning Control: schedule, cleaner app, before/after photos — see docs/FEATURE-cleaning-app.md
+import { ccSchema, ccHubRoute, ccHandover, ccDay } from "./modules/cleanctl.js";   // Cleaning Control: schedule, cleaner app, before/after photos — see docs/FEATURE-cleaning-app.md
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
 import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
 import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
@@ -34,12 +34,13 @@ import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflar
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
-import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";
+import { contractorsSchema, contractorsRoute, contractorsRun, dayList as conDayList } from "./modules/contractors.js";
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
 import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
 import { extFacts } from "./modules/extdb.js";
-import { crmSchema, crmRoute } from "./modules/crm.js";   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
+import { crmSchema, crmRoute } from "./modules/crm.js";
+import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
@@ -601,6 +602,10 @@ async function route(request, env, ctx, url) {
   if (path === "seasons") return ok(await seasonsFor(env, me));   // Seasonal decorations (admin only)
   if (path === "moment") return ok({ moment: await momentFor(env, me, beirutHM()) });   // Message of the moment (operations team)
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
+  if (path.startsWith("brief/")) return ok(await roleBriefRoute(env, path, method, body, url, { me, today: beirutToday, siteName, sitesOf,
+    system: async (id, s2) => CONNECTORS[id] && CONNECTORS[id].stats ? pull(env, id, CONNECTORS[id], s2) : null,
+    snagReport: (from, to) => snagReport(env, CONNECTORS.snaglist.base, from, to),
+    dayList: (s2, day) => conDayList(env, s2, day, day), ccDay: (s2, day) => ccDay(env, s2, day) }));
   if (path === "sso") return ok(await ssoLink(env, me, url.searchParams.get("app")));
   if (path === "health") return ok(await health(env));
   if (path === "notifications") return ok(await notificationsFor(env, me));
