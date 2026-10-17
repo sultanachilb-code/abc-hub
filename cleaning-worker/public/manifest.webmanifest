@@ -1,0 +1,14 @@
+{
+  "name": "ABC Cleaning",
+  "short_name": "ABC Cleaning",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F7F7",
+  "theme_color": "#2F6F73",
+  "icons": [
+    { "src": "/icons/abc-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/abc-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

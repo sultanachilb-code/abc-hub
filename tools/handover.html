@@ -316,9 +316,17 @@ function liveHtml(){
     ${ACC.map(a => `<tr><td><b>${esc(a.who)}</b> <small class="muted">${esc(a.at)} · ${accKind(a)}${a.by ? " · " + esc(a.by) : ""}</small></td>
       <td>${esc(a.tenant || "")}${a.req ? ` <small class="muted">· ${esc(a.req)}</small>` : ""}<br><small class="${a.decision === "out" ? "nd" : "done"}">${a.decision === "out" ? "Refused · " + esc(a.reason) : a.decision === "approved" ? "Approved · valid until " + esc(a.until) : "Attended " + esc(a.at)}</small></td>
       <td>${H.can && H.can.handover ? `<button class="btn small" data-acc="${a.i}">+ Add to handover</button>` : ""}</td></tr>`).join("")}</table>` : "";
+  /* Cleaning Control: the cleaning schedule of the day — what is late / missing, being cleaned, coming up, special tasks */
+  const C = LIVE.cleaning;
+  const cleanT = C ? `<table class="t live"><tr><th>Cleaning schedule · <span class="done">${C.summary.done}/${C.summary.total} done</span>${C.summary.late ? ` · <span class="nd">${C.summary.late} late / missed</span>` : ""}${C.summary.compliance != null ? ` · ${C.summary.compliance}% of what is due` : ""}</th><th style="width:34%">Areas</th><th style="width:30%">Status</th></tr>
+    ${[...C.missing.map(x => `<tr><td><b>${esc(x.floor)}</b> <small class="muted">· ${esc(x.names.join(" · "))}</small></td><td>${x.n} area${x.n === 1 ? "" : "s"}</td><td><span class="nd">Late — not done</span></td></tr>`),
+      ...C.progress.map(x => `<tr><td><b>${esc(x.name)}</b> <small class="muted">· ${esc(x.floor)}</small></td><td>1 area</td><td><span class="pr">Being cleaned</span> <small class="muted">· ${esc(x.by || "")} since ${esc(x.since || "")}</small></td></tr>`),
+      ...C.next.map(x => `<tr><td>${esc(x.floor)} <small class="muted">· ${esc(x.names.join(" · "))}</small></td><td>${x.n} area${x.n === 1 ? "" : "s"}</td><td><small class="muted">Coming up / due</small></td></tr>`),
+      ...C.specials.map(x => `<tr><td>⭐ <b>${esc(x.title)}</b></td><td>${esc(x.area)} <small class="muted">· ${esc(x.dueTime || x.due)}</small></td><td>${x.status === "done" ? `<span class="done">Done</span> <small class="muted">· ${esc(x.doneBy || "")}</small>` : `<span class="${x.overdue ? "nd" : "pr"}">${x.overdue ? "Overdue" : "Open"}</span>`}</td></tr>`)].join("")
+      || `<tr><td colspan="3" class="emptyrow" style="padding:8px">Everything due is done.</td></tr>`}</table>` : "";
   const wrow = w => { const cls = (n) => n >= R.rooms ? "done" : w.state === "closed" ? "nd" : w.state === "open" ? "pr" : ""; const cell = (n, by) => R.rooms ? `<span class="${cls(n)}">${n}/${R.rooms}</span>${by.length ? ` <small class="muted">${esc(by.join(", "))}</small>` : ""}` : "—";
     return `<tr><td>${esc(w.label)} <small class="muted">${esc(w.time)}</small></td><td>${cell(w.ops, w.opsBy)}</td><td>${cell(w.ss, w.ssBy)}</td></tr>`; };
-  return incT + fbT + gateT + accT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
+  return incT + fbT + gateT + accT + cleanT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
     <tr><td><b>AM Checklist</b></td><td colspan="2">${ckCell(LIVE.am)}</td></tr>
     <tr><td><b>PM Checklist</b></td><td colspan="2">${ckCell(LIVE.pm)}</td></tr></table>
     <table class="t live"><tr><th>Restroom inspections${R.rooms ? ` · ${R.rooms} restrooms` : ""}</th><th style="width:34%">OPS</th><th style="width:30%">S.S</th></tr>
@@ -346,8 +354,7 @@ function render(){
     <span class="pill ${H.receivedBy ? "ok" : submitted ? "warn" : ""}">${H.receivedBy === "Auto-closed" ? "Closed" : H.receivedBy ? `Received by ${esc(H.receivedBy)}` : submitted ? "Awaiting receipt" : "In progress"}</span>
     <span style="flex:1"></span>
     ${ro ? "" : `<button class="btn ghost small" id="impBtn" title="Salesforce Handover Report (.xlsx)">⤓ Import tenant requests</button>`}
-    ${ro ? "" : `<button class="btn ghost small" id="aiSum" title="A short summary of the shift in English and Arabic, written by the hub's free AI">✦ AI shift summary</button>`}
-    <button class="btn ghost small" id="mailBtn">✉ Email in Outlook</button>
+    ${ro ? "" : `<button class="btn ghost small" id="aiSum" title="A short summary of the shift in English and Arabic, written by Sanad, the hub's free AI">✦ Sanad · shift summary</button>`}
     <button class="btn ghost small" id="printBtn">Print / PDF</button>
   </div>
   ${!H.id && H.from ? `<div class="banner">Started from the handover of ${esc(D.fmt(H.from.day, { weekday: "short" }))} — review, then save.</div>` : ""}
@@ -543,7 +550,6 @@ app.addEventListener("click", async e => {
       : ` — ✓ Attended ${a.at}${a.workers ? ` · ${a.workers} worker${a.workers === 1 ? "" : "s"}` : ""}${a.left ? " → left " + a.left : ""}`;
     H.doc.today.push({ id: newId(), ...blank.today(), text: `${what}${a.req ? ` (${a.req})` : ""}${mark}`.slice(0, 500), ...(a.req && /^REQ/i.test(a.req) ? { req: a.req } : {}) });
     touch(); render(); return toast("Added to Today"); }
-  if (t.id === "mailBtn") return mailDialog();
   const add = t.closest("[data-add]"); if (add){ const k = add.dataset.add;
     H.doc[k].push({ id: newId(), ...blank[k](), ...(add.dataset.src ? { src: add.dataset.src } : {}), ...(add.dataset.src === "portal" && k === "today" ? { manual: true, cols: { tenant: "", req: "", task: "", contractor: "", time: "", m: "" } } : {}) }); touch(); render();
     const last = app.querySelectorAll(`[data-k="${k}"][data-i="${H.doc[k].length - 1}"]`); const f = [...last].find(x => x.tagName === "TEXTAREA" || x.type === "text"); f && f.focus(); return; }
@@ -750,6 +756,12 @@ function mailHtml(){
   const GM = L2 && L2.gate ? L2.gate.list.filter(x => x.decision !== "leave") : null;   // Loading Gate feature
   const gateM = GM ? tbl(["Loading gate", "Time", "Tenant", "Request", "Decision"], GM.map(x => [`<b>${esc(x.contractor || x.tenant)}</b>`, hm(x.at), esc(x.tenant), esc(x.req),
     x.decision === "in" ? `<b style="color:#2E8B57">Approved in</b>${x.workers ? ` · ${x.workers} workers` : ""}${x.override ? ` <span style="color:#C0392B">· override: ${esc(x.reason)}</span>` : ""}` : `<b style="color:#C0392B">Rejected out</b> · ${esc(x.reason)}`])) : "";
+  const CM = L2 && L2.cleaning;   // Cleaning Control: the cleaning schedule of the day
+  const cleanM = CM ? tbl(["Cleaning schedule", "Areas", "Since", "Status"], [
+      ...CM.missing.map(x => [`<b>${esc(x.floor)}</b> <span style="color:#555">${esc(x.names.join(" · "))}</span>`, `${x.n} area${x.n === 1 ? "" : "s"}`, "", `<b style="color:#C0392B">Late — not done</b>`]),
+      ...CM.progress.map(x => [`<b>${esc(x.name)}</b> <span style="color:#555">${esc(x.floor)}</span>`, "1 area", esc(x.since || ""), `<b style="color:#C07A12">Being cleaned · ${esc(x.by || "")}</b>`]),
+      ...CM.next.map(x => [`${esc(x.floor)} <span style="color:#555">${esc(x.names.join(" · "))}</span>`, `${x.n} area${x.n === 1 ? "" : "s"}`, "", "Coming up / due"]),
+      ...CM.specials.map(x => [`⭐ <b>${esc(x.title)}</b>`, esc(x.area), esc(x.dueTime || x.due), x.status === "done" ? `<b style="color:#2E8B57">Done · ${esc(x.doneBy || "")}</b>` : `<b style="color:${x.overdue ? "#C0392B" : "#C07A12"}">${x.overdue ? "Overdue" : "Open"}</b>`])]) : "";
   const liveM = L2 ? tbl(["Checklist", "Status"], [["AM Checklist", ckM(L2.am)], ["PM Checklist", ckM(L2.pm)]])
     + (R.windows && R.windows.length ? tbl(["Restroom inspections", "OPS", "S.S"], R.windows.map(w => [`${esc(w.label)} <span style="color:#777">${esc(w.time)}</span>`, rrM(w.ops, w.opsBy, w.state), rrM(w.ss, w.ssBy, w.state)])) : "") : "";
   return { title, html: `<div style="${F}"><p style="${F}font-size:14px">Dear team,<br><br>Please find below the shift handover.</p>
@@ -761,6 +773,7 @@ function mailHtml(){
     ${head("Coming up")}${items(d.upcoming, true)}
     ${head("Incidents & tenant feedback")}${incM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Not available.</td></tr>`}
     ${gateM ? head("Loading area gate", "QR scans today") + gateM : ""}
+    ${CM ? head("Cleaning schedule", `${CM.summary.done} of ${CM.summary.total} areas done${CM.summary.compliance != null ? ` · ${CM.summary.compliance}% of what is due` : ""}`) + cleanM : ""}
     ${head("Daily operations checklist tracker")}${liveM || `<tr><td style="${F}padding:4px 10px 8px;color:#777;font-size:13px">Live checklist status not available.</td></tr>`}
     ${head("Marketing events")}${tbl(["From", "To", "Event / activation", "Start", "End"], calEvents(d).concat(d.events).map(e => [esc(D.fmt(e.from)), esc(D.fmt(e.to)), esc(e.name), esc(e.start), esc(e.end)]))}
   </table>

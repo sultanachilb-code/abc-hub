@@ -17,3 +17,7 @@ docs
 # Loading Gate app: deployed as its own worker (gate-worker/), never served by the hub
 gate-worker
 gate-worker/**
+
+# Cleaning app: deployed as its own worker (cleaning-worker/), never served by the hub
+cleaning-worker
+cleaning-worker/**

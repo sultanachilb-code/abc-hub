@@ -1,0 +1,15 @@
+{
+  /* ABC Cleaning — the cleaner app on its own link (no hub account, no other hub tools). See docs/FEATURE-cleaning-app.md
+     • D1: the hub's own database (same database_id) — schedule, phones, jobs and special tasks live there, the hub reads them directly
+     • R2: the before / after photos (bucket abc-cleaning-photos, created by the GitHub Action; free up to 10 GB)
+     • Cron: every night, photos older than 90 days are deleted */
+  "name": "abc-cleaning",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "not_found_handling": "none", "run_worker_first": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hub-db", "database_id": "e7ae150f-de70-4376-a15b-65390159f65c" }
+  ],
+  "r2_buckets": [ { "binding": "PHOTOS", "bucket_name": "abc-cleaning-photos" } ],
+  "triggers": { "crons": ["30 0 * * *"] }
+}

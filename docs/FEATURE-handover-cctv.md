@@ -10,3 +10,9 @@ Up to 5 addresses, comma separated (e.g. the 3 CCTV room emails). Save group. Ke
 - *Email this handover* with **PM** selected: the Outlook draft (`.eml`) and the "copy + new email" option open with the CCTV emails already in **To**; the dialog shows them under the subject.
 - AM / Mid / Night handovers are not sent to CCTV.
 - `GET /api/ops/handover/mailto?site=&shift=PM` returns the recipients including `cctv`.
+
+
+## Update
+
+- The **Email in Outlook** button was removed from the Shift Handover page. The handover email is still sent automatically on submit (PM also to the CCTV emails).
+- The handover page and email now include a **Cleaning schedule** section from Cleaning Control (see FEATURE-cleaning-app.md).

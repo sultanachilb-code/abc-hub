@@ -134,7 +134,7 @@ export async function aiRoute(env, p, method, b, url, d) {
     const hist = (Array.isArray(b.messages) ? b.messages : []).slice(-8).map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: clip(m.content, 600) })).filter(m => m.content);
     if (!hist.length || hist[hist.length - 1].role !== "user") throw err("Write your question");
     const facts = await siteFacts(env, site, me, d);
-    const sys = `You are the assistant of the ABC Operations Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon).
+    const sys = `Your name is Sanad (سند). You are the assistant of the ABC Operations Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon).
 Facts about the flagship come ONLY from the DATA below — never invent names, times or numbers.
 - For a broad question ("what is still open?", "what should I follow up?", "any issues today?") go through ALL of the DATA and list every open or pending item, grouped (malfunctions, handover follow-ups, deadlines not done, contractors not attended, Snaglist, incidents, patrol, meeting actions, tenant violations). Never answer a broad question with "I do not see it".
 - For figures (occupancy, vacant units, open findings…) use the numbers in the DATA and show them clearly.
