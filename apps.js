@@ -65,6 +65,7 @@ window.HUB = {
     "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "cleanctl":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // Cleaning Control
     "beforeafter":     ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // Before / After: ghost camera + PowerPoint deck (on the device)
+    "crm":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // CRM handhelds sheet
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -137,6 +138,7 @@ window.HUB = {
     { id: "schedule-calendar", name: "Schedule & Calendar", desc: "Operations Schedule and Operations Calendar", group: "Day to Day Operations", icon: "calendar", color: "#4A1F73", kind: "orbit", orbitGroup: "Schedule & Calendar", url: "#schedule-calendar" },
     /* Contractor Access folder: opens a ring with Contractors (who is in the mall now) and the Loading Gate */
     { id: "contractor-access", name: "Contractor Access", desc: "Contractors on site and the loading gate", group: "Day to Day Operations", icon: "hardhat", color: "#C07A12", kind: "orbit", orbitGroup: "Contractor Access", url: "#contractor-access" },
+    { id: "crm", name: "CRM", desc: "CRM handhelds per tenant — S/N, model, connection, app user, delivery and retrieved devices", group: "Operations Tools", icon: "card", color: "#2B5797", url: "/tools/crm" },
     {
       id: "eod",
       name: "End of Day Report",

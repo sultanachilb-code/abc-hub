@@ -38,7 +38,8 @@ import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/c
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
 import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
-import { extFacts } from "./modules/extdb.js";   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
+import { extFacts } from "./modules/extdb.js";
+import { crmSchema, crmRoute } from "./modules/crm.js";   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
@@ -218,6 +219,7 @@ const APP_ACCESS = {
   cleaning: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   cleanctl: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Cleaning Control (Upcoming - Testing)
   beforeafter: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Before / After (Upcoming - Testing)
+  crm: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // CRM handhelds (Operations Tools)
   sales: ["MM", "OM", "LEAD"],
   training: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -359,6 +361,7 @@ async function ensureSchema(env) {
   await ccSchema(env);   // Cleaning Control (cleaner app)
   await polSchema(env);   // Policies & Procedures library
   await aiSchema(env);   // ABCON: taught facts, feedback, chat history
+  await crmSchema(env);   // CRM handhelds sheet
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
@@ -1641,6 +1644,10 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
+  if (p.startsWith("crm/")) {   // CRM handhelds sheet (modules/crm.js)
+    if (!roleAllows(me, "crm") || isWarehouse(me)) throw fail("Not allowed", 403);
+    return crmRoute(env, p, method, b, url, { site, me, now: nowIso, canEdit: isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH"), glaSeed: s2 => glaSeed(env, s2) });
+  }
   if (p.startsWith("cc/")) {   // Cleaning Control: the cleaning company's work against the schedule (modules/cleanctl.js)
     if (!roleAllows(me, "cleanctl") || isWarehouse(me)) throw fail("Not allowed", 403);
     return ccHubRoute(env, p, method, b, url, { site, me, can, now: nowIso, canManage: isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH") });
