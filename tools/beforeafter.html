@@ -16,6 +16,12 @@
 .pw{max-width:1100px;margin:0 auto;padding:14px 14px 80px;display:grid;gap:12px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row .inp,.row .sel{flex:1;min-width:140px}
+.bpick{display:flex;align-items:center;gap:10px;padding:8px;border:1px dashed var(--line);border-radius:14px}
+.bpick img{width:64px;height:64px;object-fit:cover;border-radius:10px}.bpick div{flex:1;min-width:0}.bpick b{display:block;font-size:.9rem}.bpick small{color:var(--muted);font-size:.76rem}
+.bph{flex:none!important;width:40px;height:40px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font-weight:900;color:var(--brand)}
+.view video{transform-origin:50% 50%;transition:transform .08s}
+.zbadge{position:absolute;right:12px;top:12px;padding:5px 10px;border-radius:99px;font-weight:900;font-size:.74rem;color:#2A1146;background:#E9CF8A}
+.bar .zq{display:inline-flex;gap:4px}.bar .zq button{font-size:.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:4px 7px}.bar .zq button.on{background:#E9CF8A;color:#2A1146}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}.seg button{padding:9px 16px;font-weight:800;font-size:.86rem}
 .seg button.on{background:var(--brand);color:#fff}.seg button[data-m="after"].on{background:#2E8B57}
 .lbl{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 2px 4px}
@@ -79,7 +85,7 @@ const all = store => tx(store, "readonly", s => s.getAll());
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 let CTX = null, TAB = "cam";
-const S = { mode: "before", site: "", place: "", stamp: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
+const S = { zoom: 1, zMin: 1, zMax: 4, native: false, site: "", place: "", stamp: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
 const fmtD = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const fmtDT = iso => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const slug = t => String(t || "").trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 40) || "area";
@@ -107,50 +113,47 @@ async function boot(){
 }
 const render = () => TAB === "cam" ? camView() : deckView();
 
-/* ================= CAMERA ================= */
+/* ================= CAMERA (after photos only — the before photo always comes from the gallery) ================= */
 async function camView(){
-  const befores = (await all("shots")).filter(x => x.kind === "before").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
   $("#app").innerHTML = `
     <div class="card" style="display:grid;gap:10px">
-      <div class="row"><div class="seg" id="seg"><button data-m="before" class="${S.mode === "before" ? "on" : ""}">Before</button><button data-m="after" class="${S.mode === "after" ? "on" : ""}">After</button></div>
-        <select class="sel" id="site">${Object.entries(CTX.sites).map(([c, n]) => `<option value="${c}" ${c === S.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+      <div class="row"><select class="sel" id="site">${Object.entries(CTX.sites).map(([c, n]) => `<option value="${c}" ${c === S.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
         <input class="inp" id="place" placeholder="Area, e.g. L2 corridor near Zara" value="${esc(S.place)}"></div>
+      <div class="bpick">${S.before ? `<img src="${S.before.url}" alt=""><div><b>Before photo</b><small>${esc(S.before.name || "From your gallery")}${S.before.at ? " · " + esc(fmtD(S.before.at)) : ""}</small></div>` : `<div class="bph">1</div><div><b>Choose the before photo</b><small>From your gallery — it shows over the camera as a faint ghost</small></div>`}
+        <label class="btn ${S.before ? "ghost" : "gold"} small">${S.before ? "Change" : "＋ From gallery"}<input type="file" accept="image/*" id="pickB" hidden></label></div>
       <label class="chk"><input type="checkbox" id="stamp" ${S.stamp ? "checked" : ""}> Print date, time and place on the photo</label>
-      ${S.mode === "after" ? `<div><div class="lbl">The before photo (the ghost)</div><div class="strip" id="strip">
-        <label class="pick"><input type="file" accept="image/*" id="pickB" hidden>＋ From gallery</label>
-        ${befores.map(b => `<button data-b="${b.id}" class="${S.before && S.before.id === b.id ? "on" : ""}"><img src="${b.thumb}" alt=""><small>${esc(b.place || "—")} · ${esc(fmtD(b.at))}</small></button>`).join("")}</div></div>` : ""}
     </div>
     <div class="view" id="view">
       <video id="vid" playsinline muted autoplay></video>
-      ${S.mode === "after" && S.before ? `<img class="gh${S.edges ? " edges" : ""}" id="gh" src="${S.edges ? S.before.edges || "" : S.before.url}" style="opacity:${S.edges ? .85 : S.ghostOp / 100}" alt="">` : ""}
+      ${S.before ? `<img class="gh${S.edges ? " edges" : ""}" id="gh" src="${S.edges ? S.before.edges || "" : S.before.url}" style="opacity:${S.edges ? .85 : S.ghostOp / 100}" alt="">` : ""}
       ${S.grid ? `<div class="grid"></div>` : ""}
-      <span class="tag ${S.mode}">${S.mode === "before" ? "BEFORE" : "AFTER"}</span>
-      ${S.stream ? "" : `<div class="msg"><b style="font-size:1.05rem">${S.mode === "after" && !S.before ? "Choose the before photo first" : "Camera"}</b>
-        <p>${S.mode === "before" ? "Frame the area — the grid helps you remember the angle. The photo goes to your gallery, not to the hub." : S.before ? "The before photo will show as a faint ghost: line it up with the real scene, then take the after photo." : "Pick it from the list above or from your gallery."}</p>
-        ${S.mode === "before" || S.before ? `<button class="btn gold" id="open">Open the camera</button>` : ""}</div>`}
+      <span class="tag after">AFTER</span>${S.stream ? `<span class="zbadge" id="zb">${S.zoom.toFixed(1)}×</span>` : ""}
+      ${S.stream ? "" : `<div class="msg"><b style="font-size:1.05rem">${S.before ? "Ready" : "Choose the before photo first"}</b>
+        <p>${S.before ? "The before photo shows as a faint ghost. Zoom and move until the real scene sits exactly on it, then take the after photo." : "Tap “From gallery” above and pick the before photo."}</p>
+        ${S.before ? `<button class="btn gold" id="open">Open the camera</button>` : ""}</div>`}
       ${S.stream ? `<div class="bar">
-        ${S.mode === "after" && S.before ? `<div class="sl">Ghost <input type="range" min="8" max="65" value="${S.ghostOp}" id="op" ${S.edges ? "disabled" : ""}> <span id="opv">${S.ghostOp}%</span></div>` : ""}
-        <div class="ctr"><button class="s ${S.grid ? "on" : ""}" id="gridB">Grid</button>${S.mode === "after" && S.before ? `<button class="s ${S.edges ? "on" : ""}" id="edgeB">Edges</button>` : `<span style="min-width:64px"></span>`}
-          <button class="shutter" id="snap" aria-label="Take the photo"></button><button class="s" id="flip">⟲ Flip</button><span style="min-width:0"></span></div></div>` : ""}
+        <div class="sl">Zoom <input type="range" min="${S.zMin}" max="${S.zMax}" step="0.1" value="${S.zoom}" id="zm"> <span class="zq">${[1, 2, 3].filter(z => z <= S.zMax).map(z => `<button data-z="${z}" class="${Math.abs(S.zoom - z) < .05 ? "on" : ""}">${z}×</button>`).join("")}</span></div>
+        <div class="sl">Ghost <input type="range" min="8" max="65" value="${S.ghostOp}" id="op" ${S.edges ? "disabled" : ""}> <span id="opv">${S.ghostOp}%</span></div>
+        <div class="ctr"><button class="s ${S.grid ? "on" : ""}" id="gridB">Grid</button><button class="s ${S.edges ? "on" : ""}" id="edgeB">Edges</button>
+          <button class="shutter" id="snap" aria-label="Take the after photo"></button><button class="s" id="flip">⟲ Flip</button><span style="min-width:0"></span></div></div>` : ""}
     </div>
     <div id="out"></div>
-    <p class="note" style="text-align:center">Photos are saved to your gallery and kept on this device for the deck (latest 60). Nothing is sent to the hub.${touch && /iPhone|iPad/.test(navigator.userAgent) ? " On iPhone, tap <b>Save Image</b> in the share sheet." : ""}</p>`;
-  $("#seg").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; S.mode = b.dataset.m; S.shot = null; camView(); };
+    <p class="note" style="text-align:center">Pinch the camera (or use the slider) to zoom. Photos are saved to your gallery and kept on this device for the deck (latest 60). Nothing is sent to the hub.${touch && /iPhone|iPad/.test(navigator.userAgent) ? " On iPhone, tap <b>Save Image</b> in the share sheet." : ""}</p>`;
   $("#site").onchange = e => S.site = e.target.value;
   $("#place").oninput = e => S.place = e.target.value;
   $("#stamp").onchange = e => S.stamp = e.target.checked;
+  $("#pickB").onchange = async e => { const f = e.target.files[0]; if (!f) return; const blob = await shrink(f, 1600, .85);
+    await useBefore(blob, { id: "g" + uid(), name: f.name, place: S.place, at: new Date(f.lastModified || Date.now()).toISOString(), site: S.site }); };
   const o = $("#open"); if (o) o.onclick = startCam;
-  if (S.stream) { $("#vid").srcObject = S.stream; }
-  const strip = $("#strip");
-  if (strip){
-    strip.onclick = async e => { const b = e.target.closest("[data-b]"); if (!b) return; const r = await get("shots", b.dataset.b); await useBefore(r.blob, r); };
-    $("#pickB").onchange = async e => { const f = e.target.files[0]; if (!f) return; const blob = await shrink(f, 1600, .85); await useBefore(blob, { id: "g" + uid(), place: S.place, at: new Date().toISOString(), site: S.site }); };
-  }
+  if (S.stream){ $("#vid").srcObject = S.stream; applyZoom(S.zoom); }
   const op = $("#op"); if (op) op.oninput = e => { S.ghostOp = +e.target.value; $("#gh").style.opacity = S.ghostOp / 100; $("#opv").textContent = S.ghostOp + "%"; };
+  const zm = $("#zm"); if (zm) zm.oninput = e => applyZoom(+e.target.value);
+  document.querySelectorAll("[data-z]").forEach(b => b.onclick = () => applyZoom(+b.dataset.z));
   const gb = $("#gridB"); if (gb) gb.onclick = () => { S.grid = !S.grid; camView(); };
   const eb = $("#edgeB"); if (eb) eb.onclick = async () => { S.edges = !S.edges; if (S.edges && !S.before.edges) S.before.edges = await edgesOf(S.before.url); camView(); };
   const fl = $("#flip"); if (fl) fl.onclick = async () => { S.facing = S.facing === "environment" ? "user" : "environment"; stopCam(); await startCam(); };
   const sn = $("#snap"); if (sn) sn.onclick = snap;
+  pinch($("#view"));
   if (S.shot) showShot();
 }
 async function useBefore(blob, meta){
@@ -161,8 +164,29 @@ async function useBefore(blob, meta){
 async function startCam(){
   try {
     S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: S.facing }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+    /* zoom: the camera's own zoom when the phone offers it (most Android phones), otherwise a digital zoom up to 4× */
+    const tr = S.stream.getVideoTracks()[0], cap = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+    S.native = !!(cap.zoom && cap.zoom.max > 1);
+    S.zMin = S.native ? Math.max(1, cap.zoom.min || 1) : 1; S.zMax = S.native ? Math.min(cap.zoom.max, 10) : 4; S.zoom = S.zMin;
     camView();
   } catch (e){ toast(e.name === "NotAllowedError" ? "Allow the camera for the hub in your browser settings" : "The camera could not open: " + e.message, true); }
+}
+function applyZoom(z){
+  S.zoom = Math.max(S.zMin, Math.min(S.zMax, z));
+  const v = $("#vid"); if (!v) return;
+  if (S.native){ const tr = S.stream && S.stream.getVideoTracks()[0]; if (tr) tr.applyConstraints({ advanced: [{ zoom: S.zoom }] }).catch(() => {}); v.style.transform = S.facing === "user" ? "scaleX(-1)" : ""; }
+  else v.style.transform = `scale(${S.zoom})${S.facing === "user" ? " scaleX(-1)" : ""}`;   // digital zoom: the picture is cropped the same way
+  const zb = $("#zb"); if (zb) zb.textContent = S.zoom.toFixed(1) + "×";
+  const zm = $("#zm"); if (zm && +zm.value !== S.zoom) zm.value = S.zoom;
+  document.querySelectorAll("[data-z]").forEach(b => b.classList.toggle("on", Math.abs(S.zoom - +b.dataset.z) < .05));
+}
+/* two fingers on the camera = zoom */
+function pinch(el){
+  if (!el || el.dataset.pinch) return; el.dataset.pinch = "1";
+  const P = new Map(); let d0 = 0, z0 = 1;
+  el.addEventListener("pointerdown", e => { if (!S.stream || e.target.closest(".bar")) return; P.set(e.pointerId, e); if (P.size === 2){ const [a, b] = [...P.values()]; d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); z0 = S.zoom; } });
+  el.addEventListener("pointermove", e => { if (!P.has(e.pointerId)) return; P.set(e.pointerId, e); if (P.size === 2 && d0){ const [a, b] = [...P.values()]; applyZoom(z0 * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / d0); } });
+  const up = e => { P.delete(e.pointerId); if (P.size < 2) d0 = 0; }; el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
 }
 function stopCam(){ if (S.stream){ S.stream.getTracks().forEach(t => t.stop()); S.stream = null; } }
 addEventListener("pagehide", stopCam);
@@ -186,22 +210,21 @@ function drawStamp(c, label, at){
 }
 async function snap(){
   const v = $("#vid"); if (!v || !v.videoWidth) return toast("The camera is still starting", true);
-  const at = new Date().toISOString(), c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
-  const x = c.getContext("2d"); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); } x.drawImage(v, 0, 0); x.setTransform(1, 0, 0, 1, 0, 0);
-  const label = S.mode === "before" ? "BEFORE" : "AFTER"; if (S.stamp) drawStamp(c, label, at);
+  if (!S.before) return toast("Choose the before photo first", true);
+  const vw = v.videoWidth, vh = v.videoHeight, z = S.native ? 1 : S.zoom, sw = Math.round(vw / z), sh = Math.round(vh / z);
+  const at = new Date().toISOString(), c = document.createElement("canvas"); c.width = sw; c.height = sh;
+  const x = c.getContext("2d"); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); }
+  x.drawImage(v, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, sw, sh); x.setTransform(1, 0, 0, 1, 0, 0);
+  if (S.stamp) drawStamp(c, "AFTER", at);
   const full = await toBlob(c, .92), small = await shrink(c, 1600, .84), thumb = await blobToData(await shrink(c, 240, .7));
   const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
-  const shot = { id: uid(), kind: S.mode, site, place: S.place, at, blob: small, thumb };
+  const shot = { id: uid(), kind: "after", site, place: S.place, at, blob: small, thumb };
   await put("shots", shot);
-  const files = [new File([full], `${base}_${S.mode}.jpg`, { type: "image/jpeg" })];
-  let pair = null;
-  if (S.mode === "after" && S.before){
-    let bId = S.before.id; if (!(await get("shots", bId))) { bId = uid(); await put("shots", { id: bId, kind: "before", site, place: S.before.place || S.place, at: S.before.at || at, blob: S.before.blob, thumb: await blobToData(await shrink(S.before.blob, 240, .7)) }); }
-    pair = { id: uid(), beforeId: bId, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at };
-    await put("pairs", pair);
-    const sbs = await sideBySide(S.before.blob, c, S.before.at, at);
-    files.push(new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" }));
-  }
+  let bId = S.before.id; if (!(await get("shots", bId))) { await put("shots", { id: bId, kind: "before", site, place: S.before.place || S.place, at: S.before.at || at, blob: S.before.blob, thumb: await blobToData(await shrink(S.before.blob, 240, .7)) }); }
+  const pair = { id: uid(), beforeId: bId, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at };
+  await put("pairs", pair);
+  const sbs = await sideBySide(S.before.blob, c, S.before.at, at);
+  const files = [new File([full], `${base}_after.jpg`, { type: "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
   /* keep the device tidy: the latest 60 photos */
   const shots = (await all("shots")).sort((a, b) => b.at.localeCompare(a.at)); const keep = new Set(); for (const d of await all("decks")) for (const s2 of d.slides || []) { keep.add(s2.beforeId); keep.add(s2.afterId); }
   for (const old of shots.slice(60)) if (!keep.has(old.id)) await del("shots", old.id);
@@ -221,12 +244,12 @@ async function sideBySide(beforeBlob, afterCanvas, bAt, aAt){
 }
 function showShot(){
   const s2 = S.shot, o = $("#out"); if (!s2 || !o) return;
-  o.innerHTML = `<div class="card res"><b>${s2.pair ? "✓ After photo taken" : "✓ Before photo taken"}</b>
+  o.innerHTML = `<div class="card res"><b>✓ After photo taken</b>
     <div class="imgs ${s2.urls.length === 1 ? "one" : ""}">${s2.urls.map(u => `<img src="${u}" alt="">`).join("")}</div>
-    <div class="row"><button class="btn gold" id="sv">⤓ Save to gallery${s2.files.length > 1 ? ` (${s2.files.length} photos)` : ""}</button>${s2.pair ? `<button class="btn" id="toDeck">+ Add to a deck</button>` : ""}<button class="btn ghost" id="again">${s2.pair ? "Next area" : "Retake"}</button></div>
-    <p class="note">${s2.pair ? "The after photo and a side-by-side picture are ready." : "Come back later in <b>After</b> mode — this photo will be in the list as the ghost."}</p></div>`;
+    <div class="row"><button class="btn gold" id="sv">⤓ Save to gallery${s2.files.length > 1 ? ` (${s2.files.length} photos)` : ""}</button>${s2.pair ? `<button class="btn" id="toDeck">+ Add to a deck</button>` : ""}<button class="btn ghost" id="again">Next area</button></div>
+    <p class="note">The after photo and a side-by-side picture are ready.</p></div>`;
   $("#sv").onclick = async () => { if (await saveFiles(s2.files)) toast("Saved"); };
-  $("#again").onclick = () => { S.shot = null; o.innerHTML = ""; if (s2.pair){ S.before = null; S.mode = "after"; camView(); } };
+  $("#again").onclick = () => { S.shot = null; o.innerHTML = ""; S.before = null; S.place = ""; camView(); };
   const td = $("#toDeck"); if (td) td.onclick = () => pickDeckFor(s2.pair);
   o.scrollIntoView({ behavior: "smooth", block: "start" });
 }

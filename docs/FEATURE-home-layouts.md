@@ -24,3 +24,7 @@ Tools, forms and dashboards (opened inside the hub) keep zoom and free movement.
 ## Upcoming - Testing folder (Oct 2026)
 New tools are placed in the **Upcoming - Testing** folder while they are tested, then moved to their real folder.
 Now there: Quick Access Pass, Message of the Moment, Seasonal Decorations.
+
+
+## 3D Carousel on phones (Oct 2026)
+Under 760 px wide the 3D ring becomes a strip of folder cards scrolled with the finger (native scrolling with snap); the card in the middle is the open folder and its tools show in the tray below (4 per row), with dots under the strip. Laptops keep the 3D ring. The tray is soft purple in the light theme. The home page is no longer redrawn when a phone's address bar hides or shows while scrolling.

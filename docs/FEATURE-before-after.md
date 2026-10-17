@@ -3,12 +3,14 @@
 `/tools/beforeafter` (`tools/beforeafter.html`) · folder **Upcoming - Testing** · operations team and management.
 **Nothing is sent to the hub.** Photos go to the phone's gallery; drafts and the photos used by decks stay on the device (IndexedDB `abc-beforeafter`, latest 60 photos + everything used in a deck).
 
-## Camera
-1. **Before**: choose the flagship, write the area (e.g. "L2 corridor"), open the camera, take the photo. The grid helps to remember the angle.
-2. **After** (minutes or days later): pick the before photo from the list (taken on this phone) or **From gallery**. It shows over the camera as a faint **ghost** (8–65 %, default 28 %) — line it up with the real scene and take the after photo. **Edges** shows only the outlines of the before photo.
-3. **Save to gallery**: on a phone the share sheet opens (iPhone → **Save Image**; a web page cannot write to Photos directly); on a computer the files download. File names: `VRM_L2-corridor_2026-10-17_1802_before.jpg`, `…_after.jpg`, `…_before-after.jpg` (a side-by-side picture, made automatically).
-4. Date, time, flagship and area are printed on the photo (switch off with the tick box).
-5. **+ Add to a deck** sends the pair to a deck.
+## Camera (after photos only — Oct 2026)
+1. Choose the flagship and the area, then **＋ From gallery**: the before photo always comes from the phone's gallery.
+2. Open the camera: the before photo shows over it as a faint **ghost** (8–65 %, default 28 %). **Edges** shows only its outlines; **Grid** helps to line up.
+3. **Zoom** to get the exact angle: pinch with two fingers, use the slider, or tap 1× · 2× · 3×. The phone's own camera zoom is used when it offers one (most Android phones); otherwise a digital zoom up to 4× (the photo is cropped exactly as on screen).
+4. Take the after photo.
+5. **Save to gallery**: on a phone the share sheet opens (iPhone → **Save Image**; a web page cannot write to Photos directly); on a computer the files download. File names: `VRM_L2-corridor_2026-10-17_1802_before.jpg`, `…_after.jpg`, `…_before-after.jpg` (a side-by-side picture, made automatically).
+6. Date, time, flagship and area are printed on the photo (switch off with the tick box).
+7. **+ Add to a deck** sends the pair to a deck.
 
 ## Deck
 - Several decks per device; each has a title, flagship, date, "prepared by", layout (**side by side** or **one big photo per slide**) and an optional **closing slide**.
