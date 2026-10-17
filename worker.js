@@ -38,6 +38,7 @@ import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/c
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
 import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
+import { extFacts } from "./modules/extdb.js";   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
@@ -216,6 +217,7 @@ const APP_ACCESS = {
   malfunctions: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   cleaning: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   cleanctl: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Cleaning Control (Upcoming - Testing)
+  beforeafter: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Before / After (Upcoming - Testing)
   sales: ["MM", "OM", "LEAD"],
   training: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -587,6 +589,7 @@ async function route(request, env, ctx, url) {
       canTeach: me.role === "ADMIN" || me.role === "MANAGER", sites: sitesMap(me),
       roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
       policies: q2 => polSearch(env, q2, { limit: 5, embed: t => embedTexts(env, t) }),
+      ext: s2 => extFacts(env, s2, beirutToday(), app => roleAllows(me, app), isFull(me)),
       todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`),
       systems: async s2 => { const ids = ["snaglist", "incidents", "restroom"].filter(id => CONNECTORS[id] && CONNECTORS[id].stats);
         const r = await Promise.all(ids.map(id => pull(env, id, CONNECTORS[id], s2))); return Object.fromEntries(ids.map((id, i) => [id, r[i]])); } });
@@ -1600,7 +1603,8 @@ async function opsRoute(env, me, p, method, b, url) {
   /* ----- Mall Layouts feature (modules/layouts.js) ----- */
   if (p === "layouts/hot") { if (!canSite(me, site) || isWarehouse(me) || me.role === "SECURITY") throw fail("Not allowed", 403);
     return hotspots(env, site, url, { today: beirutToday, pullDay, snagBase: CONNECTORS.snaglist.base }); }   // Hotspot map on the layouts
-  if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso });
+  if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso,
+    canFurn: !!can.layouts || isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH") });   // bins & benches: the operations team
 
   /* ----- Property Details feature (modules/property.js) ----- */
   if (p.startsWith("property/")) return propertyRoute(env, p, method, b, url, { site, can, me, now: nowIso, isAdmin: me.role === "ADMIN" || me.role === "ADVISOR" });

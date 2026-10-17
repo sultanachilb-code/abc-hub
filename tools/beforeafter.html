@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Before / After · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Before / After (docs/FEATURE-before-after.md) — everything stays on this device: nothing is sent to the hub.
+     • Camera: the before photo stays on the screen as a faint "ghost" so the after photo is taken from the same angle.
+       Photos go to the phone's gallery (share sheet on iPhone → Save Image; download on Android / computer).
+     • Deck: pairs of photos → a PowerPoint file in ABC colours (PptxGenJS, hosted in tools/pptx). Drafts are kept on this device (IndexedDB). -->
+<style>
+.tabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:3px}
+.tabs button{padding:7px 14px;border-radius:9px;font-weight:800;font-size:.84rem;color:var(--muted)}.tabs button.on{background:var(--brand);color:#fff}
+.pw{max-width:1100px;margin:0 auto;padding:14px 14px 80px;display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row .inp,.row .sel{flex:1;min-width:140px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}.seg button{padding:9px 16px;font-weight:800;font-size:.86rem}
+.seg button.on{background:var(--brand);color:#fff}.seg button[data-m="after"].on{background:#2E8B57}
+.lbl{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 2px 4px}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:.84rem;font-weight:600}
+/* viewer */
+.view{position:relative;width:100%;max-width:560px;margin:0 auto;aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:#0d0a12;touch-action:none}
+@media (min-width:900px){.view{aspect-ratio:4/3;max-width:820px}}
+.view video,.view .gh,.view .shotimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.view .gh{pointer-events:none;opacity:.28}.view .gh.edges{opacity:.85;mix-blend-mode:screen}
+.view .grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px);background-size:33.333% 33.333%}
+.view .tag{position:absolute;left:12px;top:12px;padding:5px 11px;border-radius:99px;font-weight:900;font-size:.74rem;letter-spacing:.08em;color:#fff;background:#C0392B}
+.view .tag.after{background:#2E8B57}
+.view .msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;padding:24px;gap:12px;align-content:center}
+.view .msg p{color:#cfc6dc;font-size:.88rem;line-height:1.5;max-width:340px}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 14px);background:linear-gradient(transparent,rgba(0,0,0,.72));display:grid;gap:10px;color:#fff}
+.bar .sl{display:flex;align-items:center;gap:10px;font-size:.74rem;font-weight:700}.bar input[type=range]{flex:1;accent-color:#E9CF8A}
+.bar .ctr{display:flex;align-items:center;justify-content:space-between}
+.bar .ctr button.s{font-size:.74rem;font-weight:800;padding:8px 11px;border-radius:10px;background:rgba(255,255,255,.16);color:#fff;min-width:64px}.bar .ctr button.s.on{background:#E9CF8A;color:#2A1146}
+.shutter{width:68px;height:68px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.25)}.shutter:active{transform:scale(.94)}
+/* befores */
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.strip button{flex:none;width:86px;border-radius:12px;overflow:hidden;border:2px solid transparent;background:var(--paper);text-align:left}
+.strip button.on{border-color:#2E8B57}.strip img{width:100%;height:64px;object-fit:cover;display:block}.strip small{display:block;font-size:.62rem;padding:3px 5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip .pick{display:grid;place-items:center;height:86px;font-size:.72rem;font-weight:800;color:var(--brand);border:2px dashed var(--line)}
+/* result sheet */
+.res{display:grid;gap:10px}.res .imgs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.res .imgs img{width:100%;border-radius:12px;display:block}
+.res .imgs.one{grid-template-columns:1fr}
+.note{font-size:.8rem;color:var(--muted);line-height:1.5}
+/* deck */
+.slides{display:grid;gap:10px}
+.sl-card{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.sl-th{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:150px}.sl-th img,.sl-th div{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:var(--paper)}
+.sl-f{display:grid;grid-template-columns:1fr 1fr;gap:6px}.sl-f .inp{height:34px;font-size:.84rem;width:100%}.sl-f .w{grid-column:1/-1}
+.sl-b{display:grid;gap:4px}.sl-b button{width:32px;height:30px;border-radius:8px;border:1px solid var(--line);font-weight:800}
+.prev{aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#fff;border:1px solid var(--line);display:grid;grid-template-rows:14% 1fr 9%;max-width:520px}
+.prev .h{background:#2A1146;color:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;font-weight:800;font-size:.78rem}.prev .h img{height:62%}
+.prev .h small{margin-left:auto;color:#E9CF8A;font-weight:600;font-size:.62rem}
+.prev .b{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px}.prev .b div{position:relative;border-radius:5px;overflow:hidden;background:#eee}.prev .b img{width:100%;height:100%;object-fit:contain;background:#f3f1f6}
+.prev .b em{position:absolute;left:5px;top:5px;font-style:normal;font-size:.5rem;font-weight:900;color:#fff;background:#C0392B;border-radius:99px;padding:2px 6px}.prev .b div+div em{background:#2E8B57}
+.prev .f{font-size:.55rem;color:#6d6479;padding:0 10px;display:flex;align-items:center}
+dialog .pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:50vh;overflow:auto}
+dialog .pairs button{border:2px solid var(--line);border-radius:12px;overflow:hidden;text-align:left}.pairs button.on{border-color:var(--brand)}
+dialog .pairs .th{display:grid;grid-template-columns:1fr 1fr}.pairs img{width:100%;height:60px;object-fit:cover}.pairs small{display:block;font-size:.66rem;padding:4px 6px;color:var(--muted)}
+@media (max-width:640px){.sl-card{grid-template-columns:1fr}.sl-th{width:100%}.sl-b{grid-auto-flow:column;justify-content:start}}
+</style>
+</head>
+<body>
+<div class="top"><h1>Before / After <small>on this device</small></h1><div class="tabs" id="tabs"><button data-t="cam" class="on">📷 Camera</button><button data-t="deck">🖼 Deck</button></div></div>
+<div class="pw" id="app"><div class="empty">Loading…</div></div>
+<dialog id="dlg"></dialog>
+<script src="common.js"></script>
+<script>
+/* ---------------- local storage (IndexedDB): photos, pairs and decks never leave this device ---------------- */
+const DBN = "abc-beforeafter";
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open(DBN, 1); r.onupgradeneeded = () => { const d = r.result; for (const s of ["shots", "pairs", "decks"]) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: "id" }); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const tx = async (store, mode, fn) => { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction(store, mode), s = t.objectStore(store); const out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }); };
+const put = (store, v) => tx(store, "readwrite", s => s.put(v));
+const del = (store, id) => tx(store, "readwrite", s => s.delete(id));
+const get = (store, id) => tx(store, "readonly", s => s.get(id));
+const all = store => tx(store, "readonly", s => s.getAll());
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+let CTX = null, TAB = "cam";
+const S = { mode: "before", site: "", place: "", stamp: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
+const fmtD = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const fmtDT = iso => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const slug = t => String(t || "").trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 40) || "area";
+const stamp = d => { const z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };   // the phone's own time
+const blobToImg = b => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(b); });
+const toBlob = (c, q = .9) => new Promise(r => c.toBlob(r, "image/jpeg", q));
+const blobToData = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+async function shrink(src, max, q = .82){   // canvas / image / blob → smaller jpeg blob
+  const img = src instanceof Blob ? await blobToImg(src) : src, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); return toBlob(c, q);
+}
+const touch = matchMedia("(pointer:coarse)").matches;
+/* to the phone's gallery: the share sheet on phones (iPhone: "Save Image"), a download on a computer */
+async function saveFiles(files){
+  if (touch && navigator.canShare && navigator.canShare({ files })) { try { await navigator.share({ files, title: "ABC Before / After" }); return true; } catch (e){ if (e.name === "AbortError") return false; } }
+  for (const f of files){ const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  return true;
+}
+
+async function boot(){
+  CTX = await api("ops/context");
+  S.site = CTX.site;
+  $("#tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; TAB = b.dataset.t; document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b)); if (TAB !== "cam") stopCam(); render(); };
+  if (new URLSearchParams(location.search).get("t") === "deck") $("#tabs [data-t=deck]").click(); else render();
+}
+const render = () => TAB === "cam" ? camView() : deckView();
+
+/* ================= CAMERA ================= */
+async function camView(){
+  const befores = (await all("shots")).filter(x => x.kind === "before").sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
+  $("#app").innerHTML = `
+    <div class="card" style="display:grid;gap:10px">
+      <div class="row"><div class="seg" id="seg"><button data-m="before" class="${S.mode === "before" ? "on" : ""}">Before</button><button data-m="after" class="${S.mode === "after" ? "on" : ""}">After</button></div>
+        <select class="sel" id="site">${Object.entries(CTX.sites).map(([c, n]) => `<option value="${c}" ${c === S.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+        <input class="inp" id="place" placeholder="Area, e.g. L2 corridor near Zara" value="${esc(S.place)}"></div>
+      <label class="chk"><input type="checkbox" id="stamp" ${S.stamp ? "checked" : ""}> Print date, time and place on the photo</label>
+      ${S.mode === "after" ? `<div><div class="lbl">The before photo (the ghost)</div><div class="strip" id="strip">
+        <label class="pick"><input type="file" accept="image/*" id="pickB" hidden>＋ From gallery</label>
+        ${befores.map(b => `<button data-b="${b.id}" class="${S.before && S.before.id === b.id ? "on" : ""}"><img src="${b.thumb}" alt=""><small>${esc(b.place || "—")} · ${esc(fmtD(b.at))}</small></button>`).join("")}</div></div>` : ""}
+    </div>
+    <div class="view" id="view">
+      <video id="vid" playsinline muted autoplay></video>
+      ${S.mode === "after" && S.before ? `<img class="gh${S.edges ? " edges" : ""}" id="gh" src="${S.edges ? S.before.edges || "" : S.before.url}" style="opacity:${S.edges ? .85 : S.ghostOp / 100}" alt="">` : ""}
+      ${S.grid ? `<div class="grid"></div>` : ""}
+      <span class="tag ${S.mode}">${S.mode === "before" ? "BEFORE" : "AFTER"}</span>
+      ${S.stream ? "" : `<div class="msg"><b style="font-size:1.05rem">${S.mode === "after" && !S.before ? "Choose the before photo first" : "Camera"}</b>
+        <p>${S.mode === "before" ? "Frame the area — the grid helps you remember the angle. The photo goes to your gallery, not to the hub." : S.before ? "The before photo will show as a faint ghost: line it up with the real scene, then take the after photo." : "Pick it from the list above or from your gallery."}</p>
+        ${S.mode === "before" || S.before ? `<button class="btn gold" id="open">Open the camera</button>` : ""}</div>`}
+      ${S.stream ? `<div class="bar">
+        ${S.mode === "after" && S.before ? `<div class="sl">Ghost <input type="range" min="8" max="65" value="${S.ghostOp}" id="op" ${S.edges ? "disabled" : ""}> <span id="opv">${S.ghostOp}%</span></div>` : ""}
+        <div class="ctr"><button class="s ${S.grid ? "on" : ""}" id="gridB">Grid</button>${S.mode === "after" && S.before ? `<button class="s ${S.edges ? "on" : ""}" id="edgeB">Edges</button>` : `<span style="min-width:64px"></span>`}
+          <button class="shutter" id="snap" aria-label="Take the photo"></button><button class="s" id="flip">⟲ Flip</button><span style="min-width:0"></span></div></div>` : ""}
+    </div>
+    <div id="out"></div>
+    <p class="note" style="text-align:center">Photos are saved to your gallery and kept on this device for the deck (latest 60). Nothing is sent to the hub.${touch && /iPhone|iPad/.test(navigator.userAgent) ? " On iPhone, tap <b>Save Image</b> in the share sheet." : ""}</p>`;
+  $("#seg").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; S.mode = b.dataset.m; S.shot = null; camView(); };
+  $("#site").onchange = e => S.site = e.target.value;
+  $("#place").oninput = e => S.place = e.target.value;
+  $("#stamp").onchange = e => S.stamp = e.target.checked;
+  const o = $("#open"); if (o) o.onclick = startCam;
+  if (S.stream) { $("#vid").srcObject = S.stream; }
+  const strip = $("#strip");
+  if (strip){
+    strip.onclick = async e => { const b = e.target.closest("[data-b]"); if (!b) return; const r = await get("shots", b.dataset.b); await useBefore(r.blob, r); };
+    $("#pickB").onchange = async e => { const f = e.target.files[0]; if (!f) return; const blob = await shrink(f, 1600, .85); await useBefore(blob, { id: "g" + uid(), place: S.place, at: new Date().toISOString(), site: S.site }); };
+  }
+  const op = $("#op"); if (op) op.oninput = e => { S.ghostOp = +e.target.value; $("#gh").style.opacity = S.ghostOp / 100; $("#opv").textContent = S.ghostOp + "%"; };
+  const gb = $("#gridB"); if (gb) gb.onclick = () => { S.grid = !S.grid; camView(); };
+  const eb = $("#edgeB"); if (eb) eb.onclick = async () => { S.edges = !S.edges; if (S.edges && !S.before.edges) S.before.edges = await edgesOf(S.before.url); camView(); };
+  const fl = $("#flip"); if (fl) fl.onclick = async () => { S.facing = S.facing === "environment" ? "user" : "environment"; stopCam(); await startCam(); };
+  const sn = $("#snap"); if (sn) sn.onclick = snap;
+  if (S.shot) showShot();
+}
+async function useBefore(blob, meta){
+  if (S.before && S.before.url) URL.revokeObjectURL(S.before.url);
+  S.before = { ...meta, blob, url: URL.createObjectURL(blob) }; S.edges = false; if (meta.place && !S.place) S.place = meta.place;
+  camView();
+}
+async function startCam(){
+  try {
+    S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: S.facing }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+    camView();
+  } catch (e){ toast(e.name === "NotAllowedError" ? "Allow the camera for the hub in your browser settings" : "The camera could not open: " + e.message, true); }
+}
+function stopCam(){ if (S.stream){ S.stream.getTracks().forEach(t => t.stop()); S.stream = null; } }
+addEventListener("pagehide", stopCam);
+/* edges of the before photo (outline mode): a simple Sobel filter, white lines on transparent */
+async function edgesOf(url){
+  const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = url; });
+  const w = 640, h = Math.round(img.height * w / img.width), c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, h); const d = x.getImageData(0, 0, w, h), g = new Float32Array(w * h), o = x.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) g[i] = d.data[i * 4] * .3 + d.data[i * 4 + 1] * .59 + d.data[i * 4 + 2] * .11;
+  for (let y = 1; y < h - 1; y++) for (let k = 1; k < w - 1; k++){ const i = y * w + k;
+    const gx = -g[i - w - 1] - 2 * g[i - 1] - g[i + w - 1] + g[i - w + 1] + 2 * g[i + 1] + g[i + w + 1], gy = -g[i - w - 1] - 2 * g[i - w] - g[i - w + 1] + g[i + w - 1] + 2 * g[i + w] + g[i + w + 1];
+    const m = Math.min(255, Math.hypot(gx, gy)); if (m > 70){ o.data[i * 4] = 255; o.data[i * 4 + 1] = 255; o.data[i * 4 + 2] = 120; o.data[i * 4 + 3] = m; } }
+  x.putImageData(o, 0, 0); return c.toDataURL("image/png");
+}
+function drawStamp(c, label, at){
+  const x = c.getContext("2d"), u = c.width / 1000, txt = `${label} · ${fmtDT(at)} · ${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}`;
+  x.font = `700 ${Math.round(22 * u)}px system-ui, sans-serif`; const tw = x.measureText(txt).width, pad = 12 * u, hh = 40 * u;
+  x.fillStyle = "rgba(0,0,0,.55)"; x.fillRect(16 * u, c.height - hh - 16 * u, tw + pad * 2, hh);
+  x.fillStyle = label === "BEFORE" ? "#FF8A7A" : "#7BE0A6"; x.fillText(label, 16 * u + pad, c.height - 16 * u - hh / 2 + 8 * u);
+  x.fillStyle = "#fff"; x.fillText(txt.slice(label.length), 16 * u + pad + x.measureText(label).width, c.height - 16 * u - hh / 2 + 8 * u);
+}
+async function snap(){
+  const v = $("#vid"); if (!v || !v.videoWidth) return toast("The camera is still starting", true);
+  const at = new Date().toISOString(), c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+  const x = c.getContext("2d"); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); } x.drawImage(v, 0, 0); x.setTransform(1, 0, 0, 1, 0, 0);
+  const label = S.mode === "before" ? "BEFORE" : "AFTER"; if (S.stamp) drawStamp(c, label, at);
+  const full = await toBlob(c, .92), small = await shrink(c, 1600, .84), thumb = await blobToData(await shrink(c, 240, .7));
+  const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
+  const shot = { id: uid(), kind: S.mode, site, place: S.place, at, blob: small, thumb };
+  await put("shots", shot);
+  const files = [new File([full], `${base}_${S.mode}.jpg`, { type: "image/jpeg" })];
+  let pair = null;
+  if (S.mode === "after" && S.before){
+    let bId = S.before.id; if (!(await get("shots", bId))) { bId = uid(); await put("shots", { id: bId, kind: "before", site, place: S.before.place || S.place, at: S.before.at || at, blob: S.before.blob, thumb: await blobToData(await shrink(S.before.blob, 240, .7)) }); }
+    pair = { id: uid(), beforeId: bId, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at };
+    await put("pairs", pair);
+    const sbs = await sideBySide(S.before.blob, c, S.before.at, at);
+    files.push(new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" }));
+  }
+  /* keep the device tidy: the latest 60 photos */
+  const shots = (await all("shots")).sort((a, b) => b.at.localeCompare(a.at)); const keep = new Set(); for (const d of await all("decks")) for (const s2 of d.slides || []) { keep.add(s2.beforeId); keep.add(s2.afterId); }
+  for (const old of shots.slice(60)) if (!keep.has(old.id)) await del("shots", old.id);
+  S.shot = { files, pair, urls: files.map(f => URL.createObjectURL(f)) };
+  showShot();
+}
+async function sideBySide(beforeBlob, afterCanvas, bAt, aAt){
+  const b = await blobToImg(beforeBlob), H = 1200, wb = Math.round(b.width * H / b.height), wa = Math.round(afterCanvas.width * H / afterCanvas.height), gap = 20, top = 70, bot = 60;
+  const c = document.createElement("canvas"); c.width = wb + wa + gap * 3; c.height = H + top + bot; const x = c.getContext("2d");
+  x.fillStyle = "#2A1146"; x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(b, gap, top, wb, H); x.drawImage(afterCanvas, gap * 2 + wb, top, wa, H);
+  x.font = "800 34px system-ui, sans-serif";
+  const lab = (t, col, px) => { const w = x.measureText(t).width + 36; x.fillStyle = col; x.beginPath(); x.roundRect(px, 14, w, 44, 22); x.fill(); x.fillStyle = "#fff"; x.fillText(t, px + 18, 47); };
+  lab(`BEFORE · ${bAt ? fmtD(bAt) : ""}`, "#C0392B", gap); lab(`AFTER · ${fmtD(aAt)}`, "#2E8B57", gap * 2 + wb);
+  x.font = "600 28px system-ui, sans-serif"; x.fillStyle = "#E9CF8A"; x.fillText(`${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}  ·  ABC Operations`, gap, c.height - 20);
+  return toBlob(c, .88);
+}
+function showShot(){
+  const s2 = S.shot, o = $("#out"); if (!s2 || !o) return;
+  o.innerHTML = `<div class="card res"><b>${s2.pair ? "✓ After photo taken" : "✓ Before photo taken"}</b>
+    <div class="imgs ${s2.urls.length === 1 ? "one" : ""}">${s2.urls.map(u => `<img src="${u}" alt="">`).join("")}</div>
+    <div class="row"><button class="btn gold" id="sv">⤓ Save to gallery${s2.files.length > 1 ? ` (${s2.files.length} photos)` : ""}</button>${s2.pair ? `<button class="btn" id="toDeck">+ Add to a deck</button>` : ""}<button class="btn ghost" id="again">${s2.pair ? "Next area" : "Retake"}</button></div>
+    <p class="note">${s2.pair ? "The after photo and a side-by-side picture are ready." : "Come back later in <b>After</b> mode — this photo will be in the list as the ghost."}</p></div>`;
+  $("#sv").onclick = async () => { if (await saveFiles(s2.files)) toast("Saved"); };
+  $("#again").onclick = () => { S.shot = null; o.innerHTML = ""; if (s2.pair){ S.before = null; S.mode = "after"; camView(); } };
+  const td = $("#toDeck"); if (td) td.onclick = () => pickDeckFor(s2.pair);
+  o.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ================= DECK ================= */
+const newDeck = () => ({ id: uid(), title: "Before / After", site: CTX.site, by: CTX.me.name || "", date: new Date().toISOString().slice(0, 10), layout: "side", closing: true, slides: [], at: new Date().toISOString() });
+async function pickDeckFor(pair){
+  const decks = (await all("decks")).sort((a, b) => b.at.localeCompare(a.at)), d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Add this pair to a deck</b></div><div class="dlg-b" style="display:grid;gap:6px">${decks.map(k => `<button class="btn ghost" data-d="${k.id}" style="justify-content:flex-start">${esc(k.title)} · ${(k.slides || []).length} pairs</button>`).join("")}<button class="btn" data-d="new">+ New deck</button></div><div class="dlg-f"><button class="btn ghost" data-x>Cancel</button></div>`;
+  d.onclick = async e => { if (e.target === d || e.target.closest("[data-x]")) return d.close(); const b = e.target.closest("[data-d]"); if (!b) return;
+    const deck = b.dataset.d === "new" ? newDeck() : decks.find(k => k.id === b.dataset.d);
+    deck.slides.push(slideOf(pair)); deck.at = new Date().toISOString(); await put("decks", deck); d.close(); toast("Added to " + deck.title); localStorage.setItem("ba.deck", deck.id); };
+  d.showModal();
+}
+const slideOf = p => ({ id: uid(), beforeId: p.beforeId, afterId: p.afterId, title: p.place || "Area", place: `${CTX.sites[p.site] || ""}${p.place ? " · " + p.place : ""}`, beforeDate: (p.beforeAt || "").slice(0, 10), afterDate: (p.afterAt || "").slice(0, 10), notes: "" });
+let DECK = null, THUMBS = new Map();
+async function deckView(){
+  const decks = (await all("decks")).sort((a, b) => b.at.localeCompare(a.at));
+  if (!DECK) DECK = decks.find(k => k.id === localStorage.getItem("ba.deck")) || decks[0] || null;
+  for (const s2 of DECK ? DECK.slides : []) for (const k of [s2.beforeId, s2.afterId]) if (k && !THUMBS.has(k)) { const r = await get("shots", k); THUMBS.set(k, r ? r.thumb : ""); }
+  $("#app").innerHTML = `
+    <div class="card"><div class="row"><select class="sel" id="dk">${decks.map(k => `<option value="${k.id}" ${DECK && k.id === DECK.id ? "selected" : ""}>${esc(k.title)} · ${(k.slides || []).length} pairs</option>`).join("") || `<option>No decks yet</option>`}</select>
+      <button class="btn ghost" id="nd">+ New deck</button>${DECK ? `<button class="btn ghost danger" id="dd">Delete deck</button>` : ""}</div>
+      <p class="note" style="margin-top:8px">Decks are kept on this device only. Download the PowerPoint to share it.</p></div>
+    ${DECK ? `<div class="card" style="display:grid;gap:10px">
+      <div class="sl-f"><div class="w"><div class="lbl">Deck title</div><input class="inp" data-k="title" value="${esc(DECK.title)}"></div>
+        <div><div class="lbl">Flagship</div><select class="sel" data-k="site" style="width:100%">${Object.entries(CTX.sites).map(([c, n]) => `<option value="${c}" ${c === DECK.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+        <div><div class="lbl">Date</div><input class="inp" type="date" data-k="date" value="${esc(DECK.date)}"></div>
+        <div><div class="lbl">Prepared by</div><input class="inp" data-k="by" value="${esc(DECK.by)}"></div>
+        <div><div class="lbl">Layout</div><select class="sel" data-k="layout" style="width:100%"><option value="side" ${DECK.layout === "side" ? "selected" : ""}>Before | After side by side</option><option value="big" ${DECK.layout === "big" ? "selected" : ""}>One big photo per slide</option></select></div></div>
+      <label class="chk"><input type="checkbox" data-k="closing" ${DECK.closing ? "checked" : ""}> Closing slide (summary · thank you)</label></div>
+    <div class="row"><b style="flex:1">${DECK.slides.length} pair${DECK.slides.length === 1 ? "" : "s"}</b><button class="btn ghost" id="addP">+ Add pair</button><button class="btn gold" id="dl" ${DECK.slides.length ? "" : "disabled"}>⤓ Download PowerPoint</button></div>
+    ${DECK.slides.length ? `<div class="prev">${(() => { const s2 = DECK.slides[0]; return `<div class="h"><img src="/icons/abc-logo-white.png" alt="">${esc(s2.title)}<small>${esc(s2.place)}</small></div>
+      <div class="b"><div><img src="${THUMBS.get(s2.beforeId) || ""}" alt=""><em>BEFORE</em></div><div><img src="${THUMBS.get(s2.afterId) || ""}" alt=""><em>AFTER</em></div></div><div class="f">${esc(s2.notes || "")}</div>`; })()}</div>` : ""}
+    <div class="slides">${DECK.slides.map((s2, i) => `<div class="sl-card" data-i="${i}">
+      <div class="sl-th"><img src="${THUMBS.get(s2.beforeId) || ""}" alt=""><img src="${THUMBS.get(s2.afterId) || ""}" alt=""></div>
+      <div class="sl-f"><input class="inp w" data-s="title" value="${esc(s2.title)}" placeholder="Title"><input class="inp w" data-s="place" value="${esc(s2.place)}" placeholder="Place">
+        <input class="inp" type="date" data-s="beforeDate" value="${esc(s2.beforeDate)}" title="Before date"><input class="inp" type="date" data-s="afterDate" value="${esc(s2.afterDate)}" title="After date">
+        <input class="inp w" data-s="notes" value="${esc(s2.notes)}" placeholder="Notes under the photos (work done, by whom)"></div>
+      <div class="sl-b"><button data-mv="-1" ${i ? "" : "disabled"}>↑</button><button data-mv="1" ${i < DECK.slides.length - 1 ? "" : "disabled"}>↓</button><button data-rm style="color:var(--alert)">✕</button></div></div>`).join("")
+      || `<div class="card empty">No pairs yet — take before / after photos in the Camera tab, or add two photos from your gallery.</div>`}</div>` : `<div class="card empty">Create a deck, then add before / after pairs.</div>`}`;
+  $("#dk").onchange = e => { DECK = decks.find(k => k.id === e.target.value); localStorage.setItem("ba.deck", DECK.id); deckView(); };
+  $("#nd").onclick = async () => { DECK = newDeck(); await put("decks", DECK); localStorage.setItem("ba.deck", DECK.id); deckView(); };
+  if (!DECK) return;
+  const save = () => { DECK.at = new Date().toISOString(); return put("decks", DECK); };
+  $("#dd").onclick = async () => { if (!(await confirmBox("Delete this deck?", "The deck is removed from this device. Photos in your gallery are not touched.", "Delete"))) return; await del("decks", DECK.id); DECK = null; localStorage.removeItem("ba.deck"); deckView(); };
+  document.querySelectorAll("[data-k]").forEach(el => el.onchange = async () => { DECK[el.dataset.k] = el.type === "checkbox" ? el.checked : el.value; await save(); if (el.dataset.k === "title") deckView(); });
+  document.querySelectorAll(".sl-card").forEach(card => { const i = +card.dataset.i;
+    card.querySelectorAll("[data-s]").forEach(el => el.onchange = async () => { DECK.slides[i][el.dataset.s] = el.value; await save(); });
+    card.querySelectorAll("[data-mv]").forEach(b => b.onclick = async () => { const j = i + +b.dataset.mv; [DECK.slides[i], DECK.slides[j]] = [DECK.slides[j], DECK.slides[i]]; await save(); deckView(); });
+    card.querySelector("[data-rm]").onclick = async () => { DECK.slides.splice(i, 1); await save(); deckView(); }; });
+  $("#addP").onclick = addPair;
+  $("#dl").onclick = makePptx;
+}
+async function addPair(){
+  const pairs = (await all("pairs")).sort((a, b) => b.afterAt.localeCompare(a.afterAt)), shots = new Map((await all("shots")).map(s2 => [s2.id, s2])), used = new Set(DECK.slides.map(s2 => s2.afterId));
+  const d = $("#dlg"), ok = pairs.filter(p => shots.has(p.beforeId) && shots.has(p.afterId));
+  d.innerHTML = `<div class="dlg-h"><b>Add pairs</b><small>From the ghost camera on this device, or two photos from your gallery</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px"><div class="pairs">${ok.map(p => `<button data-p="${p.id}" class="${used.has(p.afterId) ? "" : ""}" ${used.has(p.afterId) ? "disabled style=opacity:.4" : ""}><div class="th"><img src="${shots.get(p.beforeId).thumb}" alt=""><img src="${shots.get(p.afterId).thumb}" alt=""></div><small>${esc(p.place || "—")} · ${esc(fmtD(p.afterAt))}</small></button>`).join("") || `<p class="note">No pairs taken on this device yet.</p>`}</div>
+      <div><div class="lbl">Or from the gallery</div><div class="row"><label class="btn ghost small">Before photo<input type="file" accept="image/*" id="gB" hidden></label><label class="btn ghost small">After photo<input type="file" accept="image/*" id="gA" hidden></label><span class="note" id="gN"></span></div></div></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" id="pOk">Add</button></div>`;
+  const pick = { b: null, a: null };
+  $("#gB").onchange = e => { pick.b = e.target.files[0]; $("#gN").textContent = `${pick.b ? "before ✓" : ""} ${pick.a ? "after ✓" : ""}`; };
+  $("#gA").onchange = e => { pick.a = e.target.files[0]; $("#gN").textContent = `${pick.b ? "before ✓" : ""} ${pick.a ? "after ✓" : ""}`; };
+  d.onclick = async e => {
+    if (e.target === d || e.target.closest("[data-x]")) return d.close();
+    const b = e.target.closest("[data-p]"); if (b && !b.disabled) b.classList.toggle("on");
+    if (e.target.id === "pOk"){
+      for (const el of d.querySelectorAll("[data-p].on")) DECK.slides.push(slideOf(ok.find(p => p.id === el.dataset.p)));
+      if (pick.b && pick.a){ const mk = async (f, kind) => { const blob = await shrink(f, 1600, .84), id = uid(); await put("shots", { id, kind, site: DECK.site, place: "", at: new Date(f.lastModified || Date.now()).toISOString(), blob, thumb: await blobToData(await shrink(blob, 240, .7)) }); return id; };
+        const bId = await mk(pick.b, "before"), aId = await mk(pick.a, "after");
+        DECK.slides.push({ id: uid(), beforeId: bId, afterId: aId, title: "Area", place: CTX.sites[DECK.site] || "", beforeDate: new Date(pick.b.lastModified || Date.now()).toISOString().slice(0, 10), afterDate: new Date(pick.a.lastModified || Date.now()).toISOString().slice(0, 10), notes: "" }); }
+      else if (pick.b || pick.a) return toast("Choose both the before and the after photo", true);
+      DECK.at = new Date().toISOString(); await put("decks", DECK); d.close(); deckView();
+    }
+  };
+  d.showModal();
+}
+/* ---------- the PowerPoint file (16:9, ABC purple) ---------- */
+let pptxLib = null;
+const loadPptx = () => pptxLib || (pptxLib = new Promise((res, rej) => { const s2 = document.createElement("script"); s2.src = "pptx/pptxgen.bundle.js"; s2.onload = () => res(window.PptxGenJS); s2.onerror = () => rej(new Error("Could not load the PowerPoint maker")); document.head.append(s2); }));
+async function imgInfo(id){ const r = await get("shots", id); if (!r) return null; const img = await blobToImg(r.blob); return { data: (await blobToData(r.blob)).replace(/^data:/, ""), w: img.naturalWidth, h: img.naturalHeight }; }
+const fitIn = (im, bx, by, bw, bh) => { const k = Math.min(bw / im.w, bh / im.h), w = im.w * k, h = im.h * k; return { x: bx + (bw - w) / 2, y: by + (bh - h) / 2, w, h }; };
+async function makePptx(){
+  const btn = $("#dl"); btn.disabled = true; btn.textContent = "Making the PowerPoint…";
+  try {
+    const PG = await loadPptx(), p = new PG(); p.layout = "LAYOUT_WIDE"; p.author = DECK.by; p.company = "ABC"; p.title = DECK.title;
+    const logo = (await blobToData(await (await fetch("/icons/abc-logo-white.png")).blob())).replace(/^data:/, "");
+    const P = "2A1146", G = "E9CF8A", site = CTX.sites[DECK.site] || "", dt = DECK.date ? fmtD(DECK.date + "T12:00:00") : "", F = "Calibri";
+    let c = p.addSlide(); c.background = { color: P };
+    c.addShape(p.ShapeType.rect, { x: 0, y: 6.9, w: 13.333, h: .6, fill: { color: "4A1F73" } });
+    c.addImage({ data: logo, x: .7, y: .7, w: 1.4, h: 1.36 });
+    c.addText(DECK.title, { x: .7, y: 2.5, w: 11.9, h: 1.3, fontFace: F, fontSize: 40, bold: true, color: "FFFFFF" });
+    c.addText(`${site}${dt ? "  ·  " + dt : ""}`, { x: .7, y: 3.75, w: 11.9, h: .6, fontFace: F, fontSize: 20, color: G });
+    c.addText(`${DECK.slides.length} area${DECK.slides.length === 1 ? "" : "s"} · Before / After${DECK.by ? "   ·   Prepared by " + DECK.by : ""}`, { x: .7, y: 4.45, w: 11.9, h: .5, fontFace: F, fontSize: 14, color: "D9CFE6" });
+    c.addText("ABC Operations", { x: .7, y: 6.95, w: 6, h: .5, fontFace: F, fontSize: 12, color: G, bold: true });
+    let n = 1;
+    const head = (s, t, sub) => { s.background = { color: "FFFFFF" }; s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: .95, fill: { color: P } });
+      s.addImage({ data: logo, x: .3, y: .14, w: .7, h: .68 }); s.addText(t, { x: 1.15, y: .12, w: 7.8, h: .72, fontFace: F, fontSize: 22, bold: true, color: "FFFFFF", valign: "middle" });
+      s.addText(sub, { x: 8.9, y: .12, w: 4.15, h: .72, fontFace: F, fontSize: 13, color: G, align: "right", valign: "middle" }); };
+    const label = (s, t, col, x, y) => s.addText(t, { x, y, w: 2.6, h: .38, fontFace: F, fontSize: 11, bold: true, color: "FFFFFF", fill: { color: col }, align: "center", valign: "middle", rectRadius: .19, shape: p.ShapeType.roundRect });
+    const foot = (s, notes) => { s.addText(notes || "", { x: .35, y: 6.85, w: 10.6, h: .5, fontFace: F, fontSize: 12, color: "4A4458", valign: "middle" });
+      s.addText(`ABC Operations · ${++n}`, { x: 10.9, y: 6.85, w: 2.1, h: .5, fontFace: F, fontSize: 10, color: "8A8494", align: "right", valign: "middle" }); };
+    for (const s2 of DECK.slides){
+      const b = await imgInfo(s2.beforeId), a = await imgInfo(s2.afterId); if (!b || !a) continue;
+      const bd = s2.beforeDate ? fmtD(s2.beforeDate + "T12:00:00") : "", ad = s2.afterDate ? fmtD(s2.afterDate + "T12:00:00") : "";
+      if (DECK.layout === "big"){
+        for (const [im, t, col, d2] of [[b, "BEFORE", "C0392B", bd], [a, "AFTER", "2E8B57", ad]]){
+          const s = p.addSlide(); head(s, s2.title, s2.place); const r = fitIn(im, .35, 1.15, 12.63, 5.55);
+          s.addImage({ data: im.data, ...r }); label(s, `${t}${d2 ? " · " + d2 : ""}`, col, r.x + .15, r.y + .15); foot(s, s2.notes);
+        }
+      } else {
+        const s = p.addSlide(); head(s, s2.title, s2.place);
+        const rb = fitIn(b, .35, 1.15, 6.2, 5.55), ra = fitIn(a, 6.78, 1.15, 6.2, 5.55);
+        s.addImage({ data: b.data, ...rb }); s.addImage({ data: a.data, ...ra });
+        label(s, `BEFORE${bd ? " · " + bd : ""}`, "C0392B", rb.x + .15, rb.y + .15); label(s, `AFTER${ad ? " · " + ad : ""}`, "2E8B57", ra.x + .15, ra.y + .15);
+        foot(s, s2.notes);
+      }
+    }
+    if (DECK.closing){ const s = p.addSlide(); s.background = { color: P };
+      s.addImage({ data: logo, x: 5.97, y: 1.3, w: 1.4, h: 1.36 });
+      s.addText("Thank you", { x: .7, y: 3.0, w: 11.93, h: 1.1, fontFace: F, fontSize: 40, bold: true, color: "FFFFFF", align: "center" });
+      s.addText(`${DECK.slides.length} area${DECK.slides.length === 1 ? "" : "s"} · ${site}${dt ? " · " + dt : ""}`, { x: .7, y: 4.1, w: 11.93, h: .6, fontFace: F, fontSize: 18, color: G, align: "center" });
+      s.addText("ABC Operations", { x: .7, y: 6.6, w: 11.93, h: .5, fontFace: F, fontSize: 12, color: "D9CFE6", align: "center" }); }
+    const name = `${DECK.title.replace(/[\\/:*?"<>|]+/g, "-")} - ${DECK.date || ""}.pptx`;
+    await p.writeFile({ fileName: name, compression: true });
+    toast("PowerPoint ready");
+  } catch (e){ toast(e.message, true); }
+  btn.disabled = false; btn.textContent = "⤓ Download PowerPoint";
+}
+
+boot().catch(e => { $("#app").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

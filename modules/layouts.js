@@ -18,7 +18,12 @@ export async function layoutsSchema(env) {
       source TEXT NOT NULL DEFAULT 'auto', updated_by TEXT, updated_at TEXT)`),
     env.DB.prepare(`CREATE INDEX IF NOT EXISTS layout_pins_site ON layout_pins (site, level)`)
   ]);
+  /* Bins & benches (Oct 2026): a status on each pin and who checked it last */
+  for (const c of ["status TEXT NOT NULL DEFAULT ''", "checked_by TEXT NOT NULL DEFAULT ''", "checked_at TEXT NOT NULL DEFAULT ''"])
+    await env.DB.prepare(`ALTER TABLE layout_pins ADD COLUMN ${c}`).run().catch(() => {});   // already there
 }
+export const FURN_KINDS = { bin: "Recycle bin", bench: "Bench" };
+export const FURN_STATUS = ["OK", "Full", "Damaged", "Missing"];
 
 const PART = 700 * 1024;
 const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
@@ -44,10 +49,32 @@ export async function layoutsRoute(env, p, method, b, url, ctx) {
   if (p === "layouts/list") {
     const [levels, pins] = await Promise.all([
       env.DB.prepare("SELECT site, level, name, seq, width, height, figures, source, uploaded_by, uploaded_at FROM layout_levels WHERE site = ? ORDER BY seq, level").bind(site).all(),
-      env.DB.prepare("SELECT id, level, code, label, kind, x, y, source FROM layout_pins WHERE site = ?").bind(site).all()
+      env.DB.prepare("SELECT id, level, code, label, kind, x, y, source, status, checked_by, checked_at FROM layout_pins WHERE site = ?").bind(site).all()
     ]);
-    return { site, can, levels: (levels.results || []).map(l => ({ level: l.level, name: l.name, seq: l.seq, width: l.width, height: l.height,
+    return { site, can: { ...can, furniture: !!ctx.canFurn }, levels: (levels.results || []).map(l => ({ level: l.level, name: l.name, seq: l.seq, width: l.width, height: l.height,
       figures: JSON.parse(l.figures || "{}"), source: l.source, uploadedBy: l.uploaded_by, uploadedAt: l.uploaded_at })), pins: pins.results || [] };
+  }
+
+  /* Recycle bins and benches: the operations team adds, moves, renames, deletes and sets the status (OK · Full · Damaged · Missing) */
+  if (p === "layouts/furn" && method === "POST") {
+    if (!ctx.canFurn) throw Object.assign(new Error("Only the operations team and management place bins and benches"), { status: 403 });
+    const id = Number(b.id) || 0;
+    const own = id ? await env.DB.prepare("SELECT id, kind FROM layout_pins WHERE id = ? AND site = ?").bind(id, site).first() : null;
+    if (id && (!own || !FURN_KINDS[own.kind])) throw Object.assign(new Error("Pin not found"), { status: 404 });
+    if (b.delete) { await env.DB.prepare("DELETE FROM layout_pins WHERE id = ? AND site = ?").bind(id, site).run(); return { deleted: true }; }
+    const st = FURN_STATUS.includes(b.status) ? b.status : null;
+    if (id) {
+      await env.DB.prepare(`UPDATE layout_pins SET x = COALESCE(?, x), y = COALESCE(?, y), label = COALESCE(?, label), status = COALESCE(?, status),
+        checked_by = CASE WHEN ? IS NULL THEN checked_by ELSE ? END, checked_at = CASE WHEN ? IS NULL THEN checked_at ELSE ? END, updated_by = ?, updated_at = ? WHERE id = ? AND site = ?`)
+        .bind(b.x == null ? null : num(b.x, 0, 1), b.y == null ? null : num(b.y, 0, 1), b.label == null ? null : clip(b.label, 80), st, st, me.full_name, st, now(), me.full_name, now(), id, site).run();
+      return { id, checkedBy: st ? me.full_name : undefined, checkedAt: st ? now() : undefined };
+    }
+    const level = String(b.level || ""), kind = FURN_KINDS[b.kind] ? b.kind : "";
+    if (!levelOk(level)) throw Object.assign(new Error("Choose a level"), { status: 400 });
+    if (!kind) throw Object.assign(new Error("Choose recycle bin or bench"), { status: 400 });
+    const r = await env.DB.prepare("INSERT INTO layout_pins (site, level, code, label, kind, x, y, source, status, checked_by, checked_at, updated_by, updated_at) VALUES (?,?,'',?,?,?,?,'manual','OK',?,?,?,?)")
+      .bind(site, level, clip(b.label, 80), kind, num(b.x, 0, 1), num(b.y, 0, 1), me.full_name, now(), me.full_name, now()).run();
+    return { id: r.meta.last_row_id, checkedBy: me.full_name, checkedAt: now() };
   }
 
   if (!can.layouts) throw Object.assign(new Error("Only the flagship's Manager or Senior Mall Supervisor can change the layouts"), { status: 403 });

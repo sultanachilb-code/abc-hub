@@ -244,7 +244,17 @@ async function siteFacts(env, site, me, d) {
       if (ongoing.length) L.push(`Handover · ongoing follow-ups: ${ongoing.join(" | ")}.`);
       if (doc.notes) L.push(`Handover notes: ${clip(doc.notes, 400)}.`); }
   }
-  return L.join("\n").slice(0, 11000);
+  if (can("layouts")) {   // recycle bins and benches on the Mall Layouts map
+    const fu = await rows(env.DB.prepare("SELECT level, kind, label, status FROM layout_pins WHERE site = ? AND kind IN ('bin','bench')").bind(site));
+    if (fu.length) {
+      const per = {}; for (const f of fu) { per[f.level] = per[f.level] || { bin: 0, bench: 0 }; per[f.level][f.kind]++; }
+      const bad = fu.filter(f => f.status && f.status !== "OK");
+      L.push(`Recycle bins and benches on the map, per level: ${Object.entries(per).map(([lv, c]) => `${lv}: ${c.bin} bins, ${c.bench} benches`).join("; ")}.${bad.length ? ` Needing action: ${bad.map(f => `${f.kind === "bin" ? "bin" : "bench"} ${f.label || "?"} (${f.level}) ${f.status}`).join("; ")}.` : " All marked OK."}`);
+    }
+  }
+  const base = L.join("\n").slice(0, 11000);
+  const ext = d.ext ? await d.ext(site).catch(() => "") : "";   // Snaglist · Incidents · Restroom · Audit databases (read-only)
+  return ext ? base + "\n" + ext : base;
 }
 
 export async function aiRoute(env, p, method, b, url, d) {
