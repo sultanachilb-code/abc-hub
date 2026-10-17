@@ -29,6 +29,24 @@ jobs:
           wranglerVersion: "4"
           command: r2 bucket create abc-hub-files
 
+      # ABCON: list the account's D1 databases (names + ids) as notes on the run, to connect the right ones read-only
+      - name: List D1 databases (for ABCON)
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          command: d1 list --json
+      - name: Show the D1 list
+        continue-on-error: true
+        run: |
+          npx -y wrangler@4 d1 list --json > d1.json 2> d1.err || true
+          node -e 'try { const a = JSON.parse(require("fs").readFileSync("d1.json","utf8")); for (const d of a) console.log(`::notice title=D1::${d.name} ${d.uuid}`); } catch (e) { console.log("::notice title=D1::could not list — " + require("fs").readFileSync("d1.err","utf8").slice(0,300).replace(/\n/g," ")); }'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
+
       - name: Deploy with Wrangler
         uses: cloudflare/wrangler-action@v3
         with:
