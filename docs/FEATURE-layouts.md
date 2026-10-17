@@ -40,3 +40,10 @@ The GLA tables (`gla_units`, `gla_events`) are **not** touched by this feature.
 - Re-uploading a level replaces its image and its automatic pins; pins placed or moved by hand are kept.
 - The GLA remains the single source of truth: the plan only reads it (status colours, brand search).
 - Plan images and pins are only served to signed-in hub users (`/api/ops/layouts/*`).
+
+
+## Recycle bins and benches (Oct 2026)
+- Two pin types next to the shop units: ♻️ **Recycle bin** and 🪑 **Bench**. The bar under the levels shows / hides each type (remembered on the device) with the count on the level.
+- **+ Bins & benches** (operations team — Mall Officer, Mall Supervisor, Senior Mall Supervisor — and management; not Warehouse): pick the type in the yellow banner, tap the plan, give it a name (`L2-BIN-01 near Zara`). Drag to move while the mode is on.
+- Tap a pin: status **OK · Full · Damaged · Missing** (who checked it and when), rename, delete. Anything not OK gets a red ring and is listed under "Bins & benches" in the side panel.
+- Route `POST /api/ops/layouts/furn` (columns `status`, `checked_by`, `checked_at` added to `layout_pins`). ABCON knows the counts per level and which ones need action.

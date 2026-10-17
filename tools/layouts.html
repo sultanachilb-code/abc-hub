@@ -37,6 +37,17 @@ body{display:flex;flex-direction:column;overflow:hidden}
 .pin.s-none{background:#fff;border-color:#8A8494;border-style:dashed}
 .pin.sel{outline:3px solid var(--gold);outline-offset:2px}
 .pin.dim{opacity:.15}
+/* Recycle bins & benches (Oct 2026) */
+.pin.fur{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:9px;display:grid;place-items:center;font-size:14px;line-height:1;border-width:2px}
+.pin.k-bin{background:#2E8B57}.pin.k-bench{background:#8B5A2B}
+.pin.fur.st-bad{box-shadow:0 0 0 3px #E5484D,0 2px 6px rgba(0,0,0,.35)}
+.furbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 14px 0}
+.furbar button{border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.76rem;font-weight:800;color:var(--muted);background:var(--surface)}
+.furbar button.on{border-color:#4A1F73;background:#F1EAF8;color:#4A1F73}.furbar .add{background:#4A1F73;color:#fff;border-color:#4A1F73}
+.furbar .add.gold{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.banner button{margin:0 3px;border-radius:9px;padding:4px 10px;font-weight:800;border:2px solid rgba(0,0,0,.15);background:#fff;color:var(--ink)}.banner button.on{background:var(--ink);color:#fff}
+.stchips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}.stchips button{border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:.76rem;font-weight:800}
+.stchips button.on{background:#2E8B57;border-color:#2E8B57;color:#fff}.stchips button.on.bad{background:#E5484D;border-color:#E5484D}
 .pin.pulse::after,.pin.pulse::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--gold);animation:pulse 1.4s ease-out 4}
 .pin.pulse::before{animation-delay:.45s}
 @keyframes pulse{from{transform:scale(.6);opacity:1}to{transform:scale(3.2);opacity:0}}
@@ -107,6 +118,7 @@ body{display:flex;flex-direction:column;overflow:hidden}
   <button class="btn ghost small hidden" id="uplBtn">Upload layout PDF</button>
 </div>
 <div class="levels" id="levels"></div>
+<div class="furbar hidden" id="furbar"></div>
 <div class="main">
   <div class="vp" id="vp">
     <div class="world" id="world"><img id="plan" alt=""><div class="heat" id="heat"></div><div class="pins" id="pins"></div></div>
@@ -123,6 +135,10 @@ body{display:flex;flex-direction:column;overflow:hidden}
 <script src="common.js"></script>
 <script>
 let CTX = null, L = null, UNITS = [], CAN = {}, LEVEL = null, ADJUST = false, PENDING = null;
+/* Recycle bins & benches: shown / hidden per type (remembered on this device), "Add" mode for the operations team */
+const FK = { bin: ["♻️", "Recycle bin", "Recycle bins", "BIN"], bench: ["🪑", "Bench", "Benches", "BENCH"] }, FST = ["OK", "Full", "Damaged", "Missing"];
+const isFur = p => !!FK[p.kind];
+let FURN = null, FSHOW = (() => { try { return new Set(JSON.parse(localStorage.getItem("hub.layouts.fur") || '["bin","bench"]')); } catch { return new Set(["bin", "bench"]); } })();
 const V = { s: 1, x: 0, y: 0, w: 0, h: 0 };
 const norm = c => String(c || "").replace(/^VM[\s-]*/i, "").trim().toUpperCase();
 const byCode = () => { const m = new Map(); UNITS.forEach(u => m.set(norm(u.code), u)); return m; };
@@ -146,6 +162,7 @@ async function boot(site){
     return;
   }
   $("#emptyMsg").classList.add("hidden"); $("#world").style.display = "";
+  $("#furbar").classList.remove("hidden");
   const want = params.get("level");
   LEVEL = L.levels.find(x => x.level === (LEVEL || want)) ? (LEVEL || want) : L.levels[0].level;
   renderLevels(); await showLevel(LEVEL);
@@ -165,7 +182,10 @@ function showLevel(lv){
 }
 function drawPins(){
   const map = byCode();
-  $("#pins").innerHTML = L.pins.filter(p => p.level === LEVEL).map(p => {
+  drawFurBar();
+  $("#pins").innerHTML = L.pins.filter(p => p.level === LEVEL && (!isFur(p) || FSHOW.has(p.kind))).map(p => {
+    if (isFur(p)){ const t = `${p.label || FK[p.kind][1]} · ${p.status || "OK"}`;
+      return `<button class="pin fur k-${p.kind}${p.status && p.status !== "OK" ? " st-bad" : ""}" data-id="${p.id}" style="left:${p.x * 100}%;top:${p.y * 100}%" title="${esc(t)}" aria-label="${esc(t)}">${FK[p.kind][0]}</button>`; }
     const u = p.kind === "unit" ? map.get(norm(p.code)) : null;
     const cls = p.kind === "place" ? "s-place" : stCls(u);
     const title = p.kind === "place" ? p.label : u ? `${u.brand || "Vacant"} · ${u.code} · ${u.status}` : `${p.code} · not in the GLA`;
@@ -187,7 +207,8 @@ function renderSide(){
     <h3>Level ${esc(LEVEL)} · from the plan</h3>
     <div class="fg">${Object.keys(label).filter(k => f[k]).map(k => `<span>${label[k]}</span><b>${fmt(f[k])} m²</b>`).join("") || `<span class="muted">No figures on this plan</span>`}</div>
     ${us.length ? `<h3>Live from the GLA</h3><div class="fg"><span>Units</span><b>${live.units}</b><span>Vacant / terminated</span><b style="color:var(--alert)">${live.vac}</b><span>Fit-out</span><b>${live.fit}</b>${live.closed ? `<span>Closed</span><b>${live.closed}</b>` : ""}</div>` : ""}
-    <h3>Key</h3><div class="leg"><span><i style="background:#7B4BB0"></i>Open</span><span><i style="background:#C8A24A"></i>Fit-out</span><span><i style="background:#2F80ED"></i>Reserved</span><span><i style="background:#E5484D"></i>Vacant / terminated</span><span><i style="background:#8A8494"></i>Closed</span><span><i style="background:#1F9E8F;border-radius:3px"></i>Place (ATM, room, office…)</span><span><i style="background:#fff;border:2px dashed #8A8494"></i>On the plan, not in the GLA</span></div>
+    ${furSide()}
+    <h3>Key</h3><div class="leg"><span>♻️ Recycle bin</span><span>🪑 Bench</span><span><i style="background:#7B4BB0"></i>Open</span><span><i style="background:#C8A24A"></i>Fit-out</span><span><i style="background:#2F80ED"></i>Reserved</span><span><i style="background:#E5484D"></i>Vacant / terminated</span><span><i style="background:#8A8494"></i>Closed</span><span><i style="background:#1F9E8F;border-radius:3px"></i>Place (ATM, room, office…)</span><span><i style="background:#fff;border:2px dashed #8A8494"></i>On the plan, not in the GLA</span></div>
     ${notInGla.length ? `<h3>On the plan, not in the GLA · ${notInGla.length}</h3><div class="mm">${notInGla.map(p => `<button data-focus="${p.id}">${esc(p.code)}</button>`).join("")}</div>` : ""}
     ${missingOnPlan.length ? `<h3>In the GLA, not on the plan · ${missingOnPlan.length}</h3><div class="mm">${missingOnPlan.map(u => `<button data-place="${u.id}">${esc(u.code)} · ${esc(u.brand || "Vacant")}${CAN.layouts ? " — place it" : ""}</button>`).join("")}</div>` : ""}
     <p class="muted" style="font-size:.74rem;margin-top:14px">${esc(meta.source || "")}${meta.uploadedBy ? ` · uploaded by ${esc(meta.uploadedBy)}` : ""}</p>
@@ -205,7 +226,7 @@ vp.addEventListener("pointerdown", e => {
   if (e.target.closest(".card,.zoom,.banner")) return;
   vp.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = false; start = { x: e.clientX, y: e.clientY };
   const pin = e.target.closest(".pin");
-  dragPin = ADJUST && pin ? pin : null;
+  dragPin = pin && (ADJUST || (FURN && pin.classList.contains("fur"))) ? pin : null;
   if (pts.size === 2){ const [a, b] = [...pts.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); }
   vp.classList.add("drag");
 });
@@ -221,7 +242,7 @@ vp.addEventListener("pointermove", e => {
 vp.addEventListener("pointerup", async e => {
   pts.delete(e.pointerId); if (pts.size < 2) pinchD = 0; vp.classList.remove("drag");
   if (dragPin && moved){ const p = L.pins.find(x => x.id === Number(dragPin.dataset.id)); p.x = +dragPin.dataset.nx; p.y = +dragPin.dataset.ny;
-    try { await api("ops/layouts/pin", { site: CTX.site, id: p.id, x: p.x, y: p.y }); p.source = "manual"; toast("Pin moved"); } catch (er){ toast(er.message, true); } dragPin = null; return; }
+    try { await api(isFur(p) ? "ops/layouts/furn" : "ops/layouts/pin", { site: CTX.site, id: p.id, x: p.x, y: p.y }); p.source = "manual"; toast("Pin moved"); } catch (er){ toast(er.message, true); } dragPin = null; return; }
   dragPin = null;
   if (moved) return;
   const under = document.elementFromPoint(e.clientX, e.clientY) || e.target;   // the map holds the pointer while dragging: find what is really under the finger
@@ -233,6 +254,7 @@ vp.addEventListener("pointerup", async e => {
   const r = vp.getBoundingClientRect(), x = (e.clientX - r.left - V.x) / V.s / V.w, y = (e.clientY - r.top - V.y) / V.s / V.h;
   if (x < 0 || y < 0 || x > 1 || y > 1) return;
   if (PENDING){ const u = PENDING; PENDING = null; $("#banner").classList.add("hidden"); return addPin({ level: LEVEL, code: u.code, x, y }); }
+  if (FURN) return furDialog(x, y);
   if (ADJUST) addDialog(x, y);
 });
 vp.addEventListener("dblclick", e => { const r = vp.getBoundingClientRect(); zoomAt(1.8, e.clientX - r.left, e.clientY - r.top); });
@@ -307,6 +329,7 @@ $("#side").addEventListener("click", e => {
 function openCard(p){
   document.querySelectorAll(".pin.sel").forEach(x => x.classList.remove("sel"));
   const el = document.querySelector(`.pin[data-id="${p.id}"]`); if (el) el.classList.add("sel");
+  if (isFur(p)) return furCard(p);
   const u = p.kind === "unit" ? byCode().get(norm(p.code)) : null;
   const c = $("#card");
   c.innerHTML = `<button class="x" id="cx">×</button>
@@ -353,15 +376,16 @@ function search(){
   const map = byCode(), out = [];
   for (const p of L.pins){
     const u = p.kind === "unit" ? map.get(norm(p.code)) : null;
-    const hay = (p.kind === "place" ? p.label : `${u ? u.brand : ""} ${p.code}`).toLowerCase();
-    const name = (p.kind === "place" ? p.label : (u && u.brand) || "").toLowerCase();
+    const fl = isFur(p) ? `${p.label || ""} ${FK[p.kind][1]}` : "";
+    const hay = (isFur(p) ? fl : p.kind === "place" ? p.label : `${u ? u.brand : ""} ${p.code}`).toLowerCase();
+    const name = (isFur(p) ? p.label || "" : p.kind === "place" ? p.label : (u && u.brand) || "").toLowerCase();
     if (hay.includes(q)) out.push({ p, u, score: name === q || norm(p.code).toLowerCase() === q ? 0 : name.startsWith(q) ? 1 : 2 });
   }
   const pinned = new Set(L.pins.map(p => norm(p.code)));
   const off = UNITS.filter(u => !pinned.has(norm(u.code)) && `${u.brand} ${u.code}`.toLowerCase().includes(q)).slice(0, 5);
   out.sort((a, b) => a.score - b.score || String(a.p.level).localeCompare(String(b.p.level)));
-  box.innerHTML = out.slice(0, 12).map((r, i) => `<button data-pin="${r.p.id}" class="${i === 0 ? "on" : ""}"><span class="pin ${r.p.kind === "place" ? "s-place" : stCls(r.u)}" style="position:static;margin:0;transform:none;flex:none;width:14px;height:14px"></span>
-      <span><b>${esc(r.p.kind === "place" ? r.p.label : (r.u ? r.u.brand || "Vacant" : r.p.code))}</b><small>${esc(r.p.kind === "place" ? "Place" : `${r.p.code}${r.u ? " · " + r.u.status + " · " + fmt(r.u.area) + " m²" : ""}`)}</small></span><span class="lv">${esc(r.p.level)}</span></button>`).join("")
+  box.innerHTML = out.slice(0, 12).map((r, i) => `<button data-pin="${r.p.id}" class="${i === 0 ? "on" : ""}">${isFur(r.p) ? `<span style="flex:none;width:14px">${FK[r.p.kind][0]}</span>` : `<span class="pin ${r.p.kind === "place" ? "s-place" : stCls(r.u)}" style="position:static;margin:0;transform:none;flex:none;width:14px;height:14px"></span>`}
+      <span><b>${esc(isFur(r.p) ? r.p.label || FK[r.p.kind][1] : r.p.kind === "place" ? r.p.label : (r.u ? r.u.brand || "Vacant" : r.p.code))}</b><small>${esc(isFur(r.p) ? `${FK[r.p.kind][1]} · ${r.p.status || "OK"}` : r.p.kind === "place" ? "Place" : `${r.p.code}${r.u ? " · " + r.u.status + " · " + fmt(r.u.area) + " m²" : ""}`)}</small></span><span class="lv">${esc(r.p.level)}</span></button>`).join("")
     + off.map(u => `<button disabled style="opacity:.6"><span><b>${esc(u.brand || "Vacant")}</b><small>${esc(u.code)} · in the GLA, not placed on the plan yet</small></span><span class="lv">${esc(u.level)}</span></button>`).join("")
     || `<button disabled><span class="muted">No match on the ${esc(CTX.siteName)} plans</span></button>`;
   box.classList.remove("hidden");
@@ -371,8 +395,66 @@ $("#q").addEventListener("keydown", e => { if (e.key === "Enter"){ const b = $("
 $("#res").addEventListener("click", e => { const b = e.target.closest("[data-pin]"); if (!b) return; $("#res").classList.add("hidden"); focusPin(L.pins.find(p => p.id === Number(b.dataset.pin))); });
 document.addEventListener("click", e => { if (!e.target.closest(".srch")) $("#res").classList.add("hidden"); });
 
+/* ---------------- recycle bins & benches (operations team) ---------------- */
+function drawFurBar(){
+  const here = L.pins.filter(p => p.level === LEVEL && isFur(p)), n = k => here.filter(p => p.kind === k).length;
+  $("#furbar").innerHTML = Object.entries(FK).map(([k, [ic]]) => `<button data-fshow="${k}" class="${FSHOW.has(k) ? "on" : ""}">${ic} ${FK[k][2]} · ${n(k)}</button>`).join("")
+    + (CAN.furniture ? `<button class="add${FURN ? " gold" : ""}" id="furBtn">${FURN ? "Done placing" : "+ Bins & benches"}</button>` : "");
+}
+function setFurn(kind){
+  if (kind && ADJUST) setAdjust(false);
+  FURN = kind; const b = $("#banner");
+  b.classList.toggle("hidden", !kind);
+  if (kind) b.innerHTML = `Tap the plan to place: <button data-fk="bin" class="${kind === "bin" ? "on" : ""}">♻️ Recycle bin</button><button data-fk="bench" class="${kind === "bench" ? "on" : ""}">🪑 Bench</button> · drag a pin to move it`;
+  vp.classList.toggle("adjust", !!kind || ADJUST); hideCard(); drawFurBar();
+}
+$("#banner").addEventListener("click", e => { const k = e.target.closest("[data-fk]"); if (k){ e.stopPropagation(); setFurn(k.dataset.fk); } });
+$("#furbar").addEventListener("click", e => {
+  const s2 = e.target.closest("[data-fshow]"); if (s2){ const k = s2.dataset.fshow; FSHOW.has(k) ? FSHOW.delete(k) : FSHOW.add(k); try { localStorage.setItem("hub.layouts.fur", JSON.stringify([...FSHOW])); } catch {} return drawPins(); }
+  if (e.target.id === "furBtn") setFurn(FURN ? null : "bin");
+});
+function furDialog(x, y){
+  const d = $("#dlg"), k = FURN, n = L.pins.filter(p => p.kind === k && p.level === LEVEL).length + 1;
+  d.innerHTML = `<div class="dlg-h"><b>${FK[k][0]} New ${FK[k][1].toLowerCase()} on ${esc(LEVEL)}</b><small>A name helps the team find it, e.g. "${esc(LEVEL)}-${FK[k][3]}-${String(n).padStart(2, "0")} near Zara"</small></div>
+    <div class="dlg-b"><input class="inp" id="fName" style="width:100%" value="${esc(LEVEL)}-${FK[k][3]}-${String(n).padStart(2, "0")}"></div>
+    <div class="dlg-f"><button class="btn ghost" id="fC">Cancel</button><button class="btn gold" id="fOk">Place it</button></div>`;
+  d.onclick = async e => { if (e.target === d || e.target.id === "fC") return d.close();
+    if (e.target.id === "fOk"){ const label = $("#fName").value.trim(); d.close();
+      try { const r = await api("ops/layouts/furn", { site: CTX.site, level: LEVEL, kind: k, x, y, label });
+        L.pins.push({ id: r.id, level: LEVEL, kind: k, code: "", label, x, y, source: "manual", status: "OK", checked_by: r.checkedBy, checked_at: r.checkedAt });
+        if (!FSHOW.has(k)) FSHOW.add(k); drawPins(); renderSide(); renderLevels(); toast(`${FK[k][1]} placed`); } catch (er){ toast(er.message, true); } } };
+  d.showModal(); setTimeout(() => $("#fName").select(), 50);
+}
+function furCard(p){
+  const c = $("#card"), can = CAN.furniture, when = p.checked_at ? new Date(p.checked_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  c.innerHTML = `<button class="x" id="cx">×</button><h4>${FK[p.kind][0]} ${esc(p.label || FK[p.kind][1])}</h4>
+    <p class="muted" style="font-size:.8rem;margin-top:4px">${FK[p.kind][1]} · level ${esc(p.level)}</p>
+    <div class="stchips">${FST.map(s2 => `<button data-st="${s2}" class="${(p.status || "OK") === s2 ? "on" + (s2 !== "OK" ? " bad" : "") : ""}" ${can ? "" : "disabled"}>${s2}</button>`).join("")}</div>
+    ${p.checked_by ? `<p class="muted" style="font-size:.74rem">Checked by ${esc(p.checked_by)}${when ? " · " + esc(when) : ""}</p>` : ""}
+    ${can ? `<div class="acts"><button class="btn ghost small" id="fRen">Rename</button><button class="btn ghost small danger" id="fDel">Delete</button></div>` : ""}`;
+  c.classList.remove("hidden");
+  const r = vp.getBoundingClientRect(), px = V.x + p.x * V.w * V.s, py = V.y + p.y * V.h * V.s;
+  c.style.left = Math.max(10, Math.min(r.width - 280, px + 16)) + "px"; c.style.top = Math.max(10, Math.min(r.height - c.offsetHeight - 10, py - 30)) + "px";
+  c.onclick = async e => {
+    const t = e.target;
+    if (t.id === "cx") return hideCard();
+    const st = t.closest("[data-st]");
+    if (st && can){ try { const x = await api("ops/layouts/furn", { site: CTX.site, id: p.id, status: st.dataset.st }); Object.assign(p, { status: st.dataset.st, checked_by: x.checkedBy, checked_at: x.checkedAt }); drawPins(); renderSide(); furCard(p); toast("Status saved"); } catch (er){ toast(er.message, true); } }
+    if (t.id === "fRen"){ const n = prompt("Name", p.label || ""); if (n == null) return; try { await api("ops/layouts/furn", { site: CTX.site, id: p.id, label: n.trim() }); p.label = n.trim(); drawPins(); furCard(p); } catch (er){ toast(er.message, true); } }
+    if (t.id === "fDel"){ if (!(await confirmBox(`Delete this ${FK[p.kind][1].toLowerCase()}?`, "Only the pin on the plan is removed.", "Delete"))) return;
+      try { await api("ops/layouts/furn", { site: CTX.site, id: p.id, delete: true }); L.pins = L.pins.filter(x => x.id !== p.id); hideCard(); drawPins(); renderSide(); renderLevels(); } catch (er){ toast(er.message, true); } }
+  };
+}
+function furSide(){
+  const here = L.pins.filter(p => p.level === LEVEL && isFur(p)); if (!here.length) return "";
+  const bad = here.filter(p => p.status && p.status !== "OK"), c = k => here.filter(p => p.kind === k).length;
+  return `<h3>Bins & benches · level ${esc(LEVEL)}</h3><div class="fg"><span>♻️ Recycle bins</span><b>${c("bin")}</b><span>🪑 Benches</span><b>${c("bench")}</b><span>Need action</span><b style="color:${bad.length ? "var(--alert)" : "inherit"}">${bad.length}</b></div>
+    ${bad.length ? `<div class="mm">${bad.map(p => `<button data-focus="${p.id}">${FK[p.kind][0]} ${esc(p.label || FK[p.kind][1])} · ${esc(p.status)}</button>`).join("")}</div>` : ""}`;
+}
+
 /* ---------------- adjust mode ---------------- */
 function setAdjust(on){
+  if (on && FURN) setFurn(null);
   ADJUST = on; vp.classList.toggle("adjust", on); $("#adjBtn").textContent = on ? "Done adjusting" : "Adjust pins"; $("#adjBtn").classList.toggle("gold", on);
   const b = $("#banner"); b.classList.toggle("hidden", !on); b.textContent = "Adjust mode · drag a pin to move it · tap an empty spot to add a place or a unit"; hideCard();
 }

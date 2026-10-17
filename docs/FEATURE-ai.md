@@ -20,6 +20,18 @@ Runs on **Cloudflare Workers AI** — the `AI` binding in `wrangler.jsonc`. No A
 - Under each answer: Copy · Share (phone share sheet or email) · 👍 · 👎 (with "what was wrong?"), then 3 follow-up questions to tap.
 - ⤢ expands to a tall side panel on desktop; full screen on phones; ↺ starts a new chat.
 
+## Other ABC databases (read-only, Oct 2026)
+The hub Worker has four more D1 bindings that ABCON only reads (`modules/extdb.js`, SELECT queries only):
+
+| Binding | Database | System | ABCON gets | Who |
+|---|---|---|---|---|
+| `SNAG_DB` | abc-snaglist | Snaglist Manager | open snags by list type, oldest open, solved in 7 days, places with repeated snags | can open Snaglist |
+| `INC_DB` | abc-incidents | Incident Report System | incidents 30 days by type / severity, still open, overdue post-incident reports, blacklist counts (no names) | can open Incidents |
+| `RR_DB` | abc-restroom-db | Restroom Inspection | today's inspections and cleaning checks, most repeated problems in 7 days | can open Restroom |
+| `AUDIT_DB` | abc-audit-db | ABC Audit | latest audit, open findings by grade, overdue and repeat findings | management and leadership |
+
+Not connected on purpose: `abc-dashboard-users` (logins only) and the wedding-venue database (not ABC). No visitor names or contact details are ever given to ABCON.
+
 ## Smarter and faster
 - **Teach ABCON** (`ai_facts`): managers add facts for one flagship or all flagships; ABCON reads them before every answer and trusts them above everything else (cited as T1, T2…).
 - **Review 👎** (`ai_feedback`): every 👎 lands in Teach → "Answers to review"; write the correct answer → **Teach ABCON** turns it into a fact (or Dismiss).
