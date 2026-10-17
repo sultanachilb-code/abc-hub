@@ -4,7 +4,12 @@
   "compatibility_date": "2026-09-01",
   "assets": { "directory": "./", "binding": "ASSETS" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "hub-db", "database_id": "e7ae150f-de70-4376-a15b-65390159f65c" }
+    { "binding": "DB", "database_name": "hub-db", "database_id": "e7ae150f-de70-4376-a15b-65390159f65c" },
+    /* ABCON reads these READ-ONLY (modules/extdb.js — only SELECT queries). Each belongs to its own system. */
+    { "binding": "SNAG_DB", "database_name": "abc-snaglist", "database_id": "24a39f43-b22a-4a15-be4b-d142262ac171" },
+    { "binding": "INC_DB", "database_name": "abc-incidents", "database_id": "61054354-17c3-4dfa-8658-be538e364003" },
+    { "binding": "RR_DB", "database_name": "abc-restroom-db", "database_id": "51391d36-fab9-4028-b5ae-26990a1f9c3d" },
+    { "binding": "AUDIT_DB", "database_name": "abc-audit-db", "database_id": "317f85d6-d356-45a6-9c23-9cfde188fccc" }
   ],
   /* Policies & Procedures: the original PDF / Word files (docs/FEATURE-policies.md). The deploy creates the bucket if it is missing. */
   "r2_buckets": [ { "binding": "FILES", "bucket_name": "abc-hub-files" } ],
