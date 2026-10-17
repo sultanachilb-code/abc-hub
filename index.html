@@ -1867,7 +1867,7 @@ const AI_TOOLS = [
 ];
 function buildAiMenu(){
   const m = $("#aiMenu");
-  m.innerHTML = `<div class="who"><b>AI assistants</b><small>Sanad, the hub's own assistant, is the ✦ bubble at the bottom right of the home page</small></div>` +
+  m.innerHTML = `<div class="who"><b>AI assistants</b><small>ABCON, the hub's own assistant, is the ✦ bubble at the bottom right of the home page</small></div>` +
     AI_TOOLS.map(t => `<button data-ai="${t.id}" class="ai-i"><span class="ai-dot" style="background:${t.bg}">${t.mark}</span><span>${esc(t.name)}<small>${esc(t.by)}</small></span></button>`).join("");
   $("#aiBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.add("hidden"); $("#npanel").classList.add("hidden"); placePops($("#aiBtn")); m.classList.toggle("hidden"); };
   m.onclick = e => {
@@ -1879,29 +1879,30 @@ function buildAiMenu(){
   };
 }
 
-/* ---------- Sanad (سند), the Hub Assistant: free AI chat over the hub's data (see docs/FEATURE-ai.md) ---------- */
+/* ---------- ABCON (ABC Operations Control), the Hub Assistant: free AI chat over the hub's data and the policies (see docs/FEATURE-ai.md) ---------- */
 const AIC = { msgs: [], busy: false, site: "" };
-const AI_SUGGEST = ["What is still open today?", "Which contractors attended today?", "Any malfunctions still open?", "شو صار بالدورية اليوم؟"];
+const AI_SUGGEST = ["What is still open today?", "Which contractors attended today?", "What are the tenant delivery hours?", "شو صار بالدورية اليوم؟"];
 function aiChat(){
   let p = $("#aiChat");
   if (!p){ p = document.createElement("div"); p.id = "aiChat"; p.className = "aic"; document.body.append(p); }
   AIC.site = AIC.site || D2D.site || ME.user.site || Object.keys(sitesOfMe())[0] || "";
   const sites = sitesOfMe();
-  p.innerHTML = `<div class="aic-h"><span class="aic-l">✦</span><div><b>Sanad · سند</b><small>Your hub assistant · answers from the hub</small></div>
+  p.innerHTML = `<div class="aic-h"><span class="aic-l">✦</span><div><b>ABCON</b><small>ABC Operations Control · answers from the hub and the policies</small></div>
       ${Object.keys(sites).length > 1 ? `<select id="aicSite">${Object.entries(sites).map(([c, n]) => `<option value="${esc(c)}" ${c === AIC.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}
       <button class="aic-x" id="aicX" aria-label="Close">✕</button></div>
     <div class="aic-b" id="aicB"></div>
+    <div class="aic-st" id="aicSt"></div>
     <form class="aic-f" id="aicF"><textarea id="aicQ" rows="1" dir="auto" placeholder="Ask about today… · اسأل عن اليوم"></textarea><button class="aic-s" aria-label="Send">➤</button></form>`;
-  aiDraw(); p.classList.add("on"); window.sanadPaint && sanadPaint(); setTimeout(() => $("#aicQ").focus(), 60);
+  aiDraw(); aiStatus(); p.classList.add("on"); window.sanadPaint && sanadPaint(); setTimeout(() => $("#aicQ").focus(), 60);
   $("#aicX").onclick = () => { p.classList.remove("on"); window.sanadPaint && sanadPaint(); };
   const ss = $("#aicSite"); if (ss) ss.onchange = e => { AIC.site = e.target.value; AIC.msgs = []; aiDraw(); };
   $("#aicF").onsubmit = e => { e.preventDefault(); aiSend($("#aicQ").value); };
   $("#aicQ").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); aiSend($("#aicQ").value); } };
 }
-/* Sanad bubble: bottom right of the home page only (Oct 2026); the Emergency button stays where it is (above it on a phone) */
+/* ABCON bubble: bottom right of the home page only (Oct 2026); the Emergency button stays where it is (above it on a phone) */
 (() => {
-  const b = document.createElement("button"); b.id = "sanadFab"; b.type = "button"; b.setAttribute("aria-label", "Ask Sanad, the hub assistant");
-  b.innerHTML = `<span class="sf-ic">✦</span><span class="sf-lb">Ask Sanad<small>سند</small></span>`;
+  const b = document.createElement("button"); b.id = "sanadFab"; b.type = "button"; b.setAttribute("aria-label", "Ask ABCON, the hub assistant");
+  b.innerHTML = `<span class="sf-ic">✦</span><span class="sf-lb">Ask ABCON<small>Operations Control</small></span>`;
   b.onclick = () => aiChat();
   const paint = () => { const home = document.getElementById("home"); b.classList.toggle("on", (typeof ME !== "undefined" && !!ME && !!ME.user) && !!home && !home.classList.contains("hidden") && !/^#\/app\//.test(location.hash) && !($("#aiChat") && $("#aiChat").classList.contains("on"))); };
   addEventListener("DOMContentLoaded", () => { document.body.append(b); paint(); const home = document.getElementById("home"); if (home) new MutationObserver(paint).observe(home, { attributes: true, attributeFilter: ["class"] }); });
@@ -1912,9 +1913,9 @@ function aiChat(){
 function sitesOfMe(){ return (D2D.data && D2D.data.sites) || (ME.user.site ? { [ME.user.site]: ME.user.siteName } : SITES || {}); }
 function aiDraw(){
   const b = $("#aicB"); if (!b) return;
-  b.innerHTML = (AIC.msgs.length ? "" : `<div class="aic-hi"><b>Hi, I'm Sanad · أهلا، أنا سند</b><br>Ask me about today at the flagship.<small>Shifts, handover, contractors, malfunctions, patrol, tenant feedback, meetings and contracts — only what you can see in the hub.</small>
+  b.innerHTML = (AIC.msgs.length ? "" : `<div class="aic-hi"><b>Hi, I'm ABCON · أهلاً، أنا ABCON</b><br>Ask me about today at the flagship, or about ABC policies and procedures.<small>Shifts, handover, contractors, malfunctions, patrol, tenant feedback, meetings, contracts — and the Policies &amp; Procedures library, with the source of every rule.</small>
       <div class="aic-sg">${AI_SUGGEST.map(q => `<button data-q="${esc(q)}" dir="auto">${esc(q)}</button>`).join("")}</div></div>`)
-    + AIC.msgs.map(m => `<div class="aic-m ${m.role}" dir="auto">${esc(m.content).replace(/\n/g, "<br>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>`).join("")
+    + AIC.msgs.map(m => `<div class="aic-m ${m.role}" dir="auto">${esc(m.content).replace(/\n/g, "<br>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[P(\d)\]/g, '<sup class="aic-p">P$1</sup>')}${m.sources && m.sources.length ? `<div class="aic-src">${m.sources.map(x => `<a href="/tools/policies?doc=${x.doc}${x.page ? "&p=" + x.page : ""}" target="_blank" rel="noopener" dir="ltr"><sup>P${x.n}</sup> ${esc(x.title)}${x.section ? " · " + esc(x.section.slice(0, 40)) : ""}${x.page ? " · p." + x.page : ""}</a>`).join("")}</div>` : ""}${m.cached ? `<small class="aic-c">Same question as at ${esc(m.cachedAt)} — same answer, not counted</small>` : ""}</div>`).join("")
     + (AIC.busy ? `<div class="aic-m assistant typing"><i></i><i></i><i></i></div>` : "");
   b.scrollTop = b.scrollHeight;
   b.querySelectorAll("[data-q]").forEach(x => x.onclick = () => aiSend(x.dataset.q));
@@ -1922,9 +1923,21 @@ function aiDraw(){
 async function aiSend(q){
   q = String(q || "").trim(); if (!q || AIC.busy) return;
   AIC.msgs.push({ role: "user", content: q }); AIC.busy = true; const qa = $("#aicQ"); if (qa) qa.value = ""; aiDraw();
-  try { const r = await api("ai/chat", { site: AIC.site, messages: AIC.msgs }); AIC.msgs.push({ role: "assistant", content: r.answer }); }
+  try { const r = await api("ai/chat", { site: AIC.site, messages: AIC.msgs.map(({ role, content, err }) => ({ role, content, err })) });
+    AIC.msgs.push({ role: "assistant", content: r.answer, sources: r.sources || [], cached: !!r.cached, cachedAt: r.cachedAt }); }
   catch (e){ AIC.msgs.push({ role: "assistant", content: "⚠ " + e.message, err: true }); }
-  AIC.busy = false; aiDraw();
+  AIC.busy = false; aiDraw(); aiStatus();
+}
+/* ABCON limits: questions left for this person, the team's share of the free allowance, and when it is back */
+async function aiStatus(){
+  const el = $("#aicSt"); if (!el) return;
+  try { const s = await api(`ai/status?site=${encodeURIComponent(AIC.site)}`); AIC.st = s;
+    const bar = `<i style="width:${Math.max(2, s.teamPct)}%" class="${s.teamPct >= 85 ? "hi" : s.teamPct >= 60 ? "md" : ""}"></i>`;
+    el.innerHTML = s.open ? `<span>${s.daily && ME.user.role !== "ADMIN" ? `${s.left} of ${s.daily} questions left today` : "Admin"}</span><span class="aic-bar" title="Team use of today's free AI allowance (ABCON closes at 100 % here = 80 % of the free allowance)">${bar}</span><span>Team ${s.teamPct}%</span>`
+      : `<b>⏸ ${esc(s.msg)}</b>`;
+    el.classList.toggle("off", !s.open);
+    const q = $("#aicQ"), sb = document.querySelector("#aicF .aic-s"); if (q) q.disabled = !s.open; if (sb) sb.disabled = !s.open;
+  } catch { el.innerHTML = ""; }
 }
 
 function changePwDialog(){
@@ -3590,7 +3603,14 @@ boot();
 @media (max-width:900px){ #emgFab{top:auto;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:60px;height:60px} #emgFab svg{width:27px;height:27px} }
 @media (prefers-reduced-motion:reduce){ #emgFab::after{animation:none} }
 @media print{ #emgFab{display:none!important} }
-/* Sanad bubble (Hub Assistant) — bottom right of the home page; above the Emergency button on a phone */
+/* ABCON chat: limits line + policy sources */
+.aic-st{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--line)}
+.aic-st:empty{display:none}.aic-st.off{background:#FFF4E5;color:#8A4B00;font-size:.78rem;line-height:1.35}
+.aic-bar{flex:1;height:5px;border-radius:9px;background:var(--line);overflow:hidden;max-width:120px;margin-left:auto}.aic-bar i{display:block;height:100%;background:#2E8B57;border-radius:9px}.aic-bar i.md{background:#C07A12}.aic-bar i.hi{background:#C0392B}
+.aic-p{font-size:.62rem;font-weight:800;color:#7B3FB0;margin-left:1px}
+.aic-src{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.aic-src a{font-size:.72rem;font-weight:700;color:#4A1F73;background:#F1EAF8;border-radius:8px;padding:4px 8px;text-decoration:none}
+.aic-src a sup{color:#7B3FB0}.aic-c{display:block;margin-top:6px;font-size:.68rem;color:var(--muted)}
+/* ABCON bubble (Hub Assistant) — bottom right of the home page; above the Emergency button on a phone */
 #sanadFab{position:fixed;z-index:59;right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:none;align-items:center;gap:10px;border:0;cursor:pointer;
   padding:8px 18px 8px 8px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#4A1F73,#2A0F45);box-shadow:0 12px 28px rgba(42,15,69,.35),0 0 0 4px rgba(200,162,74,.25);animation:sfIn .45s cubic-bezier(.3,1.4,.5,1)}
 #sanadFab.on{display:flex}

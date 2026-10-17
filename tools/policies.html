@@ -6,35 +6,205 @@
 <title>Policies &amp; Procedures · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
-<!-- Policies & Procedures — placeholder for the three systems (Owner, Assist, ABC General Policies) -->
+<!-- Policies & Procedures — the library ABCON reads (docs/FEATURE-policies.md)
+     Owner · Assist · ABC General Policies · Verdun Tenant Manual. Search across all of them; Admin / Mall Manager / Operations Manager upload.
+     The browser reads the text of a PDF (pdf.js) or Word file (mammoth) on upload, so search and ABCON can use it. -->
 <style>
-.pp{max-width:720px;margin:30px auto;padding:30px 28px;display:grid;gap:14px}
-.pp .k{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--brand-2)}
-.pp h2{font-size:1.5rem;font-weight:800;text-wrap:balance}
-.pp p{color:var(--muted);line-height:1.6}
-.pp ul{display:grid;gap:8px;margin-top:4px;padding-left:18px;color:var(--text);font-size:.92rem;line-height:1.5}
-.sys{display:flex;gap:8px;flex-wrap:wrap}
-.sys a{padding:8px 14px;border-radius:999px;border:1px solid var(--line);font-weight:700;font-size:.85rem;color:var(--text);text-decoration:none;background:var(--surface)}
-.sys a.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.pw{max-width:1040px;margin:0 auto;padding:16px;display:grid;gap:14px}
+.sr{display:flex;gap:8px;flex-wrap:wrap}.sr .inp{flex:1;min-width:200px;height:44px;font-size:.98rem;padding:0 14px;border-radius:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:.8rem;color:var(--text);cursor:pointer}
+.chips button.on{background:var(--brand);border-color:var(--brand);color:#fff}.chips button small{opacity:.7;font-weight:600;margin-left:4px}
+.hit{display:block;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;line-height:1.5;font-size:.88rem;cursor:pointer}
+.hit:hover{border-color:var(--brand-2)}.hit small{display:block;color:var(--brand-2);font-weight:800;font-size:.74rem;margin-bottom:3px}
+mark{background:#F7E7B5;color:inherit;border-radius:3px;padding:0 1px}
+.grp{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-2);margin:6px 2px 0}
+.doc{display:flex;gap:12px;align-items:center;padding:12px 14px}
+.doc+.doc{border-top:1px solid var(--line)}
+.ic{width:38px;height:44px;border-radius:8px;display:grid;place-items:center;font-size:.6rem;font-weight:800;color:#fff;flex:none;background:#C0392B}.ic.w{background:#2B5797}
+.doc .t{flex:1;min-width:0}.doc b{display:block;font-size:.93rem;cursor:pointer}.doc small{color:var(--muted);font-size:.76rem}
+.doc .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.warn{color:#8A4B00;background:#FFF4E5;border-radius:6px;padding:1px 6px;font-weight:700}
+.empty2{padding:26px;text-align:center;color:var(--muted);line-height:1.6}
+/* reader */
+.rd-h{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.rd-h .t{flex:1;min-width:200px}.rd-h b{font-size:1.05rem}.rd-h small{display:block;color:var(--muted)}
+.rd{padding:6px 18px 24px;line-height:1.65;font-size:.93rem}
+.pg{margin-top:18px}.pg>i{display:inline-block;font-style:normal;font-size:.7rem;font-weight:800;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-bottom:6px}
+.pg.here>i{background:var(--brand);border-color:var(--brand);color:#fff}
+.sec{font-weight:800;color:var(--brand);margin:10px 0 2px}
+.rd p{white-space:pre-wrap;margin:0 0 8px}
+/* upload */
+.fld{display:grid;gap:5px;margin-bottom:10px}.fld span{font-size:.78rem;font-weight:700;color:var(--muted)}.fld .inp,.fld .sel{width:100%}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;font-size:.88rem}
+.drop.on{border-color:var(--brand-2);background:#FBF8FE}
+.prog{height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:10px}.prog i{display:block;height:100%;width:0;background:var(--brand);transition:width .2s}
+@media (max-width:640px){.doc{flex-wrap:wrap}.doc .t{flex-basis:calc(100% - 52px)}.doc .acts{width:100%;justify-content:flex-start;padding-left:50px}}
+@media print{.top,.sr,.chips,.acts,.noprint{display:none!important}}
 </style>
 </head>
 <body>
-<div class="top"><h1>Policies &amp; Procedures <small id="sub"></small></h1></div>
-<div class="wrap"><section class="card pp" id="app"></section></div>
+<div class="top"><h1>Policies &amp; Procedures <small id="sub">ABC</small></h1><span style="flex:1"></span><span id="topAct"></span></div>
+<div class="pw" id="app"><div class="empty">Loading…</div></div>
+<dialog id="up"></dialog>
 <script src="common.js"></script>
 <script>
-const SYS = {
-  owner:   { name: "Owner", desc: "Owner policies and procedures." },
-  assist:  { name: "Assist", desc: "Assist policies and procedures." },
-  general: { name: "ABC General Policies", desc: "Company-wide ABC policies." }
-};
-const k = SYS[new URLSearchParams(location.search).get("s")] ? new URLSearchParams(location.search).get("s") : "owner";
-$("#sub").textContent = SYS[k].name;
-$("#app").innerHTML = `<div class="sys">${Object.entries(SYS).map(([c, v]) => `<a href="?s=${c}" class="${c === k ? "on" : ""}">${esc(v.name)}</a>`).join("")}</div>
-  <div class="k">Coming soon</div>
-  <h2>${esc(SYS[k].name)}</h2>
-  <p>${esc(SYS[k].desc)} This space is ready in the hub. The documents, search and sign-off will be added here next.</p>
-  <ul><li>Documents by chapter, always the latest approved version</li><li>Search across every policy and procedure</li><li>Read-and-acknowledge for the team, with a record of who has read what</li></ul>`;
+const P = new URLSearchParams(location.search);
+let L = null, coll = P.get("c") || "", query = P.get("q") || "";
+const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+const fmtDay = iso => { try { return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return ""; } };
+const isWord = d => /word|docx/i.test(d.mime || d.file_name || "");
+/* [[word]] from the search snippet → highlighted, everything else escaped */
+const snip = s => esc(s || "").replace(/\[\[(.+?)\]\]/g, "<mark>$1</mark>");
+
+async function load(){
+  L = await api("pol/list");
+  $("#topAct").innerHTML = L.canEdit ? `<button class="btn small" id="upBtn">+ Upload policy</button>` : "";
+  if (L.canEdit) $("#upBtn").onclick = () => upload();
+  if (P.get("doc")) return reader(Number(P.get("doc")), Number(P.get("p")) || 0, query);
+  home();
+}
+
+function home(){
+  const counts = {}; for (const d of L.docs) counts[d.coll] = (counts[d.coll] || 0) + 1;
+  $("#sub").textContent = coll ? L.colls[coll] : "Library";
+  $("#app").innerHTML = `
+    <div class="sr"><input class="inp" id="q" type="search" dir="auto" placeholder="Search every policy and procedure… e.g. delivery hours, fit-out approval" value="${esc(query)}"><button class="btn" id="go">Search</button></div>
+    <div class="chips"><button data-c="" class="${coll ? "" : "on"}">All<small>${L.docs.length}</small></button>${Object.entries(L.colls).map(([k, n]) => `<button data-c="${k}" class="${coll === k ? "on" : ""}">${esc(n)}<small>${counts[k] || 0}</small></button>`).join("")}</div>
+    <div id="hits"></div>
+    <div id="docs"></div>
+    <p class="muted noprint" style="font-size:.78rem;line-height:1.5;margin:4px 2px">ABCON, the hub assistant, answers from these documents and shows the source of every rule. ${L.canEdit ? "Upload PDF or Word files; a scanned PDF (a photo of pages) has no text, so ABCON cannot read it — upload the text version." : "Only the Admin, the Mall Manager and the Operations Manager change the library."}</p>`;
+  $("#go").onclick = () => search($("#q").value);
+  $("#q").onkeydown = e => { if (e.key === "Enter") search($("#q").value); };
+  document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { coll = b.dataset.c; home(); });
+  drawDocs();
+  if (query) search(query);
+}
+
+function drawDocs(){
+  const list = L.docs.filter(d => !coll || d.coll === coll);
+  if (!list.length) return $("#docs").innerHTML = `<div class="card empty2">${coll ? `No documents in <b>${esc(L.colls[coll])}</b> yet.` : "The library is empty."}${L.canEdit ? `<br>Use <b>+ Upload policy</b> to add the first one.` : ""}</div>`;
+  const by = {}; for (const d of list) (by[d.coll] = by[d.coll] || []).push(d);
+  $("#docs").innerHTML = Object.keys(L.colls).filter(k => by[k]).map(k => `<div class="grp">${esc(L.colls[k])}</div><div class="card" style="padding:0">${by[k].map(d => `
+    <div class="doc"><div class="ic ${isWord(d) ? "w" : ""}">${isWord(d) ? "DOC" : "PDF"}</div>
+      <div class="t"><b data-open="${d.id}">${esc(d.title)}</b><small>${d.version ? "v" + esc(d.version) + " · " : ""}${d.pages ? d.pages + " pages · " : ""}${fmtSize(d.size)} · updated ${fmtDay(d.at)}${d.by_name ? " by " + esc(d.by_name) : ""}${d.notext ? ` · <span class="warn">no text — ABCON cannot read it</span>` : ""}</small></div>
+      <div class="acts"><button class="btn ghost small" data-open="${d.id}">Read</button><a class="btn ghost small" href="/api/pol/file?id=${d.id}" target="_blank" rel="noopener">${isWord(d) ? "Download" : "Open PDF"}</a>
+        ${L.canEdit ? `<button class="btn ghost small" data-ver="${d.id}">New version</button><button class="btn ghost small" data-rm="${d.id}" style="color:var(--danger,#C0392B)">Remove</button>` : ""}</div></div>`).join("")}</div>`).join("");
+  document.querySelectorAll("[data-open]").forEach(b => b.onclick = () => reader(Number(b.dataset.open), 0, query));
+  document.querySelectorAll("[data-ver]").forEach(b => b.onclick = () => upload(L.docs.find(d => d.id === Number(b.dataset.ver))));
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { const d = L.docs.find(x => x.id === Number(b.dataset.rm));
+    if (!await confirmBox("Remove this document?", `<b>${esc(d.title)}</b> leaves the library and ABCON stops using it. This cannot be undone.`, "Remove")) return;
+    try { await api("pol/remove", { id: d.id }); toast("Removed"); load(); } catch (e){ toast(e.message, true); } });
+}
+
+async function search(q){
+  query = String(q || "").trim(); const el = $("#hits"); if (!el) return;
+  history.replaceState(null, "", query ? `?q=${encodeURIComponent(query)}${coll ? "&c=" + coll : ""}` : location.pathname);
+  if (!query) return el.innerHTML = "";
+  el.innerHTML = `<div class="muted">Searching…</div>`;
+  try { const r = await api(`pol/search?q=${encodeURIComponent(query)}${coll ? "&coll=" + coll : ""}`);
+    el.innerHTML = r.hits.length ? `<div class="grp">${r.hits.length} matching passage${r.hits.length > 1 ? "s" : ""}</div><div style="display:grid;gap:8px;margin-top:6px">${r.hits.map(h => `<a class="hit" data-d="${h.doc}" data-p="${h.page}"><small>${esc(h.title)}${h.title.toLowerCase().includes(h.collName.toLowerCase()) ? "" : " · " + esc(h.collName)}${h.section ? " · " + esc(h.section) : ""}${h.page ? " · page " + h.page : ""}</small>${snip(h.snip)}</a>`).join("")}</div>`
+      : `<div class="card empty2">Nothing found for <b>${esc(query)}</b>. Try other words${/[؀-ۿ]/.test(query) ? " — the documents are in English, so search in English (ABCON understands Arabic questions)" : ""}.</div>`;
+    el.querySelectorAll("[data-d]").forEach(a => a.onclick = () => reader(Number(a.dataset.d), Number(a.dataset.p) || 0, query));
+  } catch (e){ el.innerHTML = `<div class="card empty2">${esc(e.message)}</div>`; }
+}
+
+/* reader view: the document's text page by page — opens on the page ABCON cited, words of the search highlighted */
+async function reader(id, page, q){
+  $("#app").innerHTML = `<div class="empty">Opening…</div>`;
+  let r; try { r = await api(`pol/doc?id=${id}`); } catch (e){ return $("#app").innerHTML = `<div class="card empty2">${esc(e.message)}<br><a href="?">Back to the library</a></div>`; }
+  const d = r.doc; $("#sub").textContent = d.collName;
+  history.replaceState(null, "", `?doc=${id}${page ? "&p=" + page : ""}${q ? "&q=" + encodeURIComponent(q) : ""}`);
+  const words = (q || "").toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [];
+  const hl = t => { let h = esc(t); for (const w of words) h = h.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\w*)`, "gi"), "<mark>$1</mark>"); return h; };
+  const pages = []; for (const c of r.chunks) { let pg = pages[pages.length - 1]; if (!pg || pg.page !== c.page) pages.push(pg = { page: c.page, parts: [] }); pg.parts.push(c); }
+  let lastSec = "";
+  $("#app").innerHTML = `<div class="card" style="padding:0">
+    <div class="rd-h"><div class="t"><b>${esc(d.title)}</b><small>${esc(d.collName)}${d.version ? " · v" + esc(d.version) : ""}${d.pages ? " · " + d.pages + " pages" : ""} · updated ${fmtDay(d.at)}</small></div>
+      <div class="acts noprint" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" id="back">← Library</button><a class="btn small" href="/api/pol/file?id=${d.id}${page && !isWord(d) ? "#page=" + page : ""}" target="_blank" rel="noopener">${isWord(d) ? "Download original" : "Open original PDF"}</a></div></div>
+    <div class="rd">${d.notext ? `<p class="warn" style="display:inline-block;margin-top:12px">This file has no readable text (a scanned PDF). Open the original to read it.</p>` : ""}
+      ${pages.map(pg => `<div class="pg ${pg.page && pg.page === page ? "here" : ""}" id="pg${pg.page}">${pg.page ? `<i>Page ${pg.page}</i>` : ""}${pg.parts.map(c => { const s = c.section && c.section !== lastSec ? `<div class="sec">${esc(c.section)}</div>` : ""; lastSec = c.section || lastSec; const body = c.section && c.text.startsWith(c.section) ? c.text.slice(c.section.length).replace(/^\s+/, "") : c.text; return s + (body ? `<p dir="auto">${hl(body)}</p>` : ""); }).join("")}</div>`).join("")}</div></div>`;
+  $("#back").onclick = () => { history.replaceState(null, "", location.pathname); home(); };
+  const t = page && document.getElementById("pg" + page) || document.querySelector("mark"); if (t) setTimeout(() => t.scrollIntoView({ block: "start", behavior: "smooth" }), 80);
+}
+
+/* ---------- upload: read the text in the browser, then send text + file ---------- */
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Could not load the file reader — check the connection")); document.head.append(s); });
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js", PDFW = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const MAMMOTH = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+/* a heading: "7.2 Deliveries", "SECTION 4 — GATE CONTROL", "Chapter 3: Fit-out" */
+const isHead = l => l.length >= 3 && l.length <= 90 && !/[.:;,]$/.test(l.replace(/:$/, "")) && (/^(\d+(\.\d+){0,3}\.?|[IVX]+\.|[A-Z]\.)\s+\S/.test(l) || /^(chapter|section|article|part|appendix|annex|clause)\b/i.test(l) || (/^[^a-z]*[A-Z][^a-z]*$/.test(l) && /[A-Z]{3}/.test(l)));
+function chunkLines(pagesLines){   // [{page, lines}] → [{page, section, text}] of about 900 characters, cut at line ends
+  const out = []; let sec = "", cur = null;
+  const flush = () => { if (cur && cur.text.trim()) out.push(cur); cur = null; };
+  for (const { page, lines } of pagesLines) {
+    for (let l of lines) { l = l.replace(/\s+/g, " ").trim(); if (!l) continue;
+      const head = isHead(l);
+      if (head) { if (cur && cur.body) flush(); sec = l.slice(0, 150); if (cur) cur.section = sec; }   // headings in a row stay with the text that follows them
+      if (!cur || cur.body && (cur.page !== page && cur.text.length > 300 || cur.text.length > 900)) { flush(); cur = { page, section: sec, text: "", body: false }; }
+      cur.text += (cur.text ? (/[-–]$/.test(cur.text) ? "" : "\n") : "") + l; if (!head) cur.body = true; }
+  }
+  flush(); return out.map(({ body, ...c }) => c);
+}
+async function readPdf(file, prog){
+  if (!window.pdfjsLib) { await loadScript(PDFJS); pdfjsLib.GlobalWorkerOptions.workerSrc = PDFW; }
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, pagesLines = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const tc = await (await pdf.getPage(i)).getTextContent(), lines = []; let line = "", lastY = null, endX = null;
+    for (const it of tc.items) {
+      const y = Math.round(it.transform[5]), x = it.transform[4];
+      if (lastY !== null && Math.abs(y - lastY) > 3) { lines.push(line); line = ""; endX = null; }
+      /* a space between two pieces of text that have a gap between them on the page */
+      if (line && it.str && !/\s$/.test(line) && !/^\s/.test(it.str) && endX !== null && x - endX > 1) line += " ";
+      line += it.str; endX = x + (it.width || 0);
+      if (it.hasEOL) { lines.push(line); line = ""; lastY = null; endX = null; } else lastY = y; }
+    if (line) lines.push(line);
+    pagesLines.push({ page: i, lines }); prog(i / pdf.numPages);
+  }
+  return { pages: pdf.numPages, chunks: chunkLines(pagesLines) };
+}
+async function readWord(file, prog){
+  if (!window.mammoth) await loadScript(MAMMOTH);
+  const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }); prog(1);
+  return { pages: 0, chunks: chunkLines([{ page: 0, lines: r.value.split(/\n+/) }]) };
+}
+function upload(old){
+  const d = $("#up");
+  d.innerHTML = `<div class="dlg-h"><b>${old ? "New version · " + esc(old.title) : "Upload a policy"}</b><small>PDF or Word (.docx), up to 25 MB. The hub reads the text so search and ABCON can use it.</small></div>
+    <div class="dlg-b">
+      <label class="drop" id="drop"><input type="file" id="f" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden><span id="fn">Tap to choose a file, or drop it here</span></label>
+      <div style="height:10px"></div>
+      <label class="fld"><span>Collection</span><select class="sel" id="uc">${Object.entries(L.colls).map(([k, n]) => `<option value="${k}" ${(old ? old.coll : coll) === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
+      <label class="fld"><span>Title</span><input class="inp" id="ut" value="${esc(old ? old.title : "")}" placeholder="e.g. Verdun Mall Tenant Manual"></label>
+      <label class="fld"><span>Version (optional)</span><input class="inp" id="uv" value="" placeholder="${old && old.version ? "was v" + esc(old.version) : "e.g. 2026.1"}"></label>
+      <div class="prog" id="pr" hidden><i></i></div><div class="muted" id="um" style="font-size:.8rem;margin-top:6px"></div>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" id="ux">Cancel</button><button class="btn" id="ugo" disabled>Upload</button></div>`;
+  let file = null;
+  const pick = f => { if (!f) return; if (!/\.(pdf|docx)$/i.test(f.name)) return toast("Choose a PDF or a Word (.docx) file", true); if (f.size > 25 * 1048576) return toast("The file is larger than 25 MB", true);
+    file = f; $("#fn").innerHTML = `<b>${esc(f.name)}</b> · ${fmtSize(f.size)}`; if (!$("#ut").value) $("#ut").value = f.name.replace(/\.(pdf|docx)$/i, "").replace(/[_-]+/g, " ").trim(); $("#ugo").disabled = false; };
+  $("#f").onchange = e => pick(e.target.files[0]);
+  const dr = $("#drop"); dr.ondragover = e => { e.preventDefault(); dr.classList.add("on"); }; dr.ondragleave = () => dr.classList.remove("on"); dr.ondrop = e => { e.preventDefault(); dr.classList.remove("on"); pick(e.dataTransfer.files[0]); };
+  $("#ux").onclick = () => d.close();
+  $("#ugo").onclick = async () => {
+    const bar = $("#pr"), msg = $("#um"), set = (x, t) => { bar.hidden = false; bar.firstElementChild.style.width = Math.round(x * 100) + "%"; if (t) msg.textContent = t; };
+    $("#ugo").disabled = true; $("#ux").disabled = true;
+    try {
+      set(0.02, "Reading the text…");
+      const word = /\.docx$/i.test(file.name), x = word ? await readWord(file, f => set(f * 0.6, "Reading the text…")) : await readPdf(file, f => set(f * 0.6, `Reading the text… ${Math.round(f * 100)}%`));
+      set(0.65, `Saving ${x.chunks.length} passages…`);
+      const r = await api("pol/save", { coll: $("#uc").value, title: $("#ut").value, version: $("#uv").value, fileName: file.name, size: file.size, pages: x.pages,
+        mime: file.type || (word ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf"), chunks: x.chunks, replaces: old ? old.id : 0 });
+      set(0.8, "Uploading the file…");
+      const up = await fetch(`/api/pol/file?id=${r.id}`, { method: "PUT", credentials: "same-origin", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
+      const j = await up.json().catch(() => null); if (!up.ok || !j || !j.ok) throw new Error((j && j.error) || `Upload failed (${up.status})`);
+      set(1, r.notext ? "Uploaded — but this file has no readable text (a scanned PDF), so ABCON cannot read it." : `Uploaded — ${r.chunks} passages are now searchable and ABCON can use them.`);
+      toast(r.notext ? "Uploaded (no readable text)" : "Uploaded"); setTimeout(() => { d.close(); load(); }, r.notext ? 2600 : 900);
+    } catch (e){ msg.textContent = "⚠ " + e.message; $("#ugo").disabled = false; $("#ux").disabled = false; }
+  };
+  d.showModal();
+}
+
+load().catch(e => { $("#app").innerHTML = `<div class="card empty2">${esc(e.message)}</div>`; });
 </script>
 </body>
 </html>

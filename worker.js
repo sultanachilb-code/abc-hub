@@ -37,7 +37,8 @@ import { packRoute } from "./modules/pack.js";   // Monthly operations pack feat
 import { contractorsSchema, contractorsRoute, contractorsRun } from "./modules/contractors.js";
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
-import { aiRoute } from "./modules/ai.js";   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
+import { aiRoute } from "./modules/ai.js";
+import { polSchema, polRoute, polSearch } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
 import { momentFor, momentsAdmin } from "./modules/moments.js";   // Message of the moment — see docs/FEATURE-moments.md
@@ -242,7 +243,7 @@ const APP_ACCESS = {
   pack: ["MM",  "OM",  "LEAD"],
   downloads: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   footfall: [],
-  policies: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  policies: ["MM", "OM", "SMS", "MS", "MO", "WH", "SEC", "LEAD"],
   "form-am": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-dbank": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -354,6 +355,7 @@ async function ensureSchema(env) {
   await malfunctionsSchema(env);   // Malfunction Records
   await cleaningSchema(env);   // Cleaning headcount control
   await ccSchema(env);   // Cleaning Control (cleaner app)
+  await polSchema(env);   // Policies & Procedures library
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
@@ -571,11 +573,17 @@ async function route(request, env, ctx, url) {
   }
   if (path === "password" && method === "POST") return ok(await changePassword(env, me, body));
   if (path === "announcements") return ok(await activeAnnouncements(env, me));
-  if (path.startsWith("ai/")) {   // Hub Assistant (free Workers AI): chat over the hub's data, shift summary
+  if (path.startsWith("pol/")) {   // Policies & Procedures: everyone reads; Admin, Mall Manager and Operations Manager change the library
+    if (!roleAllows(me, "policies")) throw fail("Not allowed", 403);
+    const r = await polRoute(env, path, method, body, url, request, { me, now: nowIso, canEdit: me.role === "ADMIN" || me.role === "MANAGER" });
+    return r instanceof Response ? r : ok(r);
+  }
+  if (path.startsWith("ai/")) {   // ABCON, the Hub Assistant (free Workers AI): chat over the hub's data, shift summary
     const site = opsSite(me, method === "GET" ? url.searchParams.get("site") : body.site);
     const sub = (p, s2, extra = "") => opsRoute(env, me, p, "GET", {}, new URL(`${url.origin}/api/ops/${p}?site=${s2}${extra}`));
     return ok(await aiRoute(env, path, method, body, url, { me, site, can: rights(me, site), canSite, siteName, today: beirutToday, hm: beirutHM, posLabel: posLabel(me.position),
       roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
+      policies: q2 => polSearch(env, q2, { limit: 5 }),
       todayData: s2 => sub("today", s2), handoverLive: (s2, day) => sub("handover/live", s2, `&day=${day}`),
       systems: async s2 => { const ids = ["snaglist", "incidents", "restroom"].filter(id => CONNECTORS[id] && CONNECTORS[id].stats);
         const r = await Promise.all(ids.map(id => pull(env, id, CONNECTORS[id], s2))); return Object.fromEntries(ids.map((id, i) => [id, r[i]])); } }));
