@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- CRM handhelds (docs/FEATURE-crm.md) — the CRM sheet, as it is, in the hub.
+     Tenant name = the real name from the GLA (linked unit); "Name in the sheet" is kept and editable. -->
+<style>
+.pw{max-width:1700px;margin:0 auto;padding:14px 16px 60px;display:grid;gap:12px}
+.kpis{display:flex;gap:8px;flex-wrap:wrap}.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:9px 14px;min-width:96px}
+.kpi b{display:block;font-size:1.25rem}.kpi span{font-size:.72rem;color:var(--muted);font-weight:700}
+.kpi.y b{color:var(--ok)}.kpi.n b{color:var(--alert)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chips{display:flex;gap:5px;flex-wrap:wrap}.chips button{border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:.78rem;font-weight:800;color:var(--muted);background:var(--surface)}
+.chips button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.tabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:3px}.tabs button{padding:7px 14px;border-radius:9px;font-weight:800;font-size:.84rem;color:var(--muted)}.tabs button.on{background:var(--brand);color:#fff}
+.tw{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface);max-height:calc(100vh - 230px)}
+table.crm{border-collapse:separate;border-spacing:0;font-size:.8rem;min-width:1500px;width:100%}
+.crm th{position:sticky;top:0;z-index:2;background:#4A1F73;color:#fff;font-size:.7rem;text-align:left;padding:8px 6px;white-space:nowrap;font-weight:800}
+.crm td{border-bottom:1px solid var(--line);padding:3px 4px;vertical-align:middle;background:var(--surface)}
+.crm tr.cont td{background:var(--paper)}
+.crm td.n{color:var(--muted);font-size:.68rem;text-align:right;width:30px}
+.crm .st{position:sticky;left:0;z-index:1}.crm th.st{z-index:3}
+.crm input,.crm select{width:100%;border:1px solid transparent;border-radius:7px;background:transparent;padding:5px 6px;font-size:.8rem;min-width:0}
+.crm input:hover,.crm select:hover{border-color:var(--line)}.crm input:focus,.crm select:focus{border-color:var(--brand-2);background:var(--surface);outline:none}
+.crm input.saved{background:#E6F4EC}.crm input.err{background:#FDECEA}
+.tn{min-width:220px}.tn b{display:block;font-size:.84rem;padding:0 6px}.tn .old{display:flex;align-items:center;gap:4px}.tn .old input{font-size:.72rem;color:var(--muted);padding:2px 6px}
+.tn .old small{font-size:.6rem;color:var(--muted);white-space:nowrap;font-weight:700}
+.lk{font-size:.62rem;font-weight:800;border-radius:99px;padding:2px 7px;white-space:nowrap;border:1px solid var(--line);background:var(--surface)}
+.lk.ok{color:var(--ok);border-color:#BFE3CF}.lk.no{color:var(--alert);border-color:#F3C7C2;background:#FFF5F4}
+.yes{color:var(--ok);font-weight:800}.no{color:var(--alert);font-weight:800}
+.pwd{display:flex;align-items:center;gap:2px}.pwd button{font-size:.8rem;width:24px;color:var(--muted)}
+.acts{white-space:nowrap}.acts button{width:26px;height:26px;border-radius:7px;color:var(--muted);font-weight:800}.acts button:hover{background:var(--paper);color:var(--text)}
+.ro{padding:5px 6px;display:block;white-space:nowrap}
+dialog .ul{max-height:52vh;overflow:auto;display:grid;gap:4px;margin-top:8px}dialog .ul button{text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:.84rem}
+dialog .ul button:hover{border-color:var(--brand-2)}dialog .ul small{color:var(--muted);margin-left:6px}
+</style>
+</head>
+<body>
+<div class="top"><h1>CRM <small id="sub"></small></h1><span id="siteBox"></span></div>
+<div class="pw" id="app"><div class="empty">Loading…</div></div>
+<dialog id="dlg"></dialog>
+<datalist id="dlModel"><option value="A07"><option value="Zebra"></datalist>
+<datalist id="dlConn"><option value="WI-FI"><option value="3G"></datalist>
+<script src="common.js"></script>
+<script>
+let CTX = null, R = null, TAB = "hh", FL = "", Q = "", CF = "";
+const U = () => new Map(R.units.map(u => [u.id, u]));
+const fmtD = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? v.split("-").reverse().join("/") : (v || "");
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  R = await api(`ops/crm/list?site=${CTX.site}`);
+  draw();
+}
+function kpis(){
+  const rs = R.rows, c = f => rs.filter(f).length, up = v => String(v || "").toUpperCase();
+  const main = rs.filter(r => !r.cont);
+  return `<div class="kpis"><div class="kpi y"><b>${main.filter(r => up(r.crm) === "YES").length}</b><span>CRM (Yes)</span></div><div class="kpi n"><b>${main.filter(r => up(r.crm) === "NO").length}</b><span>CRM (No)</span></div>
+    <div class="kpi"><b>${c(r => up(r.model) === "ZEBRA")}</b><span>Zebra</span></div><div class="kpi"><b>${c(r => up(r.model) === "A07")}</b><span>A07</span></div>
+    <div class="kpi"><b>${c(r => up(r.connection).replace("-", "") === "WIFI")}</b><span>Wi-Fi</span></div><div class="kpi"><b>${c(r => up(r.connection) === "3G")}</b><span>3G</span></div>
+    <div class="kpi"><b>${c(r => r.serial)}</b><span>Handhelds (S/N)</span></div><div class="kpi ${main.filter(r => !r.unit_id).length ? "n" : ""}"><b>${main.filter(r => !r.unit_id).length}</b><span>Not linked to the hub</span></div></div>`;
+}
+function draw(){
+  const floors = [...new Set(R.rows.map(r => r.floor).filter(Boolean))];
+  $("#app").innerHTML = `${kpis()}
+    <div class="bar"><div class="tabs" id="tabs"><button data-t="hh" class="${TAB === "hh" ? "on" : ""}">Handhelds · ${R.rows.length}</button><button data-t="ret" class="${TAB === "ret" ? "on" : ""}">Retrieved H.H. · ${R.retrieved.length}</button></div>
+      <input class="inp" id="q" placeholder="Search tenant, SKU, S/N…" value="${esc(Q)}" style="flex:1;min-width:180px">
+      ${TAB === "hh" ? `<div class="chips" id="fl"><button data-f="" class="${FL ? "" : "on"}">All floors</button>${floors.map(f => `<button data-f="${esc(f)}" class="${FL === f ? "on" : ""}">${esc(f)}</button>`).join("")}</div>
+      <div class="chips" id="cf"><button data-c="" class="${CF ? "" : "on"}">All</button><button data-c="YES" class="${CF === "YES" ? "on" : ""}">CRM Yes</button><button data-c="NO" class="${CF === "NO" ? "on" : ""}">CRM No</button><button data-c="nolink" class="${CF === "nolink" ? "on" : ""}">Not linked</button></div>` : ""}
+      ${R.canEdit ? `<button class="btn small" id="add">+ Line</button>` : ""}</div>
+    <div class="tw"><table class="crm" id="tbl">${TAB === "hh" ? hhTable() : retTable()}</table></div>
+    <p class="muted" style="font-size:.76rem">Tenant name comes from the hub (GLA) — the name in the sheet is kept underneath and can be changed. <b>Linked</b> lines follow the GLA name; tap the badge to link a line to another tenant. ${R.canEdit ? "Every change is saved when you leave the cell." : ""}</p>`;
+  $("#tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b){ TAB = b.dataset.t; draw(); } };
+  $("#q").oninput = e => { Q = e.target.value; const s = e.target.selectionStart; draw(); const q = $("#q"); q.focus(); q.setSelectionRange(s, s); };
+  const fl = $("#fl"); if (fl) fl.onclick = e => { const b = e.target.closest("[data-f]"); if (b){ FL = b.dataset.f; draw(); } };
+  const cf = $("#cf"); if (cf) cf.onclick = e => { const b = e.target.closest("[data-c]"); if (b){ CF = b.dataset.c; draw(); } };
+  const ad = $("#add"); if (ad) ad.onclick = () => addLine(null, false);
+  wire();
+}
+const cell = (r, f, opt = {}) => !R.canEdit ? `<span class="ro ${opt.cls ? opt.cls(r[f]) : ""}">${esc(opt.show ? opt.show(r[f]) : r[f])}</span>`
+  : opt.sel ? `<select data-f="${f}">${opt.sel.map(o => `<option ${String(r[f] || "") === o ? "selected" : ""} value="${esc(o)}">${esc(o || "—")}</option>`).join("")}</select>`
+  : `<input data-f="${f}" value="${esc(r[f])}" ${opt.type ? `type="${opt.type}"` : ""} ${opt.list ? `list="${opt.list}"` : ""} ${opt.ph ? `placeholder="${opt.ph}"` : ""}>`;
+function match(r, name){ const q = Q.trim().toLowerCase(); return !q || [name, r.sheet_name, r.tenant, r.sku, r.serial, r.crm_user, r.model].some(v => String(v || "").toLowerCase().includes(q)); }
+function hhTable(){
+  const um = U(); let parent = null, n = 0;
+  const rows = R.rows.map(r => { if (!r.cont) parent = r; return { r, p: r.cont ? parent : r }; })
+    .filter(({ r, p }) => { const u = um.get(p.unit_id), name = u ? u.brand : p.sheet_name;
+      return (!FL || p.floor === FL) && (!CF || (CF === "nolink" ? !p.unit_id : String(p.crm || "").toUpperCase() === CF)) && match({ ...r, sheet_name: p.sheet_name }, name); });
+  return `<thead><tr><th class="n">#</th><th>Floor</th><th class="st">Tenant name</th><th>SKU</th><th>CRM</th><th>Status</th><th>Delivery date</th><th>Serial number (S/N)</th><th>Model</th><th>Connection</th><th>CRM app user name</th><th>CRM app password</th><th>Stamp</th>${R.canEdit ? "<th></th>" : ""}</tr></thead>
+  <tbody>${rows.map(({ r, p }) => { n++; const u = um.get(r.unit_id);
+    return `<tr data-id="${r.id}" class="${r.cont ? "cont" : ""}"><td class="n">${n}</td>
+      <td style="width:62px">${r.cont ? `<span class="ro muted">↳</span>` : cell(r, "floor")}</td>
+      <td class="st tn">${r.cont ? `<span class="ro muted">↳ 2nd device · ${esc((um.get(p.unit_id) || {}).brand || p.sheet_name)}</span>` : `<b>${esc(u ? u.brand : r.sheet_name || "—")}</b>
+        <div class="old"><small>Sheet:</small>${R.canEdit ? `<input data-f="sheet_name" value="${esc(r.sheet_name)}">` : `<span class="ro muted">${esc(r.sheet_name)}</span>`}
+        <button class="lk ${u ? "ok" : "no"}" data-link="${r.id}" title="${u ? `Linked to ${esc(u.brand)} · ${esc(u.code)} · ${esc(u.level)}${r.link === "manual" ? " (set by hand)" : ""}` : "Not linked to a hub tenant"}">${u ? `${esc(u.code)}` : "Not linked"}</button></div>`}</td>
+      <td style="width:80px">${r.cont ? "" : cell(r, "sku")}</td>
+      <td style="width:76px">${r.cont ? "" : cell(r, "crm", { sel: ["", "YES", "NO"], cls: v => String(v).toUpperCase() === "YES" ? "yes" : "no" })}</td>
+      <td style="width:88px">${cell(r, "status", { sel: ["", "Open", "Still", "Closed"] })}</td>
+      <td style="width:132px">${cell(r, "delivery_date", { type: R.canEdit ? "date" : "", show: fmtD })}</td>
+      <td style="width:150px">${cell(r, "serial")}</td>
+      <td style="width:80px">${cell(r, "model", { list: "dlModel" })}</td>
+      <td style="width:88px">${cell(r, "connection", { list: "dlConn" })}</td>
+      <td style="width:110px">${cell(r, "crm_user")}</td>
+      <td style="width:150px"><div class="pwd">${R.canEdit ? `<input data-f="crm_password" type="password" value="${esc(r.crm_password)}" autocomplete="off">` : `<input type="password" value="${esc(r.crm_password)}" readonly>`}<button data-eye title="Show / hide">👁</button></div></td>
+      <td style="width:70px">${cell(r, "stamp", { sel: ["", "Yes", "No"] })}</td>
+      ${R.canEdit ? `<td class="acts"><button data-dev="${r.id}" title="Add a 2nd device for this tenant">＋</button><button data-del="${r.id}" title="Delete this line">✕</button></td>` : ""}</tr>`; }).join("")}</tbody>`;
+}
+function retTable(){
+  const um = U(), rows = R.retrieved.filter(r => match(r, (um.get(r.unit_id) || {}).brand || r.tenant));
+  return `<thead><tr><th class="n">#</th><th class="st">Tenant name</th><th>SKU</th><th>CRM</th><th>H.H. status</th><th>Retrieved date</th><th>Serial number (S/N)</th><th>Model</th><th>Connection</th><th>Given to</th>${R.canEdit ? "<th></th>" : ""}</tr></thead>
+  <tbody>${rows.map((r, i) => { const u = um.get(r.unit_id);
+    return `<tr data-id="${r.id}"><td class="n">${i + 1}</td>
+      <td class="st tn"><b>${esc(u ? u.brand : r.tenant || "—")}</b><div class="old"><small>Sheet:</small>${R.canEdit ? `<input data-f="tenant" value="${esc(r.tenant)}">` : `<span class="ro muted">${esc(r.tenant)}</span>`}
+        <button class="lk ${u ? "ok" : "no"}" data-link="${r.id}">${u ? esc(u.code) : "Not linked"}</button></div></td>
+      <td>${cell(r, "sku")}</td><td>${cell(r, "crm", { sel: ["", "YES", "NO"] })}</td><td>${cell(r, "hh_status")}</td><td>${cell(r, "retrieved_date", { type: R.canEdit ? "date" : "", show: fmtD })}</td>
+      <td>${cell(r, "serial")}</td><td>${cell(r, "model", { list: "dlModel" })}</td><td>${cell(r, "connection", { list: "dlConn" })}</td><td>${cell(r, "given_to")}</td>
+      ${R.canEdit ? `<td class="acts"><button data-del="${r.id}" title="Delete this line">✕</button></td>` : ""}</tr>`; }).join("")}</tbody>`;
+}
+const P = () => TAB === "hh" ? "" : "r";
+function wire(){
+  const t = $("#tbl"), list = () => TAB === "hh" ? R.rows : R.retrieved;
+  t.addEventListener("change", async e => {
+    const el = e.target, f = el.dataset.f; if (!f) return;
+    const tr = el.closest("tr"), id = Number(tr.dataset.id), row = list().find(x => x.id === id);
+    try { const x = await api(`ops/crm/${P()}save`, { site: CTX.site, id, field: f, value: el.value });
+      row[f] = el.value; el.classList.add("saved"); setTimeout(() => el.classList.remove("saved"), 900);
+      if ("unit_id" in x){ row.unit_id = x.unit_id; row.link = x.link; draw(); }
+      else if (["crm", "model", "connection", "serial"].includes(f)) { const k = $(".kpis"); if (k) k.outerHTML = kpis(); }
+    } catch (er){ el.classList.add("err"); toast(er.message, true); }
+  });
+  t.addEventListener("click", async e => {
+    const eye = e.target.closest("[data-eye]"); if (eye){ const i = eye.previousElementSibling; i.type = i.type === "password" ? "text" : "password"; return; }
+    const lk = e.target.closest("[data-link]"); if (lk) return linkDialog(Number(lk.dataset.link));
+    const dv = e.target.closest("[data-dev]"); if (dv) return addLine(Number(dv.dataset.dev), true);
+    const dl = e.target.closest("[data-del]");
+    if (dl){ if (!(await confirmBox("Delete this line?", "The line is removed from the CRM sheet.", "Delete"))) return;
+      try { await api(`ops/crm/${P()}remove`, { site: CTX.site, id: Number(dl.dataset.del) }); R = await api(`ops/crm/list?site=${CTX.site}`); draw(); } catch (er){ toast(er.message, true); } }
+  });
+}
+async function addLine(after, cont){
+  try { /* a 2nd device goes under the tenant's last line */
+    let a = after; if (cont){ const i = R.rows.findIndex(r => r.id === after); let j = i; while (R.rows[j + 1] && R.rows[j + 1].cont) j++; a = R.rows[j].id; }
+    const x = await api(`ops/crm/${P()}add`, { site: CTX.site, after: a || 0, cont: !!cont });
+    R = await api(`ops/crm/list?site=${CTX.site}`); draw();
+    const tr = document.querySelector(`tr[data-id="${x.id}"]`); if (tr){ tr.scrollIntoView({ block: "center" }); const i = tr.querySelector("input"); if (i) i.focus(); }
+  } catch (er){ toast(er.message, true); }
+}
+function linkDialog(id){
+  const row = (TAB === "hh" ? R.rows : R.retrieved).find(x => x.id === id), d = $("#dlg"), cur = U().get(row.unit_id);
+  const draw2 = q => { const k = q.toLowerCase(); return R.units.filter(u => !k || `${u.brand} ${u.code} ${u.level}`.toLowerCase().includes(k)).sort((a, b) => a.brand.localeCompare(b.brand)).slice(0, 80)
+      .map(u => `<button data-u="${u.id}"><b>${esc(u.brand || "Vacant")}</b><small>${esc(u.code)} · ${esc(u.level)} · ${esc(u.status)}</small></button>`).join(""); };
+  d.innerHTML = `<div class="dlg-h"><b>Link to a hub tenant</b><small>Sheet name: ${esc(row.sheet_name || row.tenant || "—")}${cur ? ` · now: ${esc(cur.brand)} (${esc(cur.code)})` : ""}</small></div>
+    <div class="dlg-b"><input class="inp" id="lq" placeholder="Search the GLA…" style="width:100%" value="${esc(row.sheet_name || row.tenant || "")}"><div class="ul" id="lu">${draw2(row.sheet_name || row.tenant || "")}</div></div>
+    <div class="dlg-f"><button class="btn ghost" data-u="0">Not a hub tenant</button><button class="btn ghost" data-x>Cancel</button></div>`;
+  $("#lq").oninput = e => $("#lu").innerHTML = draw2(e.target.value);
+  if (!R.canEdit) d.querySelectorAll("[data-u]").forEach(b => b.disabled = true);
+  d.onclick = async e => { if (e.target === d || e.target.closest("[data-x]")) return d.close();
+    const b = e.target.closest("[data-u]"); if (!b || !R.canEdit) return;
+    try { await api(TAB === "hh" ? "ops/crm/link" : "ops/crm/relink", { site: CTX.site, id, unit_id: Number(b.dataset.u) });
+      row.unit_id = Number(b.dataset.u); row.link = "manual"; d.close(); draw(); toast("Linked"); } catch (er){ toast(er.message, true); } };
+  d.showModal(); setTimeout(() => $("#lq").select(), 40);
+}
+boot().catch(e => { $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
