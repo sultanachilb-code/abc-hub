@@ -26,6 +26,7 @@ import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs
 import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
+import { ccSchema, ccHubRoute, ccHandover } from "./modules/cleanctl.js";   // Cleaning Control: schedule, cleaner app, before/after photos — see docs/FEATURE-cleaning-app.md
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
 import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
 import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
@@ -213,6 +214,7 @@ const APP_ACCESS = {
   tenant360: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   malfunctions: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   cleaning: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  cleanctl: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Cleaning Control (Upcoming - Testing)
   sales: ["MM", "OM", "LEAD"],
   training: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -351,6 +353,7 @@ async function ensureSchema(env) {
   await portalSchema(env);   // Tenant portal follow-up
   await malfunctionsSchema(env);   // Malfunction Records
   await cleaningSchema(env);   // Cleaning headcount control
+  await ccSchema(env);   // Cleaning Control (cleaner app)
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
@@ -483,6 +486,7 @@ export default {
       await digestRun(env, DIGEST_DEPS).catch(e => console.error("digest", e && e.message));
       await snagReportRun(env, { base: CONNECTORS.snaglist.base, relay: (e, m) => relay(e, m), hubUrl: HUB_URL }).catch(e => console.error("snagreport", e && e.message));   // Snaglist weekly email   // Weekly digest per person
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
+      if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -490,6 +494,18 @@ export default {
     })());
   }
 };
+
+/* Cleaning Control: on the 1st of each month, tell each flagship that last month's cleaning pack is ready in Downloads */
+async function ccPackNotice(env) {
+  const today = beirutToday(); if (today.slice(8) !== "01") return;
+  const prev = new Date(Date.parse(today + "T12:00:00Z") - 2 * 864e5).toISOString().slice(0, 7), k = `cc:pack:${prev}`;
+  if (await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k).first()) return;
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, nowIso()).run();
+  const { results } = await env.DB.prepare("SELECT site, COUNT(*) AS n FROM cc_jobs WHERE substr(day,1,7) = ? GROUP BY site").bind(prev).all().catch(() => ({ results: [] }));
+  const mn = new Date(prev + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  for (const r of results || []) await raiseEvent(env, { site: r.site, app: "cleanctl", tone: "info", title: `Monthly cleaning pack · ${mn} is ready`,
+    body: `${siteName(r.site)} · ${r.n} cleaning jobs with before / after photos — Downloads → Monthly cleaning packs` });
+}
 
 async function route(request, env, ctx, url) {
   if (!env.DB) throw fail("The hub database is not connected (D1 binding DB is missing).", 500);
@@ -1277,7 +1293,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol" };
+  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1609,6 +1625,10 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
+  if (p.startsWith("cc/")) {   // Cleaning Control: the cleaning company's work against the schedule (modules/cleanctl.js)
+    if (!roleAllows(me, "cleanctl") || isWarehouse(me)) throw fail("Not allowed", 403);
+    return ccHubRoute(env, p, method, b, url, { site, me, can, now: nowIso, canManage: isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH") });
+  }
   if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
   if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content
   if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday });   // Tenant 360
@@ -1918,7 +1938,8 @@ async function opsRoute(env, me, p, method, b, url) {
     let gateMarks = {}; try { gateMarks = hd ? gateMarksOf(JSON.parse(hd.doc || "{}")) : {}; } catch {}   // the open page shows new gate marks without reloading
     gateMarks = { ...gateMarks, ...(await gateScanMarks(env, site, day).catch(() => ({}))) };   // and approvals scanned before their REQ was imported
     const access = await accessLog(env, site, day, hd).catch(() => []);   // every contractor access of the day, flagged when no handover line covers it
-    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks, access };
+    const cleaning = await ccHandover(env, site, day).catch(() => null);   // Cleaning Control: the cleaning schedule — done, missing, special tasks
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks, access, cleaning };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);

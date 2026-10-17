@@ -478,23 +478,23 @@ main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1e
 .d2d-leg{display:flex;gap:14px;flex-wrap:wrap;margin:10px 2px 14px;font-size:.72rem;color:var(--muted);font-weight:600}
 .d2d-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .d2d-leg i.pn{border-radius:50%;background:var(--gold)}
-.d2d-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.d2d-c{display:flex;gap:11px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:11px 12px;text-align:left;background:var(--surface);transition:border-color .15s,transform .15s,box-shadow .15s;min-width:0}
+.d2d-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.d2d-c{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:7px 9px;text-align:left;background:var(--surface);transition:border-color .15s,transform .15s,box-shadow .15s;min-width:0}
 .d2d-c:hover{border-color:var(--brand-2);transform:translateY(-1px);box-shadow:0 8px 20px rgba(42,15,69,.08)}
-.d2d-c .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none}
-.d2d-c .ico svg{width:22px;height:22px}
+.d2d-c .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none}
+.d2d-c .ico svg{width:16px;height:16px}
 .d2d-c span.tx{min-width:0;flex:1}
-.d2d-c b{display:block;font-size:.9rem;line-height:1.25}
-.d2d-c small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--muted);font-size:.75rem;line-height:1.35;overflow:hidden;margin-top:1px}
-.d2d-c em{font-style:normal;display:inline-block;white-space:nowrap;font-size:.66rem;font-weight:800;border-radius:999px;padding:2px 7px;margin-top:4px}
+.d2d-c b{display:block;font-size:.78rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d2d-c small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.66rem;line-height:1.3;margin-top:1px}
+.d2d-c em{font-style:normal;display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:.6rem;font-weight:800;border-radius:999px;padding:1px 6px;margin-top:2px}
 em.ok{background:rgba(46,139,87,.13);color:var(--ok)} em.warn{background:rgba(192,122,18,.15);color:var(--warn)} em.al{background:rgba(192,57,43,.12);color:var(--alert)} em.mu{background:var(--paper);color:var(--muted)}
 .d2d-pop{position:absolute;z-index:20;width:min(300px,calc(100% - 24px));background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 18px 40px rgba(27,10,46,.22)}
 .d2d-pop h4{font-size:.95rem;margin:0 0 2px}.d2d-pop p{font-size:.8rem;color:var(--muted);margin:2px 0;line-height:1.45}
 .d2d-pop em{font-style:normal;display:inline-block;font-size:.7rem;font-weight:800;border-radius:999px;padding:2px 8px}
 .d2d-pop .row{display:flex;gap:8px;margin-top:10px}.d2d-pop .btn{height:36px;font-size:.82rem;padding:0 14px}
 .d2d-sk{height:150px;border-radius:16px;background:linear-gradient(90deg,var(--paper),var(--line),var(--paper));background-size:200% 100%;animation:sk 1.4s infinite}
-@media (max-width:1100px){.d2d-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:600px){.d2d{padding:14px;border-radius:18px}.d2d-cards{gap:8px;grid-template-columns:1fr}.d2d-h .dt{font-size:.72rem;width:100%;order:3}.d2d-h .d2d-live{margin-left:auto}.d2d-c{padding:10px;gap:9px}.d2d-c .ico{width:36px;height:36px}.d2d-c b{font-size:.84rem}}
+@media (max-width:1100px){.d2d-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.d2d{padding:14px;border-radius:18px}.d2d-cards{gap:6px;grid-template-columns:repeat(2,minmax(0,1fr))}.d2d-c:last-child:nth-child(odd){grid-column:1/-1}.d2d-c{align-items:flex-start}.d2d-c b{white-space:normal;font-size:.74rem}.d2d-c small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:.64rem}.d2d-h .dt{font-size:.72rem;width:100%;order:3}.d2d-h .d2d-live{margin-left:auto}.d2d-c{padding:7px 8px;gap:7px}.d2d-c .ico{width:26px;height:26px;border-radius:8px}.d2d-c .ico svg{width:14px;height:14px}}
 .bcard{border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;width:100%;display:block;background:var(--paper)}
 button.bcard:hover{border-color:var(--brand-2)}
 .bcard-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -1867,8 +1867,7 @@ const AI_TOOLS = [
 ];
 function buildAiMenu(){
   const m = $("#aiMenu");
-  m.innerHTML = `<div class="who"><b>AI assistants</b><small>Hub Assistant answers from the hub's data</small></div>
-    <button data-ai="hub" class="ai-i"><span class="ai-dot" style="background:linear-gradient(135deg,#4A1F73,#B08A2E)">✦</span><span>Hub Assistant<small>Ask about today · English / عربي</small></span></button>` +
+  m.innerHTML = `<div class="who"><b>AI assistants</b><small>Sanad, the hub's own assistant, is the ✦ bubble at the bottom right of the home page</small></div>` +
     AI_TOOLS.map(t => `<button data-ai="${t.id}" class="ai-i"><span class="ai-dot" style="background:${t.bg}">${t.mark}</span><span>${esc(t.name)}<small>${esc(t.by)}</small></span></button>`).join("");
   $("#aiBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.add("hidden"); $("#npanel").classList.add("hidden"); placePops($("#aiBtn")); m.classList.toggle("hidden"); };
   m.onclick = e => {
@@ -1880,7 +1879,7 @@ function buildAiMenu(){
   };
 }
 
-/* ---------- Hub Assistant: free AI chat over the hub's data (see docs/FEATURE-ai.md) ---------- */
+/* ---------- Sanad (سند), the Hub Assistant: free AI chat over the hub's data (see docs/FEATURE-ai.md) ---------- */
 const AIC = { msgs: [], busy: false, site: "" };
 const AI_SUGGEST = ["What is still open today?", "Which contractors attended today?", "Any malfunctions still open?", "شو صار بالدورية اليوم؟"];
 function aiChat(){
@@ -1888,21 +1887,32 @@ function aiChat(){
   if (!p){ p = document.createElement("div"); p.id = "aiChat"; p.className = "aic"; document.body.append(p); }
   AIC.site = AIC.site || D2D.site || ME.user.site || Object.keys(sitesOfMe())[0] || "";
   const sites = sitesOfMe();
-  p.innerHTML = `<div class="aic-h"><span class="aic-l">✦</span><div><b>Hub Assistant</b><small>Answers from the hub · free AI</small></div>
+  p.innerHTML = `<div class="aic-h"><span class="aic-l">✦</span><div><b>Sanad · سند</b><small>Your hub assistant · answers from the hub</small></div>
       ${Object.keys(sites).length > 1 ? `<select id="aicSite">${Object.entries(sites).map(([c, n]) => `<option value="${esc(c)}" ${c === AIC.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}
       <button class="aic-x" id="aicX" aria-label="Close">✕</button></div>
     <div class="aic-b" id="aicB"></div>
     <form class="aic-f" id="aicF"><textarea id="aicQ" rows="1" dir="auto" placeholder="Ask about today… · اسأل عن اليوم"></textarea><button class="aic-s" aria-label="Send">➤</button></form>`;
-  aiDraw(); p.classList.add("on"); setTimeout(() => $("#aicQ").focus(), 60);
-  $("#aicX").onclick = () => p.classList.remove("on");
+  aiDraw(); p.classList.add("on"); window.sanadPaint && sanadPaint(); setTimeout(() => $("#aicQ").focus(), 60);
+  $("#aicX").onclick = () => { p.classList.remove("on"); window.sanadPaint && sanadPaint(); };
   const ss = $("#aicSite"); if (ss) ss.onchange = e => { AIC.site = e.target.value; AIC.msgs = []; aiDraw(); };
   $("#aicF").onsubmit = e => { e.preventDefault(); aiSend($("#aicQ").value); };
   $("#aicQ").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); aiSend($("#aicQ").value); } };
 }
+/* Sanad bubble: bottom right of the home page only (Oct 2026); the Emergency button stays where it is (above it on a phone) */
+(() => {
+  const b = document.createElement("button"); b.id = "sanadFab"; b.type = "button"; b.setAttribute("aria-label", "Ask Sanad, the hub assistant");
+  b.innerHTML = `<span class="sf-ic">✦</span><span class="sf-lb">Ask Sanad<small>سند</small></span>`;
+  b.onclick = () => aiChat();
+  const paint = () => { const home = document.getElementById("home"); b.classList.toggle("on", (typeof ME !== "undefined" && !!ME && !!ME.user) && !!home && !home.classList.contains("hidden") && !/^#\/app\//.test(location.hash) && !($("#aiChat") && $("#aiChat").classList.contains("on"))); };
+  addEventListener("DOMContentLoaded", () => { document.body.append(b); paint(); const home = document.getElementById("home"); if (home) new MutationObserver(paint).observe(home, { attributes: true, attributeFilter: ["class"] }); });
+  if (document.readyState !== "loading") { document.body.append(b); }
+  addEventListener("hashchange", paint); setInterval(paint, 1500);
+  window.sanadPaint = paint;
+})();
 function sitesOfMe(){ return (D2D.data && D2D.data.sites) || (ME.user.site ? { [ME.user.site]: ME.user.siteName } : SITES || {}); }
 function aiDraw(){
   const b = $("#aicB"); if (!b) return;
-  b.innerHTML = (AIC.msgs.length ? "" : `<div class="aic-hi"><b>Ask me about today at the flagship</b><small>Shifts, handover, contractors, malfunctions, patrol, tenant feedback, meetings and contracts — only what you can see in the hub.</small>
+  b.innerHTML = (AIC.msgs.length ? "" : `<div class="aic-hi"><b>Hi, I'm Sanad · أهلا، أنا سند</b><br>Ask me about today at the flagship.<small>Shifts, handover, contractors, malfunctions, patrol, tenant feedback, meetings and contracts — only what you can see in the hub.</small>
       <div class="aic-sg">${AI_SUGGEST.map(q => `<button data-q="${esc(q)}" dir="auto">${esc(q)}</button>`).join("")}</div></div>`)
     + AIC.msgs.map(m => `<div class="aic-m ${m.role}" dir="auto">${esc(m.content).replace(/\n/g, "<br>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>`).join("")
     + (AIC.busy ? `<div class="aic-m assistant typing"><i></i><i></i><i></i></div>` : "");
@@ -2282,7 +2292,8 @@ document.addEventListener("click", e => { if (e.target.id === "moX" && MOM.m){ s
 /* ---------- Day to Day Operations: today's live timeline above Leadership (see docs/FEATURE-day-to-day.md) ---------- */
 const DAY_GROUP = "Day to Day Operations";
 const D2D = { data: null, err: "", site: store.get("hub.d2dSite", ""), scrolled: false, t: 0 };
-const d2dApps = () => APPS.filter(a => inG(a, DAY_GROUP) && !a.hidden);
+const D2D_ORDER = ["handover", "forms", "contractor-access", "schedule-calendar", "mom"];   // the order of the Day to Day cards (Oct 2026)
+const d2dApps = () => APPS.filter(a => inG(a, DAY_GROUP) && !a.hidden).sort((a, b) => ((D2D_ORDER.indexOf(a.id) + 1) || 99) - ((D2D_ORDER.indexOf(b.id) + 1) || 99));
 const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 async function loadToday(){
@@ -2443,6 +2454,13 @@ function d2dCards(apps, D, nm){
       const last = att.slice().sort((a, b) => hmM(b.inAt) - hmM(a.inAt))[0];
       return [`${att.length} attended · ${L.length} booked today${last ? ` · last at ${last.inAt}` : ""}`, ""];
     } };
+  line.forms = () => {   // Operations Forms: today's AM / PM checklists
+    if (!D || !D.reminders) return ["…", ""];
+    const R = id => D.reminders.find(r => r.id === id) || {}, am = R("amCheck"), pm = R("pmCheck");
+    const t = x => x.done ? `✓ ${x.at}` : x.started ? "started" : `due ${x.due || ""}`;
+    const late = [am, pm].some(x => !x.done && x.due && hmM(x.due) < nm);
+    return [`AM ${t(am)} · PM ${t(pm)}`, late ? `<em class="al">Checklist overdue</em>` : am.done && pm.done ? `<em class="ok">Both submitted</em>` : `<em class="ok">On track</em>`];
+  };
   line["schedule-calendar"] = line.schedule;   // the Schedule & Calendar tile shows who is on duty
   return `<div class="d2d-cards">${apps.map(a => { const [t, p] = (a.id === "contractor-access" ? (() => { const [t0] = line.contractors(); const G = D && D.gate, Q = D && D.quickPasses || [];
       return [t0 + (Q.length ? ` · ${Q.length} Quick Pass${Q.length === 1 ? "" : "es"}` : "") + (G && G.out ? ` · ${G.out} refused at the gate` : ""), ""]; }) : line[a.id] || (() => [a.desc, ""]))(); const live = false;   // contractor access is information only (no live highlight)
@@ -3572,6 +3590,19 @@ boot();
 @media (max-width:900px){ #emgFab{top:auto;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:60px;height:60px} #emgFab svg{width:27px;height:27px} }
 @media (prefers-reduced-motion:reduce){ #emgFab::after{animation:none} }
 @media print{ #emgFab{display:none!important} }
+/* Sanad bubble (Hub Assistant) — bottom right of the home page; above the Emergency button on a phone */
+#sanadFab{position:fixed;z-index:59;right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:none;align-items:center;gap:10px;border:0;cursor:pointer;
+  padding:8px 18px 8px 8px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#4A1F73,#2A0F45);box-shadow:0 12px 28px rgba(42,15,69,.35),0 0 0 4px rgba(200,162,74,.25);animation:sfIn .45s cubic-bezier(.3,1.4,.5,1)}
+#sanadFab.on{display:flex}
+#sanadFab .sf-ic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.3rem;background:linear-gradient(135deg,#C8A24A,#8A6A12);animation:sfGlow 3s ease-in-out infinite}
+#sanadFab .sf-lb{display:flex;flex-direction:column;align-items:flex-start;font-weight:800;font-size:.92rem;line-height:1.1}
+#sanadFab .sf-lb small{font-size:.74rem;color:#E8C66A;font-weight:700}
+#sanadFab:hover{transform:translateY(-2px)}
+@keyframes sfIn{from{transform:translateY(30px);opacity:0}}
+@keyframes sfGlow{50%{box-shadow:0 0 0 6px rgba(200,162,74,.25)}}
+@media (max-width:900px){ #sanadFab{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);padding:6px} #sanadFab .sf-lb{display:none} #sanadFab .sf-ic{width:46px;height:46px} }
+@media (prefers-reduced-motion:reduce){ #sanadFab,#sanadFab .sf-ic{animation:none} }
+@media print{ #sanadFab{display:none!important} }
 </style>
 <div id="emg" role="alertdialog" aria-modal="true" aria-labelledby="emgT"></div>
 <button id="emgBar" type="button"></button>

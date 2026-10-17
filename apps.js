@@ -63,6 +63,7 @@ window.HUB = {
     "sales":           ["MM",  "OM",  "LEAD"],
     "snagreport":      ["MM",  "OM",  "SMS",  "LEAD"],
     "cleaning":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "cleanctl":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // Cleaning Control
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -150,6 +151,7 @@ window.HUB = {
       name: "Operations Forms",
       desc: "Operational checklists",
       group: "Operations Tools",
+      also: ["Day to Day Operations"],   // a card on the Day to Day timeline (Oct 2026)
       icon: "clipboard",
       color: "#8A2F6B",
       kind: "orbit",
@@ -308,6 +310,8 @@ window.HUB = {
     /* Snaglist consolidated report — all flagships, from the Snaglist Manager (see docs/FEATURE-snaglist-report.md) */
     { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Inspections", icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
     /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
+    /* Cleaning Control — the cleaner app (own link) and the cleaning company's work against the schedule — see docs/FEATURE-cleaning-app.md */
+    { id: "cleanctl", name: "Cleaning Control", desc: "Cleaning schedule, before / after photos, compliance and the cleaner app phones", group: "Upcoming - Testing", icon: "clipboard", color: "#2F6F73", url: "/tools/cleanctl" },
     { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
     {
       id: "restroom",

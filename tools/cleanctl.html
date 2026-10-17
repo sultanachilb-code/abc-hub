@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleaning Control · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Cleaning Control: the cleaning company's work against the schedule, with before / after photos — see docs/FEATURE-cleaning-app.md -->
+<style>
+.wrap{max-width:1320px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.kpi{padding:12px 14px}.kpi strong{font-size:1.55rem;font-weight:900;display:block;color:var(--ink,#2A0F45)}.kpi span{font-size:.76rem;color:var(--muted);font-weight:700}
+.floors{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.fl{padding:12px 14px}.fl h3{display:flex;align-items:center;gap:8px;font-size:.95rem;margin-bottom:6px}.fl h3 .pill{margin-left:auto}
+.row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:.82rem}
+.row b{flex:1;font-weight:700;min-width:0}.row small{color:var(--muted);white-space:nowrap}
+.cam{cursor:pointer;font-size:.95rem}
+.pill.al{background:rgba(192,57,43,.12);color:var(--alert)}.pill.wa{background:rgba(192,122,18,.14);color:var(--warn)}.pill.okk{background:rgba(46,139,87,.12);color:var(--ok)}.pill.in{background:#F1EAFA;color:#7B4BB0}
+.sec{font-size:.74rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 2px 8px}
+.wk{overflow-x:auto}
+.wk table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:900px}
+.wk th{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+.wk td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.wk td.c{cursor:pointer;min-width:80px}.wk td.c:hover{background:var(--paper)}
+.wk tr.fh td{background:var(--paper);font-weight:900;font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.wk .nm{cursor:pointer;font-weight:700}.wk .nm:hover{color:var(--brand-2,#7B4BB0)}
+.slot{display:inline-block;background:#E8F2F2;color:#2F6F73;border-radius:7px;padding:2px 6px;font-weight:800;font-size:.7rem;margin:1px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .h{font-size:.68rem;font-weight:800;color:var(--muted);text-align:center;padding:4px}
+.cal .d{min-height:96px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;font-size:.68rem;position:relative}
+.cal .d.today{border-color:#7B4BB0;box-shadow:0 0 0 2px #F1EAFA}
+.cal .d b{font-size:.74rem;color:var(--muted)}
+.cal .d .add{position:absolute;top:2px;right:4px;font-weight:900;color:#7B4BB0;opacity:.0;font-size:.9rem}.cal .d:hover .add{opacity:1}
+.cal .ev{display:block;width:100%;text-align:left;background:#F1EAFA;color:#5B2A8A;border-radius:6px;padding:1px 4px;margin-top:2px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.66rem}
+.cal .ev.cy{background:#FFF1E0;color:#9A5B0A}.cal .ev.mo{background:#E8F2F2;color:#2F6F73}
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.pair{padding:10px 12px}.pair b{font-size:.84rem}.pair small{display:block;color:var(--muted);font-size:.74rem}
+.pair .tw{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.pair .tw div{position:relative;border-radius:10px;overflow:hidden;background:var(--paper);height:130px;cursor:zoom-in}
+.pair .tw img{width:100%;height:100%;object-fit:cover;display:block}
+.pair .tw span{position:absolute;bottom:5px;left:5px;background:rgba(0,0,0,.55);color:#fff;font-size:.64rem;font-weight:800;padding:2px 6px;border-radius:6px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding:8px 0;border-bottom:1px solid var(--line)}
+.bars i{flex:1;max-width:48px;background:#2E8B57;border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.bars i.lo{background:#C07A12}.bars i.vlo{background:#C0392B}.bars i.nd{background:var(--line)}
+.dev{padding:12px 14px}.dev h3{display:flex;align-items:center;gap:8px;font-size:.95rem}.dev h3 .pill{margin-left:auto}
+.u{display:inline-flex;gap:4px;align-items:center;background:var(--paper);border-radius:999px;padding:3px 9px;font-size:.76rem;font-weight:700;margin:3px 4px 0 0}
+.urow{display:grid;grid-template-columns:1fr 90px 90px 32px;gap:6px;margin-top:6px}
+.urow input,.urow select,.fld input,.fld select,.fld textarea{font:inherit;font-size:.86rem;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);width:100%}
+.fld{display:grid;gap:4px;margin-top:10px}.fld span{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dlg-b{max-height:70vh;overflow:auto}
+.qr{display:grid;place-items:center;margin:10px 0}.qr svg{width:220px;height:220px}
+.code{font-size:2rem;font-weight:900;letter-spacing:.2em;text-align:center}
+.daysel{display:flex;gap:4px;flex-wrap:wrap}.daysel button{padding:6px 9px;border:1px solid var(--line);border-radius:9px;font-weight:700;font-size:.8rem;background:var(--surface)}.daysel button.on{background:#2F6F73;color:#fff;border-color:#2F6F73}
+.zoom{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.85);display:grid;place-items:center;cursor:zoom-out}.zoom img{max-width:94vw;max-height:90vh;border-radius:10px}
+/* monthly pack (print) */
+.pk h1{font-size:1.4rem}.pk .day{page-break-inside:avoid;margin-top:16px}.pk table{width:100%;border-collapse:collapse;font-size:.8rem}.pk td,.pk th{border:1px solid #ddd;padding:4px 6px;text-align:left}
+.pk .ph{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.pk .ph div{font-size:.66rem;page-break-inside:avoid}.pk .ph img{width:49%;height:70px;object-fit:cover;border-radius:4px}
+@media print{ .top,.noprint{display:none!important} body{background:#fff} .card{box-shadow:none;border:1px solid #ddd} .pairs{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:640px){ .g2{grid-template-columns:1fr} .urow{grid-template-columns:1fr 70px 70px 28px} }
+</style>
+</head>
+<body>
+<div class="top noprint"><h1>🧹 Cleaning Control <small id="sub"></small></h1><span id="sitePick"></span>
+  <div class="tabs" id="tabs"><button class="on" data-t="today">Today</button><button data-t="sched">Schedule</button><button data-t="photos">Photos</button><button data-t="ana">Analysis</button><button data-t="sp">Special tasks</button><button data-t="dev">Phones</button></div></div>
+<div class="wrap" id="app"><div class="empty">Loading…</div></div>
+<dialog id="dlg" class="wide"></dialog>
+<script src="common.js"></script>
+<script src="/tools/qrcode.js"></script>
+<script>
+const Q = new URLSearchParams(location.search);
+let ctx = null, site = Q.get("site") || "", tab = "today", TASKS = null, DAYX = null, CAN = { manage: false };
+const DOW = [["1", "Mon"], ["2", "Tue"], ["3", "Wed"], ["4", "Thu"], ["5", "Fri"], ["6", "Sat"], ["7", "Sun"]];
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
+const addD = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+let pday = today(), month = today().slice(0, 7), aFrom = addD(today(), -29), aTo = today();
+const ST = { done: ["Done", "okk"], progress: ["In progress", "wa"], late: ["Late", "al"], missed: ["Missed", "al"], due: ["Due now", "in"], upcoming: ["Later", ""] };
+const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+const shrinkData = (file, max, q) => new Promise((res, rej) => { const i = new Image(); i.onload = () => { const k = Math.min(1, max / Math.max(i.naturalWidth, i.naturalHeight)), c = document.createElement("canvas");
+  c.width = Math.round(i.naturalWidth * k); c.height = Math.round(i.naturalHeight * k); c.getContext("2d").drawImage(i, 0, 0, c.width, c.height); URL.revokeObjectURL(i.src); res(c.toDataURL("image/jpeg", q)); }; i.onerror = rej; i.src = URL.createObjectURL(file); });
+const zoom = src => { if (!src) return; const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img src="${esc(src)}" alt="">`; z.onclick = () => z.remove(); document.body.append(z); };
+
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site ? `?site=${site}` : "")); site = ctx.site;
+    $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; TASKS = null; history.replaceState(null, "", `?site=${v}`); show(); });
+    if (Q.get("pack")) return packView(Q.get("pack"));
+    show();
+  } catch (e){ $("#app").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+}
+$("#tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.t; $("#tabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); show(); };
+function show(){ $("#sub").textContent = ctx.siteName; ({ today: todayView, sched: schedView, photos: photosView, ana: anaView, sp: spView, dev: devView })[tab](); }
+
+/* ---------- TODAY ---------- */
+async function todayView(){
+  const D = await api(`ops/cc/day?site=${site}`).catch(e => ({ err: e.message })); if (D.err) return $("#app").innerHTML = `<div class="card empty">${esc(D.err)}</div>`;
+  DAYX = D; CAN = D.can; if (tab !== "today") return;
+  const s = D.summary, hc = D.headcount || {}, perCl = hc.onNow || hc.present ? (s.done / (hc.present || hc.onNow)).toFixed(1) : "—";
+  const fl = {}; for (const it of D.items) (fl[it.floor] = fl[it.floor] || []).push(it);
+  $("#app").innerHTML = `<div class="kpis">
+    <div class="card kpi"><strong>${s.compliance == null ? "—" : s.compliance + "%"}</strong><span>Compliance so far today · ${s.done} of ${s.dueSoFar} due</span></div>
+    <div class="card kpi"><strong>${s.done} / ${s.total}</strong><span>Areas done today · ${s.total - s.done} still to do</span></div>
+    <div class="card kpi"><strong style="color:var(--alert)">${s.late}</strong><span>Late (1 hour past their time)</span></div>
+    <div class="card kpi"><strong>${s.progress}</strong><span>Being cleaned now</span></div>
+    <div class="card kpi"><strong>${hc.onNow ?? hc.present ?? "—"}${hc.contract ? " / " + hc.contract : ""}</strong><span>Cleaners ${hc.onNow != null ? "on duty now" : "punched today"} vs contract${hc.present == null ? " (no punching record for today — Cleaning Headcount)" : ""}</span></div>
+    <div class="card kpi"><strong>${perCl}</strong><span>Areas per cleaner today</span></div></div>
+    ${D.specials.filter(x => x.status === "open").length ? `<div class="card fl" style="margin-bottom:12px"><h3>⭐ Special tasks open</h3>${D.specials.filter(x => x.status === "open").map(x => `<div class="row"><b>${esc(x.title)}</b><small>${esc(x.area)} · due ${esc(x.due === today() ? (x.dueTime || "today") : x.due)}</small><span class="pill ${x.overdue ? "al" : "wa"}">${x.overdue ? "Overdue" : "Open"}</span></div>`).join("")}</div>` : ""}
+    ${D.items.length ? `<div class="floors">${Object.entries(fl).map(([f, L]) => { const d = L.filter(x => x.status === "done").length;
+      return `<div class="card fl"><h3>${esc(f)}<span class="pill ${d === L.length ? "okk" : L.some(x => x.status === "late") ? "al" : "wa"}">${d}/${L.length}</span></h3>
+        ${L.map(x => `<div class="row"><b>${esc(x.icon || "")} ${esc(x.name)}</b><small>${esc(x.time || "any time")}${x.job ? " · " + esc(x.job.user) + " " + esc(x.job.after || x.job.before) : ""}</small>
+          ${x.job && (x.job.bt || x.job.at) ? `<span class="cam" data-b="${esc(x.job.b || "")}" data-a="${esc(x.job.a || "")}" title="Before / after photos">📷</span>` : ""}<span class="pill ${ST[x.status][1]}">${ST[x.status][0]}</span></div>`).join("")}</div>`; }).join("")}</div>`
+      : `<div class="card empty">No cleaning schedule yet for ${esc(ctx.siteName)}. Build it in <b>Schedule</b>.</div>`}
+    <p class="hint" style="margin-top:10px">Updated ${esc(D.now)} · refreshes every minute · the cleaner app: <a href="${esc(D.cleanUrl)}" target="_blank" rel="noopener">${esc(D.cleanUrl.replace("https://", ""))}</a></p>`;
+}
+document.addEventListener("click", e => { const c = e.target.closest(".cam"); if (!c) return; const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>Before / after</b></div><div class="dlg-b"><div class="g2"><div><b>Before</b><img src="${esc(c.dataset.b)}" style="width:100%;border-radius:10px;margin-top:6px" alt=""></div><div><b>After</b><img src="${esc(c.dataset.a)}" style="width:100%;border-radius:10px;margin-top:6px" alt=""></div></div></div><div class="dlg-f"><button class="btn ghost" data-x>Close</button></div>`;
+  d.onclick = ev => { if (ev.target === d || ev.target.closest("[data-x]")) d.close(); }; d.showModal(); });
+setInterval(() => { if (tab === "today" && document.visibilityState === "visible" && !$("#dlg").open) todayView(); }, 60000);
+
+/* ---------- SCHEDULE: week table (daily) + month calendar (deep cleaning) ---------- */
+function occurs(t, day){   // same rule as the hub (modules/cleanctl.js slotsOf)
+  const dow = ((new Date(day + "T12:00:00Z").getUTCDay() + 6) % 7) + 1, r = t.rule || {};
+  if (t.kind === "daily") return (t.times[dow] || []);
+  let on = false;
+  if (t.freq === "weekly") on = (r.dow || []).includes(dow);
+  else if (t.freq === "monthly") { const dm = +day.slice(8), last = new Date(Date.UTC(+day.slice(0, 4), +day.slice(5, 7), 0)).getUTCDate(); on = (r.dom || []).some(x => Math.min(+x, last) === dm); }
+  else if (t.freq === "cycle" && r.start && r.every) { const k = Math.round((Date.parse(day + "T12:00:00Z") - Date.parse(r.start + "T12:00:00Z")) / 864e5); if (k >= 0){ const p = (k % r.every) + 1; on = p >= (r.from || 1) && p < (r.from || 1) + (r.len || 1); } }
+  else if (t.freq === "dates") on = (r.dates || []).includes(day);
+  return on ? [t.time || ""] : [];
+}
+async function schedView(){
+  if (!TASKS){ const r = await api(`ops/cc/tasks?site=${site}`).catch(e => ({ err: e.message })); if (r.err) return $("#app").innerHTML = `<div class="card empty">${esc(r.err)}</div>`; TASKS = r.tasks; CAN = r.can; }
+  const daily = TASKS.filter(t => t.kind === "daily"), deep = TASKS.filter(t => t.kind === "deep"), fl = {};
+  for (const t of daily) (fl[t.floor || "—"] = fl[t.floor || "—"] || []).push(t);
+  const [y, m] = month.split("-").map(Number), first = new Date(Date.UTC(y, m - 1, 1)), lead = (first.getUTCDay() + 6) % 7, last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const cells = []; for (let i = 0; i < lead; i++) cells.push(`<div></div>`);
+  for (let i = 1; i <= last; i++){ const d = `${month}-${String(i).padStart(2, "0")}`;
+    const ev = deep.filter(t => occurs(t, d).length);
+    cells.push(`<div class="d ${d === today() ? "today" : ""}" data-day="${d}"><b>${i}</b>${CAN.manage ? `<button class="add" data-newdeep="${d}" title="Add deep cleaning on this day">+</button>` : ""}${ev.map(t => `<button class="ev ${t.freq === "cycle" ? "cy" : t.freq === "monthly" ? "mo" : ""}" data-edit="${t.id}" title="${esc(t.floor)} · ${esc(t.name)}${t.time ? " · " + t.time : ""}">${esc(t.icon || "")} ${esc(t.name)}</button>`).join("")}</div>`); }
+  const mn = new Date(month + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  $("#app").innerHTML = `<div class="card" style="padding:14px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Week plan · daily tasks</h3><span class="pill in">${daily.length} tasks</span><span style="flex:1"></span>
+        ${CAN.manage ? `<button class="btn small" data-new="daily">+ Add daily task</button>` : ""}</div>
+      <p class="hint" style="margin:6px 0 8px">Click a day to add, change or remove its times · click a task's name to edit or remove it. The same plan repeats every week.</p>
+      <div class="wk"><table><thead><tr><th style="width:24%">Area / task</th>${DOW.map(d => `<th>${d[1]}</th>`).join("")}</tr></thead><tbody>
+      ${Object.entries(fl).map(([f, L]) => `<tr class="fh"><td colspan="8">${esc(f)} · ${L.length}</td></tr>` + L.map(t => `<tr><td><span class="nm" data-edit="${t.id}">${esc(t.icon || "")} ${esc(t.name)}</span>${t.tool ? `<br><small class="muted">${esc(t.tool)}</small>` : ""}</td>
+        ${DOW.map(([k]) => `<td class="c" data-cell="${t.id}|${k}">${(t.times[k] || []).map(x => `<span class="slot">${x || "any"}</span>`).join("") || `<span class="muted">—</span>`}</td>`).join("")}</tr>`).join("")).join("") || `<tr><td colspan="8" class="muted">No daily tasks yet.</td></tr>`}
+      </tbody></table></div></div>
+    <div class="card" style="padding:14px;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Month · deep cleaning</h3><span class="pill in">${deep.length} tasks</span><span style="flex:1"></span>
+        <button class="btn ghost small" data-mon="-1">‹</button><b>${esc(mn)}</b><button class="btn ghost small" data-mon="1">›</button>${CAN.manage ? `<button class="btn small" data-new="deep">+ Add deep cleaning</button>` : ""}</div>
+      <p class="hint" style="margin:6px 0 8px"><span class="pill in">Weekly</span> <span class="pill" style="background:#E8F2F2;color:#2F6F73">Monthly</span> <span class="pill" style="background:#FFF1E0;color:#9A5B0A">Every N days (e.g. Canopy 26-day cycle)</span> · click a task to edit it, or + on a day to add one</p>
+      <div class="cal">${DOW.map(d => `<div class="h">${d[1]}</div>`).join("")}${cells.join("")}</div></div>`;
+}
+document.getElementById("app").addEventListener("click", e => {
+  if (tab !== "sched") return;
+  const mo = e.target.closest("[data-mon]"); if (mo){ const [y, m] = month.split("-").map(Number), d = new Date(Date.UTC(y, m - 1 + Number(mo.dataset.mon), 1)); month = d.toISOString().slice(0, 7); return schedView(); }
+  if (!CAN.manage) return;
+  const nw = e.target.closest("[data-new]"); if (nw) return taskDlg({ kind: nw.dataset.new, times: {}, rule: {}, freq: nw.dataset.new === "deep" ? "weekly" : "daily" });
+  const nd = e.target.closest("[data-newdeep]"); if (nd){ e.stopPropagation(); return taskDlg({ kind: "deep", freq: "dates", rule: { dates: [nd.dataset.newdeep] }, times: {} }); }
+  const ed = e.target.closest("[data-edit]"); if (ed) return taskDlg(TASKS.find(t => t.id === Number(ed.dataset.edit)));
+  const c = e.target.closest("[data-cell]"); if (c){ const [id, k] = c.dataset.cell.split("|"); return cellDlg(TASKS.find(t => t.id === Number(id)), k); }
+});
+function floorsList(){ return [...new Set((TASKS || []).map(t => t.floor).filter(Boolean))]; }
+async function saveTask(t){ try { await api("ops/cc/task/save", { site, ...t }); TASKS = null; toast("Saved"); $("#dlg").close(); schedView(); } catch (e){ toast(e.message, true); } }
+function cellDlg(t, k){
+  const d = $("#dlg"), dn = DOW.find(x => x[0] === k)[1];
+  d.innerHTML = `<div class="dlg-h"><b>${esc(t.name)} · ${dn}</b><small>Times this task is cleaned on ${dn} (24-hour, e.g. 07:00, 14:30). Leave empty for none, or write “any” for any time of the day.</small></div>
+    <div class="dlg-b"><div class="fld"><span>Times</span><input id="cT" value="${esc((t.times[k] || []).map(x => x || "any").join(", "))}" placeholder="e.g. 07:00, 14:00, 19:00"></div>
+      <label class="chk" style="margin-top:10px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="cAll"> Use the same times every day of the week</label></div>
+    <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok>Save</button></div>`;
+  d.onclick = ev => { if (ev.target === d || ev.target.closest("[data-x]")) return d.close();
+    if (!ev.target.closest("[data-ok]")) return;
+    const L = $("#cT").value.split(/[,\s]+/).map(x => x.trim()).filter(Boolean).map(x => /^any/i.test(x) ? "" : x.length === 4 && x.includes(":") ? "0" + x : x);
+    if (L.some(x => x && !/^([01]\d|2[0-3]):[0-5]\d$/.test(x))) return toast("Write times like 07:00, 14:30", true);
+    const times = { ...t.times }; if ($("#cAll").checked) DOW.forEach(([kk]) => times[kk] = L); else times[k] = L;
+    saveTask({ ...t, times }); };
+  d.showModal(); setTimeout(() => $("#cT").focus(), 50);
+}
+function taskDlg(t){
+  const d = $("#dlg"), deep = t.kind === "deep", r = t.rule || {};
+  let freq = t.freq || (deep ? "weekly" : "daily");
+  const draw = () => {
+    d.innerHTML = `<div class="dlg-h"><b>${t.id ? "Edit" : "Add"} ${deep ? "deep cleaning" : "daily"} task</b></div>
+      <div class="dlg-b">
+        <div class="g2"><div class="fld"><span>Area / task</span><input id="tN" value="${esc(t.name || "")}" placeholder="e.g. L2 Restrooms (M/F)"></div>
+          <div class="fld"><span>Floor / zone</span><input id="tF" list="fls" value="${esc(t.floor || "")}" placeholder="e.g. Level 2"><datalist id="fls">${floorsList().map(f => `<option>${esc(f)}</option>`).join("")}</datalist></div></div>
+        <div class="g2"><div class="fld"><span>Icon (emoji, optional)</span><input id="tI" value="${esc(t.icon || "")}" maxlength="4"></div><div class="fld"><span>Tool / method (optional)</span><input id="tT" value="${esc(t.tool || "")}"></div></div>
+        ${deep ? `<div class="fld"><span>Repeats</span><select id="tQ">${[["weekly", "Every week on…"], ["monthly", "Every month on day…"], ["cycle", "Every N days (cycle, e.g. Canopy 26 days)"], ["dates", "On these dates"]].map(([k, n]) => `<option value="${k}" ${k === freq ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+          <div id="tR"></div><div class="fld"><span>Time (optional)</span><input id="tTm" type="time" value="${esc(t.time || "")}"></div>`
+          : `<div class="fld"><span>Times per day (Mon–Sun) — edit each day in the week table after saving</span><input id="tD" value="${esc(((t.times || {})[1] || []).map(x => x || "any").join(", "))}" placeholder="e.g. 07:00, 14:00 — same every day"></div>`}
+      </div>
+      <div class="dlg-f">${t.id ? `<button class="btn ghost danger" data-del>Remove task</button>` : ""}<span style="flex:1"></span><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok>Save</button></div>`;
+    if (deep) drawRule();
+  };
+  const drawRule = () => {
+    const box = $("#tR");
+    if (freq === "weekly") box.innerHTML = `<div class="fld"><span>Days</span><div class="daysel">${DOW.map(([k, n]) => `<button type="button" data-dw="${k}" class="${(r.dow || []).includes(+k) ? "on" : ""}">${n}</button>`).join("")}</div></div>`;
+    if (freq === "monthly") box.innerHTML = `<div class="fld"><span>Day(s) of the month (e.g. 1, 15)</span><input id="rDom" value="${esc((r.dom || []).join(", "))}"></div>`;
+    if (freq === "cycle") box.innerHTML = `<div class="g2"><div class="fld"><span>Cycle length (days)</span><input id="rEv" type="number" min="2" value="${esc(r.every || 26)}"></div><div class="fld"><span>Cycle starts on</span><input id="rSt" type="date" value="${esc(r.start || today())}"></div></div>
+      <div class="g2"><div class="fld"><span>This task: from day of the cycle</span><input id="rFr" type="number" min="1" value="${esc(r.from || 1)}"></div><div class="fld"><span>For how many days</span><input id="rLn" type="number" min="1" value="${esc(r.len || 1)}"></div></div>`;
+    if (freq === "dates") box.innerHTML = `<div class="fld"><span>Dates (YYYY-MM-DD, comma separated)</span><input id="rDt" value="${esc((r.dates || []).join(", "))}"></div>`;
+  };
+  draw();
+  d.onclick = async ev => {
+    if (ev.target === d || ev.target.closest("[data-x]")) return d.close();
+    const dw = ev.target.closest("[data-dw]"); if (dw){ dw.classList.toggle("on"); return; }
+    if (ev.target.closest("[data-del]")){ if (!(await confirmBox("Remove this task?", "It no longer appears in the schedule. Past cleaning records stay.", "Remove"))) return;
+      try { await api("ops/cc/task/remove", { site, id: t.id }); TASKS = null; d.close(); toast("Removed"); schedView(); } catch (e){ toast(e.message, true); } return; }
+    if (!ev.target.closest("[data-ok]")) return;
+    const o = { id: t.id, kind: t.kind, name: $("#tN").value, floor: $("#tF").value, icon: $("#tI").value, tool: $("#tT").value };
+    if (deep){
+      o.freq = freq; o.time = $("#tTm").value; o.rule = {};
+      if (freq === "weekly") o.rule.dow = [...d.querySelectorAll("[data-dw].on")].map(x => +x.dataset.dw);
+      if (freq === "monthly") o.rule.dom = $("#rDom").value.split(/[,\s]+/).map(Number).filter(Boolean);
+      if (freq === "cycle") o.rule = { every: +$("#rEv").value, start: $("#rSt").value, from: +$("#rFr").value, len: +$("#rLn").value };
+      if (freq === "dates") o.rule.dates = $("#rDt").value.split(/[,\s]+/).filter(Boolean);
+    } else {
+      const L = $("#tD").value.split(/[,\s]+/).map(x => x.trim()).filter(Boolean).map(x => /^any/i.test(x) ? "" : x);
+      if (L.some(x => x && !/^([01]\d|2[0-3]):[0-5]\d$/.test(x))) return toast("Write times like 07:00, 14:30", true);
+      o.times = t.id && !$("#tD").value.trim() ? t.times : Object.fromEntries(DOW.map(([k]) => [k, t.id && JSON.stringify((t.times || {})[1] || []) !== JSON.stringify(L) ? L : (t.times || {})[k] || L]));
+    }
+    saveTask(o);
+  };
+  d.onchange = ev => { if (ev.target.id === "tQ"){ freq = ev.target.value; drawRule(); } };
+  d.showModal(); setTimeout(() => $("#tN").focus(), 50);
+}
+
+/* ---------- PHOTOS of a day (daily PDF = print) ---------- */
+async function photosView(){
+  const D = await api(`ops/cc/day?site=${site}&day=${pday}`).catch(e => ({ err: e.message })); if (D.err) return $("#app").innerHTML = `<div class="card empty">${esc(D.err)}</div>`;
+  const L = D.items.filter(x => x.job), sp = D.specials.filter(x => x.job);
+  const card = (t, sub, j) => `<div class="card pair"><b>${esc(t)}</b><small>${esc(sub)}</small>${j.purged ? `<p class="hint">Photos deleted after 90 days</p>` : `<div class="tw"><div data-z="${esc(j.b)}"><img src="${esc(j.bt)}" alt="" loading="lazy"><span>Before ${esc(j.before)}</span></div><div data-z="${esc(j.a)}">${j.at ? `<img src="${esc(j.at)}" alt="" loading="lazy">` : ""}<span>${j.after ? "After " + esc(j.after) : "Not finished"}</span></div></div>`}</div>`;
+  $("#app").innerHTML = `<div class="card noprint" style="padding:12px 14px;margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn ghost small" data-pd="-1">‹</button><input type="date" id="pdI" value="${esc(pday)}" max="${today()}" class="inp" style="width:auto"><button class="btn ghost small" data-pd="1">›</button>
+      <span class="pill okk">${L.filter(x => x.job.after).length} areas · ${L.length * 2} photos</span><span style="flex:1"></span>
+      <button class="btn ghost small" id="prt">⤓ Daily report (PDF)</button><button class="btn ghost small" id="pk">⤓ Monthly cleaning pack</button></div>
+    <h2 style="margin:4px 2px 10px">Cleaning report · ${esc(ctx.siteName)} · ${esc(D.day)} <small class="muted">· ${D.summary.done} of ${D.summary.total} scheduled areas done${D.summary.dayCompliance != null ? ` (${D.isToday ? D.summary.compliance : D.summary.dayCompliance}%)` : ""}</small></h2>
+    ${L.length || sp.length ? `<div class="pairs">${L.map(x => card(`${x.icon || ""} ${x.name}`, `${x.floor} · ${x.time || "any time"} · ${x.job.user}`, x.job)).join("")}${sp.map(x => card("⭐ " + x.title, `${x.area} · special task · ${x.job.user}`, x.job)).join("")}</div>`
+      : `<div class="card empty">No cleaning photos for this day.</div>`}
+    ${D.items.filter(x => x.status === "missed" || x.status === "late").length ? `<div class="sec">Not done</div><div class="card" style="padding:10px 14px">${D.items.filter(x => x.status === "missed" || x.status === "late").map(x => `<div class="row"><b>${esc(x.name)}</b><small>${esc(x.floor)} · ${esc(x.time || "any time")}</small></div>`).join("")}</div>` : ""}`;
+  $("#pdI").onchange = e => { pday = e.target.value; photosView(); };
+  $("#prt").onclick = () => print();
+  $("#pk").onclick = () => window.open(`/tools/cleanctl?site=${site}&pack=${pday.slice(0, 7)}`, "_blank");
+}
+document.getElementById("app").addEventListener("click", e => {
+  const z = e.target.closest("[data-z]"); if (z) return zoom(z.dataset.z);
+  const pd = e.target.closest("[data-pd]"); if (pd && tab === "photos"){ const d = addD(pday, +pd.dataset.pd); if (d <= today()){ pday = d; photosView(); } }
+});
+
+/* ---------- ANALYSIS ---------- */
+async function anaView(){
+  $("#app").innerHTML = `<div class="empty">Working out the period… (a few seconds for long periods)</div>`;
+  const A = await api(`ops/cc/analysis?site=${site}&from=${aFrom}&to=${aTo}`).catch(e => ({ err: e.message })); if (A.err) return $("#app").innerHTML = `<div class="card empty">${esc(A.err)}</div>`;
+  const withHc = A.days.filter(d => d.present), hcAvg = withHc.length ? (withHc.reduce((a, d) => a + d.present, 0) / withHc.length).toFixed(1) : null, contract = (A.days.find(d => d.contract) || {}).contract;
+  const perCl = withHc.length ? (withHc.reduce((a, d) => a + d.done, 0) / withHc.reduce((a, d) => a + d.present, 0)).toFixed(1) : null;
+  $("#app").innerHTML = `<div class="card noprint" style="padding:12px 14px;margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      From <input type="date" id="aF" class="inp" style="width:auto" value="${esc(A.from)}"> to <input type="date" id="aT" class="inp" style="width:auto" value="${esc(A.to)}" max="${today()}"><button class="btn small" id="aGo">Show</button><span style="flex:1"></span><button class="btn ghost small" onclick="print()">⤓ PDF</button></div>
+    ${!A.liveSince ? `<div class="card empty" style="margin-bottom:12px">No cleaner phone is paired at this flagship yet — the analysis starts counting from the day the first phone is paired (Phones tab).</div>` : A.liveSince >= A.from ? `<div class="muted" style="margin:0 2px 10px;font-size:12.5px">Counting from ${esc(A.liveSince)} — the day the cleaner app went live here. Earlier days are not counted as missed.</div>` : ""}
+    <div class="kpis"><div class="card kpi"><strong>${A.compliance == null ? "—" : A.compliance + "%"}</strong><span>Compliance with the schedule</span></div>
+      <div class="card kpi"><strong>${A.done} / ${A.scheduled}</strong><span>Areas done / scheduled (due)</span></div>
+      <div class="card kpi"><strong>${hcAvg ?? "—"}${contract ? " / " + contract : ""}</strong><span>Cleaners per day (punching) vs contract</span></div>
+      <div class="card kpi"><strong>${perCl ?? "—"}</strong><span>Areas done per cleaner per day</span></div></div>
+    <div class="card" style="padding:14px"><h3>Compliance by day</h3><div class="bars">${A.days.map(d => `<i class="${d.pct == null ? "nd" : d.pct < 60 ? "vlo" : d.pct < 85 ? "lo" : ""}" style="height:${Math.max(2, d.pct || 0)}%" title="${esc(d.day)} · ${d.pct == null ? "no schedule" : d.pct + "%"} · ${d.done}/${d.due}${d.present ? " · " + d.present + " cleaners" : ""}"></i>`).join("")}</div>
+      <p class="hint">Green 85%+ · amber 60–84% · red under 60% · hover a bar for the day</p></div>
+    <div class="g2" style="margin-top:12px"><div class="card fl"><h3>By floor / zone</h3>${A.floors.map(f => `<div class="row"><b>${esc(f.floor)}</b><small>${f.done}/${f.total}</small><span class="pill ${f.pct >= 85 ? "okk" : f.pct >= 60 ? "wa" : "al"}">${f.pct ?? "—"}%</span></div>`).join("")}</div>
+      <div class="card fl"><h3>Most missed areas</h3>${A.worst.map(t => `<div class="row"><b>${esc(t.name)}</b><small>${esc(t.floor)} · ${t.done}/${t.total}</small><span class="pill ${t.pct >= 85 ? "okk" : t.pct >= 60 ? "wa" : "al"}">${t.pct}%</span></div>`).join("")}</div></div>
+    <div class="card fl" style="margin-top:12px"><h3>By cleaning supervisor</h3>${A.users.map(u => `<div class="row"><b>${esc(u.user)}</b><small>${u.days} days</small><span class="pill okk">${u.done} areas</span></div>`).join("") || `<p class="hint">No cleaning recorded in this period.</p>`}</div>`;
+  $("#aGo").onclick = () => { aFrom = $("#aF").value; aTo = $("#aT").value; anaView(); };
+}
+
+/* ---------- SPECIAL TASKS ---------- */
+async function spView(){
+  const [r, t] = await Promise.all([api(`ops/cc/specials?site=${site}`), TASKS ? { tasks: TASKS, can: CAN } : api(`ops/cc/tasks?site=${site}`)]).catch(e => [{ err: e.message }]);
+  if (r.err) return $("#app").innerHTML = `<div class="card empty">${esc(r.err)}</div>`;
+  TASKS = t.tasks; CAN = t.can;
+  const areas = [...new Set([...floorsList(), ...TASKS.map(x => x.name)])];
+  $("#app").innerHTML = `${CAN.manage ? `<div class="card" style="padding:14px;margin-bottom:12px"><h3>➕ Assign a special task to the cleaning team</h3>
+      <div class="g2"><div class="fld"><span>Title</span><input id="sT" placeholder="e.g. Coffee spill near Zara"></div><div class="fld"><span>Area</span><input id="sA" list="sAl" placeholder="Floor or area"><datalist id="sAl">${areas.map(a => `<option>${esc(a)}</option>`).join("")}</datalist></div></div>
+      <div class="fld"><span>Details</span><textarea id="sD" rows="2" placeholder="What exactly needs to be done"></textarea></div>
+      <div class="g2"><div class="g2"><div class="fld"><span>Due date</span><input id="sDue" type="date" value="${today()}"></div><div class="fld"><span>By (time)</span><input id="sTm" type="time"></div></div>
+        <div class="g2"><div class="fld"><span>Priority</span><select id="sP"><option value="high">🔴 High</option><option value="medium" selected>🟡 Medium</option><option value="low">🟢 Low</option></select></div>
+          <div class="fld"><span>Photo (optional)</span><input id="sPh" type="file" accept="image/*"></div></div></div>
+      <button class="btn" id="sGo" style="margin-top:12px">Send to the cleaning team</button></div>` : ""}
+    <div class="sec">Special tasks · ${r.specials.length}</div>
+    ${r.specials.map(x => `<div class="card fl" style="margin-bottom:8px"><h3>${x.priority === "high" ? "🔴" : x.priority === "low" ? "🟢" : "🟡"} ${esc(x.title)}<span class="pill ${x.status === "done" ? "okk" : "wa"}">${x.status === "done" ? "Done · " + esc(x.doneBy) : "Open"}</span></h3>
+      <div class="row" style="border:0"><b style="font-weight:600">${esc(x.area)} · due ${esc(x.due)}${x.dueTime ? " " + esc(x.dueTime) : ""}${x.details ? " · " + esc(x.details) : ""}</b><small>by ${esc(x.by)}</small>
+      ${x.photo ? `<span class="cam" data-zz="${esc(x.photo)}">🖼</span>` : ""}
+      ${CAN.manage ? `<button class="btn ghost small" data-sc="${x.id}" data-re="${x.status === "done" ? 1 : ""}">${x.status === "done" ? "Reopen" : "Mark done"}</button><button class="btn ghost small danger" data-sd="${x.id}">✕</button>` : ""}</div></div>`).join("") || `<div class="card empty">No special tasks yet.</div>`}`;
+  const go = $("#sGo"); if (go) go.onclick = async () => {
+    const f = $("#sPh").files[0]; let photo = ""; if (f) photo = await shrinkData(f, 900, .6);
+    try { await api("ops/cc/special/save", { site, title: $("#sT").value, area: $("#sA").value, details: $("#sD").value, due: $("#sDue").value, dueTime: $("#sTm").value, priority: $("#sP").value, photo }); toast("Sent to the cleaning team"); spView(); }
+    catch (e){ toast(e.message, true); } };
+}
+document.getElementById("app").addEventListener("click", async e => {
+  if (tab !== "sp") return;
+  const zz = e.target.closest("[data-zz]"); if (zz){ e.stopPropagation(); return zoom(zz.dataset.zz); }
+  const sc = e.target.closest("[data-sc]"); if (sc){ try { await api("ops/cc/special/close", { site, id: +sc.dataset.sc, reopen: !!sc.dataset.re }); spView(); } catch (er){ toast(er.message, true); } }
+  const sd = e.target.closest("[data-sd]"); if (sd && await confirmBox("Delete this special task?", "", "Delete")){ try { await api("ops/cc/special/remove", { site, id: +sd.dataset.sd }); spView(); } catch (er){ toast(er.message, true); } }
+}, true);
+
+/* ---------- PHONES (cleaner supervisors and the company manager) ---------- */
+async function devView(){
+  const r = await api(`ops/cc/devices?site=${site}`).catch(e => ({ err: e.message })); if (r.err) return $("#app").innerHTML = `<div class="card empty">${esc(r.err)}</div>`;
+  if (!TASKS){ const t = await api(`ops/cc/tasks?site=${site}`).catch(() => null); if (t){ TASKS = t.tasks; CAN = t.can; } }
+  $("#app").innerHTML = `<div class="card" style="padding:14px;margin-bottom:12px"><h3>Cleaning company phones · ${esc(ctx.siteName)}</h3>
+      <p class="hint">Each phone is paired once with a QR code (like the loading gate). <b>Cleaner</b> phones are used by the cleaning supervisors: up to ${r.maxUsers} people per phone, each with a 4-digit PIN and a language. A <b>Manager</b> phone shows the cleaning company manager the day's progress, what is late and the photos. Removing a phone (or pairing it again) cuts the old phone off at once.</p>
+      ${CAN.manage ? `<div style="display:flex;gap:8px;margin-top:10px"><button class="btn small" data-nd="cleaner">+ Cleaner phone</button><button class="btn ghost small" data-nd="manager">+ Manager phone</button></div>` : ""}</div>
+    <div class="floors">${r.devices.map(d => `<div class="card dev"><h3>${d.kind === "manager" ? "📊" : "🧹"} ${esc(d.name)}<span class="pill ${d.paired ? "okk" : "wa"}">${d.paired ? "Paired" : d.pairing ? "Pairing…" : "Not paired"}</span></h3>
+      <small class="muted">${d.kind === "manager" ? "Manager screen" : "Cleaner phone"}${d.lastSeen ? " · last used " + esc(new Date(d.lastSeen).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) : ""}</small>
+      <div style="margin-top:6px">${d.users.map(u => `<span class="u">${esc(u.name)} · ${u.lang === "ar" ? "ع" : u.lang === "bn" ? "বাং" : "EN"}</span>`).join("")}</div>
+      ${CAN.manage ? `<div style="display:flex;gap:6px;margin-top:10px"><button class="btn small" data-pair="${d.id}">${d.paired ? "Pair again" : "Pair the phone"}</button><button class="btn ghost small" data-ed="${d.id}">Edit users</button><button class="btn ghost small danger" data-rm="${d.id}">Remove</button></div>` : ""}</div>`).join("") || `<div class="card empty">No phones yet.</div>`}</div>`;
+  devView.list = r.devices; devView.url = r.cleanUrl; devView.max = r.maxUsers;
+}
+function devDlg(dv){
+  const d = $("#dlg"), U = (dv.users || []).map(u => ({ ...u }));
+  if (!U.length) U.push({ name: "", lang: "en" });
+  const draw = () => {
+    d.innerHTML = `<div class="dlg-h"><b>${dv.id ? "Edit" : "Add"} ${dv.kind === "manager" ? "manager" : "cleaner"} phone</b><small>Up to ${devView.max} people · each with a 4-digit PIN (leave PIN empty to keep the current one)</small></div>
+      <div class="dlg-b"><div class="fld"><span>Phone name</span><input id="dN" value="${esc(dv.name || "")}" placeholder="${dv.kind === "manager" ? "e.g. BPM manager" : "e.g. BPM supervisors · L1–L2"}"></div>
+        <div class="fld"><span>People on this phone</span></div>
+        ${U.map((u, i) => `<div class="urow" data-i="${i}"><input class="uN" value="${esc(u.name)}" placeholder="Name"><input class="uP" inputmode="numeric" maxlength="4" placeholder="${u.hasPin ? "••••" : "PIN"}"><select class="uL">${[["en", "English"], ["ar", "عربي"], ["bn", "বাংলা"]].map(([k, n]) => `<option value="${k}" ${k === (u.lang || "en") ? "selected" : ""}>${n}</option>`).join("")}</select><button class="btn ghost small" data-ur="${i}">✕</button></div>`).join("")}
+        ${U.length < devView.max ? `<button class="btn ghost small" data-ua style="margin-top:8px">+ Add a person</button>` : ""}</div>
+      <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok>Save</button></div>`;
+  };
+  const read = () => d.querySelectorAll(".urow").forEach(r => { const u = U[+r.dataset.i]; u.name = r.querySelector(".uN").value; u.pin = r.querySelector(".uP").value; u.lang = r.querySelector(".uL").value; });
+  draw();
+  d.onclick = async ev => {
+    if (ev.target === d || ev.target.closest("[data-x]")) return d.close();
+    if (ev.target.closest("[data-ua]")){ read(); U.push({ name: "", lang: "en" }); return draw(); }
+    const ur = ev.target.closest("[data-ur]"); if (ur){ read(); U.splice(+ur.dataset.ur, 1); return draw(); }
+    if (!ev.target.closest("[data-ok]")) return;
+    read();
+    try { await api("ops/cc/device/save", { site, id: dv.id, kind: dv.kind, name: $("#dN").value, users: U.filter(u => u.name.trim()).map(u => ({ id: u.id, name: u.name, pin: u.pin, lang: u.lang })) }); d.close(); toast("Saved"); devView(); }
+    catch (e){ toast(e.message, true); }
+  };
+  d.showModal();
+}
+document.getElementById("app").addEventListener("click", async e => {
+  if (tab !== "dev") return;
+  const nd = e.target.closest("[data-nd]"); if (nd) return devDlg({ kind: nd.dataset.nd, users: [] });
+  const ed = e.target.closest("[data-ed]"); if (ed) return devDlg(devView.list.find(x => x.id === +ed.dataset.ed));
+  const rm = e.target.closest("[data-rm]"); if (rm){ if (!(await confirmBox("Remove this phone?", "The phone is cut off at once. Its cleaning records stay.", "Remove"))) return; await api("ops/cc/device/remove", { site, id: +rm.dataset.rm }).catch(er => toast(er.message, true)); return devView(); }
+  const pr = e.target.closest("[data-pair]"); if (pr){
+    try { const r = await api("ops/cc/device/pair", { site, id: +pr.dataset.pair });
+      let qr = ""; try { const q = qrcode(0, "M"); q.addData(r.link); q.make(); qr = q.createSvgTag({ cellSize: 5, margin: 1 }); } catch {}
+      const d = $("#dlg");
+      d.innerHTML = `<div class="dlg-h"><b>Pair the phone</b><small>On the cleaning phone: scan this QR code with the camera (or open ${esc(devView.url.replace("https://", ""))} and type the code). Then <b>Add to Home Screen</b>. Valid 30 minutes.</small></div>
+        <div class="dlg-b"><div class="qr">${qr}</div><div class="code">${esc(r.code)}</div><p class="hint" style="text-align:center;word-break:break-all">${esc(r.link)}</p></div><div class="dlg-f"><button class="btn" data-x>Done</button></div>`;
+      d.onclick = ev => { if (ev.target === d || ev.target.closest("[data-x]")){ d.close(); devView(); } }; d.showModal();
+    } catch (er){ toast(er.message, true); }
+  }
+});
+
+/* ---------- MONTHLY CLEANING PACK (print / save as PDF) ---------- */
+async function packView(m){
+  $("#tabs").style.display = "none";
+  $("#app").innerHTML = `<div class="empty">Preparing the monthly cleaning pack… (this can take a few seconds)</div>`;
+  const P = await api(`ops/cc/pack?site=${site}&month=${m}`).catch(e => ({ err: e.message })); if (P.err) return $("#app").innerHTML = `<div class="card empty">${esc(P.err)}</div>`;
+  const mn = new Date(m + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const tot = P.days.reduce((a, d) => ({ t: a.t + d.summary.total, d: a.d + d.summary.done }), { t: 0, d: 0 });
+  $("#sub").textContent = ctx.siteName + " · monthly cleaning pack";
+  $("#app").innerHTML = `<div class="pk card" style="padding:18px"><div class="noprint" style="text-align:right"><button class="btn" onclick="print()">⤓ Save as PDF / Print</button></div>
+    <h1>Monthly cleaning pack · ${esc(ctx.siteName)} · ${esc(mn)}</h1><p class="muted">ABC Operations · Cleaning Control · ${tot.d} of ${tot.t} scheduled areas done (${pct(tot.d, tot.t) ?? "—"}%) · generated ${esc(new Date().toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}</p>
+    <table style="margin-top:10px"><tr><th>Day</th><th>Scheduled</th><th>Done</th><th>Compliance</th><th>Not done</th><th>Special tasks</th></tr>
+      ${P.days.map(d => `<tr><td>${esc(d.day)}</td><td>${d.summary.total}</td><td>${d.summary.done}</td><td>${d.summary.dayCompliance ?? "—"}%</td><td>${d.missed.length}</td><td>${d.specials.length}</td></tr>`).join("")}</table>
+    ${P.days.filter(d => d.done.length || d.missed.length).map(d => `<div class="day"><h3>${esc(new Date(d.day + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }))} · ${d.summary.done}/${d.summary.total}</h3>
+      ${d.missed.length ? `<p style="font-size:.78rem;color:#C0392B"><b>Not done:</b> ${d.missed.map(x => esc(x.floor + " · " + x.name + (x.time ? " " + x.time : ""))).join(" · ")}</p>` : ""}
+      <div class="ph">${d.done.map(x => `<div><b>${esc(x.name)}</b> · ${esc(x.floor)} · ${esc(x.job.user)} ${esc(x.job.after)}<br>${x.job.purged ? "<i>photos deleted (90 days)</i>" : `<img src="${esc(x.job.bt)}" alt=""> <img src="${esc(x.job.at)}" alt="">`}</div>`).join("")}</div></div>`).join("")}</div>`;
+}
+boot();
+</script>
+</body>
+</html>

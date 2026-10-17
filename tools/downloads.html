@@ -28,6 +28,7 @@
 <div class="top"><h1>⤓ Downloads <small id="sub">on this device</small></h1></div>
 <div class="wrap"><div class="wrapd">
   <div class="bar"><input class="inp" id="q" placeholder="Search downloads"><button class="btn ghost" id="clr">Clear all</button></div>
+  <div id="packs"></div>
   <div id="app"><div class="empty">Loading…</div></div>
   <p class="note">Every file you get from the hub — Excel exports, handover and announcement emails (.eml), Tenant Works Forms PDFs, CSV files — is listed here and kept on this device (last 80 files). Nothing is uploaded: other devices and other people have their own list.</p>
 </div></div>
@@ -68,6 +69,19 @@ $("#app").onclick = async e => {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 };
 load();
+/* Cleaning Control: the monthly cleaning pack of each flagship (before / after photos, done and missed areas) — opens ready to print or save as PDF */
+(async () => {
+  try {
+    const ctx = await api("ops/context"), sites = ctx.sites || { [ctx.site]: ctx.siteName }, rows = [];
+    for (const [code, name] of Object.entries(sites)) { try { const r = await api(`ops/cc/packlist?site=${code}`); for (const m of r.months) rows.push({ code, name, ...m }); } catch (e){ if (e.status === 403) return; } }
+    if (!rows.length) return;
+    const mn = m => new Date(m + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    $("#packs").innerHTML = `<div class="day">Monthly cleaning packs</div>` + rows.map(r => `<div class="card f"><span class="ic" style="background:#2F6F73">PACK</span>
+      <div><b data-pack="${esc(r.code)}|${esc(r.month)}">Cleaning pack · ${esc(r.name)} · ${esc(mn(r.month))}</b><small>${r.jobs} cleaning jobs with before / after photos · opens ready to print or save as PDF</small></div>
+      <div class="acts"><button class="btn ghost small" data-pack="${esc(r.code)}|${esc(r.month)}">Open</button></div></div>`).join("");
+    $("#packs").onclick = e => { const b = e.target.closest("[data-pack]"); if (!b) return; const [code, m] = b.dataset.pack.split("|"); window.open(`/tools/cleanctl?site=${code}&pack=${m}`, "_blank"); };
+  } catch {}
+})();
 </script>
 </body>
 </html>

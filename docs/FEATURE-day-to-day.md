@@ -71,3 +71,8 @@ is put back on the day of its last hand-over the next time today's handover is o
 - **Quick Access Passes**: a green *QP* pin at the approval time (hollow once used at the gate).
 - **Contractor access is information only**: a small grey dot at the time each contractor attended ("Attended 09:12"), no overdue / late alerts, no live highlight. The "still on site" reminder is off (`CON_OVERDUE_ALERTS = "1"` brings it back).
 - **Message of the moment** above the timeline (see FEATURE-moments.md).
+
+
+## Cards under the timeline
+
+Compact cards, one row on desktop (3 per row ≤1100 px, 2 on phones), in this order: Shift Handover → Operations Forms → Contractor Access → Schedule & Calendar → Minutes of Meeting (`D2D_ORDER` in `index.html`). Operations Forms shows the AM / PM checklist status from the reminders.

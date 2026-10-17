@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2F6F73">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ABC Cleaning</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="apple-touch-icon" href="/icons/abc-180.png">
+<!-- ABC Cleaning — the cleaner supervisors' app (and the cleaning company manager's screen). See docs/FEATURE-cleaning-app.md -->
+<style>
+:root{--teal:#2F6F73;--teal2:#245558;--ok:#2E8B57;--warn:#C07A12;--al:#C0392B;--bg:#F4F7F7;--card:#fff;--line:#DDE6E6;--text:#1C2A2B;--muted:#62706F;--gold:#C8A24A}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali","Noto Sans Arabic",Arial,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none}
+[dir=rtl] body,[dir=rtl]{font-family:"Noto Sans Arabic",system-ui,sans-serif}
+button{font:inherit;border:0;background:none;color:inherit;cursor:pointer}
+.top{position:sticky;top:0;z-index:5;background:var(--teal);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 12px;display:flex;align-items:center;gap:8px}
+.top b{font-size:1rem;flex:1;line-height:1.2}.top b small{display:block;font-size:.72rem;opacity:.8;font-weight:600}
+.lang{display:flex;gap:4px}.lang button{font-size:.72rem;font-weight:800;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff}.lang button.on{background:#fff;color:var(--teal)}
+.ib{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:1rem;position:relative}
+.ib .n{position:absolute;top:-4px;inset-inline-end:-4px;background:var(--warn);color:#fff;font-size:.62rem;font-weight:800;border-radius:999px;padding:1px 5px}
+main{padding:12px 12px calc(env(safe-area-inset-bottom,0px) + 30px);max-width:640px;margin:0 auto}
+.card{background:var(--card);border-radius:16px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+h2{font-size:1.05rem;margin-bottom:10px}
+.center{text-align:center}
+.inp{width:100%;height:52px;border:2px solid var(--line);border-radius:14px;padding:0 14px;font-size:1.2rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;text-align:center;background:#fff}
+.btn{width:100%;height:58px;border-radius:16px;background:var(--teal);color:#fff;font-weight:900;font-size:1.05rem;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}
+.btn.ok{background:var(--ok)}.btn.ghost{background:#fff;color:var(--teal);border:2px solid var(--teal)}.btn:disabled{opacity:.5}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.who button{background:#fff;border:2px solid var(--line);border-radius:14px;padding:14px 8px;font-weight:800;font-size:.95rem}
+.who button.on{border-color:var(--teal);color:var(--teal);background:#EAF3F3}
+.dots{display:flex;gap:14px;justify-content:center;margin:16px 0}.dots i{width:16px;height:16px;border-radius:50%;background:#CFDADA}.dots i.f{background:var(--teal)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:0 auto}
+.pad button{height:62px;border-radius:16px;background:#fff;font-size:1.5rem;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.pad button:active{background:#E2EEEE}
+.err{color:var(--al);font-weight:800;text-align:center;min-height:1.4em;margin-top:8px}
+.prog{display:flex;align-items:center;gap:10px;font-weight:800}
+.bar{flex:1;height:10px;background:#E3EBEB;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok);border-radius:9px;transition:width .4s}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 6px;scrollbar-width:none;overscroll-behavior-x:contain}
+.chips button{flex:none;background:#fff;border:2px solid var(--line);border-radius:999px;padding:7px 13px;font-weight:800;font-size:.84rem}
+.chips button.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.seg{display:flex;background:#E3EBEB;border-radius:14px;padding:4px;margin:6px 0 10px}.seg button{flex:1;padding:10px;border-radius:11px;font-weight:800;font-size:.9rem}.seg button.on{background:#fff;color:var(--teal)}
+.it{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:12px;margin-bottom:8px;width:100%;text-align:start;border:2px solid transparent}
+.it .em{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:1.35rem;flex:none;background:#EEF3F3}
+.it b{display:block;font-size:.98rem}.it small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.it .st{margin-inline-start:auto;font-size:1.3rem;flex:none}
+.it.late{border-color:#F2C9C4}.it.done{opacity:.6}.it.progress{border-color:#F1D9A6}
+.sp{background:#FFF7E6;border:2px solid #F1D9A6;border-radius:16px;padding:12px;margin-bottom:8px;width:100%;text-align:start;display:block}
+.sp b{display:block}.sp small{display:block;color:var(--muted);margin-top:3px}
+.sp.high{border-color:#F2B8B0;background:#FFF0EE}
+.ph{position:relative;border-radius:18px;overflow:hidden;background:#DDE6E6;min-height:190px;display:grid;place-items:center;margin-top:10px}
+.ph img{width:100%;max-height:330px;object-fit:cover;display:block}
+.ph span{position:absolute;top:10px;inset-inline-start:10px;background:rgba(0,0,0,.6);color:#fff;font-weight:800;font-size:.78rem;padding:4px 10px;border-radius:9px}
+.cam{position:relative;overflow:hidden}.cam input{position:absolute;inset:0;opacity:0}
+.timer{text-align:center;font-weight:900;color:var(--warn);margin-top:10px;font-size:1.05rem}
+.pair2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pair2 .ph{min-height:130px}.pair2 img{height:150px}
+.big-ok{width:110px;height:110px;border-radius:50%;background:var(--ok);color:#fff;font-size:3.6rem;display:grid;place-items:center;margin:20px auto 10px;animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(.3)}}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:#1C2A2B;color:#fff;padding:11px 18px;border-radius:999px;font-weight:700;font-size:.9rem;z-index:50;opacity:0;transition:.25s;pointer-events:none;max-width:92%}
+.toast.on{opacity:1}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.kp div{background:#fff;border-radius:14px;padding:12px}.kp strong{display:block;font-size:1.6rem;font-weight:900}.kp span{font-size:.76rem;color:var(--muted);font-weight:700}
+.row{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line);font-size:.9rem}.row b{flex:1}
+.pill{font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.p-ok{background:#E3F2EA;color:var(--ok)}.p-w{background:#FBEFD9;color:var(--warn)}.p-a{background:#FBE5E2;color:var(--al)}
+.mt{margin-top:12px}.muted{color:var(--muted)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.thumbs div{background:#fff;border-radius:12px;padding:6px;font-size:.72rem;font-weight:700}
+.thumbs .tw{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px}.thumbs img{width:100%;height:64px;object-fit:cover;border-radius:7px;background:#DDE6E6}
+</style>
+</head>
+<body>
+<div class="top" id="top"></div>
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+<script>
+/* ---------- the 3 languages ---------- */
+const T = {
+  en: { dir: "ltr", app: "ABC Cleaning", pairT: "Connect this phone", pairH: "Type the code operations gave you", pair: "Connect", who: "Who are you?", pin: "Enter your PIN", wrong: "Wrong PIN",
+    today: "Today", all: "All", daily: "Daily", deep: "Deep cleaning", done: "done", special: "Special tasks from Operations", before: "📷 Before photo", after: "📷 After photo",
+    takeB: "Take the BEFORE photo", takeA: "Clean the area, then take the AFTER photo", send: "✓ Send", sent: "Sent — thank you!", next: "Next area", back: "‹ Back",
+    cleaning: "Cleaning…", lock: "Lock", waiting: "waiting to send", offline: "No signal — saved on the phone, it will be sent automatically", nothing: "Nothing scheduled here today",
+    st: { done: "Done", progress: "In progress", late: "Late", missed: "Missed", due: "Now", upcoming: "Later" }, anytime: "Any time", due: "Due", note: "Note (optional)",
+    mgr: "Manager", pct: "Of today's schedule done", areas: "Areas done", lateN: "Late now", onDuty: "Cleaners on duty", bySup: "By supervisor", lateL: "Late now", photos: "Today's photos", prevDay: "‹", nextDay: "›" },
+  ar: { dir: "rtl", app: "ABC للتنظيف", pairT: "ربط هذا الهاتف", pairH: "أدخل الرمز الذي أعطتك إياه العمليات", pair: "ربط", who: "من أنت؟", pin: "أدخل الرمز", wrong: "رمز خاطئ",
+    today: "اليوم", all: "الكل", daily: "يومي", deep: "تنظيف عميق", done: "تم", special: "مهام خاصة من العمليات", before: "📷 صورة قبل", after: "📷 صورة بعد",
+    takeB: "التقط صورة قبل التنظيف", takeA: "نظّف المنطقة ثم التقط صورة بعد التنظيف", send: "✓ إرسال", sent: "تم الإرسال — شكراً!", next: "المنطقة التالية", back: "رجوع ›",
+    cleaning: "جارٍ التنظيف…", lock: "قفل", waiting: "بانتظار الإرسال", offline: "لا يوجد إرسال — تم الحفظ على الهاتف وسيُرسل تلقائياً", nothing: "لا يوجد شيء مجدول هنا اليوم",
+    st: { done: "تم", progress: "قيد التنفيذ", late: "متأخر", missed: "فائت", due: "الآن", upcoming: "لاحقاً" }, anytime: "أي وقت", due: "الموعد", note: "ملاحظة (اختياري)",
+    mgr: "المدير", pct: "من جدول اليوم منجز", areas: "مناطق منجزة", lateN: "متأخرة الآن", onDuty: "عمال في الدوام", bySup: "حسب المشرف", lateL: "متأخرة الآن", photos: "صور اليوم", prevDay: "›", nextDay: "‹" },
+  bn: { dir: "ltr", app: "ABC পরিষ্কার", pairT: "এই ফোন যুক্ত করুন", pairH: "অপারেশনস যে কোড দিয়েছে তা লিখুন", pair: "যুক্ত করুন", who: "আপনি কে?", pin: "আপনার পিন দিন", wrong: "ভুল পিন",
+    today: "আজ", all: "সব", daily: "দৈনিক", deep: "গভীর পরিষ্কার", done: "সম্পন্ন", special: "অপারেশনস থেকে বিশেষ কাজ", before: "📷 আগের ছবি", after: "📷 পরের ছবি",
+    takeB: "পরিষ্কারের আগের ছবি তুলুন", takeA: "এলাকা পরিষ্কার করুন, তারপর পরের ছবি তুলুন", send: "✓ পাঠান", sent: "পাঠানো হয়েছে — ধন্যবাদ!", next: "পরের এলাকা", back: "‹ ফিরে যান",
+    cleaning: "পরিষ্কার চলছে…", lock: "লক", waiting: "পাঠানোর অপেক্ষায়", offline: "নেটওয়ার্ক নেই — ফোনে সংরক্ষিত, স্বয়ংক্রিয়ভাবে পাঠানো হবে", nothing: "আজ এখানে কিছু নির্ধারিত নেই",
+    st: { done: "সম্পন্ন", progress: "চলছে", late: "দেরি", missed: "বাদ পড়েছে", due: "এখন", upcoming: "পরে" }, anytime: "যেকোনো সময়", due: "নির্ধারিত সময়", note: "নোট (ঐচ্ছিক)",
+    mgr: "ম্যানেজার", pct: "আজকের সূচির কাজ সম্পন্ন", areas: "সম্পন্ন এলাকা", lateN: "এখন দেরি", onDuty: "ডিউটিতে ক্লিনার", bySup: "সুপারভাইজার অনুযায়ী", lateL: "এখন দেরি", photos: "আজকের ছবি", prevDay: "‹", nextDay: "›" }
+};
+const S = { tok: localStorage.getItem("cc.tok") || "", ses: null, me: null, user: null, lang: localStorage.getItem("cc.lang") || "en", day: null, view: "home", floor: "", tab: "daily", cur: null, mday: "" };
+try { S.ses = JSON.parse(sessionStorage.getItem("cc.ses") || "null"); } catch {}
+const L = () => T[S.lang] || T.en;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const toast = m => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 2600); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const hm = iso => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" });
+const bDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
+
+async function api(path, opt = {}){
+  const h = { ...(opt.headers || {}) };
+  if (S.tok) h.authorization = "Bearer " + S.tok;
+  if (S.ses && S.ses.ses) h["x-cc-ses"] = S.ses.ses;
+  if (opt.json !== undefined){ h["content-type"] = "application/json"; opt.body = JSON.stringify(opt.json); }
+  const r = await fetch("/api/" + path, { method: opt.method || (opt.body ? "POST" : "GET"), headers: h, body: opt.body });
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || !j.ok){ const e = new Error((j && j.error) || "Error " + r.status); e.status = r.status; throw e; }
+  return j.data;
+}
+
+/* ---------- photos: made small on the phone before sending ---------- */
+async function shrink(file, max, q){
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+  c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src);
+  return new Promise(res => c.toBlob(res, "image/jpeg", q));
+}
+
+/* ---------- the send queue (IndexedDB): works without signal, sends in order when back online ---------- */
+const DBP = new Promise((res, rej) => { const o = indexedDB.open("abc-cleaning", 1); o.onupgradeneeded = () => o.result.createObjectStore("q", { keyPath: "n", autoIncrement: true }); o.onsuccess = () => res(o.result); o.onerror = () => rej(o.error); });
+const qtx = async (mode, fn) => { const db = await DBP; return new Promise((res, rej) => { const t = db.transaction("q", mode), st = t.objectStore("q"); const r = fn(st); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); };
+const qAdd = x => qtx("readwrite", st => st.add(x));
+const qAll = () => qtx("readonly", st => st.getAll());
+const qDel = n => qtx("readwrite", st => st.delete(n));
+let flushing = false;
+async function flush(){
+  if (flushing || !S.tok || !S.ses) return; flushing = true;
+  try {
+    for (const x of await qAll()){
+      if (x.ses !== S.ses.ses && x.ses) { /* sent with the session that made it */ }
+      const h = { authorization: "Bearer " + S.tok, "x-cc-ses": x.ses || S.ses.ses };
+      let r;
+      try {
+        if (x.t === "job") r = await fetch("/api/job", { method: "POST", headers: { ...h, "content-type": "application/json" }, body: JSON.stringify(x.d) });
+        else r = await fetch(`/api/photo?c=${encodeURIComponent(x.c)}&k=${x.k}`, { method: "PUT", headers: { ...h, "content-type": "image/jpeg" }, body: x.blob });
+      } catch { break; }   // no signal: try later
+      if (r.ok || (r.status >= 400 && r.status < 500 && r.status !== 401 && r.status !== 409)) await qDel(x.n);
+      else break;
+    }
+  } finally { flushing = false; paintTop(); }
+}
+addEventListener("online", flush); setInterval(flush, 20000);
+async function pending(){ try { return (await qAll()).length; } catch { return 0; } }
+
+/* ---------- screens ---------- */
+async function paintTop(){
+  const t = L(), n = await pending();
+  document.documentElement.dir = t.dir; document.documentElement.lang = S.lang;
+  $("#top").innerHTML = `<b>🧹 ${esc(S.me ? S.me.siteName : t.app)}<small>${esc(S.user ? S.user + (S.me && S.me.kind === "manager" ? " · " + t.mgr : "") : t.app)}</small></b>
+    ${n ? `<span class="ib" title="${esc(t.waiting)}">⇪<span class="n">${n}</span></span>` : ""}
+    <div class="lang">${["en", "ar", "bn"].map(k => `<button data-l="${k}" class="${k === S.lang ? "on" : ""}">${k === "en" ? "EN" : k === "ar" ? "ع" : "বাং"}</button>`).join("")}</div>
+    ${S.ses ? `<button class="ib" id="lockB" title="${esc(t.lock)}">🔒</button>` : ""}`;
+}
+$("#top").onclick = e => { const b = e.target.closest("[data-l]"); if (b){ S.lang = b.dataset.l; localStorage.setItem("cc.lang", S.lang); render(); return; }
+  if (e.target.closest("#lockB")){ S.ses = null; S.user = null; sessionStorage.removeItem("cc.ses"); S.view = "home"; render(); } };
+
+async function boot(){
+  const pc = new URLSearchParams(location.search).get("pair");
+  if (pc && !S.tok) return pairWith(pc);
+  if (!S.tok) return render();
+  try { S.me = await api("me"); } catch (e){ if (e.status === 401){ S.tok = ""; localStorage.removeItem("cc.tok"); } else toast(e.message); }
+  if (S.ses && S.me){ S.user = S.ses.name; }
+  render(); flush();
+}
+async function pairWith(code){
+  try { const r = await api("pair", { json: { code } }); S.tok = r.token; localStorage.setItem("cc.tok", r.token); history.replaceState(null, "", "/"); S.me = await api("me"); render(); }
+  catch (e){ render(); $("#perr") && ($("#perr").textContent = e.message); }
+}
+function render(){
+  paintTop(); const t = L();
+  if (!S.tok || !S.me){
+    $("#app").innerHTML = `<div class="card center mt"><h2>${esc(t.pairT)}</h2><p class="muted" style="margin-bottom:12px">${esc(t.pairH)}</p>
+      <input class="inp" id="pc" maxlength="8" autocomplete="off" placeholder="––––––"><button class="btn" id="pb">${esc(t.pair)}</button><div class="err" id="perr"></div></div>`;
+    $("#pb").onclick = () => $("#pc").value.trim() && pairWith($("#pc").value.trim()); return;
+  }
+  if (!S.ses) return loginView();
+  if (S.me.kind === "manager") return managerView();
+  if (S.view === "task") return taskView();
+  return homeView();
+}
+
+/* PIN */
+let pinUser = "", pinVal = "";
+function loginView(){
+  const t = L(), U = S.me.users;
+  if (U.length === 1) pinUser = U[0].id;
+  $("#app").innerHTML = `<div class="card mt"><h2>${esc(t.who)}</h2><div class="who">${U.map(u => `<button data-u="${esc(u.id)}" class="${u.id === pinUser ? "on" : ""}">${esc(u.name)}</button>`).join("")}</div>
+    <h2 class="center" style="margin-top:16px">${esc(t.pin)}</h2><div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i < pinVal.length ? "f" : ""}"></i>`).join("")}</div>
+    <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "⌫"].map(n => `<button data-k="${n}">${n}</button>`).join("")}</div><div class="err" id="lerr"></div></div>`;
+  $("#app").onclick = async e => {
+    const u = e.target.closest("[data-u]"); if (u){ pinUser = u.dataset.u; const x = S.me.users.find(y => y.id === pinUser); if (x && x.lang && !localStorage.getItem("cc.lang")) S.lang = x.lang; pinVal = ""; return loginView(); }
+    const k = e.target.closest("[data-k]"); if (!k || k.dataset.k === "") return;
+    if (k.dataset.k === "⌫") pinVal = pinVal.slice(0, -1); else if (pinVal.length < 4) pinVal += k.dataset.k;
+    if (pinVal.length === 4){
+      if (!pinUser){ pinVal = ""; loginView(); $("#lerr").textContent = t.who; return; }
+      try { const r = await api("login", { json: { user: pinUser, pin: pinVal } }); S.ses = { ses: r.ses, name: r.name }; S.user = r.name; sessionStorage.setItem("cc.ses", JSON.stringify(S.ses));
+        if (!localStorage.getItem("cc.lang")) S.lang = r.lang || "en"; pinVal = ""; $("#app").onclick = null; S.view = "home"; render(); flush(); }
+      catch (er){ pinVal = ""; loginView(); $("#lerr").textContent = er.status === 401 ? t.wrong : er.message; navigator.vibrate && navigator.vibrate([80, 60, 80]); }
+      return;
+    }
+    loginView();
+  };
+}
+
+/* cleaner home: today's list */
+const ICON = { done: "✅", progress: "⏳", late: "🔴", missed: "⚠️", due: "⚪", upcoming: "🕒" };
+async function loadDay(){ try { S.day = await api("today"); localStorage.setItem("cc.day", JSON.stringify(S.day)); } catch (e){ if (e.status === 401){ S.ses = null; sessionStorage.removeItem("cc.ses"); return render(); } try { S.day = JSON.parse(localStorage.getItem("cc.day") || "null"); } catch {} } }
+async function homeView(){
+  const t = L();
+  if (!S.day || S.day.day !== bDay()) { $("#app").innerHTML = `<p class="center muted mt">…</p>`; await loadDay(); }
+  const D = S.day; if (!D){ $("#app").innerHTML = `<div class="card center mt">${esc(t.offline)}</div>`; return; }
+  const local = JSON.parse(localStorage.getItem("cc.local") || "{}");   // jobs made on this phone today (shown at once, even before the server has them)
+  for (const k of Object.keys(local)) if (!k.startsWith(bDay() + "|")) delete local[k];
+  localStorage.setItem("cc.local", JSON.stringify(local));
+  const items = D.items.map(x => { const l = local[bDay() + "|" + x.key]; return l && x.status !== "done" ? { ...x, status: l.after ? "done" : "progress" } : x; });
+  const floors = [...new Set(items.map(x => x.floor))];
+  const RANK = { late: 0, missed: 0, progress: 1, due: 2, upcoming: 3, done: 4 };   // what needs doing first, done at the bottom
+  const F = items.filter(x => (!S.floor || x.floor === S.floor) && (S.tab === "deep" ? x.kind === "deep" : x.kind !== "deep"))
+    .sort((a, b) => (RANK[a.status] ?? 5) - (RANK[b.status] ?? 5) || (a.time || "99").localeCompare(b.time || "99"));
+  const done = items.filter(x => x.status === "done").length, open = D.specials.filter(s => s.status === "open");
+  $("#app").innerHTML = (open.length ? `<h2 class="mt">⭐ ${esc(t.special)}</h2>${open.map(s => `<button class="sp ${esc(s.priority)}" data-sp="${s.id}"><b>${esc(s.title)}</b><small>${esc(s.area)}${s.due ? " · " + esc(t.due) + " " + esc(s.due === bDay() ? (s.dueTime || t.today) : s.due) : ""}</small>${s.details ? `<small>${esc(s.details)}</small>` : ""}</button>`).join("")}` : "")
+    + `<div class="card mt"><div class="prog">${esc(t.today)} <div class="bar"><i style="width:${items.length ? Math.round(done / items.length * 100) : 0}%"></i></div> ${done}/${items.length}</div></div>
+    <div class="chips"><button data-f="" class="${!S.floor ? "on" : ""}">${esc(t.all)}</button>${floors.map(f => `<button data-f="${esc(f)}" class="${f === S.floor ? "on" : ""}">${esc(f)}</button>`).join("")}</div>
+    <div class="seg"><button data-tab="daily" class="${S.tab !== "deep" ? "on" : ""}">${esc(t.daily)}</button><button data-tab="deep" class="${S.tab === "deep" ? "on" : ""}">${esc(t.deep)}</button></div>
+    ${F.length ? F.map(x => `<button class="it ${x.status}" data-k="${esc(x.key)}"><span class="em">${esc(x.icon || "🧽")}</span><span><b>${esc(x.name)}</b><small>${esc(x.floor)} · ${esc(x.time || t.anytime)} · ${esc(t.st[x.status] || "")}${x.job && x.job.user ? " · " + esc(x.job.user) : ""}</small></span><span class="st">${ICON[x.status] || ""}</span></button>`).join("")
+      : `<div class="card center muted">${esc(t.nothing)}</div>`}`;
+  $("#app").onclick = e => {
+    const f = e.target.closest("[data-f]"); if (f){ S.floor = f.dataset.f; return homeView(); }
+    const tb = e.target.closest("[data-tab]"); if (tb){ S.tab = tb.dataset.tab; return homeView(); }
+    const it = e.target.closest("[data-k]"); if (it){ const x = items.find(y => y.key === it.dataset.k); if (!x || x.status === "done") return; S.cur = { item: x }; S.view = "task"; return render(); }
+    const sp = e.target.closest("[data-sp]"); if (sp){ const s = D.specials.find(y => y.id === Number(sp.dataset.sp)); S.cur = { special: s }; S.view = "task"; return render(); }
+  };
+}
+
+/* one area: before → clean → after → send */
+function taskView(){
+  const t = L(), c = S.cur, key = bDay() + "|" + (c.item ? c.item.key : "sp" + c.special.id);
+  const local = JSON.parse(localStorage.getItem("cc.local") || "{}"), l = local[key] || null;
+  const title = c.item ? `${c.item.icon || "🧽"} ${c.item.name}` : `⭐ ${c.special.title}`, sub = c.item ? `${c.item.floor} · ${c.item.time || t.anytime}` : `${c.special.area || ""}${c.special.details ? " · " + c.special.details : ""}`;
+  const bUrl = sessionStorage.getItem("cc.b." + key) || "";
+  $("#app").innerHTML = `<button class="btn ghost" id="bk" style="height:44px;margin-top:0">${esc(t.back)}</button>
+    <div class="card mt"><h2>${esc(title)}</h2><p class="muted">${esc(sub)}</p>${c.special && c.special.photo ? `<div class="ph"><img src="${esc(c.special.photo)}" alt=""></div>` : ""}</div>
+    ${!l ? `<div class="ph cam"><span>${esc(t.before)}</span><b style="font-size:1.05rem;padding:30px;text-align:center">${esc(t.takeB)}</b><input type="file" accept="image/*" capture="environment" id="fB"></div>`
+      : `<div class="ph"><span>${esc(t.before)} ✓ ${esc(hm(l.beforeAt))}</span>${bUrl ? `<img src="${esc(bUrl)}" alt="">` : ""}</div>
+         <div class="timer" id="tm"></div>
+         <div class="ph cam" style="margin-top:10px;background:#E3F2EA"><span>${esc(t.after)}</span><b style="font-size:1.05rem;padding:30px;text-align:center">${esc(t.takeA)}</b><input type="file" accept="image/*" capture="environment" id="fA"></div>`}`;
+  $("#bk").onclick = () => { S.view = "home"; render(); };
+  const tm = $("#tm"); if (tm && l){ const tick = () => { if (!document.body.contains(tm)) return clearInterval(iv); const s = Math.max(0, Math.floor((Date.now() - Date.parse(l.beforeAt)) / 1000)); tm.textContent = `⏱ ${t.cleaning} ${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; }; tick(); var iv = setInterval(tick, 1000); }
+  const job = (extra) => ({ c: l ? l.c : null, taskId: c.item ? c.item.taskId : 0, specialId: c.special ? c.special.id : 0, day: bDay(), ...extra });
+  const fb = $("#fB"); if (fb) fb.onchange = async () => {
+    const f = fb.files[0]; if (!f) return;
+    const cid = uid(), at = new Date().toISOString(), big = await shrink(f, 1024, .6), th = await shrink(f, 320, .6);
+    await qAdd({ t: "job", ses: S.ses.ses, d: { ...job({ beforeAt: at }), c: cid } });
+    await qAdd({ t: "photo", ses: S.ses.ses, c: cid, k: "b", blob: big }); await qAdd({ t: "photo", ses: S.ses.ses, c: cid, k: "bt", blob: th });
+    const loc = JSON.parse(localStorage.getItem("cc.local") || "{}"); loc[key] = { c: cid, beforeAt: at }; localStorage.setItem("cc.local", JSON.stringify(loc));
+    try { sessionStorage.setItem("cc.b." + key, URL.createObjectURL(th)); } catch {}
+    navigator.vibrate && navigator.vibrate(60); taskView(); flush();
+  };
+  const fa = $("#fA"); if (fa) fa.onchange = async () => {
+    const f = fa.files[0]; if (!f) return;
+    const at = new Date().toISOString(), big = await shrink(f, 1024, .6), th = await shrink(f, 320, .6);
+    await qAdd({ t: "job", ses: S.ses.ses, d: { ...job({ beforeAt: l.beforeAt, afterAt: at }), c: l.c } });
+    await qAdd({ t: "photo", ses: S.ses.ses, c: l.c, k: "a", blob: big }); await qAdd({ t: "photo", ses: S.ses.ses, c: l.c, k: "at", blob: th });
+    const loc = JSON.parse(localStorage.getItem("cc.local") || "{}"); loc[key] = { ...l, after: at }; localStorage.setItem("cc.local", JSON.stringify(loc));
+    navigator.vibrate && navigator.vibrate([60, 40, 60]);
+    $("#app").innerHTML = `<div class="big-ok">✓</div><h2 class="center">${esc(t.sent)}</h2>${navigator.onLine ? "" : `<p class="center muted">${esc(t.offline)}</p>`}<button class="btn" id="nx">${esc(t.next)} ›</button>`;
+    $("#nx").onclick = () => { S.view = "home"; S.day = null; render(); };
+    await flush(); S.day = null;
+  };
+}
+
+/* the cleaning company manager's screen */
+async function managerView(){
+  const t = L(); S.mday = S.mday || bDay();
+  let D; try { D = await api(`today?day=${S.mday}`); } catch (e){ if (e.status === 401){ S.ses = null; sessionStorage.removeItem("cc.ses"); return render(); } $("#app").innerHTML = `<div class="card center mt">${esc(e.message)}</div>`; return; }
+  const s = D.summary, hc = D.headcount || {}, late = D.items.filter(x => x.status === "late" || x.status === "missed"), ph = D.items.filter(x => x.job && x.job.after);
+  $("#app").innerHTML = `<div class="card mt" style="display:flex;align-items:center;gap:8px"><button class="pill p-ok" data-d="-1">${t.prevDay}</button><b style="flex:1;text-align:center">${esc(new Date(D.day + "T12:00:00Z").toLocaleDateString(S.lang === "ar" ? "ar-LB" : S.lang === "bn" ? "bn-BD" : "en-GB", { weekday: "long", day: "numeric", month: "long" }))}</b><button class="pill p-ok" data-d="1">${t.nextDay}</button></div>
+    <div class="kp mt"><div><strong>${s.compliance == null ? "—" : (D.isToday ? s.compliance : s.dayCompliance) + "%"}</strong><span>${esc(t.pct)}</span></div><div><strong>${s.done} / ${s.total}</strong><span>${esc(t.areas)}</span></div>
+      <div><strong style="color:var(--al)">${s.late}</strong><span>${esc(t.lateN)}</span></div><div><strong>${hc.onNow ?? hc.present ?? "—"}${hc.contract ? " / " + hc.contract : ""}</strong><span>${esc(t.onDuty)}</span></div></div>
+    <div class="card"><h2>${esc(t.bySup)}</h2>${D.byUser.map(u => `<div class="row"><b>${esc(u.user)}</b><span class="pill p-ok">${u.done} ${esc(t.done)}</span>${u.progress ? `<span class="pill p-w">${u.progress} ⏳</span>` : ""}</div>`).join("") || `<p class="muted">—</p>`}</div>
+    <div class="card mt"><h2>${esc(t.lateL)} · ${late.length}</h2>${late.slice(0, 15).map(x => `<div class="row"><b>${esc(x.name)}</b><span class="muted">${esc(x.floor)} · ${esc(x.time || "")}</span><span class="pill p-a">${esc(t.st[x.status])}</span></div>`).join("") || `<p class="muted">—</p>`}${late.length > 15 ? `<p class="muted mt">+ ${late.length - 15}</p>` : ""}</div>
+    ${D.specials.length ? `<div class="card mt"><h2>⭐ ${esc(t.special)}</h2>${D.specials.map(x => `<div class="row"><b>${esc(x.title)}</b><span class="pill ${x.status === "done" ? "p-ok" : x.overdue ? "p-a" : "p-w"}">${x.status === "done" ? "✓ " + esc(x.doneAt) : esc(x.dueTime || x.due)}</span></div>`).join("")}</div>` : ""}
+    <div class="card mt"><h2>${esc(t.photos)} · ${ph.length}</h2><div class="thumbs">${ph.slice(0, 60).map(x => `<div>${esc(x.name)} · ${esc(x.job.after)}<div class="tw"><img src="${esc(x.job.bt || "")}" alt="" loading="lazy"><img src="${esc(x.job.at || "")}" alt="" loading="lazy"></div></div>`).join("")}</div></div>`;
+  $("#app").onclick = e => { const b = e.target.closest("[data-d]"); if (!b) return; const d = new Date(Date.parse(S.mday + "T12:00:00Z") + Number(b.dataset.d) * 864e5).toISOString().slice(0, 10); if (d > bDay()) return; S.mday = d; managerView(); };
+}
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+boot();
+setInterval(() => { if (S.ses && S.me && S.view === "home" && document.visibilityState === "visible"){ if (S.me.kind === "manager") managerView(); else { S.day = null; homeView(); } } }, 120000);
+</script>
+</body>
+</html>

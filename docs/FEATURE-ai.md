@@ -1,11 +1,13 @@
-# Hub Assistant (free AI)
+# Sanad · سند — the Hub Assistant (free AI)
+
+The assistant is called **Sanad (سند, "support")**. It opens from the **✦ Ask Sanad** bubble at the bottom right of the landing page (icon only on phones, above the emergency button); the bubble hides inside tools and while the chat is open.
 
 Runs on **Cloudflare Workers AI** — the `AI` binding in `wrangler.jsonc`. No API key, no card, nothing to pay.
 
 - **Free allowance**: 10,000 Neurons a day for the Cloudflare account (resets 00:00 UTC). When it is used up, the assistant says so until the next day — nothing is charged. Each person can ask 25 questions a day so the allowance lasts for the team.
 - **Model**: `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (the stronger free model), with `@cf/meta/llama-3.1-8b-instruct` as the backup. Set `AI_MODEL` to change it.
 
-## Chat (AI button → Hub Assistant)
+## Chat (✦ Ask Sanad bubble)
 Questions about today at a flagship, in English or Arabic. The hub gives the model a short summary of only what that person can open in the hub (shifts, handover, deadlines, contractors, Quick Passes, patrol, GLA occupancy, Snaglist / incidents / restroom figures, open malfunctions, tenant feedback, meeting actions, contracts ending). The model is told to answer only from it.
 
 ## Shift summary (Shift Handover → ✦ AI shift summary)
