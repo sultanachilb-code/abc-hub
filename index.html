@@ -389,6 +389,34 @@ body.hl-docked main{padding-bottom:110px}
 .cr-phone .cr-tray .cr-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 4px}.cr-phone .cr-tray .hl-app{width:auto}
 @media (max-width:380px){.cr-phone .cr-tray .cr-g{grid-template-columns:repeat(3,1fr)}}
 @media (prefers-reduced-motion:reduce){.hx,.bk,.bk-pg.r,.sh-store,.cr-tray .hl-app{animation:none}.cr-ring,.sh-shut,.cr-strip .cr-p{transition:none}}
+/* ---------- brief by role ---------- */
+.rb-admin{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 14px;padding:8px 10px;border-radius:12px;background:var(--paper);font-size:.76rem;font-weight:700;color:var(--muted)}
+.rb-admin button{border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-weight:800;font-size:.76rem;background:var(--surface);color:var(--text)}.rb-admin button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.rb-need{display:inline-flex;align-items:center;line-height:1;font-size:.72rem;font-weight:800;padding:5px 10px;border-radius:99px;background:#FDECEA;color:#C0392B;white-space:nowrap}.rb-need.ok{background:#E6F4EC;color:#2E8B57}
+.rb-site{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface);color:var(--text);font:inherit;font-size:.8rem}
+.rb-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.rb-tile{display:grid;gap:3px;text-align:left;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer}
+.rb-tile b{font-size:.8rem;color:var(--muted)}.rb-tile strong{font-size:1.3rem;font-weight:800}.rb-tile small{font-size:.74rem;color:var(--muted);line-height:1.35}
+.rb-tile.t-r{border-color:#F3C7C2;background:#FFF7F6}.rb-tile.t-r strong{color:#C0392B}.rb-tile.t-a{border-color:#F1DDB5;background:#FFFBF2}.rb-tile.t-a strong{color:#B26A00}.rb-tile.t-g strong{color:#2E8B57}
+:root[data-theme="dark"] .rb-tile.t-r,:root[data-theme="dark"] .rb-tile.t-a{background:var(--surface)}
+.rb-tile:hover{border-color:var(--brand-2)}
+.rb-sec{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin:16px 0 4px}
+.rb-todo{display:grid}.rb-do{display:flex;gap:10px;align-items:flex-start;padding:9px 2px;border-top:1px solid var(--line);text-align:left;width:100%;font-size:.86rem;background:none}.rb-do:first-child{border-top:0}
+.rb-do i{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px}.rb-do .d-r{background:#C0392B}.rb-do .d-a{background:#C07A12}.rb-do .d-g{background:#2E8B57}
+.rb-do span{flex:1}.rb-do small{display:block;color:var(--muted);font-size:.74rem}.rb-do em{font-style:normal;font-size:.74rem;font-weight:800;color:var(--brand-2);white-space:nowrap}
+.rb-per{display:flex;gap:3px}.rb-per button{font-size:.74rem;font-weight:800;padding:6px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--text)}.rb-per button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.rb-tw{overflow-x:auto}.rb-kt{width:100%;border-collapse:collapse;font-size:.84rem;min-width:620px}
+.rb-kt th{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}.rb-kt th:first-child{text-align:left}
+.rb-kt td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:center}.rb-kt td:first-child{text-align:left;font-weight:700;font-size:.8rem}
+.rb-kt td button{background:none;display:inline-flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:center}
+.rb-c{display:inline-block;min-width:52px;padding:4px 8px;border-radius:9px;font-weight:800;font-size:.8rem;background:var(--paper)}
+.rb-c.c-g{background:#E6F4EC;color:#2E8B57}.rb-c.c-a{background:#FFF1DA;color:#9A5B00}.rb-c.c-r{background:#FDECEA;color:#C0392B}
+.rb-d{font-size:.64rem;font-weight:800}.rb-d.up{color:#2E8B57}.rb-d.down{color:#C0392B}.rb-cs{display:block;width:100%;font-size:.66rem;color:var(--muted)}
+.rb-leg{font-size:.72rem;color:var(--muted);margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.rb-leg i{width:10px;height:10px;border-radius:3px;display:inline-block}.rb-leg .c-g{background:#BFE3CF}.rb-leg .c-a{background:#F6D9A6}.rb-leg .c-r{background:#F3C7C2}
+.rb-mx{width:100%;border-collapse:collapse;font-size:.82rem}.rb-mx th{font-size:.66rem;text-transform:uppercase;color:var(--muted);padding:6px;border-bottom:1px solid var(--line)}.rb-mx td{padding:6px;border-bottom:1px solid var(--line);text-align:center}.rb-mx td:first-child{text-align:left}
+.rb-mx .rb-mh{text-align:left;font-weight:800;color:var(--brand-2);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding-top:12px}
+@media (max-width:600px){.rb-tiles{grid-template-columns:1fr 1fr}.rb-tile strong{font-size:1.1rem}}
+#sheet.rb-wide{width:min(720px,96vw);max-width:96vw}.rb-mx td:first-child{white-space:nowrap}
 /* ---------- daily brief ---------- */
 .brief{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
@@ -2310,9 +2338,76 @@ async function loadBrief(fresh){
 const SENIOR_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];
 const seniorView = () => !!(ME && ME.user && SENIOR_ROLES.includes(ME.user.role));
 const showD2D = () => !!(ME && ME.user) && (ME.user.role === "ADMIN" || !seniorView());   // Admin sees both the brief and the timeline
+/* ---------- Brief by role (Oct 2026, docs/FEATURE-brief-by-role.md) ----------
+   Manager → action brief for his flagship (tiles + follow-ups) · Advisor → KPI brief, all flagships · Director / CDSO → KPI brief, department stores.
+   Admin → "Preview as…" and "Brief settings" (who sees what). Green ≥ 90 %, amber 75–89 %, red < 75 %. */
+const RB = { data: null, busy: false, as: store.get("hub.briefAs", "advisor"), period: store.get("hub.briefPeriod", "month"), site: store.get("hub.briefSite", ""), err: "" };
+const RB_APP = { incidents: "incidents", checklists: "forms", handover: "handover", malfunctions: "malfunctions", snaglist: "snaglist", restroom: "restroom", feedback: "feedback", marketing: "calendar", cleaning: "cleanctl", contractors: "contractor-access", contracts: "contracts",
+  pir: "incidents", amcheck: "forms", pmcheck: "forms", cleaningk: "cleanctl", mf48: "malfunctions", snags: "snaglist", gla: "gla" };
+async function loadRoleBrief(){
+  if (RB.busy) return; RB.busy = true; RB.err = ""; renderRoleBrief();
+  try { RB.data = await api(`brief/role?as=${encodeURIComponent(RB.as)}&period=${RB.period}&site=${encodeURIComponent(RB.site)}`); }
+  catch (e){ RB.err = e.message; }
+  RB.busy = false; renderRoleBrief();
+}
+function renderRoleBrief(){
+  const box = $("#brief"); if (!box) return;
+  if (!RB.data && !RB.busy && !RB.err){ loadRoleBrief(); return; }
+  const D = RB.data || {}, admin = ME.user.role === "ADMIN", hr = new Date().getHours(), part = hr < 12 ? "Morning" : hr < 18 ? "Afternoon" : "Evening";
+  if (D.kind === "none" && !admin){ box.innerHTML = ""; return; }
+  const first = esc((ME.user.name || "").split(" ")[0]);
+  const adminBar = admin ? `<div class="rb-admin"><span>Preview as</span>${Object.entries({ manager: "Manager", advisor: "Advisor", director: "Director", cdso: "CDSO" }).map(([k, n]) => `<button data-rbas="${k}" class="${RB.as === k ? "on" : ""}">${n}</button>`).join("")}<span style="flex:1"></span><button data-rbset class="gh">⚙ Brief settings</button></div>` : "";
+  const refresh = `<button class="refresh ${RB.busy ? "spin" : ""}" data-rbref aria-label="Refresh" title="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>`;
+  let body = "";
+  if (!RB.data) body = RB.err ? `<p class="brief-empty">${esc(RB.err)}</p>` : `<div class="sk"></div><div class="sk"></div>`;
+  else if (D.kind === "manager"){
+    body = `<div class="brief-h"><div><h2>${part} brief · ${esc(D.siteName)}</h2><p>Good ${part.toLowerCase()}, ${first} — what needs you today</p></div><div class="brief-actions">
+        ${D.sites && D.sites.length > 1 ? `<select class="rb-site" data-rbsite>${D.sites.map(c => `<option value="${c}" ${c === D.site ? "selected" : ""}>${esc((SITES || {})[c] || c)}</option>`).join("")}</select>` : ""}
+        ${D.need ? `<span class="rb-need">${D.need} need action</span>` : `<span class="rb-need ok">All under control</span>`}${refresh}</div></div>
+      <div class="rb-tiles">${D.tiles.map(t => `<button class="rb-tile t-${t.tone || "n"}" data-rbapp="${esc(t.app)}" data-rbsite2="${esc(D.site)}"><b>${esc(t.title)}</b><strong>${esc(t.value)}</strong><small>${esc(t.note || "")}</small></button>`).join("")}</div>
+      ${D.todo.length ? `<div class="rb-sec">Your follow-ups</div><div class="rb-todo">${D.todo.map(x => `<button class="rb-do" data-rbapp="${esc(x.app)}" data-rbsite2="${esc(D.site)}"><i class="d-${x.tone}"></i><span><b>${esc(x.text)}</b><small>${esc(x.sub || "")}</small></span><em>Open ›</em></button>`).join("")}</div>` : ""}`;
+  } else if (D.kind === "kpi"){
+    const per = { today: "Today", "7d": "7 days", month: "Month" };
+    const cell = (row, c) => c.v == null ? `<span class="rb-c">—</span>` : `<span class="rb-c ${c.tone ? "c-" + c.tone : ""}">${c.pct ? c.v + "%" : c.v.toLocaleString("en-US")}</span>${c.delta ? `<span class="rb-d ${c.delta > 0 ? "up" : "down"}">${c.delta > 0 ? "▲" : "▼"}${Math.abs(c.delta)}</span>` : ""}${c.sub ? `<small class="rb-cs">${esc(c.sub)}</small>` : ""}`;
+    body = `<div class="brief-h"><div><h2>${part} brief · Operations KPIs</h2><p>${esc(D.range.label)} · ${esc(D.range.from.slice(8))}–${esc(D.range.to.slice(8))} ${new Date(D.range.to + "T12:00:00").toLocaleDateString("en-GB", { month: "short" })} · ${D.sites.length} flagship${D.sites.length > 1 ? "s" : ""}</p></div>
+        <div class="brief-actions"><div class="rb-per">${Object.entries(per).map(([k, n]) => `<button data-rbper="${k}" class="${D.period === k ? "on" : ""}">${n}</button>`).join("")}</div>${refresh}</div></div>
+      <div class="rb-tw"><table class="rb-kt"><thead><tr><th>KPI</th>${D.sites.map(s2 => `<th>${esc(s2.name)}</th>`).join("")}</tr></thead>
+        <tbody>${D.rows.map(r => `<tr><td>${esc(r.label)}</td>${r.cells.map(c => `<td><button data-rbapp="${esc(RB_APP[r.key === "cleaning" ? "cleaningk" : r.key] || r.key)}" data-rbsite2="${esc(c.site)}">${cell(r, c)}</button></td>`).join("")}</tr>`).join("")}</tbody></table></div>
+      <p class="rb-leg"><i class="c-g"></i>90 % and above <i class="c-a"></i>75–89 % <i class="c-r"></i>below 75 % · ▲▼ against the previous ${D.period === "today" ? "day" : D.period === "7d" ? "7 days" : "period of the same length"} · — = no data</p>
+      ${D.worst.length ? `<div class="rb-sec">Weakest this period</div><div class="rb-todo">${D.worst.map(w => `<div class="rb-do"><i class="d-${w.tone}"></i><span><b>${esc(w.siteName)} — ${esc(w.label)} ${w.v}%</b>${w.delta ? `<small>${w.delta > 0 ? "▲" : "▼"} ${Math.abs(w.delta)} against the previous period</small>` : ""}</span></div>`).join("")}</div>` : `<div class="allclear">✓ Every KPI is green</div>`}`;
+  } else body = `<p class="brief-empty">No brief for this view.</p>`;
+  box.innerHTML = `<section class="brief rb">${adminBar}${body}</section>`;
+}
+$("#brief").addEventListener("click", async e => {
+  const t = e.target;
+  const as = t.closest("[data-rbas]"); if (as){ RB.as = as.dataset.rbas; store.set("hub.briefAs", RB.as); RB.data = null; return loadRoleBrief(); }
+  const pr = t.closest("[data-rbper]"); if (pr){ RB.period = pr.dataset.rbper; store.set("hub.briefPeriod", RB.period); return loadRoleBrief(); }
+  if (t.closest("[data-rbref]")) return loadRoleBrief();
+  if (t.closest("[data-rbset]")) return briefSettings();
+  const ap = t.closest("[data-rbapp]"); if (ap){ const a = byId(ap.dataset.rbapp); if (a) launch(a, ap.dataset.rbsite2 || undefined); }
+});
+$("#brief").addEventListener("change", e => { if (e.target.matches("[data-rbsite]")){ RB.site = e.target.value; store.set("hub.briefSite", RB.site); loadRoleBrief(); } });
+async function briefSettings(){
+  let S; try { S = await api("brief/settings"); } catch (e){ return alert(e.message); }
+  const aud = Object.keys(S.audiences), items = [...Object.entries(S.mgrItems).map(([k, n]) => ["manager", k, n]), ...Object.entries(S.kpiItems).map(([k, n]) => ["kpi", k, n])];
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Brief settings</b><small>Which items each title sees · the operations team has no brief</small></div></div>
+    <div class="sheet-body"><div class="rb-tw"><table class="rb-mx"><thead><tr><th>Item</th>${aud.map(a => `<th>${esc(S.audiences[a])}</th>`).join("")}</tr></thead><tbody>
+      <tr><td colspan="${aud.length + 1}" class="rb-mh">Manager · action tiles</td></tr>
+      ${Object.entries(S.mgrItems).map(([k, n]) => `<tr><td>${esc(n)}</td>${aud.map(a => `<td>${a === "manager" ? `<input type="checkbox" data-a="${a}" data-k="${k}" ${S.cfg[a][k] ? "checked" : ""}>` : "—"}</td>`).join("")}</tr>`).join("")}
+      <tr><td colspan="${aud.length + 1}" class="rb-mh">KPI rows</td></tr>
+      ${Object.entries(S.kpiItems).map(([k, n]) => `<tr><td>${esc(n)}</td>${aud.map(a => `<td>${a !== "manager" ? `<input type="checkbox" data-a="${a}" data-k="${k}" ${S.cfg[a][k] ? "checked" : ""}>` : "—"}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div><p class="muted" style="font-size:.78rem;margin-top:8px">Director and CDSO see the department stores (Dbayeh, Verdun and Achrafieh DS) they can reach; the Advisor sees every flagship.</p></div>
+    <div class="sheet-f"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="rbSave">Save</button></div>`;
+  sheet.classList.add("rb-wide"); sheet.addEventListener("close", () => sheet.classList.remove("rb-wide"), { once: true });
+  sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
+  $("#rbSave").onclick = async () => { const c = {}; aud.forEach(a => c[a] = {}); sheet.querySelectorAll("input[data-a]").forEach(i => c[i.dataset.a][i.dataset.k] = i.checked);
+    try { await api("brief/settings", c); sheet.close(); RB.data = null; loadRoleBrief(); } catch (e){ alert(e.message); } };
+  sheet.showModal();
+}
 function renderBrief(loading){
   const box = $("#brief");
   if (!seniorView()){ box.innerHTML = ""; return; }   // operations team: no brief panel (its figures still feed the tile badges)
+  return renderRoleBrief();   // Brief by role (Oct 2026): Manager action brief · Advisor / Director / CDSO KPI brief
   const ids = APPS.filter(a => BRIEF ? BRIEF.systems && BRIEF.systems[a.id] : false).map(a => a.id);
   if (!loading && !ids.length){
     box.innerHTML = ME.user.role === "ADMIN" && BRIEF && BRIEF.keyMissing
