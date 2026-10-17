@@ -2,10 +2,13 @@
    REMINDERS — feature module (kept separate so it can be removed cleanly)
    See docs/FEATURE-reminders.md
 
-   A lead picks the reminders a flagship needs (time, repeat, days).
+   Each title has its OWN reminder list at each flagship (Oct 2026) and controls it:
+     Mall Manager · Operations Manager · Operations team (one shared list for the Senior Mall Supervisor,
+     Mall Supervisors and Mall Officers) · Security · Property Advisor · Mall Director · CDSO.
+   Flagship management can also open the Operations team's list. Admin sees every list.
    Every 2 minutes the hub checks each reminder that is due:
      · the task is done      → nothing is sent
-     · the task is pending   → bell + push to EVERYONE at that flagship
+     · the task is pending   → bell + push to the people of THAT list only
        (no link to the Schedule — shift or off day does not matter)
 
    Tables : reminders · reminder_runs · reminder_done
@@ -39,6 +42,41 @@ const TEAMS = { both: "Operations & Soft services", ops: "Operations", usm: "Sof
 const SHIFTS = { AM: "AM", MID: "Mid", PM: "PM", NIGHT: "Night" };   // handover shifts (each flagship ticks its own in Shift Handover → Settings)
 const FORM_NAMES = { am: "AM Checklist", pm: "PM Checklist", dbank: "Direct Banking Checklist", open: "Tenant Opening Checklist", close: "Tenant Closing Checklist" };
 
+/* ---------- who owns a reminder list (scope) ---------- */
+export const SCOPES = { MM: "Mall Manager", OM: "Operations Manager", OPS: "Operations team", SEC: "Security",
+  ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
+/* the person's own list (null = none: the warehouse account) */
+export function scopeOf(me) {
+  if (!me) return null;
+  if (["ADVISOR", "DIRECTOR", "CDSO"].includes(me.role)) return me.role;
+  if (me.role === "MANAGER") return ["OM", "DOM"].includes(me.position) ? "OM" : "MM";
+  if (me.role === "SUPERVISOR") return me.position === "WH" ? null : "OPS";
+  if (me.role === "SECURITY") return "SEC";
+  return null;
+}
+/* the lists a person can open and control */
+export function scopesFor(me) {
+  if (me && me.role === "ADMIN") return Object.keys(SCOPES);
+  const own = scopeOf(me);
+  if (!own) return [];
+  return me.role === "MANAGER" ? [own, "OPS"] : [own];
+}
+/* the people who receive a list's reminders at a flagship */
+async function members(env, site, scope) {
+  const q = {
+    MM: ["role = 'MANAGER' AND site_code = ? AND position NOT IN ('OM','DOM')", [site]],
+    OM: ["role = 'MANAGER' AND site_code = ? AND position IN ('OM','DOM')", [site]],
+    OPS: ["role = 'SUPERVISOR' AND site_code = ? AND position != 'WH'", [site]],
+    SEC: ["role = 'SECURITY' AND site_code = ?", [site]],
+    ADVISOR: ["role = 'ADVISOR'", []],
+    DIRECTOR: ["role = 'DIRECTOR' AND (site_code = ? OR (',' || sites || ',') LIKE ?)", [site, `%,${site},%`]],
+    CDSO: ["role = 'CDSO' AND (site_code = ? OR (',' || sites || ',') LIKE ?)", [site, `%,${site},%`]]
+  }[scope];
+  if (!q) return [];
+  const { results } = await env.DB.prepare(`SELECT email, full_name FROM users WHERE active = 1 AND ${q[0]}`).bind(...q[1]).all();
+  return results || [];
+}
+
 /* The checks the hub knows how to verify. `source` says where the answer comes from. */
 export const KINDS = {
   restroom:  { label: "Restroom inspections", source: "Restroom system", hint: "Pending while any restroom has no inspection logged for the window." },
@@ -47,7 +85,7 @@ export const KINDS = {
   pir:       { label: "Post-incident reports", source: "Incident Report System", hint: "Pending while any Level 2/3 incident is waiting for its report (overdue only, or all)." },
   sitevisit: { label: "Site visit points", source: "Snaglist Manager", hint: "Pending while a site visit has open points for longer than the days you set." },
   form:      { label: "Checklist submitted", source: "Operations Forms", hint: "Pending until the checklist is submitted — today (AM / PM) or since Monday (weekly Direct Banking)." },
-  custom:    { label: "Custom task", source: "Marked done in the hub", hint: "Anyone at the flagship taps Done in Reminders. Until then it counts as pending." }
+  custom:    { label: "Custom task", source: "Marked done in the hub", hint: "Anyone on this list taps Done in Reminders. Until then it counts as pending." }
 };
 
 /* Recommended set — offered as a pick list the first time (and any time later) */
@@ -79,6 +117,8 @@ export async function remindersSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS reminder_done (reminder_id INTEGER NOT NULL, day TEXT NOT NULL, by_email TEXT, by_name TEXT, at TEXT,
       PRIMARY KEY (reminder_id, day))`)
   ]);
+  /* one list per title (Oct 2026): the reminders made before belong to the operations team */
+  await env.DB.prepare("ALTER TABLE reminders ADD COLUMN scope TEXT NOT NULL DEFAULT 'OPS'").run().catch(() => {});
   /* restroom windows changed (Oct 2026): move reminders that still use the old default times; edited ones are left alone */
   await env.DB.batch(OLD_WINDOWS.flatMap(set => Object.entries(set)).filter(([w, to]) => WINDOWS[w] && WINDOWS[w].to !== to).map(([w, to]) => env.DB.prepare(
     "UPDATE reminders SET at_time = ?, until_time = ? WHERE kind = 'restroom' AND preset = ? AND at_time = ? AND until_time = ?")
@@ -254,9 +294,10 @@ export async function remindersRun(env, deps) {
     let pushed = 0;
     if (res.state === "pending") {
       const repeat = runs.filter(x => x.state === "pending").length;
-      await deps.raiseEvent(env, { site: r.site, app: "reminders", email: "", tone: repeat ? "alert" : "warn",
+      const to = await members(env, r.site, r.scope || "OPS");   // only the people of this reminder's list
+      for (const m of to) await deps.raiseEvent(env, { site: r.site, app: "reminders", email: m.email, tone: repeat ? "alert" : "warn",
         title: `${repeat ? `Still pending (${repeat + 1}) · ` : ""}${r.title}`, body: res.detail });
-      pushed = 1;
+      pushed = to.length ? 1 : 0;
     }
     await env.DB.prepare("UPDATE reminder_runs SET state = ?, detail = ?, pushed = ?, at = ? WHERE reminder_id = ? AND day = ? AND slot = ?")
       .bind(res.state, clip(res.detail, 400), pushed, deps.now(), r.id, t.day, due).run();
@@ -267,24 +308,31 @@ export async function remindersRun(env, deps) {
 }
 
 /* ---------- screens ---------- */
-const out = (r, extra = {}) => ({ id: r.id, kind: r.kind, title: r.title, note: r.note, at: r.at_time, every: r.every_min, until: r.until_time,
+const out = (r, extra = {}) => ({ id: r.id, scope: r.scope || "OPS", kind: r.kind, title: r.title, note: r.note, at: r.at_time, every: r.every_min, until: r.until_time,
   days: r.days, params: JSON.parse(r.params || "{}"), preset: r.preset, active: !!r.active, createdName: r.created_name, updatedAt: r.updated_at, ...extra });
 
-/* ctx = { site, can, me, now, raiseEvent, pullDay } — can.reminders decides who sets reminders up */
+/* ctx = { site, me, now, raiseEvent, pullDay } — the person's title decides which list they open (scopesFor) */
 export async function remindersRoute(env, p, method, b, url, ctx) {
-  const { site, can, me, now } = ctx;
-  const manage = !!can.reminders;
-  const need = () => { if (!manage) throw err("Only managers and the senior mall supervisor can change reminders", 403); };
+  const { site, me, now } = ctx;
   const t = beirutNow();
+  /* which list: the one asked for (if this person may open it), else their own */
+  const allowed = scopesFor(me);
+  if (!allowed.length) throw err("Reminders are not available for this account", 403);
+  const want = String(b.scope || url.searchParams.get("scope") || "").toUpperCase();
+  const scope = allowed.includes(want) ? want : allowed.includes(scopeOf(me)) ? scopeOf(me) : allowed.includes("OPS") ? "OPS" : allowed[0];
+  const manage = true;   // each title controls its own list
+  const need = () => {};
 
   if (p === "reminders/get") {
     const [list, runs, done, staff] = await Promise.all([
-      env.DB.prepare("SELECT * FROM reminders WHERE site = ? ORDER BY at_time, id").bind(site).all(),
-      env.DB.prepare("SELECT * FROM reminder_runs WHERE site = ? AND day = ? ORDER BY slot").bind(site, t.day).all(),
-      env.DB.prepare("SELECT d.* FROM reminder_done d JOIN reminders r ON r.id = d.reminder_id WHERE r.site = ? AND d.day = ?").bind(site, t.day).all(),
-      env.DB.prepare(`SELECT COUNT(*) AS people, SUM(CASE WHEN EXISTS (SELECT 1 FROM push_subs s WHERE s.email = u.email) THEN 1 ELSE 0 END) AS devices
-        FROM users u WHERE u.active = 1 AND u.site_code = ?`).bind(site).first()
+      env.DB.prepare("SELECT * FROM reminders WHERE site = ? AND scope = ? ORDER BY at_time, id").bind(site, scope).all(),
+      env.DB.prepare("SELECT x.* FROM reminder_runs x JOIN reminders r ON r.id = x.reminder_id WHERE x.site = ? AND x.day = ? AND r.scope = ? ORDER BY x.slot").bind(site, t.day, scope).all(),
+      env.DB.prepare("SELECT d.* FROM reminder_done d JOIN reminders r ON r.id = d.reminder_id WHERE r.site = ? AND r.scope = ? AND d.day = ?").bind(site, scope, t.day).all(),
+      members(env, site, scope)
     ]);
+    const emails = staff.map(m => m.email);
+    const devices = emails.length ? Number(((await env.DB.prepare(`SELECT COUNT(DISTINCT email) AS n FROM push_subs WHERE email IN (${emails.map(() => "?").join(",")})`)
+      .bind(...emails).first()) || {}).n || 0) : 0;
     const runsBy = new Map(), doneBy = new Map((done.results || []).map(d => [d.reminder_id, d]));
     for (const x of runs.results || []) (runsBy.get(x.reminder_id) || runsBy.set(x.reminder_id, []).get(x.reminder_id)).push(x);
     const reminders = (list.results || []).map(r => {
@@ -297,21 +345,22 @@ export async function remindersRoute(env, p, method, b, url, ctx) {
         done: d ? { by: d.by_name, at: d.at, email: d.by_email } : null });
     });
     return { site, day: t.day, now: toHM(t.minutes), dow: t.dow, can: { manage }, kinds: KINDS, windows: WINDOWS, teams: TEAMS, presets: PRESETS,
-      reach: { people: Number(staff && staff.people || 0), devices: Number(staff && staff.devices || 0) }, reminders };
+      scope, scopeName: SCOPES[scope], scopes: allowed.map(k => ({ key: k, name: SCOPES[k], own: k === scopeOf(me) })),
+      reach: { people: staff.length, devices, names: staff.map(m => m.full_name).slice(0, 12) }, reminders };
   }
 
   if (p === "reminders/save" && method === "POST") {
     need();
     const c = cleanReminder(b);
     if (b.id) {
-      const cur = await env.DB.prepare("SELECT id FROM reminders WHERE id = ? AND site = ?").bind(Number(b.id), site).first();
+      const cur = await env.DB.prepare("SELECT id FROM reminders WHERE id = ? AND site = ? AND scope = ?").bind(Number(b.id), site, scope).first();
       if (!cur) throw err("This reminder no longer exists", 404);
       await env.DB.prepare(`UPDATE reminders SET kind=?, title=?, note=?, at_time=?, every_min=?, until_time=?, days=?, params=?, updated_at=? WHERE id=?`)
         .bind(c.kind, c.title, c.note, c.at, c.every, c.until, c.days, JSON.stringify(c.params), now(), cur.id).run();
       return { id: cur.id, saved: true };
     }
-    const r = await env.DB.prepare(`INSERT INTO reminders (site, kind, title, note, at_time, every_min, until_time, days, params, preset, active, created_by, created_name, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).bind(site, c.kind, c.title, c.note, c.at, c.every, c.until, c.days, JSON.stringify(c.params),
+    const r = await env.DB.prepare(`INSERT INTO reminders (site, scope, kind, title, note, at_time, every_min, until_time, days, params, preset, active, created_by, created_name, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).bind(site, scope, c.kind, c.title, c.note, c.at, c.every, c.until, c.days, JSON.stringify(c.params),
       clip(b.preset || "", 40), me.email, me.full_name, now(), now()).run();
     return { id: r.meta && r.meta.last_row_id, saved: true };
   }
@@ -320,17 +369,17 @@ export async function remindersRoute(env, p, method, b, url, ctx) {
   if (p === "reminders/presets" && method === "POST") {
     need();
     const keys = new Set(Array.isArray(b.keys) ? b.keys : []);
-    const have = new Set(((await env.DB.prepare("SELECT preset FROM reminders WHERE site = ? AND preset != ''").bind(site).all()).results || []).map(x => x.preset));
+    const have = new Set(((await env.DB.prepare("SELECT preset FROM reminders WHERE site = ? AND scope = ? AND preset != ''").bind(site, scope).all()).results || []).map(x => x.preset));
     const pick = PRESETS.filter(x => keys.has(x.key) && !have.has(x.key));
-    const ops = pick.map(x => env.DB.prepare(`INSERT INTO reminders (site, kind, title, note, at_time, every_min, until_time, days, params, preset, active, created_by, created_name, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).bind(site, x.kind, x.title, "", x.at, x.every, x.until, x.days || "1234567", JSON.stringify(x.params), x.key,
+    const ops = pick.map(x => env.DB.prepare(`INSERT INTO reminders (site, scope, kind, title, note, at_time, every_min, until_time, days, params, preset, active, created_by, created_name, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).bind(site, scope, x.kind, x.title, "", x.at, x.every, x.until, x.days || "1234567", JSON.stringify(x.params), x.key,
       me.email, me.full_name, now(), now()));
     if (ops.length) await env.DB.batch(ops);
     return { added: ops.length };
   }
 
   const one = async () => {
-    const r = await env.DB.prepare("SELECT * FROM reminders WHERE id = ? AND site = ?").bind(Number(b.id || url.searchParams.get("id")), site).first();
+    const r = await env.DB.prepare("SELECT * FROM reminders WHERE id = ? AND site = ? AND scope = ?").bind(Number(b.id || url.searchParams.get("id")), site, scope).first();
     if (!r) throw err("This reminder no longer exists", 404);
     return r;
   };
@@ -359,8 +408,7 @@ export async function remindersRoute(env, p, method, b, url, ctx) {
     const r = await one();
     if (r.kind !== "custom") throw err("This reminder is checked automatically from its system");
     if (b.undo) {
-      const d = await env.DB.prepare("SELECT by_email FROM reminder_done WHERE reminder_id = ? AND day = ?").bind(r.id, t.day).first();
-      if (d && d.by_email !== me.email && !manage) throw err("Only the person who marked it done, or a manager, can undo it", 403);
+      /* anyone on the list may undo (each title controls its own list) */
       await env.DB.prepare("DELETE FROM reminder_done WHERE reminder_id = ? AND day = ?").bind(r.id, t.day).run();
       return { done: false };
     }
@@ -371,7 +419,7 @@ export async function remindersRoute(env, p, method, b, url, ctx) {
   if (p === "reminders/history") {
     const from = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
     const { results } = await env.DB.prepare(`SELECT x.*, r.title, r.kind FROM reminder_runs x JOIN reminders r ON r.id = x.reminder_id
-      WHERE x.site = ? AND x.day >= ? ORDER BY x.day DESC, x.slot DESC LIMIT 400`).bind(site, from).all();
+      WHERE x.site = ? AND r.scope = ? AND x.day >= ? ORDER BY x.day DESC, x.slot DESC LIMIT 400`).bind(site, scope, from).all();
     return { runs: (results || []).map(x => ({ day: x.day, slot: x.slot, title: x.title, kind: x.kind, state: x.state, detail: x.detail, pushed: !!x.pushed })) };
   }
   throw err("Unknown endpoint", 404);

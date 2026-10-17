@@ -63,6 +63,7 @@ table.h{width:100%;border-collapse:collapse;font-size:.84rem}
 <div class="top">
   <h1>Reminders <small id="sub"></small></h1>
   <span id="sitePick"></span>
+  <span id="scopePick"></span>
   <div class="tabs" id="tabs"><button class="on" data-t="today">Today</button><button data-t="history">History</button></div>
   <button class="btn ghost hidden" id="bPick">Recommended</button>
   <button class="btn hidden" id="bAdd">Add reminder</button>
@@ -77,7 +78,7 @@ table.h{width:100%;border-collapse:collapse;font-size:.84rem}
 const DAYS = [["1","Mon"],["2","Tue"],["3","Wed"],["4","Thu"],["5","Fri"],["6","Sat"],["7","Sun"]];
 const EVERY = [[0,"Once"],[5,"Every 5 min"],[10,"Every 10 min"],[15,"Every 15 min"],[20,"Every 20 min"],[30,"Every 30 min"],[45,"Every 45 min"],[60,"Every hour"],[90,"Every 90 min"],[120,"Every 2 hours"]];
 const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
-let ctx = null, data = null, tab = "today", site = new URLSearchParams(location.search).get("site") || "";
+let ctx = null, data = null, tab = "today", site = new URLSearchParams(location.search).get("site") || "", scope = new URLSearchParams(location.search).get("scope") || "";
 
 async function boot(){
   try {
@@ -88,8 +89,13 @@ async function boot(){
   } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 async function load(){
-  data = await api(`ops/reminders/get?site=${site}`);
-  $("#sub").textContent = `${ctx.siteName} · ${D.long(data.day)}`;
+  data = await api(`ops/reminders/get?site=${site}&scope=${scope}`);
+  scope = data.scope;
+  $("#sub").textContent = `${data.scopeName} · ${ctx.siteName} · ${D.long(data.day)}`;
+  /* each title has its own list; managers can also open the operations team's list, admin every list */
+  $("#scopePick").innerHTML = data.scopes.length > 1 ? `<select id="scopeSel" class="inp" style="height:36px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-weight:700;background:var(--surface);color:var(--text)">
+    ${data.scopes.map(x => `<option value="${x.key}" ${x.key === scope ? "selected" : ""}>${esc(x.name)}${x.own ? " · my list" : ""}</option>`).join("")}</select>` : `<span class="pill brand">${esc(data.scopeName)}</span>`;
+  const ss = $("#scopeSel"); if (ss) ss.onchange = () => { scope = ss.value; history.replaceState(null, "", `?site=${site}&scope=${scope}`); load(); };
   $("#bAdd").classList.toggle("hidden", !data.can.manage);
   $("#bPick").classList.toggle("hidden", !data.can.manage);
   render();
@@ -124,13 +130,13 @@ function render(){
   const st = L.map(statusOf);
   const count = k => st.filter(s => s.k === k).length;
   const reach = data.reach;
-  let h = `<div class="card reach">${ICON}<div>A reminder that is still <b>pending</b> at its time goes to <b>everyone at ${esc(ctx.siteName)}</b> — the bell for all
-    <b>${reach.people}</b> people, and a push to the <b>${reach.devices}</b> with notifications turned on — whether they are on shift or not.
+  let h = `<div class="card reach">${ICON}<div>This is the <b>${esc(data.scopeName)}</b> reminder list at ${esc(ctx.siteName)} — only this list's people receive it.
+    A reminder still <b>pending</b> at its time goes to <b>${reach.people}</b> ${reach.people === 1 ? "person" : "people"}${reach.names.length ? ` (${esc(reach.names.join(", "))})` : ""} — the bell, and a push to the <b>${reach.devices}</b> with notifications turned on.
     A task that is <b>done</b> sends nothing, and the repeats stop.</div></div>`;
   if (!L.length){
-    h += `<div class="card empty">No reminders yet for ${esc(ctx.siteName)}.<br>${data.can.manage
+    h += `<div class="card empty">No ${esc(data.scopeName)} reminders yet at ${esc(ctx.siteName)}.<br>${data.can.manage
       ? `<button class="btn" style="margin-top:12px" onclick="openPick()">Choose from the recommended list</button>`
-      : "A manager or the senior mall supervisor sets them up."}</div>`;
+      : ""}</div>`;
     $("#app").innerHTML = h; return;
   }
   h += `<div class="kpis">
@@ -174,13 +180,13 @@ $("#app").addEventListener("click", async e => {
     if (b.dataset.a === "edit") return openEdit(r);
     b.disabled = true;
     if (b.dataset.a === "check"){
-      const res = await api("ops/reminders/check", { site, id });
+      const res = await api("ops/reminders/check", { site, scope, id });
       toast(`${res.state === "done" ? "Done" : res.state === "pending" ? "Pending" : "Couldn't check"} — ${res.detail}`, res.state !== "done");
       b.disabled = false; return;
     }
-    if (b.dataset.a === "done"){ await api("ops/reminders/done", { site, id }); toast("Marked done — no more reminders today"); }
-    if (b.dataset.a === "undo"){ await api("ops/reminders/done", { site, id, undo: true }); toast("Back to pending"); }
-    if (b.dataset.a === "toggle"){ await api("ops/reminders/active", { site, id, active: !r.active }); toast(r.active ? "Reminder switched off" : "Reminder switched on"); }
+    if (b.dataset.a === "done"){ await api("ops/reminders/done", { site, scope, id }); toast("Marked done — no more reminders today"); }
+    if (b.dataset.a === "undo"){ await api("ops/reminders/done", { site, scope, id, undo: true }); toast("Back to pending"); }
+    if (b.dataset.a === "toggle"){ await api("ops/reminders/active", { site, scope, id, active: !r.active }); toast(r.active ? "Reminder switched off" : "Reminder switched on"); }
     await load();
   } catch (err){ toast(err.message, true); b.disabled = false; }
 });
@@ -189,14 +195,14 @@ $("#app").addEventListener("click", async e => {
 async function renderHistory(){
   $("#app").innerHTML = `<div class="empty">Loading…</div>`;
   try {
-    const { runs } = await api(`ops/reminders/history?site=${site}`);
+    const { runs } = await api(`ops/reminders/history?site=${site}&scope=${scope}`);
     if (!runs.length){ $("#app").innerHTML = `<div class="card empty">No reminder has run yet at ${esc(ctx.siteName)}.</div>`; return; }
     const lab = { done: ["Done — nothing sent", "ok"], pending: ["Pending", "alert"], error: ["Couldn't check", "warn"], checking: ["Checking", ""] };
     $("#app").innerHTML = `<div class="card" style="overflow-x:auto"><table class="h"><thead><tr><th>Date</th><th>Time</th><th>Reminder</th><th>Result</th><th class="hide-m">Details</th></tr></thead><tbody>
       ${runs.map(x => `<tr><td class="n">${esc(D.fmt(x.day, { weekday: "short" }))}</td><td class="n">${esc(x.slot)}</td><td>${esc(x.title)}</td>
         <td><span class="pill ${(lab[x.state] || ["", ""])[1]}">${esc((lab[x.state] || [x.state])[0])}</span>${x.pushed ? ` <span class="pill brand">Pushed</span>` : ""}</td>
         <td class="hide-m muted">${esc(x.detail)}</td></tr>`).join("")}</tbody></table></div>
-      <p class="hint" style="margin-top:10px">The last 14 days. Each line is one check; a pushed line went to everyone at the flagship.</p>`;
+      <p class="hint" style="margin-top:10px">The last 14 days. Each line is one check; a pushed line went to the people of this list.</p>`;
   } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
@@ -249,7 +255,7 @@ function drawEdit(){
   d.querySelector("#fSave").onclick = save;
   if (edit.id) d.querySelector("#fDel").onclick = async () => {
     if (!await confirmBox("Delete this reminder?", `“${esc(edit.title)}” and its history will be removed.`, "Delete")) return;
-    try { await api("ops/reminders/remove", { site, id: edit.id }); d.close(); toast("Reminder deleted"); load(); } catch (e){ toast(e.message, true); }
+    try { await api("ops/reminders/remove", { site, scope, id: edit.id }); d.close(); toast("Reminder deleted"); load(); } catch (e){ toast(e.message, true); }
   };
 }
 function grab(){
@@ -268,7 +274,7 @@ async function save(){
   grab();
   const b = $("#fSave"); b.disabled = true;
   try {
-    await api("ops/reminders/save", { site, ...edit });
+    await api("ops/reminders/save", { site, scope, ...edit });
     $("#dEdit").close(); toast("Reminder saved"); load();
   } catch (e){ $("#fErr").textContent = e.message; b.disabled = false; }
 }
@@ -290,7 +296,7 @@ function openPick(){
   d.querySelector("#pAdd").onclick = async () => {
     const keys = [...d.querySelectorAll("input:checked:not([disabled])")].map(i => i.value);
     if (!keys.length) return d.close();
-    try { const r = await api("ops/reminders/presets", { site, keys }); d.close(); toast(`${r.added} reminder${r.added === 1 ? "" : "s"} added`); load(); }
+    try { const r = await api("ops/reminders/presets", { site, scope, keys }); d.close(); toast(`${r.added} reminder${r.added === 1 ? "" : "s"} added`); load(); }
     catch (e){ toast(e.message, true); }
   };
   d.showModal();

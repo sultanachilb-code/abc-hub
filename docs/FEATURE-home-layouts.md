@@ -15,3 +15,12 @@ Each person chooses how the tools are laid out on the home page. The choice is s
 - The Day to Day timeline (operations team) or brief (management), the Recent rail and search work the same in all layouts. Searching shows the plain list of matching tools.
 - Live counts, health dots, the flagship picker and locked (not set up) tools behave as before.
 - Animations are short. They switch off when the device asks for reduced motion.
+
+## iPhone: home page locked (Oct 2026)
+The home page scrolls up and down only: it never slides sideways and cannot be pinch-zoomed (`#home` overflow-x hidden, touch-action pan-x pan-y, Safari gesture events).
+The Day to Day timeline keeps its sideways scroll but stops at its ends without dragging the page, and a mostly-downward swipe that starts on it scrolls the page.
+Tools, forms and dashboards (opened inside the hub) keep zoom and free movement.
+
+## Upcoming - Testing folder (Oct 2026)
+New tools are placed in the **Upcoming - Testing** folder while they are tested, then moved to their real folder.
+Now there: Quick Access Pass, Message of the Moment, Seasonal Decorations.

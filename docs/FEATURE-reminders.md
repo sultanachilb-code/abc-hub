@@ -44,3 +44,19 @@ Added: September 2026 · Status: live · Owner: Sultan Al Achi
 DROP TABLE reminder_runs; DROP TABLE reminder_done; DROP TABLE reminders;
 DELETE FROM hub_events WHERE app = 'reminders';
 ```
+
+## One list per title (Oct 2026)
+Each title has its **own reminder list at each flagship** and controls it (add, edit, switch off, delete, mark done):
+
+| List | Who controls it and receives its reminders |
+|---|---|
+| Mall Manager | Mall Manager / Senior Mall Manager |
+| Operations Manager | Operations Manager / Deputy Operations Manager |
+| Operations team (one shared list) | Senior Mall Supervisor, Mall Supervisors, Mall Officers |
+| Security | Security |
+| Property Advisor · Mall Director · CDSO | each their own list, per flagship |
+
+- A pending reminder goes **only to the people of its list** (bell + push), never to the whole flagship.
+- Flagship management can also open the **Operations team** list (picker at the top). Admin can open every list. The warehouse account has no reminders.
+- The reminders that existed before this change belong to the **Operations team** list.
+- Table `reminders` has a new column `scope` (MM, OM, OPS, SEC, ADVISOR, DIRECTOR, CDSO). Routes take `scope`.

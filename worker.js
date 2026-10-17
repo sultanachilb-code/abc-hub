@@ -202,7 +202,7 @@ const APP_ACCESS = {
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   emergency: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  reminders: ["MM",  "OM"],
+  reminders: ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],   // each title has its own reminder list (modules/reminders.js)
   calendar: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   tenants: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   feedback: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
