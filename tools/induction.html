@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Induction · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Operations Induction (docs/FEATURE-induction.md): the newcomer induction PowerPoint of each flagship, made on this device
+     with the flagship's current team (Admin → Hub users: name, position, profile picture) and a small settings form. -->
+<style>
+.pw{max-width:1180px;margin:0 auto;padding:16px 16px 60px;display:grid;gap:14px}
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:stretch}
+.dl{padding:20px;background:linear-gradient(135deg,#2A0F45,#5B2A8A);color:#fff;border:0;display:grid;gap:12px;align-content:start}
+.dl h2{font-size:1.25rem}.dl p{opacity:.85;font-size:.88rem;line-height:1.5}
+.dl .btn{background:#C8A24A;color:#1C0B30;font-weight:800;justify-self:start}
+.dl .prog{font-size:.8rem;opacity:.85;min-height:1.2em}
+.slides{display:flex;flex-wrap:wrap;gap:6px}.slides span{background:rgba(255,255,255,.14);border-radius:99px;padding:4px 10px;font-size:.74rem;font-weight:700}
+.sec{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.team{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.mem{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.mem.off{opacity:.45}.mem img,.mem .ini{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;background:#7B3FB0;color:#fff;display:grid;place-items:center;font-weight:800}
+.mem b{display:block;font-size:.88rem}.mem small{color:var(--muted);font-size:.76rem}.mem span{flex:1;min-width:0}
+.mem input{width:18px;height:18px;accent-color:var(--brand)}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.form label{display:grid;gap:4px;font-size:.78rem;font-weight:700;color:var(--muted)}
+.form .full{grid-column:1/-1}.form small{font-weight:500}
+.cov{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.cov img{width:200px;height:112px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.note{font-size:.8rem;color:var(--muted);line-height:1.5;padding:10px 12px;border-radius:12px;background:var(--paper)}
+@media (max-width:860px){ .hero{grid-template-columns:1fr} .form{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="top"><h1>🎓 Operations Induction <small id="sub"></small></h1><span id="siteBox"></span></div>
+<div class="pw" id="app"><div class="empty">Loading…</div></div>
+<script src="common.js"></script>
+<script>
+let CTX = null, IND = null, CFG = null;
+const SLIDES = ["Welcome", "Agenda", "Who we are", "Meet the team", "Organization chart", "Operations scope", "Other departments", "Coordination", "Daily tasks", "Policies", "Tenant rules", "Problem solving", "Welcome aboard"];
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#sub").textContent = CTX.siteName;
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  IND = await api(`ops/ind/data?site=${CTX.site}`); CFG = JSON.parse(JSON.stringify(IND.cfg));
+  draw();
+}
+const people = () => IND.team.filter(m => !m.leader || CFG.leaders);
+const inDeck = m => !CFG.hidden.includes(m.email.toLowerCase());
+const photoUrl = m => m.photoAt ? `/api/profile/photo?u=${encodeURIComponent(m.email)}&v=${encodeURIComponent(m.photoAt)}` : "";
+const inits = n => String(n || "").split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+function draw(){
+  const P = people(), n = P.filter(inDeck).length, ed = IND.canEdit;
+  const v = k => esc(Array.isArray(CFG[k]) ? CFG[k].join(", ") : CFG[k] || "");
+  $("#app").innerHTML = `
+    <div class="hero">
+      <div class="card dl"><h2>Induction for newcomers · ${esc(IND.siteName)}</h2>
+        <p>A ${SLIDES.length}-slide PowerPoint with animations: who we are, the ${esc(CFG.short)} team (${n} people with their photos), the organization chart, how operations work, the policies and the tenant rules. Made on this device from the hub's current data.</p>
+        <div class="slides">${SLIDES.map((s, i) => `<span>${i + 1} · ${esc(s)}</span>`).join("")}</div>
+        <button class="btn" id="dlBtn">⤓ Download PowerPoint</button><div class="prog" id="prog"></div></div>
+      <div class="card" style="padding:16px"><div class="sec">Cover photo</div>
+        <div class="cov"><img id="covImg" alt="Cover" src="${coverSrc() || "induction/logo_purple.png"}" style="${coverSrc() ? "" : "object-fit:contain;padding:18px;background:#F4F1F8"}">
+          <div style="display:grid;gap:6px">${ed ? `<label class="btn small ghost">Upload a photo<input type="file" accept="image/*" id="covFile" hidden></label>${IND.cover ? `<button class="btn small ghost" id="covDel">Remove</button>` : ""}` : ""}
+          <small class="muted">${IND.cover ? "Induction photo" : IND.siteCover ? "The flagship cover from Profile" : IND.site === "VRM" ? "Verdun Mall photo" : "No photo yet — a purple ABC cover is used"}</small></div></div>
+        <div class="note" style="margin-top:12px">Names, positions and photos come from <b>Admin → Hub users</b> and each person's profile picture. Untick someone to leave them out of the deck.</div></div>
+    </div>
+    <div class="card" style="padding:16px"><div class="sec"><span>The ${esc(CFG.short)} team in the deck · ${n} of ${P.length}</span>
+      ${ed ? `<label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:.8rem"><input type="checkbox" id="lead" ${CFG.leaders ? "checked" : ""}> Include Advisor / Director / CDSO</label>` : ""}</div>
+      <div class="team">${P.map(m => `<label class="mem ${inDeck(m) ? "" : "off"}">${m.photoAt ? `<img src="${photoUrl(m)}" alt="">` : `<span class="ini">${esc(inits(m.name))}</span>`}
+        <span><b>${esc(m.name)}</b><small>${esc(m.pos)}</small></span>${ed ? `<input type="checkbox" data-hide="${esc(m.email.toLowerCase())}" ${inDeck(m) ? "checked" : ""}>` : ""}</label>`).join("") || `<div class="muted">No hub users at this flagship yet.</div>`}</div></div>
+    ${ed ? `<div class="card" style="padding:16px"><div class="sec"><span>What is specific to ${esc(IND.siteName)}</span>${IND.updatedBy ? `<small style="text-transform:none;letter-spacing:0">Saved by ${esc(IND.updatedBy)}</small>` : ""}</div>
+      <div class="form">
+        <label>Name on the slides<input class="inp" data-k="brand" value="${v("brand")}"></label>
+        <label>Short name<input class="inp" data-k="short" value="${v("short")}"></label>
+        <label>Tenant manual<input class="inp" data-k="manual" value="${v("manual")}"></label>
+        <label>Year<input class="inp" data-k="year" value="${v("year")}"></label>
+        <label>Trading hours<input class="inp" data-k="hours" value="${v("hours")}"></label>
+        <label>Tenant staff in by<input class="inp" data-k="staffIn" value="${v("staffIn")}"></label>
+        <label class="full">Extra daily tasks <small>(comma-separated — e.g. parking operator, I-Play)</small><input class="inp" data-k="extraTasks" value="${v("extraTasks")}"></label>
+        <label>Extra "other duties"<input class="inp" data-k="extraDuties" value="${v("extraDuties")}"></label>
+        <label>Extra technical items<input class="inp" data-k="technicalExtra" value="${v("technicalExtra")}"></label>
+        <label>Head office departments<input class="inp" data-k="ho" value="${v("ho")}"></label>
+        <label>Soft-service partners <small>(cleaning, security, parking…)</small><input class="inp" data-k="soft" value="${v("soft")}"></label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" id="save">Save</button><button class="btn ghost" id="reset">Back to the defaults</button></div></div>` : ""}`;
+  wire();
+}
+function coverSrc(){ return IND.cover ? `/api/ops/ind/cover?site=${IND.site}&v=${encodeURIComponent(IND.cover)}` : IND.siteCover ? `/api/profile/cover?site=${IND.site}&v=${encodeURIComponent(IND.siteCover)}` : IND.site === "VRM" ? "induction/cover_VRM.jpg" : ""; }
+function readForm(){ document.querySelectorAll("[data-k]").forEach(i => { const k = i.dataset.k; CFG[k] = Array.isArray(IND.defaults[k]) ? i.value.split(",").map(x => x.trim()).filter(Boolean) : i.value.trim(); }); }
+async function save(quiet){ readForm(); const r = await api("ops/ind/save", { site: IND.site, cfg: CFG }); IND.cfg = r.cfg; CFG = JSON.parse(JSON.stringify(r.cfg)); if (!quiet) toast("Saved"); }
+function wire(){
+  $("#dlBtn").onclick = () => makeDeck().catch(e => { console.error(e); $("#prog").textContent = ""; toast(e.message || "Could not make the PowerPoint", true); $("#dlBtn").disabled = false; });
+  document.querySelectorAll("[data-hide]").forEach(c => c.onchange = async () => { const e = c.dataset.hide; CFG.hidden = c.checked ? CFG.hidden.filter(x => x !== e) : [...CFG.hidden, e]; await save(true).catch(er => toast(er.message, true)); draw(); });
+  const ld = $("#lead"); if (ld) ld.onchange = async () => { CFG.leaders = ld.checked; await save(true).catch(er => toast(er.message, true)); draw(); };
+  const sv = $("#save"); if (sv) sv.onclick = () => save().then(draw).catch(e => toast(e.message, true));
+  const rs = $("#reset"); if (rs) rs.onclick = async () => { if (!(await confirmBox("Back to the defaults", "Replace these fields with the default values for this flagship? The team choices are kept."))) return; CFG = { ...IND.defaults, hidden: CFG.hidden, leaders: CFG.leaders }; await api("ops/ind/save", { site: IND.site, cfg: CFG }); boot(IND.site); };
+  const cf = $("#covFile"); if (cf) cf.onchange = async () => { const f = cf.files[0]; if (!f) return;
+    try { const data = await fitImage(URL.createObjectURL(f), 1600, 900, "image/jpeg", .8); const r = await api("ops/ind/cover", { site: IND.site, data }); IND.cover = r.cover; draw(); toast("Cover saved"); } catch (e){ toast(e.message, true); } };
+  const cd = $("#covDel"); if (cd) cd.onclick = async () => { await api("ops/ind/cover", { site: IND.site, remove: true }); IND.cover = ""; draw(); };
+}
+
+/* ================= the deck ================= */
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => rej(new Error("Could not load " + src)); i.src = src; });
+const toData = async src => { const b = await (await fetch(src, { credentials: "include" })).blob(); return new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); };
+async function fitImage(src, w, h, type, q, tint){   // cover-fit into w×h (and darken for covers)
+  const im = await loadImg(src), c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
+  const s = Math.max(w / im.width, h / im.height); x.drawImage(im, (w - im.width * s) / 2, (h - im.height * s) / 2, im.width * s, im.height * s);
+  if (tint){ x.fillStyle = "rgba(28,11,48,.58)"; x.fillRect(0, 0, w, h); }
+  return c.toDataURL(type || "image/jpeg", q || .85);
+}
+function brandCover(){   // no photo: a purple ABC cover
+  const c = document.createElement("canvas"); c.width = 1600; c.height = 900; const x = c.getContext("2d");
+  const g = x.createLinearGradient(0, 0, 1600, 900); g.addColorStop(0, "#1C0B30"); g.addColorStop(.6, "#3B1764"); g.addColorStop(1, "#5B2A8A"); x.fillStyle = g; x.fillRect(0, 0, 1600, 900);
+  x.strokeStyle = "rgba(200,162,74,.18)"; x.lineWidth = 2; for (let r = 260; r < 1400; r += 130){ x.beginPath(); x.arc(1450, -60, r, 0, Math.PI * 2); x.stroke(); }
+  x.fillStyle = "rgba(255,255,255,.04)"; for (let r = 90; r < 900; r += 180){ x.beginPath(); x.arc(150, 900, r, 0, Math.PI * 2); x.fill(); }
+  return c.toDataURL("image/jpeg", .9);
+}
+async function avatar(m){   // round photo on a purple disc (or the initials)
+  const S = 480, c = document.createElement("canvas"); c.width = c.height = S; const x = c.getContext("2d");
+  x.beginPath(); x.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); x.closePath(); x.clip();
+  const g = x.createRadialGradient(S / 2, S / 3, 20, S / 2, S / 2, S / 2); g.addColorStop(0, "#9D6BD0"); g.addColorStop(1, "#5B2A8A"); x.fillStyle = g; x.fillRect(0, 0, S, S);
+  let ok = false;
+  if (m.photoAt){ try { const im = await loadImg(photoUrl(m)); const s = Math.max(S / im.width, S / im.height); x.drawImage(im, (S - im.width * s) / 2, (S - im.height * s) / 2.6, im.width * s, im.height * s); ok = true; } catch {} }
+  if (!ok){ x.fillStyle = "#fff"; x.font = "bold 170px Calibri, Arial, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(inits(m.name), S / 2, S / 2 + 6); }
+  return c.toDataURL("image/png");
+}
+const loadPptx = () => window.PptxGenJS ? Promise.resolve(window.PptxGenJS) : new Promise((res, rej) => { const s = document.createElement("script"); s.src = "pptx/pptxgen.bundle.js"; s.onload = () => res(window.PptxGenJS); s.onerror = () => rej(new Error("Could not load the PowerPoint maker")); document.head.append(s); });
+
+function orgOf(T, cfg){   // the chart from the hub titles
+  const M = T.filter(m => m.role === "MANAGER"), sup = T.filter(m => m.role === "SUPERVISOR"), sec = T.filter(m => m.role === "SECURITY"), lead = T.filter(m => m.leader);
+  const root = M[0] ? { name: M[0].name, role: M[0].pos } : { name: `${cfg.brand} Management`, role: "" };
+  const kids = M.slice(1).map(m => ({ name: m.name, role: m.pos }));
+  const ops = sup.filter(m => m.code !== "WH"), wh = sup.filter(m => m.code === "WH");
+  const team = (label, L) => L.length ? { name: label, children: L.slice(0, L.length > 6 ? 5 : 6).map(m => ({ name: m.name, role: m.pos })).concat(L.length > 6 ? [{ name: `+ ${L.length - 5} more` }] : []) } : null;
+  [team("Operations Team", ops), team("Security", sec), team("Warehouse", wh)].filter(Boolean).forEach(k => kids.push(k));
+  return { root, kids: kids.slice(0, 5), above: lead.map(m => `${m.name} — ${m.pos}`) };
+}
+
+async function makeDeck(){
+  const btn = $("#dlBtn"), pr = t => $("#prog").textContent = t; btn.disabled = true;
+  pr("Preparing the photos…");
+  const cfg = CFG, T = people().filter(inDeck), name = IND.siteName;
+  const [PG, logoW, logoP, ic] = await Promise.all([loadPptx(), toData("induction/logo_white.png"), toData("induction/logo_purple.png"),
+    Promise.all(["manual", "policy", "books", "penalty"].map(n => toData(`induction/ic_${n}.png`)))]);
+  const cs = coverSrc(), cover = cs ? await fitImage(cs, 1600, 900, "image/jpeg", .85, true) : brandCover();
+  const close = IND.site === "VRM" && !IND.cover && !IND.siteCover ? await fitImage("induction/close_VRM.jpg", 1600, 900, "image/jpeg", .85, true) : cover;
+  const building = IND.site === "VRM" ? await toData("induction/building_VRM.png") : "";
+  const av = []; for (const m of T){ av.push(await avatar(m)); pr(`Preparing the photos… ${av.length}/${T.length}`); }
+  pr("Making the slides…");
+
+  const INK = "1C0B30", DEEP = "2A1146", BRAND = "4A1F73", PURPLE = "7B3FB0", GOLD = "C8A24A", LIGHT = "F4F1F8", MUTED = "6B6380", LINE = "E4DEEC", TEXT = "1D1530", W = 13.333, H = 7.5;
+  const pres = new PG(); pres.layout = "LAYOUT_WIDE"; pres.theme = { headFontFace: "Calibri", bodyFontFace: "Calibri" };
+  pres.title = `Operations Induction · ${name}`; pres.author = "ABC Operations"; pres.company = "ABC";
+  const img = d => d.replace(/^data:/, "");
+  pres.defineSlideMaster({ title: "DARK", background: { color: INK }, objects: [] });
+  pres.defineSlideMaster({ title: "CONTENT", background: { color: "FFFFFF" }, objects: [
+    { image: { data: img(logoP), x: W - 1.15, y: 0.38, w: 0.62, h: 0.6 } },
+    { text: { text: `${name} · Operations Induction`, options: { x: 0.6, y: H - 0.5, w: 7, h: 0.3, fontSize: 10, color: MUTED, margin: 0 } } },
+    { placeholder: { options: { name: "title", type: "title", x: 0.6, y: 0.42, w: 10.5, h: 0.75, fontSize: 32, bold: true, color: BRAND, margin: 0, valign: "middle", align: "left" }, text: "" } }],
+    slideNumber: { x: W - 1.0, y: H - 0.52, w: 0.5, h: 0.3, fontSize: 10, color: MUTED, align: "right" } });
+  const box = (s, nm, x, y, w, h, fill, o = {}) => s.addShape(pres.shapes.ROUNDED_RECTANGLE, { objectName: nm, x, y, w, h, fill: { color: fill }, line: { color: o.line || fill, width: 0.75 }, rectRadius: o.r ?? 0.12, shadow: o.shadow ? { type: "outer", color: "2A1146", opacity: 0.12, blur: 8, offset: 2, angle: 90 } : undefined });
+  const dot = (s, nm, x, y, d, c, o = {}) => s.addShape(pres.shapes.OVAL, { objectName: nm, x, y, w: d, h: d, fill: { color: c }, line: { color: o.line || c, width: o.lw || 0.75 } });
+  const txt = (s, nm, t, o) => s.addText(t, { objectName: nm, isTextBox: true, margin: 0, fontFace: "Calibri", color: TEXT, ...o });
+  const bl = (L, o = {}) => L.map((t, i) => ({ text: t, options: { bullet: { indent: o.ind || 18 }, breakLine: i < L.length - 1 } }));
+  const content = sec => pres.addSlide({ masterName: "CONTENT", sectionTitle: sec }), dark = sec => pres.addSlide({ masterName: "DARK", sectionTitle: sec });
+  const title = (s, t) => s.addText(t, { placeholder: "title" });
+
+  /* 1 cover */
+  pres.addSection({ title: "Welcome" });
+  { const s = dark("Welcome"); s.addImage({ objectName: "bg", data: img(cover), x: 0, y: 0, w: W, h: H });
+    s.addImage({ objectName: "A1z_logo", data: img(logoW), x: W / 2 - 0.85, y: 1.25, w: 1.7, h: 1.65 });
+    txt(s, "A2u_k", "OPERATIONS INDUCTION", { x: 1, y: 3.25, w: W - 2, h: 0.4, fontSize: 16, bold: true, color: GOLD, align: "center", charSpacing: 6 });
+    txt(s, "A3u_t", `Welcome to ${name}`, { x: 0.8, y: 3.7, w: W - 1.6, h: 1.0, fontSize: 46, bold: true, color: "FFFFFF", align: "center", fit: "shrink" });
+    txt(s, "A4f_s", `Your first steps with the Operations team · ${cfg.year}`, { x: 1, y: 4.75, w: W - 2, h: 0.45, fontSize: 18, color: "E9E1F5", align: "center" });
+    s.addNotes(`Welcome the newcomer to ${name}. This induction covers who we are, the team, how operations work and the rules we apply every day.`); }
+  /* 2 agenda */
+  { const s = content("Welcome"); title(s, "What we will cover");
+    ["Who we are", "Meet the team", "Organization chart", "Operations scope of work", "Working with other departments", "Daily operations tasks", "Policies, procedures and tenant rules", "Problem solving, our way"].forEach((t, i) => {
+      const x = 0.9 + (i % 2) * 6.05, y = 1.6 + Math.floor(i / 2) * 1.25, g = i + 1;
+      box(s, `A${g}u_c${i}`, x, y, 5.6, 0.95, LIGHT, { r: 0.14 }); dot(s, `A${g}u_o${i}`, x + 0.22, y + 0.17, 0.62, i ? BRAND : GOLD);
+      txt(s, `A${g}u_n${i}`, String(i + 1).padStart(2, "0"), { x: x + 0.22, y: y + 0.17, w: 0.62, h: 0.62, fontSize: 16, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+      txt(s, `A${g}u_t${i}`, t, { x: x + 1.05, y: y + 0.12, w: 4.4, h: 0.72, fontSize: 18, bold: true, color: DEEP, valign: "middle" }); }); }
+  /* 3 who we are */
+  pres.addSection({ title: "Who we are" });
+  { const s = content("Who we are"); title(s, `About ${cfg.brand}`);
+    txt(s, "A1u_pk", "OUR PURPOSE", { x: 0.6, y: 1.65, w: 5.6, h: 0.35, fontSize: 14, bold: true, color: GOLD, charSpacing: 4 });
+    txt(s, "A1u_p", "Making Lebanon a better place", { x: 0.6, y: 2.0, w: 5.8, h: 1.1, fontSize: 32, bold: true, color: DEEP });
+    txt(s, "A2u_mk", "OUR MISSION", { x: 0.6, y: 3.45, w: 5.6, h: 0.35, fontSize: 14, bold: true, color: GOLD, charSpacing: 4 });
+    txt(s, "A2u_m", "Being a great social hub, offering the best brand mix and an outstanding customer experience, makes ABC Lebanon's favourite brand.", { x: 0.6, y: 3.8, w: 5.8, h: 1.4, fontSize: 18, valign: "top" });
+    txt(s, "A3u_r", `As part of the Operations team, you are the first face of ${name} for tenants, contractors and visitors — every day.`, { x: 0.6, y: 5.35, w: 5.8, h: 0.9, fontSize: 15, italic: true, color: PURPLE, valign: "top" });
+    if (building) s.addImage({ objectName: "A1z_img", data: img(building), x: 6.6, y: 1.85, w: 6.3, h: 3.28 });
+    else { box(s, "A1z_pn", 6.9, 1.7, 5.8, 4.5, LIGHT, { r: 0.2 }); s.addImage({ objectName: "A1z_pl", data: img(logoP), x: 8.95, y: 2.95, w: 1.7, h: 1.65 }); } }
+  /* 4 team (10 per slide) */
+  pres.addSection({ title: "The team" });
+  const pages = T.length > 8 ? Math.ceil(T.length / 10) : 1;
+  for (let pg = 0; pg < pages; pg++){
+    const L = T.slice(pg * (pages > 1 ? 10 : 8), (pg + 1) * (pages > 1 ? 10 : 8)), off0 = pg * (pages > 1 ? 10 : 8), per = pages > 1 || T.length > 8 ? 5 : 4;
+    const s = content("The team"); title(s, `Meet the ${cfg.short} team${pages > 1 ? ` (${pg + 1}/${pages})` : ""}`);
+    const cw = per === 5 ? 2.25 : 2.55, gap = (W - 1.2 - per * cw) / (per - 1), ph = 1.5, rh = 2.6;
+    if (!L.length) txt(s, "A1f_none", "The team list is empty — add people in Admin → Hub users.", { x: 0.6, y: 3, w: W - 1.2, h: 0.6, fontSize: 18, color: MUTED, align: "center" });
+    L.forEach((m, j) => { const i = off0 + j, r = Math.floor(j / per), c = j % per, nn = Math.min(per, L.length - r * per), off = (per - nn) * (cw + gap) / 2, x = 0.6 + off + c * (cw + gap), y = 1.45 + r * rh, g = r + 1;
+      s.addImage({ objectName: `A${g}z_ph${j}`, data: img(av[i]), x: x + (cw - ph) / 2, y, w: ph, h: ph });
+      txt(s, `A${g}f_nm${j}`, m.name, { x, y: y + ph + 0.1, w: cw, h: 0.36, fontSize: 16, bold: true, color: DEEP, align: "center", fit: "shrink" });
+      txt(s, `A${g}f_ps${j}`, m.pos, { x, y: y + ph + 0.44, w: cw, h: 0.32, fontSize: 13, color: PURPLE, align: "center" }); });
+    s.addNotes("Introduce each person and their role. Names, positions and photos come from the ABC Operations Hub.");
+  }
+  /* 5 organization chart */
+  { const s = content("The team"); title(s, "Organization chart"); const O = orgOf(T, cfg), K = O.kids, n = Math.max(1, K.length);
+    const cw = Math.min(2.6, (W - 1.2 - (n - 1) * 0.25) / n), gap = n > 1 ? (W - 1.2 - n * cw) / (n - 1) : 0, x0 = n === 1 ? W / 2 - cw / 2 : 0.6;
+    if (O.above.length) txt(s, "A1f_above", O.above.join("   ·   "), { x: 0.6, y: 1.2, w: W - 1.2, h: 0.3, fontSize: 12, color: MUTED, align: "center" });
+    const top = { x: W / 2 - 1.6, y: 1.55, w: 3.2, h: 0.85 };
+    box(s, "A1z_top", top.x, top.y, top.w, top.h, BRAND, { r: 0.1 });
+    txt(s, "A1z_tt", [{ text: O.root.name, options: { bold: true, fontSize: 15, color: "FFFFFF", breakLine: !!O.root.role } }, ...(O.root.role ? [{ text: O.root.role, options: { fontSize: 12, color: "E9E1F5" } }] : [])], { x: top.x, y: top.y, w: top.w, h: top.h, align: "center", valign: "middle" });
+    if (K.length){ const busY = 2.7;
+      s.addShape(pres.shapes.LINE, { objectName: "A2f_l0", x: W / 2, y: top.y + top.h, w: 0, h: busY - top.y - top.h, line: { color: PURPLE, width: 1.5 } });
+      if (n > 1) s.addShape(pres.shapes.LINE, { objectName: "A2f_bus", x: x0 + cw / 2, y: busY, w: (n - 1) * (cw + gap), h: 0, line: { color: PURPLE, width: 1.5 } });
+      K.forEach((k, i) => { const x = x0 + i * (cw + gap), y = 3.0;
+        s.addShape(pres.shapes.LINE, { objectName: `A2f_lk${i}`, x: x + cw / 2, y: busY, w: 0, h: y - busY, line: { color: PURPLE, width: 1.5 } });
+        box(s, `A3u_k${i}`, x, y, cw, 0.8, DEEP, { r: 0.1 });
+        txt(s, `A3u_kt${i}`, [{ text: k.name, options: { bold: true, fontSize: 13, color: "FFFFFF", breakLine: !!k.role } }, ...(k.role ? [{ text: k.role, options: { fontSize: 11, color: "E9E1F5" } }] : [])], { x: x + 0.06, y, w: cw - 0.12, h: 0.8, align: "center", valign: "middle", fit: "shrink" });
+        (k.children || []).forEach((c, j) => { const yy = 4.0 + j * 0.5;
+          s.addShape(pres.shapes.LINE, { objectName: `A4f_lc${i}_${j}`, x: x + 0.22, y: j ? yy - 0.25 : y + 0.8, w: 0, h: j ? 0.5 : yy + 0.22 - y - 0.8, line: { color: "B9AFC8", width: 1 } });
+          s.addShape(pres.shapes.LINE, { objectName: `A4f_lh${i}_${j}`, x: x + 0.22, y: yy + 0.22, w: 0.2, h: 0, line: { color: "B9AFC8", width: 1 } });
+          box(s, `A4u_c${i}_${j}`, x + 0.42, yy, cw - 0.42, 0.44, LIGHT, { r: 0.08, line: LINE });
+          txt(s, `A4u_ct${i}_${j}`, [{ text: c.name, options: { bold: true, fontSize: 11, color: DEEP } }, ...(c.role ? [{ text: "  " + c.role, options: { fontSize: 9.5, color: PURPLE } }] : [])], { x: x + 0.5, y: yy, w: cw - 0.55, h: 0.44, valign: "middle", fit: "shrink" }); }); }); } }
+  /* 6 operations scope */
+  pres.addSection({ title: "How we work" });
+  { const s = content("How we work"); title(s, "Operations scope of work");
+    const A = ["Security", "Parking management", "Cleaning", "Tenant supervision", "Maintaining the property", "Landscaping", "Pest control", "Customer satisfaction", "CCTV & local authorities"];
+    const B = ["Fraud process", "Lost & found", ...cfg.extraDuties, "Incidents", "Access control", "IT-related subjects"];
+    box(s, "A1u_c0", 0.6, 1.6, 7.1, 4.75, DEEP, { r: 0.18 }); txt(s, "A1u_h0", "Operations duties", { x: 0.95, y: 1.85, w: 6.4, h: 0.5, fontSize: 24, bold: true, color: GOLD });
+    txt(s, "A1u_b0", bl(A.slice(0, 5)), { x: 0.95, y: 2.4, w: 3.2, h: 3.6, fontSize: 20, color: "FFFFFF", paraSpaceAfter: 12, valign: "top" });
+    txt(s, "A1u_b1", bl(A.slice(5)), { x: 4.3, y: 2.4, w: 3.2, h: 3.6, fontSize: 20, color: "FFFFFF", paraSpaceAfter: 12, valign: "top" });
+    box(s, "A2u_c1", 8.0, 1.6, 4.73, 4.75, LIGHT, { r: 0.18 }); txt(s, "A2u_h1", "Other duties", { x: 8.35, y: 1.85, w: 4.1, h: 0.5, fontSize: 24, bold: true, color: BRAND });
+    txt(s, "A2u_b2", bl(B), { x: 8.35, y: 2.4, w: 4.1, h: 3.6, fontSize: B.length > 7 ? 17 : 20, paraSpaceAfter: 12, valign: "top" }); }
+  /* 7 other departments */
+  { const s = content("How we work"); title(s, "Working with other departments");
+    const DP = [["Leasing", ["New tenant opening", "Termination of tenant", "Pop-ups", "Space management", "Tenant breaches", "Direct banking", "Hoardings"]], ["Retail Delivery", ["Architect forms", "Fit-out tenants", "Approval to trade", "Hoardings", "Contractor breaches"]],
+      ["Procurement", ["Projects", "Requests", "Insurance", "Hygiene orders", "Contracts", "Mall supplies"]], ["Technical", ["Preventive maintenance", "Maintenance requests", "Work permits", "Food audit", ...cfg.technicalExtra, "EPP"]], ["Marketing", ["Events & activations", "Loyalty program", "Marketing ads", "Visuals"]]];
+    const cw = 2.3, gap = (W - 1.2 - 5 * cw) / 4, C = [BRAND, PURPLE, GOLD, DEEP, PURPLE];
+    DP.forEach(([h, L], i) => { const x = 0.6 + i * (cw + gap), g = i + 1;
+      box(s, `A${g}u_d${i}`, x, 1.55, cw, 4.7, i % 2 ? LIGHT : "FFFFFF", { r: 0.16, line: LINE, shadow: true }); dot(s, `A${g}u_do${i}`, x + 0.25, 1.8, 0.55, C[i]);
+      txt(s, `A${g}u_dn${i}`, String(i + 1), { x: x + 0.25, y: 1.8, w: 0.55, h: 0.55, fontSize: 15, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+      txt(s, `A${g}u_dh${i}`, h, { x: x + 0.25, y: 2.5, w: cw - 0.4, h: 0.45, fontSize: 18, bold: true, color: DEEP });
+      txt(s, `A${g}u_db${i}`, bl(L, { ind: 14 }), { x: x + 0.25, y: 3.05, w: cw - 0.4, h: 3.1, fontSize: 14, paraSpaceAfter: 7, valign: "top" }); }); }
+  /* 8 coordination */
+  { const s = content("How we work"); title(s, "Coordination between departments");
+    const Q = [["Operations", "Every tenant request, with full responsibility for the customer experience.", BRAND], ["Technical", "Electrical, mechanical, control room, safety and general services, with any external contractors.", PURPLE],
+      ["Head office departments", cfg.ho.join(" · ") || "Leasing · Procurement · Marketing · Legal · Treasury", DEEP], ["Soft services", cfg.soft.join(" · ") || "Cleaning, security and parking partners — your supervisor introduces them on your first days.", GOLD]];
+    dot(s, "A1z_hub", W / 2 - 1.05, 3.05, 2.1, LIGHT, { line: PURPLE, lw: 2 });
+    txt(s, "A1z_hubt", cfg.short, { x: W / 2 - 1.05, y: 3.05, w: 2.1, h: 2.1, fontSize: 18, bold: true, color: BRAND, align: "center", valign: "middle", fit: "shrink" });
+    Q.forEach(([h, b, c], i) => { const x = i % 2 ? W / 2 + 1.35 : 0.6, y = i < 2 ? 1.5 : 4.4, w = W / 2 - 1.95, g = i + 2;
+      box(s, `A${g}u_q${i}`, x, y, w, 2.3, "FFFFFF", { r: 0.16, line: LINE, shadow: true }); dot(s, `A${g}u_qd${i}`, x + 0.3, y + 0.32, 0.32, c);
+      txt(s, `A${g}u_qh${i}`, h, { x: x + 0.8, y: y + 0.22, w: w - 1.0, h: 0.5, fontSize: 20, bold: true, color: DEEP, valign: "middle" });
+      txt(s, `A${g}u_qb${i}`, b, { x: x + 0.3, y: y + 0.85, w: w - 0.6, h: 1.25, fontSize: 15, valign: "top" }); }); }
+  /* 9 daily tasks */
+  { const s = content("How we work"); title(s, "Daily operations tasks");
+    const TK = ["Daily opening and closing", "Handover and ROA", "Direct banking", "Food safety", "MEP", "Hoardings", ...cfg.extraTasks, "Restaurant-related subjects", "Vacant units", "Key box", "Yearly calendar", "Preventive maintenance", "IT-related subjects"].slice(0, 18);
+    const per = 3, cw = 3.85, gap = (W - 1.2 - per * cw) / (per - 1), rh = TK.length > 15 ? 0.84 : 1.0, bh = TK.length > 15 ? 0.66 : 0.78;
+    TK.forEach((t, i) => { const r = Math.floor(i / per), c = i % per, x = 0.6 + c * (cw + gap), y = 1.5 + r * rh, g = r + 1;
+      box(s, `A${g}u_t${i}`, x, y, cw, bh, r % 2 ? LIGHT : "FFFFFF", { r: bh / 2, line: LINE }); dot(s, `A${g}u_td${i}`, x + 0.22, y + bh / 2 - 0.15, 0.3, [BRAND, PURPLE, GOLD][c]);
+      txt(s, `A${g}u_tt${i}`, t, { x: x + 0.7, y, w: cw - 0.85, h: bh, fontSize: 16, bold: true, color: DEEP, valign: "middle", fit: "shrink" }); }); }
+  /* 10 policies */
+  pres.addSection({ title: "Rules" });
+  { const s = content("Rules"); title(s, "Policies and procedures");
+    const P = [[ic[0], cfg.manual], [ic[1], "ABC Policies and Procedures"], [ic[2], "Mall Guideline"], [ic[3], "Penalty Scheme"]], cw = 2.7, gap = (W - 1.2 - 4 * cw) / 3;
+    P.forEach(([im, t], i) => { const x = 0.6 + i * (cw + gap), g = i + 1;
+      box(s, `A${g}u_p${i}`, x, 1.6, cw, 3.2, LIGHT, { r: 0.18 }); s.addImage({ objectName: `A${g}u_pi${i}`, data: img(im), x: x + cw / 2 - 0.8, y: 1.95, w: 1.6, h: 1.6 });
+      txt(s, `A${g}u_pt${i}`, t, { x: x + 0.2, y: 3.75, w: cw - 0.4, h: 0.85, fontSize: 17, bold: true, color: DEEP, align: "center", valign: "middle", fit: "shrink" }); });
+    box(s, "A5f_hub", 0.6, 5.25, W - 1.2, 1.25, DEEP, { r: 0.18 });
+    txt(s, "A5f_ht", [{ text: "All of them are in the ABC Operations Hub.  ", options: { bold: true, color: GOLD } }, { text: "Open Policies & Procedures, or simply ask ABCON — it answers with the exact rule and its source.", options: { color: "FFFFFF" } }], { x: 1.0, y: 5.25, w: W - 2.0, h: 1.25, fontSize: 17, valign: "middle" }); }
+  /* 11 tenant rules */
+  { const s = content("Rules"); title(s, "Key tenant rules we enforce");
+    const R = [["Insurance", "Verify tenant policies", "Keep all required insurance; provide copies"], ["Staff listing", "Keep the security database", "Submit employee names monthly"], ["Deliveries", "Set routes and timing", "Back doors and service corridors only"],
+      ["Waste", "Run the garbage room", "Sort recyclable / non-recyclable"], ["Trading hours", "Monitor and enforce", `Open ${cfg.hours}; staff in by ${cfg.staffIn}`], ["Unit interior", "Inspect for compliance", "Keep in good repair — no cracks or leaks"],
+      ["Utilities", "Provide connection and meter", "Pay consumption; switch off taps and lights nightly"], ["Signage", "Approve the design in writing", "Install only after approval"], ["Storefront", "Audit transparency (75 %)", "Keep the 1.5 m design control area clear"],
+      ["Work permits", "Issue permits and security passes", "Apply 5 days ahead; approval within 48 h"], ["Fire safety", "Audit extinguishers and sprinklers", "Comply with NFPA standards"]];
+    const hd = t => ({ text: t, options: { bold: true, color: "FFFFFF", fill: { color: BRAND }, fontSize: 14 } });
+    s.addTable([[hd("Topic"), hd("Mall management"), hd("Tenant")], ...R.map((r, i) => r.map((c, j) => ({ text: c, options: { fontSize: 13, bold: j === 0, color: j === 0 ? DEEP : TEXT, fill: { color: i % 2 ? "FFFFFF" : LIGHT } } })))],
+      { objectName: "A1f_tbl", x: 0.6, y: 1.45, w: W - 1.2, colW: [2.3, 4.3, W - 7.8], rowH: 0.42, border: { type: "solid", color: LINE, pt: 0.75 }, margin: [3, 8, 3, 8], valign: "middle", fontFace: "Calibri" }); }
+  /* 12 problem solving */
+  { const s = content("Rules"); title(s, "Problem solving, our way");
+    const P = [["Observe", "Notice every event, small or big"], ["Approach correctly", "Go to the right person, the right way"], ["Stay positive", "Keep a positive, solution-first attitude"], ["Re-observe", "Check that the action solved it"], ["Follow up", "Close the loop — the most important step"]];
+    const cw = 2.25, gap = (W - 1.2 - 5 * cw) / 4;
+    s.addShape(pres.shapes.LINE, { objectName: "A1f_track", x: 0.6 + cw / 2, y: 2.6, w: 4 * (cw + gap), h: 0, line: { color: "D9CFE6", width: 3 } });
+    P.forEach(([h, b], i) => { const x = 0.6 + i * (cw + gap), g = i + 2;
+      dot(s, `A${g}z_s${i}`, x + cw / 2 - 0.55, 2.05, 1.1, i === 4 ? GOLD : [BRAND, PURPLE][i % 2], { line: "FFFFFF", lw: 3 });
+      txt(s, `A${g}z_sn${i}`, String(i + 1).padStart(2, "0"), { x: x + cw / 2 - 0.55, y: 2.05, w: 1.1, h: 1.1, fontSize: 24, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+      txt(s, `A${g}u_sh${i}`, h, { x, y: 3.45, w: cw, h: 0.5, fontSize: 19, bold: true, color: DEEP, align: "center" });
+      txt(s, `A${g}u_sb${i}`, b, { x: x + 0.05, y: 4.0, w: cw - 0.1, h: 1.1, fontSize: 15, color: MUTED, align: "center", valign: "top" }); });
+    box(s, "A7f_tip", 0.6, 5.45, W - 1.2, 0.95, LIGHT, { r: 0.18 });
+    txt(s, "A7f_tt", [{ text: "Write it in the hub:  ", options: { bold: true, color: BRAND } }, { text: "log what you see in the shift handover, malfunctions, incidents or tenant feedback, so the next shift can follow up.", options: { color: TEXT } }], { x: 0.95, y: 5.45, w: W - 1.9, h: 0.95, fontSize: 15, valign: "middle" }); }
+  /* 13 closing */
+  pres.addSection({ title: "Welcome aboard" });
+  { const s = dark("Welcome aboard"); s.addImage({ objectName: "bg", data: img(close), x: 0, y: 0, w: W, h: H });
+    s.addImage({ objectName: "A1z_logo", data: img(logoW), x: W / 2 - 0.75, y: 1.5, w: 1.5, h: 1.45 });
+    txt(s, "A2u_t", "Welcome aboard", { x: 1, y: 3.3, w: W - 2, h: 1.0, fontSize: 48, bold: true, color: "FFFFFF", align: "center" });
+    txt(s, "A3f_s", `Questions? Your supervisor and the ${cfg.short} Operations team are here to help.`, { x: 1.2, y: 4.35, w: W - 2.4, h: 0.6, fontSize: 18, color: "E9E1F5", align: "center" }); }
+
+  pr("Adding the animations…");
+  const buf = await pres.write({ outputType: "arraybuffer" });
+  const out = await animate(buf);
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
+  a.download = `Operations Induction - ${name}.pptx`; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  pr(`Done — ${T.length} people, ${pres.slides.length} slides.`); btn.disabled = false;
+}
+
+/* entrance animations: shapes named A<group><z|u|f>_… appear one group after the other when the slide opens (zoom · float up · fade) */
+async function animate(buf){
+  const zip = await JSZip.loadAsync(buf), DUR = { z: 450, u: 500, f: 450 }, STEP = 230;
+  for (const f of Object.keys(zip.files).filter(f => /^ppt\/slides\/slide\d+\.xml$/.test(f))){
+    let x = await zip.file(f).async("string");
+    const groups = {}; for (const m of x.matchAll(/<p:cNvPr id="(\d+)" name="A(\d+)([zuf])_[^"]*"/g)) (groups[+m[2]] = groups[+m[2]] || []).push([m[1], m[3]]);
+    let id = 3, t = 300; const n = () => id++, inner = [];
+    const one = (k, sp, first) => {
+      const vis = `<p:set><p:cBhvr><p:cTn id="${n()}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn><p:tgtEl><p:spTgt spid="${sp}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr><p:to><p:strVal val="visible"/></p:to></p:set>`;
+      const d = DUR[k], fade = `<p:animEffect transition="in" filter="fade"><p:cBhvr><p:cTn id="${n()}" dur="${d}"/><p:tgtEl><p:spTgt spid="${sp}"/></p:tgtEl></p:cBhvr></p:animEffect>`;
+      const an = (at, a, b) => `<p:anim calcmode="lin" valueType="num"><p:cBhvr><p:cTn id="${n()}" dur="${d}" fill="hold"/><p:tgtEl><p:spTgt spid="${sp}"/></p:tgtEl><p:attrNameLst><p:attrName>${at}</p:attrName></p:attrNameLst></p:cBhvr><p:tavLst><p:tav tm="0"><p:val><p:strVal val="${a}"/></p:val></p:tav><p:tav tm="100000"><p:val><p:strVal val="${b}"/></p:val></p:tav></p:tavLst></p:anim>`;
+      const [pre, sub, body] = k === "z" ? [53, 16, vis + an("ppt_w", "0", "#ppt_w") + an("ppt_h", "0", "#ppt_h") + fade] : k === "u" ? [42, 0, vis + fade + an("ppt_x", "#ppt_x", "#ppt_x") + an("ppt_y", "#ppt_y+.1", "#ppt_y")] : [10, 0, vis + fade];
+      return `<p:par><p:cTn id="${n()}" presetID="${pre}" presetClass="entr" presetSubtype="${sub}" fill="hold" nodeType="${first ? "afterEffect" : "withEffect"}"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>${body}</p:childTnLst></p:cTn></p:par>`;
+    };
+    for (const g of Object.keys(groups).map(Number).sort((a, b) => a - b)){ inner.push(`<p:par><p:cTn id="${n()}" fill="hold"><p:stCondLst><p:cond delay="${t}"/></p:stCondLst><p:childTnLst>${groups[g].map(([sp, k], i) => one(k, sp, i === 0)).join("")}</p:childTnLst></p:cTn></p:par>`); t += STEP; }
+    const timing = inner.length ? `<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst><p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst><p:par><p:cTn id="${n()}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/><p:cond evt="onBegin" delay="0"><p:tn val="2"/></p:cond></p:stCondLst><p:childTnLst>${inner.join("")}</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn><p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst><p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>` : "";
+    x = x.replace(/<p:transition[\s\S]*?<\/p:transition>|<p:timing>[\s\S]*?<\/p:timing>/g, "");
+    const add = '<p:transition spd="med"><p:fade/></p:transition>' + timing;
+    x = x.includes("</p:clrMapOvr>") ? x.replace("</p:clrMapOvr>", "</p:clrMapOvr>" + add) : x.replace("</p:cSld>", "</p:cSld>" + add);
+    zip.file(f, x);
+  }
+  return zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+}
+boot().catch(e => $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`);
+</script>
+</body>
+</html>

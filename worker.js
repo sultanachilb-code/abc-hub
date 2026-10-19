@@ -40,6 +40,7 @@ import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.j
 import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
 import { extFacts } from "./modules/extdb.js";
 import { crmSchema, crmRoute } from "./modules/crm.js";
+import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
@@ -221,6 +222,7 @@ const APP_ACCESS = {
   cleanctl: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Cleaning Control (Upcoming - Testing)
   beforeafter: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Before / After (Upcoming - Testing)
   crm: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // CRM handhelds (Operations Tools)
+  induction: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Operations Induction deck
   sales: ["MM", "OM", "LEAD"],
   training: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   works: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -363,6 +365,7 @@ async function ensureSchema(env) {
   await polSchema(env);   // Policies & Procedures library
   await aiSchema(env);   // ABCON: taught facts, feedback, chat history
   await crmSchema(env);   // CRM handhelds sheet
+  await inductionSchema(env);   // Operations Induction
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
@@ -629,7 +632,12 @@ async function route(request, env, ctx, url) {
   if (path === "push/test" && method === "POST") return ok(await pushTest(env, me, body));
   if (path === "usage" && method === "POST") { await logUsage(env, me, String(body.app || "").slice(0, 40)); return ok({ logged: true }); }
   if (path === "ops/layouts/image") return layoutsImage(env, opsSite(me, url.searchParams.get("site")), url);   // Mall Layouts feature
-  if (path === "ops/works/file") return worksFile(env, me, url, { canSite });   // Tenant Works Forms feature: the PDF
+  if (path === "ops/works/file") return worksFile(env, me, url, { canSite });
+  if (path === "ops/ind/cover" && method === "GET") {   // Operations Induction: the cover photo
+    const s2 = opsSite(me, url.searchParams.get("site"));
+    if (!roleAllows(me, "induction") || !canSite(me, s2)) return new Response("", { status: 403 });
+    return inductionCover(env, s2);
+  }   // Tenant Works Forms feature: the PDF
   if (path.startsWith("ops/")) {
     const out = await opsRoute(env, me, path.slice(4), method, body, url);
     if (method === "POST") await auditOps(env, me, path.slice(4), body || {}, out).catch(() => {});   // Change history feature
@@ -1655,6 +1663,14 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
+  if (p.startsWith("ind/")) {   // Operations Induction (modules/induction.js)
+    if (!roleAllows(me, "induction") || isWarehouse(me)) throw fail("Not allowed", 403);
+    return inductionRoute(env, p, method, b, url, { site, me, canSite, siteName, now: nowIso, canEdit: isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS"),
+      team: async s2 => { const { results } = await env.DB.prepare("SELECT email, full_name, role, position, site_code, sites, photo_at FROM users WHERE active = 1 AND role IN ('MANAGER','SUPERVISOR','SECURITY','ADVISOR','DIRECTOR','CDSO')").all();
+        const rk = u => ({ ADVISOR: -10, DIRECTOR: -9, CDSO: -8 })[u.role] ?? ((TITLES[u.position] || POSITIONS[u.position] || {}).rank ?? 6);
+        return (results || []).filter(u => sitesOf(u).includes(s2)).map(u => ({ email: u.email, name: u.full_name, role: u.role, pos: posLabel(u.position) || ROLES[u.role] || u.role,
+          code: u.position || "", rank: rk(u), photoAt: u.photo_at || "", leader: ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) })).sort((a, b2) => a.rank - b2.rank || a.name.localeCompare(b2.name)); } });
+  }
   if (p.startsWith("crm/")) {   // CRM handhelds sheet (modules/crm.js)
     if (!roleAllows(me, "crm") || isWarehouse(me)) throw fail("Not allowed", 403);
     return crmRoute(env, p, method, b, url, { site, me, now: nowIso, canEdit: isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH"), glaSeed: s2 => glaSeed(env, s2) });
