@@ -230,7 +230,7 @@ window.HUB = {
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
-    { id: "portal", name: "Portal Dashboard", desc: "Breaches & penalties, violations and ABC requests waiting on tenants", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing, contractor permits and portal users", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
     /* Malfunction Records — soft services and operations follow the service providers (see docs/FEATURE-malfunctions.md) */
     { id: "malfunctions", name: "Malfunction Records", desc: "Malfunctions handled by service providers — reported, attended, fixed", group: "Operations Tools", icon: "bolt", color: "#B5452B", url: "/tools/malfunctions" },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },

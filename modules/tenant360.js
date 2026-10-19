@@ -23,7 +23,7 @@ const rows = async q => { try { return (await q.all()).results || []; } catch { 
 const one = async q => { try { return await q.first(); } catch { return null; } };
 const dayAgo = (today, n) => new Date(Date.parse(today + "T00:00:00Z") - n * 864e5).toISOString().slice(0, 10);
 const daysTo = (today, d) => d ? Math.round((Date.parse(d + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 864e5) : null;
-const PKIND = { bp: "Breach & Penalty", vr: "Violation", nr: "ABC Request" };
+const PKIND = { bp: "Breach & Penalty", vr: "Violation", nr: "ABC Request", mk: "Marketing Request", cp: "Contractor Permit" };
 
 async function siteData(env, site, today) {
   const DB = env.DB, since = dayAgo(today, 365);

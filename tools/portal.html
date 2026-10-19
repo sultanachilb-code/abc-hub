@@ -8,13 +8,13 @@
 <link rel="stylesheet" href="tools.css">
 <!-- Tenant portal follow-up: Breaches & Penalties · Violations · ABC Requests (Salesforce reports by email) — see docs/FEATURE-portal-followup.md -->
 <style>
-:root{--bp:#A33B3B;--vr:#C07A12;--nr:#2F6F7E}
+:root{--bp:#A33B3B;--vr:#C07A12;--nr:#2F6F7E;--mk:#B4428C;--cp:#3A6EA5;--us:#5B8C3A}
 .src{padding:12px 16px;margin-bottom:14px;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
 .src .it{display:flex;align-items:center;gap:6px}
 .src .it i{width:8px;height:8px;border-radius:50%;background:var(--k)}
 .src .it b{color:var(--text)}
 .src .sp{flex:1}
-.hero{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.hero{display:grid;grid-template-columns:1.3fr repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
 .kc{padding:16px 18px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
 .kc:hover{border-color:var(--brand-2);transform:translateY(-1px);box-shadow:0 10px 24px rgba(42,15,69,.08)}
 .kc.on{border-color:var(--brand-2);box-shadow:inset 0 0 0 1px var(--brand-2)}
@@ -62,36 +62,103 @@
 .left .f{opacity:.65}
 details summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted);margin:8px 0}
 .tag{font-size:.72rem;font-weight:800;color:var(--alert)}
-@media (max-width:1100px){ .hero{grid-template-columns:repeat(2,minmax(0,1fr))} .cols{grid-template-columns:1fr} }
+@media (max-width:1100px){ .hero{grid-template-columns:repeat(2,minmax(0,1fr))} .hero .kc.lead{grid-column:1/-1} .cols{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:600px){ .hero{grid-template-columns:1fr 1fr;gap:8px} .kc{padding:12px} .kc .big{font-size:1.6rem} .kc.lead{grid-column:1/-1}
   .f{grid-template-columns:52px 1fr;gap:10px;padding:10px} .f .acts{grid-column:1/-1;justify-self:end} }
 @media print{ .top,.bar,.src button,.acts{display:none!important} .wrap{padding:0} .f,.panel{break-inside:avoid} }
+
+/* v2: tabs · flagship table · trend · marketing · permits · users */
+.tabs{display:flex;gap:2px;margin:0 0 14px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{display:flex;align-items:center;gap:6px;padding:10px 13px;font-weight:800;font-size:.84rem;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;margin-bottom:-1px}
+.tabs button i{width:8px;height:8px;border-radius:50%;background:var(--k)}
+.tabs button em{font-style:normal;font-size:.68rem;background:var(--paper);border-radius:99px;padding:1px 7px;color:var(--muted)}
+.tabs button,.tabs button.on{background:transparent!important;box-shadow:none!important;border-radius:0}.tabs button.on{color:var(--brand-2);border-color:var(--brand-2)}
+.panel .sub{font-size:.76rem;color:var(--muted);line-height:1.5}.f .meta a{color:var(--brand-2);font-weight:700} .tabs button.on em{background:rgba(123,75,176,.14);color:var(--brand-2)}
+.ft{width:100%;border-collapse:collapse;font-size:.84rem}
+.ft th{font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:7px 6px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.ft th:first-child,.ft td:first-child{text-align:left}
+.ft td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center;font-variant-numeric:tabular-nums}
+.ft td:first-child{font-weight:700}
+.tw{overflow-x:auto}.tw .ft{min-width:540px}
+.c{display:inline-block;min-width:48px;padding:3px 8px;border-radius:8px;font-weight:800;background:var(--paper)}
+.c.g{background:rgba(46,139,87,.14);color:var(--ok)}.c.a{background:rgba(192,122,18,.15);color:var(--warn)}.c.r{background:rgba(192,57,43,.13);color:var(--alert)}
+.trend{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;height:150px}
+.mo{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.mo .stack{width:68%;display:flex;flex-direction:column-reverse;border-radius:6px 6px 2px 2px;overflow:hidden;min-height:2px}
+.mo .stack i{display:block}
+.mo small{font-size:.68rem;color:var(--muted);font-weight:700}.mo b{font-size:.7rem}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kv .card{padding:12px 14px;position:relative;overflow:hidden;cursor:pointer}
+.kv .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--k)}
+.kv .card.on{border-color:var(--brand-2);box-shadow:inset 0 0 0 1px var(--brand-2)}
+.kv b{display:block;font-size:1.6rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.kv small{font-size:.74rem;color:var(--muted)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chiprow button{font-size:.74rem;font-weight:800;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.chiprow button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.win{font-size:.78rem;font-weight:700;margin-top:4px}
+.cm{font-size:.8rem;margin-top:5px;line-height:1.45;padding:6px 9px;border-radius:9px;background:var(--paper)}
+.cm b{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-right:5px}
+.ut{width:100%;border-collapse:collapse;font-size:.8rem}
+.ut th{font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.ut td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.ut td small{display:block;color:var(--muted);font-size:.72rem}
+.lg2{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:.72rem;color:var(--muted);margin-top:8px}
+.lg2 span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c);margin-right:4px;vertical-align:-1px}
+.warnnote{background:rgba(192,57,43,.08);color:var(--alert)}
+@media (max-width:1100px){ .kv{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:600px){ .kv b{font-size:1.3rem} .trend{height:120px} .ut .hide-s{display:none} }
 </style>
 </head>
 <body>
 <div class="top"><h1>🧾 Portal Dashboard <small id="sub"></small></h1><span id="sitePick"></span></div>
 <div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
-<input type="file" id="file" accept=".xlsx,.csv" multiple hidden>
+<input type="file" id="file" accept=".xlsx,.xls,.csv,.html" multiple hidden>
 <script src="common.js"></script>
 <script>
+/* Portal Dashboard v2 (Oct 2026) — docs/FEATURE-portal-v2.md
+   Overview · Violations · Breaches & Penalties · ABC Requests · Marketing · Contractor Permits · Portal Users (managers and leadership) */
 const UP = new URLSearchParams(location.search);
-const K = { bp: { c: "var(--bp)", short: "Breach" }, vr: { c: "var(--vr)", short: "Violation" }, nr: { c: "var(--nr)", short: "Request" } };
-const ST_COL = { "Sent to Tenant": "#C0392B", "In Review": "#C07A12", "Acknowledged": "#2E8B57", "Rejected": "#8C8398", "Confirmed & Resolved": "#2E8B57", "Closed": "#8C8398" };
+const K = { bp: { c: "var(--bp)", short: "Breach" }, vr: { c: "var(--vr)", short: "Violation" }, nr: { c: "var(--nr)", short: "Request" }, mk: { c: "var(--mk)", short: "Marketing" }, cp: { c: "var(--cp)", short: "Permit" } };
+const ST_COL = { "Sent to Tenant": "#C0392B", "In Review": "#C07A12", "Acknowledged": "#2E8B57", "Rejected": "#8C8398", "Confirmed & Resolved": "#2E8B57", "Confirmed": "#2E8B57", "Closed": "#5E7F6B",
+  "Created": "#B9AFC8", "Approved": "#2E8B57", "Submitted To Review": "#C07A12", "Submitted": "#C07A12" };
 const stCol = s => ST_COL[s] || "#7B4BB0";
-let ctx = null, site = UP.get("site") || "", P = null, kind = "", q = UP.get("q") || "", old = false, tenant = "", status = "follow", LIM = 40;
+const TABS = [["overview", "Overview"], ["vr", "Violations"], ["bp", "Breaches & Penalties"], ["nr", "ABC Requests"], ["mk", "Marketing"], ["cp", "Contractor Permits"], ["users", "Portal Users"]];
+let ctx = null, site = UP.get("site") || "", P = null, U = null, tab = UP.get("tab") || "overview", kind = "", q = UP.get("q") || "", old = false, tenant = "", status = "follow", LIM = 40;
+let mkF = "review", mkType = "", cpF = "live", usF = "", usLim = 150;
+if (q && /^(MKT|CP)-/i.test(q)) tab = /^MKT/i.test(q) ? "mk" : "cp";
 async function boot(){
   try {
     ctx = await api("ops/context" + (site && site !== "ALL" ? `?site=${site}` : ""));
     if (!site) site = ctx.site;
     const S = Object.entries(ctx.sites || {});
     $("#sitePick").innerHTML = S.length > 1 ? `<select class="sel" id="siteSel" aria-label="Flagship"><option value="ALL" ${site === "ALL" ? "selected" : ""}>All flagships</option>${S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : `<span class="pill brand">${esc(ctx.siteName)}</span>`;
-    const sel = $("#siteSel"); if (sel) sel.onchange = () => { site = sel.value; history.replaceState(null, "", `?site=${site}`); load(); };
+    const sel = $("#siteSel"); if (sel) sel.onchange = () => { site = sel.value; url(); load(); };
     load();
   } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-async function load(){ try { P = await api(`ops/portal/data?site=${site}`); draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; } }
+function url(){ history.replaceState(null, "", `?site=${site}${tab !== "overview" ? "&tab=" + tab : ""}`); }
+async function load(){
+  try {
+    P = await api(`ops/portal/data?site=${site}`);
+    if (P.can.users && !U) api("ops/portal/users").then(r => { U = r; draw(); }).catch(() => { U = { users: [], err: true }; });
+    if (tab === "users" && !P.can.users) tab = "overview";
+    draw();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
 const ago = iso => { if (!iso) return ""; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 const ageCls = a => a == null ? "" : a > 30 ? "a3" : a > 14 ? "a2" : "";
+const nowL = () => new Date().toLocaleString("sv-SE", { timeZone: "Asia/Beirut" }).replace(" ", "T").slice(0, 16);
+const dt = v => v ? `${D.fmt(v.slice(0, 10))}${v.length > 10 ? " " + v.slice(11, 16) : ""}` : "";
+const pctTone = v => v == null ? "" : v >= 90 ? "g" : v >= 75 ? "a" : "r";
+const isOpenVr = x => /^(sent to tenant|created)/i.test(x.status);
+const isDoneVr = x => /^(closed|confirmed)/i.test(x.status);
+const isOpenBp = x => /^(sent to tenant|created|in review)/i.test(x.status);
+const isOpenNr = x => /^(sent to tenant|created)/i.test(x.status);
+const mkReview = x => /^(submitted|created)/i.test(x.status);
+const cpLive = (x, n) => /^approved/i.test(x.status) && x.from && x.to && x.from <= n && x.to >= n;
+const days = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
 function stack(L, keyOf, order){
   const c = {}; L.forEach(x => { const k = keyOf(x); c[k] = (c[k] || 0) + 1; });
   const keys = [...(order || []).filter(k => c[k]), ...Object.keys(c).filter(k => !(order || []).includes(k))];
@@ -99,63 +166,106 @@ function stack(L, keyOf, order){
   return `<div class="stk">${keys.map(k => `<i style="width:${c[k] / n * 100}%;background:${stCol(k)}" title="${esc(k)}: ${c[k]}"></i>`).join("")}</div>
     <div class="lg">${keys.map(k => `<span style="--c:${stCol(k)}">${esc(k)} <b>${c[k]}</b></span>`).join("")}</div>`;
 }
+function bars(rows, color){   // [[label, n, title?]]
+  const m = Math.max(1, ...rows.map(r => r[1]));
+  return rows.map(([t, n, tip, key]) => `<div class="hb" ${key ? `data-f="${esc(key)}"` : `style="cursor:default"`} title="${esc(tip || "")}"><span class="t">${esc(t)}</span><span class="b"><i style="width:${n / m * 100}%;background:${color}"></i></span><span class="n">${n}</span></div>`).join("");
+}
 function draw(){
   $("#sub").textContent = P.all ? "All flagships" : P.siteNames[P.sites[0]] || "";
-  const I = P.items, of = k => I.filter(x => x.kind === k), FU = I.filter(x => x.followUp);
-  const bp = of("bp"), vr = of("vr"), nr = of("nr");
-  const oldest = FU.reduce((m, x) => Math.max(m, x.age || 0), 0);
-  const lastTxt = k => { const l = P.last[k]; return `<span class="it" style="--k:${K[k].c}"><i></i>${esc(P.kinds[k].label)}: ${l ? `<b>${esc(ago(l.at))}</b> · ${l.rows} rows` : "<b>not imported yet</b>"}</span>`; };
-  /* the list */
-  const s = q.toLowerCase();
-  const L = I.filter(x => (status === "follow" ? x.followUp : status === "review" ? /review/i.test(x.status) : true) && (!kind || x.kind === kind) && (!tenant || x.tenant === tenant)
-      && (!old || (x.age || 0) > 30) && (!s || `${x.name} ${x.tenant} ${x.type} ${x.subject} ${x.desc}`.toLowerCase().includes(s)))
-    .sort((a, b) => (b.age || 0) - (a.age || 0));
-  /* repeat tenants: breaches + violations */
-  const T = {}; [...bp, ...vr].forEach(x => { const t = T[x.tenant] = T[x.tenant] || { n: 0, open: 0, bp: 0, vr: 0 }; t.n++; t[x.kind]++; if (x.followUp) t.open++; });
-  const topT = Object.entries(T).sort((a, b) => b[1].n - a[1].n).slice(0, 10), topN = Math.max(1, ...topT.map(([, t]) => t.n));
-  const VT = {}; vr.forEach(x => { const t = VT[x.type || "Other"] = VT[x.type || "Other"] || { n: 0, open: 0 }; t.n++; if (x.followUp) t.open++; });
-  const vtN = Math.max(1, ...Object.values(VT).map(t => t.n));
-  const resolved = vr.filter(x => /resolved/i.test(x.status)).length;
-  $("#app").innerHTML = `
-    <div class="card src">${["bp", "vr", "nr"].map(lastTxt).join("")}<span class="sp"></span>
-      ${P.can.import ? `<button class="btn small ghost" id="impBtn" title="Salesforce report exports (.xlsx) — Breaches & Penalties, Violations, ABC Requests">⤓ Import reports</button>` : ""}</div>
+  const I = P.items, of = k => I.filter(x => x.kind === k);
+  const cnt = { overview: "", vr: of("vr").filter(x => x.followUp).length, bp: of("bp").filter(isOpenBp).length, nr: of("nr").filter(isOpenNr).length,
+    mk: of("mk").filter(mkReview).length, cp: of("cp").filter(x => cpLive(x, nowL())).length, users: U && U.users ? U.users.length : "" };
+  const tk = { vr: "var(--vr)", bp: "var(--bp)", nr: "var(--nr)", mk: "var(--mk)", cp: "var(--cp)", users: "var(--us)" };
+  const lastTxt = k => { const l = P.last[k]; const lab = k === "users" ? "Portal Users" : P.kinds[k].label; return `<span class="it" style="--k:${tk[k]}"><i></i>${esc(lab)}: ${l ? `<b>${esc(ago(l.at))}</b> · ${l.rows}` : "<b>not yet</b>"}</span>`; };
+  const tabsH = `<div class="tabs" role="tablist">${TABS.filter(([k]) => k !== "users" || P.can.users).map(([k, n]) => `<button role="tab" data-tab="${k}" class="${tab === k ? "on" : ""}" style="--k:${tk[k] || "var(--brand)"}">${k !== "overview" ? "<i></i>" : ""}${esc(n)}${cnt[k] !== "" && cnt[k] != null ? ` <em>${cnt[k]}${k === "cp" ? " live" : ""}</em>` : ""}</button>`).join("")}</div>`;
+  const src = `<div class="card src">${["vr", "bp", "nr", "mk", "cp", ...(P.can.users ? ["users"] : [])].map(lastTxt).join("")}<span class="sp"></span>
+      ${P.can.import ? `<button class="btn small ghost" id="impBtn" title="Salesforce report exports (.xls / .xlsx / .csv): Violations, Breaches & Penalties, ABC Requests, Marketing Requests, Contractor Permits, Active Users">⤓ Import reports</button>` : ""}</div>`;
+  const body = tab === "mk" ? drawMk(of("mk")) : tab === "cp" ? drawCp(of("cp")) : tab === "users" ? drawUsers() : tab === "overview" ? drawOverview(I) : drawKind(tab, I);
+  $("#app").innerHTML = src + tabsH + body;
+  wire();
+}
+/* ---------------- Overview ---------------- */
+function drawOverview(I){
+  const of = k => I.filter(x => x.kind === k), vr = of("vr"), bp = of("bp"), nr = of("nr"), mk = of("mk"), cp = of("cp"), n = nowL();
+  const FU = I.filter(x => x.followUp), oldest = FU.reduce((m, x) => Math.max(m, x.age || 0), 0);
+  const res = vr.length ? Math.round(vr.filter(isDoneVr).length / vr.length * 100) : null;
+  const mkR = mk.filter(mkReview), mkOld = mkR.filter(x => (x.age || 0) > 7), mkWeek = mk.filter(x => /^approved/i.test(x.status) && x.from > n && x.from <= D.add(P.today, 7) + "T23:59");
+  const cpL = cp.filter(x => cpLive(x, n)), cpToday = cp.filter(x => x.from && x.from.slice(0, 10) === P.today), cpWait = cp.filter(x => /^submitted/i.test(x.status));
+  const us = U && U.users && U.users.length ? U.users : null, us30 = us ? us.filter(u => u.login && days(u.login.slice(0, 10), U.today) <= 30).length : 0;
+  const lastTile = P.can.users
+    ? `<div class="card kc" style="--k:var(--us)" data-tab="users"><h4>Portal users active</h4><div class="big">${us ? Math.round(us30 / us.length * 100) : "—"}<small>%</small></div><div class="sub">${us ? `${us30} of ${us.length} logged in during the last 30 days` : U ? "Import the Active Users report" : "Loading…"}</div></div>`
+    : `<div class="card kc" style="--k:var(--bp)" data-tab="bp"><h4>Breaches open</h4><div class="big">${bp.filter(isOpenBp).length}</div><div class="sub">${bp.length} in the report</div></div>`;
+  /* by flagship */
+  const S = P.sites.map(s => { const f = x => x.site === s;
+    const v = vr.filter(f), r = v.length ? Math.round(v.filter(isDoneVr).length / v.length * 100) : null;
+    return `<tr><td>${esc(P.siteNames[s] || s)}</td><td>${v.filter(isOpenVr).length}</td><td>${r == null ? "—" : `<span class="c ${pctTone(r)}">${r}%</span>`}</td><td>${bp.filter(f).filter(isOpenBp).length}</td><td>${nr.filter(f).filter(isOpenNr).length}</td><td>${mk.filter(f).filter(mkReview).length}</td></tr>`; }).join("");
+  /* new items per month: last 6 months */
+  const mon = []; { const t = new Date(P.today + "T12:00:00Z"); for (let i = 5; i >= 0; i--){ const x = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() - i, 15)); mon.push(x.toISOString().slice(0, 7)); } }
+  const ord = ["vr", "bp", "nr", "mk", "cp"], M = mon.map(m => { const c = {}; ord.forEach(k => c[k] = 0); I.forEach(x => { if (x.created && x.created.slice(0, 7) === m && c[x.kind] != null) c[x.kind]++; }); return c; });
+  const tot = M.map(c => ord.reduce((a, k) => a + c[k], 0)), mx = Math.max(1, ...tot);
+  const trend = `<div class="trend">${mon.map((m, i) => `<div class="mo"><b>${tot[i]}</b><div class="stack" style="height:${tot[i] / mx * 100}%">${ord.map(k => M[i][k] ? `<i style="flex:${M[i][k]};background:${K[k].c}" title="${esc(P.kinds[k].label)}: ${M[i][k]}"></i>` : "").join("")}</div><small>${new Date(m + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}${m === P.today.slice(0, 7) ? "*" : ""}</small></div>`).join("")}</div>
+    <div class="lg2">${ord.map(k => `<span style="--c:${K[k].c}">${esc(P.kinds[k].label)}</span>`).join("")}<span style="--c:transparent">* month to date</span></div>`;
+  return `
     <div class="hero">
-      <div class="card kc lead ${status === "follow" && !kind ? "on" : ""}" data-q="follow"><h4>Waiting on tenants</h4><div class="big">${FU.length}<small>sent to tenant</small></div>
+      <div class="card kc lead"><h4>Waiting on tenants</h4><div class="big">${FU.length}<small>sent to tenant</small></div>
         <div class="sub">${FU.length ? `Oldest ${oldest} days · ${FU.filter(x => (x.age || 0) > 30).length} over 30 days` : "Nothing waiting"}</div>
-        <div class="chips"><span>${FU.filter(x => x.kind === "bp").length} breaches</span><span>${FU.filter(x => x.kind === "vr").length} violations</span><span>${FU.filter(x => x.kind === "nr").length} requests</span></div></div>
-      <div class="card kc ${kind === "bp" ? "on" : ""}" style="--k:var(--bp)" data-k="bp"><h4>Breaches &amp; Penalties</h4><div class="big">${bp.length}<small>${bp.filter(x => /review/i.test(x.status)).length} in review</small></div>
-        ${stack(bp, x => x.status, ["Sent to Tenant", "In Review", "Acknowledged", "Rejected"])}</div>
-      <div class="card kc ${kind === "vr" ? "on" : ""}" style="--k:var(--vr)" data-k="vr"><h4>Violations</h4><div class="big">${vr.filter(x => x.followUp).length}<small>open of ${vr.length}</small></div>
-        <div class="sub">${vr.length ? `${Math.round(resolved / vr.length * 100)}% confirmed &amp; resolved` : "—"}</div>${stack(vr, x => x.status, ["Sent to Tenant", "Confirmed & Resolved"])}</div>
-      <div class="card kc ${kind === "nr" ? "on" : ""}" style="--k:var(--nr)" data-k="nr"><h4>ABC Requests</h4><div class="big">${nr.filter(x => x.followUp).length}<small>open of ${nr.length}</small></div>
-        ${nr.length ? stack(nr, x => x.status, ["Sent to Tenant", "Closed"]) : `<div class="sub">Import the Normal Requests report to see them here.</div>`}</div>
+        <div class="chips"><span>${FU.filter(x => x.kind === "vr").length} violations</span><span>${FU.filter(x => x.kind === "bp").length} breaches</span><span>${FU.filter(x => x.kind === "nr").length} requests</span></div></div>
+      <div class="card kc" style="--k:var(--vr)" data-tab="vr"><h4>Violations resolved</h4><div class="big">${res == null ? "—" : res}<small>${res == null ? "" : "%"}</small></div><div class="sub">${vr.filter(isDoneVr).length} of ${vr.length} closed or resolved</div></div>
+      <div class="card kc" style="--k:var(--mk)" data-tab="mk"><h4>Marketing to review</h4><div class="big">${mkR.length}</div><div class="sub">${mk.length ? `${mkOld.length} older than 7 days · ${mkWeek.length} approved start this week` : "Import the Marketing Requests report"}</div></div>
+      <div class="card kc" style="--k:var(--cp)" data-tab="cp"><h4>Permits live now</h4><div class="big">${cpL.length}</div><div class="sub">${cp.length ? `${cpToday.length} start today · ${cpWait.length} waiting approval` : "Import the Contractor Permits report"}</div></div>
+      ${lastTile}
     </div>
     <div class="cols">
-      <div>
-        <div class="bar">
-          <span class="seg" id="stSeg"><button data-s="follow" class="${status === "follow" ? "on" : ""}">Sent to tenant</button><button data-s="review" class="${status === "review" ? "on" : ""}">In review</button><button data-s="all" class="${status === "all" ? "on" : ""}">All</button></span>
-          <span class="seg" id="kSeg"><button data-k="" class="${!kind ? "on" : ""}">All</button><button data-k="bp" class="${kind === "bp" ? "on" : ""}">Breaches</button><button data-k="vr" class="${kind === "vr" ? "on" : ""}">Violations</button><button data-k="nr" class="${kind === "nr" ? "on" : ""}">Requests</button></span>
-          <label class="pill ${old ? "alert" : ""}" style="cursor:pointer"><input type="checkbox" id="old" ${old ? "checked" : ""} style="margin:0 2px 0 0"> Over 30 days</label>
-          <input class="inp" id="q" placeholder="Search tenant, number or text…" value="${esc(q)}">
-        </div>
-        ${tenant ? `<div class="bar"><span class="pill brand">Tenant: ${esc(tenant)} <button id="clrT" style="font-weight:800;margin-left:4px">×</button></span></div>` : ""}
-        <div class="sec">${status === "follow" ? "Follow-up — sent to tenant, oldest first" : status === "review" ? "In review" : "All items"} · ${L.length}</div>
-        <div class="list">${L.slice(0, LIM).map(row).join("") || `<div class="card empty" style="padding:22px">${I.length ? "Nothing matches." : "No portal report imported yet — use “Import reports” or email them to the hub."}</div>`}</div>
-        ${L.length > LIM ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="more">Show ${Math.min(40, L.length - LIM)} more · ${L.length - LIM} left</button></div>` : ""}
-        ${P.left.length ? `<details class="left"><summary>Left the report in the last 14 days · ${P.left.length}</summary><div class="list">${P.left.map(x => `<div class="card f" style="--k:${K[x.kind].c}"><div class="age">✓<small>left</small></div><div><h3>${esc(x.tenant)} <span class="no">${esc(x.name)}</span></h3><div class="meta">Last status ${esc(x.status)} · ${esc(ago(x.at))}${P.all ? " · " + esc(P.siteNames[x.site] || x.site) : ""}</div></div></div>`).join("")}</div></details>` : ""}
-      </div>
-      <div>
-        <div class="card panel"><div class="sec">Repeat tenants · breaches &amp; violations</div>
-          ${topT.map(([t, v]) => `<div class="hb" data-t="${esc(t)}" title="${v.bp} breaches · ${v.vr} violations · ${v.open} open"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.bp / topN * 100}%;background:var(--bp)"></i><i style="width:${v.vr / topN * 100}%;background:var(--vr)"></i></span><span class="n">${v.n}</span></div>`).join("") || `<div class="sub muted">No data yet.</div>`}
-          <div class="lg" style="margin-top:8px"><span style="--c:var(--bp)">Breaches &amp; penalties</span><span style="--c:var(--vr)">Violations</span></div></div>
-        <div class="card panel"><div class="sec">Violations by type</div>
-          ${Object.entries(VT).sort((a, b) => b[1].n - a[1].n).map(([t, v]) => `<div class="hb" style="cursor:default"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.open / vtN * 100}%;background:#C0392B"></i><i style="width:${(v.n - v.open) / vtN * 100}%;background:#2E8B57"></i></span><span class="n">${v.n}</span></div>`).join("") || `<div class="sub muted">No data yet.</div>`}
-          <div class="lg" style="margin-top:8px"><span style="--c:#C0392B">Sent to tenant</span><span style="--c:#2E8B57">Confirmed &amp; resolved</span></div></div>
-        ${!P.linked && I.length ? `<div class="note">🔗 Until IT adds the record link (or Record ID) column to the reports, “Open in portal” opens the portal search for the number. Once it is in the report, the button opens the record directly.</div>` : ""}
-        <div class="note">📧 Reports by email: <b>abcoperationshub+portal-…@gmail.com</b> (any flagship — the Branch column decides). Items that drop out of the next report move to “Left the report”.</div>
-      </div>
-    </div>`;
-  wire();
+      <div class="card panel"><div class="sec">By flagship</div>
+        <div class="tw"><table class="ft"><thead><tr><th>Flagship</th><th>Violations open</th><th>Resolved %</th><th>Breaches open</th><th>Requests open</th><th>Marketing to review</th></tr></thead><tbody>${S}</tbody></table></div>
+        <div class="lg2"><span style="--c:rgba(46,139,87,.35)">90% and above</span><span style="--c:rgba(192,122,18,.4)">75–89%</span><span style="--c:rgba(192,57,43,.35)">below 75%</span></div></div>
+      <div class="card panel"><div class="sec">New items per month</div>${trend}</div>
+    </div>
+    ${followList(I, "")}`;
+}
+/* ---------------- Violations / Breaches / Requests (and the Overview list) ---------------- */
+function followList(I, lock){
+  const s = q.toLowerCase(), k2 = lock || kind;
+  const base = I.filter(x => ["bp", "vr", "nr"].includes(x.kind));
+  const L = base.filter(x => (status === "follow" ? x.followUp : status === "review" ? /review/i.test(x.status) : true) && (!k2 || x.kind === k2) && (!tenant || x.tenant === tenant)
+      && (!old || (x.age || 0) > 30) && (!s || `${x.name} ${x.tenant} ${x.type} ${x.subject} ${x.desc}`.toLowerCase().includes(s)))
+    .sort((a, b) => (b.age || 0) - (a.age || 0));
+  const left = P.left.filter(x => (!k2 || x.kind === k2) && ["bp", "vr", "nr"].includes(x.kind));
+  return `<div>
+    <div class="bar">
+      <span class="seg" id="stSeg"><button data-s="follow" class="${status === "follow" ? "on" : ""}">Sent to tenant</button>${!lock || lock === "bp" ? `<button data-s="review" class="${status === "review" ? "on" : ""}">In review</button>` : ""}<button data-s="all" class="${status === "all" ? "on" : ""}">All</button></span>
+      ${lock ? "" : `<span class="seg" id="kSeg"><button data-k="" class="${!kind ? "on" : ""}">All</button><button data-k="vr" class="${kind === "vr" ? "on" : ""}">Violations</button><button data-k="bp" class="${kind === "bp" ? "on" : ""}">Breaches</button><button data-k="nr" class="${kind === "nr" ? "on" : ""}">Requests</button></span>`}
+      <label class="pill ${old ? "alert" : ""}" style="cursor:pointer"><input type="checkbox" id="old" ${old ? "checked" : ""} style="margin:0 2px 0 0"> Over 30 days</label>
+      <input class="inp" id="q" placeholder="Search tenant, number or text…" value="${esc(q)}">
+    </div>
+    ${tenant ? `<div class="bar"><span class="pill brand">Tenant: ${esc(tenant)} <button id="clrT" style="font-weight:800;margin-left:4px">×</button></span></div>` : ""}
+    <div class="sec">${status === "follow" ? "Waiting on tenants — oldest first" : status === "review" ? "In review" : "All items"} · ${L.length}</div>
+    <div class="list">${L.slice(0, LIM).map(row).join("") || `<div class="card empty" style="padding:22px">${base.length ? "Nothing matches." : "No portal report imported yet — use “Import reports” or email them to the hub."}</div>`}</div>
+    ${L.length > LIM ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="more">Show ${Math.min(40, L.length - LIM)} more · ${L.length - LIM} left</button></div>` : ""}
+    ${left.length ? `<details class="left"><summary>Left the report in the last 14 days · ${left.length}</summary><div class="list">${left.map(x => `<div class="card f" style="--k:${K[x.kind].c}"><div class="age">✓<small>left</small></div><div><h3>${esc(x.tenant)} <span class="no">${esc(x.name)}</span></h3><div class="meta">Last status ${esc(x.status)} · ${esc(ago(x.at))}${P.all ? " · " + esc(P.siteNames[x.site] || x.site) : ""}</div></div></div>`).join("")}</div></details>` : ""}
+  </div>`;
+}
+function drawKind(k, I){
+  const L = I.filter(x => x.kind === k);
+  const T = {}; L.forEach(x => { const t = T[x.tenant] = T[x.tenant] || { n: 0, open: 0 }; t.n++; if (x.followUp) t.open++; });
+  const topT = Object.entries(T).sort((a, b) => b[1].n - a[1].n).slice(0, 10);
+  const order = { vr: ["Sent to Tenant", "Created", "Confirmed & Resolved", "Closed"], bp: ["Sent to Tenant", "Created", "In Review", "Acknowledged", "Rejected"], nr: ["Sent to Tenant", "Created", "Confirmed", "Closed"] }[k];
+  const VT = {}; if (k === "vr") L.forEach(x => { const t = VT[x.type || "Other"] = VT[x.type || "Other"] || { n: 0, open: 0 }; t.n++; if (isOpenVr(x)) t.open++; });
+  const vtN = Math.max(1, ...Object.values(VT).map(t => t.n));
+  const amt = k === "bp" ? L.reduce((a, x) => a + (x.amount || 0), 0) : 0;
+  return `<div class="cols">
+    ${followList(I, k)}
+    <div>
+      <div class="card panel"><div class="sec">Status · ${L.length} in the report</div>${L.length ? stack(L, x => x.status, order) : `<div class="sub muted">Import the ${esc(P.kinds[k].label)} report.</div>`}
+        ${k === "vr" && L.length ? `<div class="sub" style="margin-top:8px">${Math.round(L.filter(isDoneVr).length / L.length * 100)}% closed or resolved</div>` : ""}
+        ${k === "bp" && amt ? `<div class="sub" style="margin-top:8px">Penalties written in the descriptions: <b>$${amt.toLocaleString("en-US")}</b></div>` : ""}</div>
+      ${k === "vr" && L.length ? `<div class="card panel"><div class="sec">By type</div>
+        ${Object.entries(VT).sort((a, b) => b[1].n - a[1].n).map(([t, v]) => `<div class="hb" style="cursor:default"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.open / vtN * 100}%;background:#C0392B"></i><i style="width:${(v.n - v.open) / vtN * 100}%;background:#2E8B57"></i></span><span class="n">${v.n}</span></div>`).join("")}
+        <div class="lg" style="margin-top:8px"><span style="--c:#C0392B">Open</span><span style="--c:#2E8B57">Closed / resolved</span></div></div>` : ""}
+      <div class="card panel"><div class="sec">Repeat tenants</div>
+        ${topT.map(([t, v]) => `<div class="hb" data-t="${esc(t)}" title="${v.open} sent to tenant"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.n / Math.max(1, topT[0][1].n) * 100}%;background:${K[k].c}"></i></span><span class="n">${v.n}</span></div>`).join("") || `<div class="sub muted">No data yet.</div>`}</div>
+      ${!P.linked && L.length ? `<div class="note">🔗 Until IT adds the Record ID column to the reports, “Open in portal” opens the portal search for the number.</div>` : ""}
+    </div></div>`;
 }
 function row(x){
   const k = K[x.kind];
@@ -166,11 +276,123 @@ function row(x){
       ${x.desc || (x.subject && x.type) ? `<div class="ds">${esc(x.desc || x.subject)}</div>` : ""}</div>
     <div class="acts"><a class="btn small ${x.followUp ? "" : "ghost"} go" href="${esc(x.url)}" target="_blank" rel="noopener" title="${x.direct ? "Open this record in the portal" : "Search the portal for " + esc(x.name)}">Open in portal ↗</a></div></div>`;
 }
+/* ---------------- Marketing ---------------- */
+function drawMk(L){
+  const n = nowL(), wk = D.add(P.today, 14) + "T23:59", s = q.toLowerCase();
+  const R = L.filter(mkReview), dec = L.filter(x => /^(approved|rejected)/i.test(x.status)), ap = L.filter(x => /^approved/i.test(x.status));
+  const up = ap.filter(x => x.to >= n && x.from <= wk);
+  const F = (mkF === "review" ? R.slice().sort((a, b) => (b.age || 0) - (a.age || 0)) : mkF === "upcoming" ? up.slice().sort((a, b) => a.from < b.from ? -1 : 1) : mkF === "rejected" ? L.filter(x => /^rejected/i.test(x.status)) : L.slice().sort((a, b) => a.created < b.created ? 1 : -1))
+    .filter(x => (!mkType || x.type === mkType) && (!s || `${x.name} ${x.tenant} ${x.type} ${x.desc} ${x.abc}`.toLowerCase().includes(s)));
+  const TY = {}; L.forEach(x => { const t = TY[x.type || "Other"] = TY[x.type || "Other"] || { n: 0, ap: 0, rv: 0 }; t.n++; if (/^approved/i.test(x.status)) t.ap++; if (mkReview(x)) t.rv++; });
+  const BS = P.sites.map(si => [P.siteNames[si] || si, L.filter(x => x.site === si && mkReview(x)).length]).filter(r => r[1]);
+  return `<div class="kv">
+      <div class="card ${mkF === "review" ? "on" : ""}" style="--k:var(--mk)" data-mkf="review"><b>${R.length}</b><small>to review · ${R.filter(x => (x.age || 0) > 7).length} over 7 days</small></div>
+      <div class="card ${mkF === "upcoming" ? "on" : ""}" style="--k:var(--ok)" data-mkf="upcoming"><b>${up.length}</b><small>approved · live or starting in 14 days</small></div>
+      <div class="card ${mkF === "all" ? "on" : ""}" style="--k:var(--brand)" data-mkf="all"><b>${dec.length ? Math.round(ap.length / dec.length * 100) + "%" : "—"}</b><small>approved (${ap.length} of ${dec.length} decided)</small></div>
+      <div class="card ${mkF === "rejected" ? "on" : ""}" style="--k:#8C8398" data-mkf="rejected"><b>${dec.length - ap.length}</b><small>rejected</small></div>
+    </div>
+    <div class="cols"><div>
+      <div class="chiprow"><button data-mkt="" class="${!mkType ? "on" : ""}">All types</button>${Object.keys(TY).sort((a, b) => TY[b].n - TY[a].n).map(t => `<button data-mkt="${esc(t)}" class="${mkType === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+      <div class="bar"><input class="inp" id="q" placeholder="Search tenant, number or comment…" value="${esc(q)}"></div>
+      <div class="sec">${{ review: "To review — oldest first", upcoming: "Approved — live now or starting in the next 14 days", all: "All requests — newest first", rejected: "Rejected" }[mkF]} · ${F.length}</div>
+      <div class="list">${F.slice(0, LIM).map(mkRow).join("") || `<div class="card empty" style="padding:22px">${L.length ? "Nothing here." : "Import the Marketing Requests report."}</div>`}</div>
+      ${F.length > LIM ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="more">Show ${Math.min(40, F.length - LIM)} more · ${F.length - LIM} left</button></div>` : ""}
+    </div><div>
+      <div class="card panel"><div class="sec">By type · ${L.length}</div>
+        ${Object.entries(TY).sort((a, b) => b[1].n - a[1].n).map(([t, v]) => `<div class="hb" data-mkt2="${esc(t)}" title="${v.ap} approved · ${v.rv} to review"><span class="t">${esc(t)}</span><span class="b"><i style="width:${v.ap / Math.max(1, ...Object.values(TY).map(x => x.n)) * 100}%;background:#2E8B57"></i><i style="width:${v.rv / Math.max(1, ...Object.values(TY).map(x => x.n)) * 100}%;background:#C07A12"></i><i style="width:${(v.n - v.ap - v.rv) / Math.max(1, ...Object.values(TY).map(x => x.n)) * 100}%;background:#B9AFC8"></i></span><span class="n">${v.n}</span></div>`).join("") || `<div class="sub muted">No data yet.</div>`}
+        <div class="lg" style="margin-top:8px"><span style="--c:#2E8B57">Approved</span><span style="--c:#C07A12">To review</span><span style="--c:#B9AFC8">Rejected / created</span></div></div>
+      ${P.all && BS.length ? `<div class="card panel"><div class="sec">To review by flagship</div>${bars(BS, "var(--mk)")}</div>` : ""}
+      ${L.length ? `<div class="card panel">${stack(L, x => x.status, ["Submitted To Review", "Created", "Approved", "Rejected"])}</div>` : ""}
+    </div></div>`;
+}
+function mkRow(x){
+  const n = nowL(), live = /^approved/i.test(x.status) && x.from <= n && x.to >= n;
+  return `<div class="card f" style="--k:var(--mk)">
+    <div class="age ${mkReview(x) ? ((x.age || 0) > 30 ? "a3" : (x.age || 0) > 7 ? "a2" : "") : ""}" title="Days since it was created">${x.age == null ? "—" : x.age}<small>days</small></div>
+    <div><h3><span class="kp">${esc(x.type || "Marketing")}</span>${esc(x.tenant)} <span class="no">${esc(x.name)}</span>${live ? ` <span class="pill ok">Live now</span>` : ""}</h3>
+      <div class="meta">${esc([x.status, x.created ? "created " + D.fmt(x.created, { year: "numeric" }) : "", P.all ? P.siteNames[x.site] : ""].filter(Boolean).join(" · "))}</div>
+      ${x.from ? `<div class="win">📅 ${esc(dt(x.from))} → ${esc(dt(x.to))}</div>` : ""}
+      ${x.desc ? `<div class="cm"><b>Tenant</b>${esc(x.desc)}</div>` : ""}${x.abc ? `<div class="cm"><b>ABC</b>${esc(x.abc)}</div>` : ""}</div>
+    <div class="acts"><a class="btn small ${mkReview(x) ? "" : "ghost"} go" href="${esc(x.url)}" target="_blank" rel="noopener">Open in portal ↗</a></div></div>`;
+}
+/* ---------------- Contractor Permits ---------------- */
+function drawCp(L){
+  const n = nowL(), t = P.today, w = D.add(t, 7) + "T23:59", s = q.toLowerCase();
+  const live = L.filter(x => cpLive(x, n)), today = L.filter(x => /^(approved|submitted)/i.test(x.status) && x.from && x.from.slice(0, 10) <= t && x.to.slice(0, 10) >= t);
+  const next = L.filter(x => /^(approved|submitted)/i.test(x.status) && x.from > n && x.from <= w), wait = L.filter(x => /^submitted/i.test(x.status));
+  const F = ({ live, today, next, wait, all: L }[cpF] || live).filter(x => !s || `${x.name} ${x.subject} ${x.desc} ${x.phone}`.toLowerCase().includes(s))
+    .sort((a, b) => cpF === "all" ? (a.created < b.created ? 1 : -1) : (a.from < b.from ? -1 : 1));
+  const mon = []; { const d0 = new Date(t + "T12:00:00Z"); for (let i = 5; i >= 0; i--) mon.push(new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() - i, 15)).toISOString().slice(0, 7)); }
+  const perm = L.filter(x => /^yes/i.test(x.permit)).length, noSite = L.some(x => x.allSites);
+  return `<div class="kv">
+      <div class="card ${cpF === "live" ? "on" : ""}" style="--k:var(--cp)" data-cpf="live"><b>${live.length}</b><small>live now</small></div>
+      <div class="card ${cpF === "today" ? "on" : ""}" style="--k:var(--ok)" data-cpf="today"><b>${today.length}</b><small>valid today</small></div>
+      <div class="card ${cpF === "next" ? "on" : ""}" style="--k:var(--brand)" data-cpf="next"><b>${next.length}</b><small>starting in 7 days</small></div>
+      <div class="card ${cpF === "wait" ? "on" : ""}" style="--k:var(--warn)" data-cpf="wait"><b>${wait.length}</b><small>waiting approval</small></div>
+    </div>
+    <div class="cols"><div>
+      <div class="bar"><span class="seg" id="cpSeg">${[["live", "Live now"], ["today", "Today"], ["next", "Next 7 days"], ["wait", "Waiting"], ["all", "All"]].map(([k, l]) => `<button data-cpf="${k}" class="${cpF === k ? "on" : ""}">${l}</button>`).join("")}</span>
+        <input class="inp" id="q" placeholder="Search contractor, number, work or mobile…" value="${esc(q)}"></div>
+      <div class="sec">${{ live: "Live now", today: "Valid today", next: "Starting in the next 7 days", wait: "Waiting approval", all: "All permits — newest first" }[cpF]} · ${F.length}</div>
+      <div class="list">${F.slice(0, LIM).map(cpRow).join("") || `<div class="card empty" style="padding:22px">${L.length ? "No permit here." : "Import the Contractor Permits report."}</div>`}</div>
+      ${F.length > LIM ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="more">Show ${Math.min(40, F.length - LIM)} more · ${F.length - LIM} left</button></div>` : ""}
+    </div><div>
+      <div class="card panel"><div class="sec">Permits per month</div>${bars(mon.map(m => [new Date(m + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }) + (m === t.slice(0, 7) ? " (to date)" : ""), L.filter(x => x.created.slice(0, 7) === m).length]), "var(--cp)")}</div>
+      ${L.length ? `<div class="card panel"><div class="sec">${L.length} in the report</div>${stack(L, x => x.status, ["Submitted", "Approved", "Rejected"])}<div class="sub" style="margin-top:8px">${Math.round(perm / L.length * 100)}% need a work permit (${perm})</div></div>` : ""}
+      ${noSite ? `<div class="note warnnote">⚠ This report has no <b>Branch</b> or <b>Account</b> column, so the permits can't be split per flagship: every flagship sees all of them. Ask IT to add both columns.</div>` : ""}
+    </div></div>`;
+}
+function cpRow(x){
+  const n = nowL(), live = cpLive(x, n);
+  return `<div class="card f" style="--k:var(--cp)">
+    <div class="age" title="Valid from">${x.from ? D.fmt(x.from.slice(0, 10)).replace(" ", "<small>") + "</small>" : "—"}</div>
+    <div><h3><span class="kp">${esc(x.status || "Permit")}</span>${esc(x.subject || "Contractor")} <span class="no">${esc(x.name)}</span>${live ? ` <span class="pill ok">Live now</span>` : ""}${/^yes/i.test(x.permit) ? ` <span class="pill warn">Work permit</span>` : ""}</h3>
+      <div class="win">🕒 ${esc(dt(x.from))} → ${esc(dt(x.to))}</div>
+      ${x.desc ? `<div class="ds">${esc(x.desc)}</div>` : ""}
+      ${x.phone ? `<div class="meta">📞 ${x.phone.split(/\s*[|,;]\s*|\s+\/\s+/).filter(Boolean).map(ph => `<a href="tel:${esc(ph.replace(/[^\d+]/g, ""))}">${esc(ph)}</a>`).join(" · ")}${!x.allSites && P.all ? " · " + esc(P.siteNames[x.site] || "") : ""}</div>` : ""}</div>
+    <div class="acts"><a class="btn small ghost go" href="${esc(x.url)}" target="_blank" rel="noopener">Open in portal ↗</a></div></div>`;
+}
+/* ---------------- Portal Users (managers and leadership) ---------------- */
+function drawUsers(){
+  if (!U) return `<div class="card empty" style="padding:22px">Loading…</div>`;
+  if (U.err) return `<div class="card empty" style="padding:22px">Portal users could not be loaded.</div>`;
+  const L = U.users, t = U.today, s = q.toLowerCase();
+  const b = u => !u.login ? "never" : days(u.login.slice(0, 10), t) <= 7 ? "7" : days(u.login.slice(0, 10), t) <= 30 ? "30" : days(u.login.slice(0, 10), t) <= 90 ? "90" : "old";
+  const BK = [["7", "Last 7 days"], ["30", "8–30 days"], ["90", "31–90 days"], ["old", "Over 90 days"], ["never", "Never logged in"]];
+  const c = {}; L.forEach(u => { const k = b(u); c[k] = (c[k] || 0) + 1; });
+  const F = L.filter(u => (!usF || b(u) === usF) && (!s || `${u.name} ${u.user} ${u.title} ${u.company}`.toLowerCase().includes(s)));
+  const TT = {}; L.forEach(u => { const k = (u.title || "").replace(/\s+/g, " ").trim(); if (k) TT[k] = (TT[k] || 0) + 1; });
+  const in30 = (c["7"] || 0) + (c["30"] || 0);
+  if (!L.length) return `<div class="card empty" style="padding:22px">Import the Active Users report (Salesforce) to see who uses the portal.</div>`;
+  return `<div class="kv">
+      <div class="card ${!usF ? "on" : ""}" style="--k:var(--us)" data-usf=""><b>${L.length}</b><small>active users</small></div>
+      <div class="card ${usF === "7" ? "on" : ""}" style="--k:var(--ok)" data-usf="7"><b>${c["7"] || 0}</b><small>logged in this week</small></div>
+      <div class="card" style="--k:var(--brand)" data-usf="30"><b>${Math.round(in30 / L.length * 100)}%</b><small>logged in within 30 days (${in30})</small></div>
+      <div class="card ${usF === "never" ? "on" : ""}" style="--k:var(--alert)" data-usf="never"><b>${c.never || 0}</b><small>never logged in</small></div>
+    </div>
+    <div class="cols"><div>
+      <div class="bar"><input class="inp" id="q" placeholder="Search name, email, title or company…" value="${esc(q)}">${usF ? `<span class="pill brand">${esc((BK.find(x => x[0] === usF) || [])[1] || "")} <button data-usf="" style="font-weight:800;margin-left:4px">×</button></span>` : ""}</div>
+      <div class="card" style="padding:4px 6px"><div class="tw"><table class="ut"><thead><tr><th>Name</th><th>Last login</th><th class="hide-s">Title</th><th class="hide-s">Company</th><th class="hide-s">User since</th></tr></thead>
+        <tbody>${F.slice(0, usLim).map(u => `<tr><td><b>${esc(u.name || "—")}</b><small>${esc(u.user)}</small></td><td>${u.login ? esc(dt(u.login)) + `<small>${days(u.login.slice(0, 10), t)} days ago</small>` : `<span class="tag">Never</span>`}</td><td class="hide-s">${esc(u.title)}</td><td class="hide-s">${esc(u.company || (u.site ? U.siteNames[u.site] || "" : ""))}</td><td class="hide-s">${esc(dt((u.created || "").slice(0, 10)))}</td></tr>`).join("")}</tbody></table></div></div>
+      ${F.length > usLim ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="usMore">Show more · ${F.length - usLim} left</button></div>` : ""}
+    </div><div>
+      <div class="card panel"><div class="sec">Last login</div>${bars(BK.map(([k, l]) => [l, c[k] || 0, "", k]), "var(--us)")}<div class="sub" style="margin-top:8px">Tap a line to list those users. Users who never logged in or not for 90 days are the first to review for licences.</div></div>
+      <div class="card panel"><div class="sec">Top titles · ${L.length - Object.values(TT).reduce((a, n) => a + n, 0)} without a title</div>${bars(Object.entries(TT).sort((a, b) => b[1] - a[1]).slice(0, 8), "var(--brand-2)")}</div>
+      <div class="note warnnote">⚠ The Active Users report has no <b>Account</b> or <b>Branch</b> column, so users can't be counted per tenant or flagship yet. Ask IT to add both columns.</div>
+    </div></div>`;
+}
 function wire(){
   $("#app").onclick = e => {
+    const tb = e.target.closest("[data-tab]");
+    if (tb){ tab = tb.dataset.tab; LIM = 40; kind = ""; tenant = ""; status = "follow"; q = ""; url(); return draw(); }
     if (e.target.id === "more"){ LIM += 40; return draw(); }
-    if (e.target.closest(".kc,#stSeg button,#kSeg button,.hb[data-t]") || e.target.id === "clrT") LIM = 40;   // a new filter starts from the top
-    const c = e.target.closest(".kc"); if (c){ if (c.dataset.q){ status = "follow"; kind = ""; } else { kind = kind === c.dataset.k ? "" : c.dataset.k; status = "all"; } return draw(); }
+    if (e.target.id === "usMore"){ usLim += 150; return draw(); }
+    const mf = e.target.closest("[data-mkf]"); if (mf){ mkF = mf.dataset.mkf; LIM = 40; return draw(); }
+    const mt = e.target.closest("[data-mkt],[data-mkt2]"); if (mt){ const v = mt.dataset.mkt != null ? mt.dataset.mkt : mt.dataset.mkt2; mkType = mkType === v && mt.dataset.mkt2 != null ? "" : v; LIM = 40; return draw(); }
+    const cf = e.target.closest("[data-cpf]"); if (cf){ cpF = cf.dataset.cpf; LIM = 40; return draw(); }
+    const uf = e.target.closest("[data-usf]"); if (uf){ usF = uf.dataset.usf; usLim = 150; return draw(); }
+    const hf = e.target.closest(".hb[data-f]"); if (hf){ usF = hf.dataset.f; usLim = 150; return draw(); }
+    if (e.target.closest("#stSeg button,#kSeg button,.hb[data-t]") || e.target.id === "clrT") LIM = 40;
     const sb = e.target.closest("#stSeg button"); if (sb){ status = sb.dataset.s; return draw(); }
     const kb = e.target.closest("#kSeg button"); if (kb){ kind = kb.dataset.k; return draw(); }
     const t = e.target.closest(".hb[data-t]"); if (t){ tenant = t.dataset.t; status = "all"; return draw(); }
@@ -179,15 +401,16 @@ function wire(){
     if (e.target.id === "impBtn") return $("#file").click();
   };
   const o = $("#old"); if (o) o.onchange = () => { old = o.checked; LIM = 40; draw(); };
-  const qi = $("#q"); if (qi) qi.oninput = () => { q = qi.value; const pos = qi.selectionStart; draw(); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); };
+  const qi = $("#q"); if (qi) qi.oninput = () => { q = qi.value; LIM = 40; const pos = qi.selectionStart; draw(); const n = $("#q"); if (n){ n.focus(); n.setSelectionRange(pos, pos); } };
 }
 $("#file").onchange = async e => {
   const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
   try {
+    toast(`Reading ${fs.length} report${fs.length > 1 ? "s" : ""}…`);
     const files = await Promise.all(fs.map(f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res({ name: f.name, data: r.result }); r.onerror = () => rej(new Error("Could not read " + f.name)); r.readAsDataURL(f); })));
     const r = await api("ops/portal/import", { site: site === "ALL" ? "" : site, files });
-    toast(r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.gone} left`).join(" | "));
-    load();
+    toast(r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} · ${f.added} new${f.gone ? " · " + f.gone + " left" : ""}`).join(" | "));
+    U = null; load();
   } catch (er){ toast(er.message, true); }
 };
 boot();
