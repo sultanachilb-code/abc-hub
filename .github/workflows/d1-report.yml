@@ -30,10 +30,10 @@ jobs:
           try { out = execSync(`npx -y wrangler@4 d1 insights ${d.name} --timePeriod ${process.env.PERIOD} --sort-type sum --sort-by reads --sort-direction DESC --limit 9 --json`, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); rows = JSON.parse(out); }
           catch (e) { console.log(`::warning title=${d.name}::insights failed — ${String((e.stderr || e.message || "")).slice(0, 300).replace(/\n/g, " ")}`); process.exit(0); }
           const tot = rows.reduce((a, r) => a + (Number(r.totalRowsRead) || 0), 0);
-          console.log(`::notice title=${d.name} · TOTAL::top ${rows.length} queries read ${tot.toLocaleString("en-US")} rows in ${process.env.PERIOD}`);
+          console.log(`::notice title=${d.name} · TOTAL::top ${rows.length} queries read ${tot} rows in ${process.env.PERIOD}`);
           for (const r of rows.slice(0, 9)) {
             const q = String(r.query || "").replace(/\s+/g, " ").slice(0, 330);
-            console.log(`::notice title=${d.name} · ${Number(r.totalRowsRead || 0).toLocaleString("en-US")} rows · ${r.numberOfTimesRun || "?"} runs · ${Math.round(Number(r.avgRowsRead || 0))} avg::${q}`);
+            console.log(`::notice title=${d.name} · ${Number(r.totalRowsRead || 0)} rows read · ${r.numberOfTimesRun || "?"} runs · ${Math.round(Number(r.avgRowsRead || 0))} per run::${q}`);   // no commas in a title (GitHub cuts it there)
           }
           EOF
           echo ok

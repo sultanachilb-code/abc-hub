@@ -366,6 +366,13 @@ async function ensureSchema(env) {
   await aiSchema(env);   // ABCON: taught facts, feedback, chat history
   await crmSchema(env);   // CRM handhelds sheet
   await inductionSchema(env);   // Operations Induction
+  /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table */
+  await env.DB.batch([
+    "CREATE INDEX IF NOT EXISTS hub_events_at ON hub_events (at)", "CREATE INDEX IF NOT EXISTS hub_events_site_at ON hub_events (site, at)",
+    "CREATE INDEX IF NOT EXISTS sched_cells_site_day ON sched_cells (site, day)", "CREATE INDEX IF NOT EXISTS handovers_site_day ON handovers (site, day)",
+    "CREATE INDEX IF NOT EXISTS mom_actions_meeting ON mom_actions (meeting_id)", "CREATE INDEX IF NOT EXISTS mom_actions_site ON mom_actions (site, status)",
+    "CREATE INDEX IF NOT EXISTS contractors_ins ON contractors (ins_expiry)"
+  ].map(q => env.DB.prepare(q))).catch(e => console.error("indexes", e && e.message));
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
@@ -499,7 +506,7 @@ export default {
       await snagReportRun(env, { base: CONNECTORS.snaglist.base, relay: (e, m) => relay(e, m), hubUrl: HUB_URL }).catch(e => console.error("snagreport", e && e.message));   // Snaglist weekly email   // Weekly digest per person
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
-      await polEmbedPending(env, t => embedTexts(env, t), { limit: 48 }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
+      await polEmbedPending(env, t => embedTexts(env, t), { limit: 48, cron: true }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature

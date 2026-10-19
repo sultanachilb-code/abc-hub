@@ -114,11 +114,14 @@ async function photoLinker(env, rel) {   // rel: links for the cleaning app itse
 }
 
 /* ---------- the day: every scheduled slot with its status ---------- */
+const TASKS = new Map();   // D1 reads: the task list of a flagship, kept 60 s in this worker's memory
+const tasksOf = async (env, site) => { const c = TASKS.get(site); if (c && Date.now() - c.t < 60e3) return c.r;
+  const r = await env.DB.prepare("SELECT * FROM cc_tasks WHERE site = ? AND active = 1 ORDER BY sort, id").bind(site).all(); TASKS.set(site, { t: Date.now(), r }); return r; };
 export async function ccDay(env, site, day, opt = {}) {
   await ensureSeed(env, site);
   const now = beirut(), isToday = day === now.day, past = day < now.day;
   const [tq, jq, sq] = await Promise.all([
-    env.DB.prepare("SELECT * FROM cc_tasks WHERE site = ? AND active = 1 ORDER BY sort, id").bind(site).all(),
+    tasksOf(env, site),
     env.DB.prepare("SELECT * FROM cc_jobs WHERE site = ? AND day = ? ORDER BY before_at, id").bind(site, day).all(),
     env.DB.prepare("SELECT * FROM cc_special WHERE site = ? AND (status = 'open' OR due = ? OR substr(done_at,1,10) = ?) ORDER BY due, id").bind(site, day, day).all()
   ]);
@@ -212,6 +215,7 @@ export async function ccHubRoute(env, p, method, b, url, ctx) {
   if (p === "cc/tasks") { await ensureSeed(env, site);
     const { results } = await env.DB.prepare("SELECT * FROM cc_tasks WHERE site = ? AND active = 1 ORDER BY sort, id").bind(site).all();
     return { tasks: (results || []).map(taskOut), can: { manage: !!ctx.canManage } }; }
+  if (p.startsWith("cc/task/")) TASKS.delete(site);   // a change shows at once
   if (p === "cc/task/save" && method === "POST") {
     need(); const c = cleanTask(b);
     if (b.id) {

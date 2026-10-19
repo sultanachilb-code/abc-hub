@@ -99,7 +99,8 @@ export async function contractorsRun(env, deps) {
       body: `${v.tenant}${v.work ? " · " + v.work : ""} · permit ended ${v.time_to}${v.req ? " · " + v.req : ""} — check them out or extend.` });
   }
   /* insurance expiry: 30, 7, 0 days */
-  const ins = await env.DB.prepare("SELECT id, site, company, ins_expiry FROM contractors WHERE deleted = 0 AND status = 'Active' AND ins_expiry != '' AND ins_expiry >= ? AND ins_expiry <= ?")
+  const insDay = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(`con:ins:${today}`, deps.now()).run().catch(() => null);   // D1 reads: once a day
+  const ins = !(insDay && insDay.meta && insDay.meta.changes === 1) ? { results: [] } : await env.DB.prepare("SELECT id, site, company, ins_expiry FROM contractors WHERE deleted = 0 AND status = 'Active' AND ins_expiry != '' AND ins_expiry >= ? AND ins_expiry <= ?")
     .bind(today, addDays(today, 30)).all().catch(() => ({ results: [] }));
   for (const r of ins.results || []) {
     const left = daysBetween(today, r.ins_expiry);

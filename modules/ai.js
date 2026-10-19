@@ -362,7 +362,7 @@ ${facts}`;
       const sources = pol.sources.filter(x => used.has(`[${x.n}]`));
       await countQuestion(env, me);
       await metaSet(env, ck, JSON.stringify({ a: answer, s: sources, f: follow, t: Date.now() }));
-      env.DB.prepare("DELETE FROM meta WHERE k LIKE 'ai:c:%' AND CAST(json_extract(v, '$.t') AS INTEGER) < ?").bind(Date.now() - 2 * CACHE_MIN * 60e3).run().catch(() => {});
+      env.DB.prepare("DELETE FROM meta WHERE k >= 'ai:c:' AND k < 'ai:c;' AND CAST(json_extract(v, '$.t') AS INTEGER) < ?").bind(Date.now() - 2 * CACHE_MIN * 60e3).run().catch(() => {});
       const s2 = await standing(env, me);
       return { answer, sources, follow, model: model === AI_FAST ? "fast" : "full", left: s2.left, teamPct: s2.teamPct };
     };
