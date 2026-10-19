@@ -21,7 +21,7 @@ export async function findRoute(env, url, { sites, siteName }) {
     rows(DB.prepare(`SELECT name, kind, site, tenant, status, subject, created_day FROM portal_items WHERE site IN (${ph}) AND active = 1 AND (name LIKE ? OR subject LIKE ? OR tenant LIKE ?) ORDER BY created_day DESC LIMIT 6`).bind(...sites, like, like, like)),
     rows(DB.prepare(`SELECT contract_no, site, tenant, end_day, status FROM contracts_ending WHERE site IN (${ph}) AND active = 1 AND (contract_no LIKE ? OR tenant LIKE ?) LIMIT 4`).bind(...sites, like, like))
   ]);
-  const K = { bp: "Breach & Penalty", vr: "Violation", nr: "ABC Request" };
+  const K = { bp: "Breach & Penalty", vr: "Violation", nr: "ABC Request", mk: "Marketing Request", cp: "Contractor Permit" };
   const results = [
     ...units.filter(u => u.brand).map(u => ({ app: "tenant360", qs: `?site=${u.site}&unit=${u.id}`, title: u.brand, sub: `Tenant 360 · ${[u.code, u.level, u.status].filter(Boolean).join(" · ")}${where(u.site)}`, icon: "unit" })),
     ...visits.map(v => ({ app: "contractors", qs: `?site=${v.site}&day=${v.day_from}`, title: `${v.req} · ${v.company || v.tenant}`, sub: `Contractor booking · ${[v.tenant, v.work, v.day_from + (v.day_to !== v.day_from ? " → " + v.day_to : "")].filter(Boolean).join(" · ")}${where(v.site)}`, icon: "req" })),

@@ -17,7 +17,7 @@ A dashboard (Tenant Management → **Tenant Portal Follow-up**, Manager and Supe
 - **Snapshots:** each import replaces that report and flagship. An item that drops out of the next report moves to *Left the report* (kept for 14 days). A status change resets "status since".
 
 ## Getting the reports in
-- **By email:** IT (or a Salesforce report subscription) sends the exports to `abcoperationshub+portal-<TAG>@gmail.com`. Up to 6 attachments are read per email, for any flagship; the **Branch** column decides the flagship. The sender must be a hub user, or be listed in the `PORTAL_SENDERS` variable (comma-separated) for an IT or Salesforce address.
+- **By email:** IT (or a Salesforce report subscription) sends the exports to `abcoperationshub+portal-<TAG>@gmail.com`. Up to 10 attachments are read per email (the Gmail script must allow 10 — see FEATURE-portal-v2.md), for any flagship; the **Branch** column decides the flagship. The sender must be a hub user, or be listed in the `PORTAL_SENDERS` variable (comma-separated) for an IT or Salesforce address.
 - **By hand:** the *Import reports* button on the page takes one or more files.
 - **Report format:**
   - Excel (.xlsx), CSV, or Salesforce "Excel" files that are really HTML.

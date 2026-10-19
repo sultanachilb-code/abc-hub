@@ -112,7 +112,7 @@ export async function mailInbox(env, request, body, d) {
   }
   try {
     if (kind === "portal") {
-      const files = (Array.isArray(body.files) ? body.files : []).slice(0, 6);
+      const files = (Array.isArray(body.files) ? body.files : []).slice(0, 10);
       if (!files.length) return { accepted: false, reason: "No report attached" };
       const r = await portalImport(env, d, { files, from: u.full_name });
       return { accepted: true, ...r, reason: r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.changed} status changes · ${f.gone} no longer in the report`).join(" | ") };

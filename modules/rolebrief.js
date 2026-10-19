@@ -24,10 +24,10 @@ const RR = { VRM: "verdun_mall", ACM: "achrafieh_mall", DBS: "dbayeh", VRS: "ver
 
 /* ---------- what each audience sees (Admin can change it) ---------- */
 export const MGR_ITEMS = { incidents: "Incidents · PIR", checklists: "AM / PM checklists", handover: "Shift handover", malfunctions: "Malfunctions", snaglist: "Snaglist",
-  restroom: "Restroom inspection", feedback: "Tenant feedback", marketing: "Marketing events", cleaning: "Cleaning", contractors: "Contractors", contracts: "Contracts ending" };
+  restroom: "Restroom inspection", feedback: "Tenant feedback", marketing: "Marketing events", cleaning: "Cleaning", contractors: "Contractors", contracts: "Contracts ending", portal: "Portal items waiting" };
 export const KPI_ITEMS = { restroom: "Restroom inspection compliance", pir: "Incident PIR on time", amcheck: "AM checklist on time", pmcheck: "PM checklist on time",
   handover: "Handover on time", cleaning: "Cleaning compliance", mf48: "Malfunctions fixed within 48 h", snags: "Snags solved", gla: "GLA occupancy (by area)",
-  contractors: "Contractor entries", contracts: "Contracts ending (next 60 days)" };
+  contractors: "Contractor entries", contracts: "Contracts ending (next 60 days)", vrres: "Portal violations resolved (older than 7 days)", mk7: "Marketing requests answered (older than 7 days)" };
 export const AUDIENCES = { manager: "Mall / Operations Manager", advisor: "Property Advisor", director: "Mall Director", cdso: "CDSO" };
 const allOn = o => Object.fromEntries(Object.keys(o).map(k => [k, true]));
 export async function briefConfig(env) {
@@ -132,6 +132,18 @@ async function managerBrief(env, site, d, cfg) {
     T("contracts", { title: "Contracts ending", value: `${ce.length}`, tone: soon.length ? "a" : "g", note: ce.length ? `next 60 days · first: ${clip(ce[0].tenant, 24)} ${ce[0].d}` : "None in the next 60 days" });
     for (const c of soon.slice(0, 2)) todo.push({ tone: "a", app: "contracts", text: `${c.tenant} — contract ends ${c.d}`, sub: "handover of the unit, CRM handheld, deposits" });
   }
+  /* ABC Connect portal: items waiting on tenants + marketing requests to review (Portal Dashboard) */
+  if (cfg.portal) {
+    const P = await rows(env.DB.prepare("SELECT kind, status, created_day FROM portal_items WHERE site = ? AND active = 1 AND kind IN ('bp','vr','nr','mk')").bind(site));
+    const wait = P.filter(x => x.kind !== "mk" && /^sent to tenant/i.test(x.status)), d30 = dayAdd(day, -30), old = wait.filter(x => x.created_day && x.created_day < d30);
+    const mk = P.filter(x => x.kind === "mk" && /^(submitted|created)/i.test(x.status)), mkOld = mk.filter(x => x.created_day && x.created_day < dayAdd(day, -7));
+    if (P.length) {
+      T("portal", { app: "portal", title: "Portal items waiting", value: `${wait.length}`, tone: old.length >= 10 ? "r" : old.length || mkOld.length ? "a" : "g",
+        note: [`${old.length} over 30 days`, mk.length ? `${mk.length} marketing to review` : ""].filter(Boolean).join(" · ") });
+      if (old.length) todo.push({ tone: old.length >= 10 ? "r" : "a", app: "portal", text: `${old.length} portal item${old.length === 1 ? "" : "s"} waiting on tenants over 30 days`, sub: "breaches, violations and ABC requests — Portal Dashboard" });
+      if (mkOld.length) todo.push({ tone: "a", app: "portal", text: `${mkOld.length} marketing request${mkOld.length === 1 ? "" : "s"} in review over 7 days`, sub: "Portal Dashboard → Marketing" });
+    }
+  }
   const rank = { r: 0, a: 1, g: 2, "": 3 };
   todo.sort((a, b) => rank[a.tone] - rank[b.tone]);
   return { kind: "manager", site, siteName: d.siteName(site), tiles, todo: todo.slice(0, 6), need: tiles.filter(t => t.tone === "r").length };
@@ -208,6 +220,21 @@ async function cleaningPct(env, site, from, to, d) {
   for (const x of daysIn(from, to)) { const c = await d.ccDay(site, x).catch(() => null); if (c && c.summary) { done += c.summary.done || 0; due += c.summary.dueSoFar || 0; } }
   return due ? Math.min(100, pct(done, due)) : null;
 }
+/* ABC Connect portal (imported reports): violations created in the period and at least 7 days old — share closed or resolved
+   (a violation sent yesterday can't be resolved yet: the newest week is left out, so Today / 7 days show "—") */
+async function portalVrPct(env, site, from, to, day) {
+  const upto = to < dayAdd(day, -7) ? to : dayAdd(day, -7);
+  if (upto < from) return null;
+  const r = await one(env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status LIKE 'Closed%' OR status LIKE 'Confirmed%' THEN 1 ELSE 0 END) AS ok FROM portal_items WHERE site = ? AND kind = 'vr' AND active = 1 AND created_day BETWEEN ? AND ?").bind(site, from, upto));
+  return r && r.n ? pct(r.ok || 0, r.n) : null;
+}
+/* marketing requests created in the period and at least 7 days old: share already approved or rejected */
+async function portalMkPct(env, site, from, to, day) {
+  const upto = to < dayAdd(day, -7) ? to : dayAdd(day, -7);
+  if (upto < from) return null;
+  const r = await one(env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status LIKE 'Approved%' OR status LIKE 'Rejected%' THEN 1 ELSE 0 END) AS ok FROM portal_items WHERE site = ? AND kind = 'mk' AND active = 1 AND created_day BETWEEN ? AND ?").bind(site, from, upto));
+  return r && r.n ? pct(r.ok || 0, r.n) : null;
+}
 async function glaPct(env, site) {
   const g = await rows(env.DB.prepare("SELECT status, section, area FROM gla_units WHERE site = ? AND active = 1").bind(site));
   const lease = g.filter(u => !u.section || /leas/i.test(u.section)), total = lease.reduce((a, u) => a + (Number(u.area) || 0), 0);
@@ -240,10 +267,12 @@ async function kpiBrief(env, sites, period, d, cfg) {
       case "gla": return prev ? null : glaPct(env, site);
       case "contractors": return prev ? null : contractorEntries(env, site, r.from, r.to);
       case "contracts": return prev ? null : contractsEnding(env, site, day);
+      case "vrres": return portalVrPct(env, site, r.from, r.to, day);
+      case "mk7": return portalMkPct(env, site, r.from, r.to, day);
     }
     return null;
   };
-  const PCT = new Set(["restroom", "pir", "amcheck", "pmcheck", "handover", "cleaning", "mf48", "gla"]);
+  const PCT = new Set(["restroom", "pir", "amcheck", "pmcheck", "handover", "cleaning", "mf48", "gla", "vrres", "mk7"]);
   const keys = Object.keys(KPI_ITEMS).filter(k => cfg[k]);
   const out = [];
   for (const k of keys) {

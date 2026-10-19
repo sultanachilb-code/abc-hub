@@ -88,8 +88,9 @@ export async function readSheet(name, b64) {
   if (/\.csv$/i.test(name) || /\.txt$/i.test(name)) return readCsv(new TextDecoder().decode(bin));
   if (bin[0] === 0x50 && bin[1] === 0x4b) return readXlsx(bin);
   if (/\.html?$/i.test(name) || /<table/i.test(new TextDecoder().decode(bin.subarray(0, 4000)))) {   // also the report inside an email body   // "Excel" exports that are really HTML tables (Salesforce)
-    const html = new TextDecoder().decode(bin);
+    /* Salesforce exports are ISO-8859-1 (é as one byte, emojis as &#…;): read as UTF-8 when valid, else as Windows-1252 */
+    let html; try { html = new TextDecoder("utf-8", { fatal: true }).decode(bin); } catch { html = new TextDecoder("windows-1252").decode(bin); }
     return [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(r => [...r[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(c => ent(c[1].replace(/<[^>]+>/g, "")).trim()));
   }
-  throw new Error(`${name}: only .xlsx or .csv files can be read (save old .xls files as .xlsx)`);
+  throw new Error(`${name}: only .xlsx, .csv or Salesforce .xls exports can be read (save old Excel .xls files as .xlsx)`);
 }
