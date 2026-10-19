@@ -165,6 +165,7 @@ function draw(){
   const bk = $("#back"); if (bk) bk.onclick = () => { $("#t3").classList.remove("det"); cur = 0; history.replaceState(null, "", `?site=${site}`); };
 }
 boot();
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>

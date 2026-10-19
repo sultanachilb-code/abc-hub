@@ -185,6 +185,8 @@ button{background:none;border:0;cursor:pointer}
 .menu button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:10px;font-size:.9rem;font-weight:600}
 .menu button:hover{background:var(--paper)}
 .umenu{position:relative}
+.hub-ver{position:absolute;top:calc(100% + 2px);left:50%;transform:translateX(-50%);font-size:.6rem;font-weight:800;letter-spacing:.04em;opacity:.7;white-space:nowrap;pointer-events:none;color:inherit}
+.foot-fresh{white-space:nowrap}
 
 /* ---------- announcements ---------- */
 .ann-wrap{max-width:1280px;margin:0 auto;padding:16px 28px 0;display:grid;gap:8px}
@@ -1023,6 +1025,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
         </div>
         <div class="umenu">
           <button class="avatar" id="avatar" aria-haspopup="true" aria-label="Account"></button>
+          <span class="hub-ver" id="hubVer" title="Hub version"></span>
           <div class="menu hidden" id="menu"></div>
         </div>
       </div>
@@ -1192,6 +1195,27 @@ const show = id => ["boot","auth","home","appview","admin"].forEach(v => $("#" +
 /* =====================================================================
    BOOT & SIGN-IN
    ===================================================================== */
+/* ---------- Refresh on return + hub version (Oct 2026) ---------- */
+let HIDDEN_AT = 0, FRESH_AT = Date.now(), HUB_VER = "";
+function refreshHome(){
+  if (!ME || !ME.user) return;
+  FRESH_AT = Date.now();
+  loadBrief(); if (seniorView()) loadRoleBrief();
+  loadHealth(); loadNotifications(); loadToolSummary(); loadToday(); loadAnnouncements(); checkApprovals();
+  paintFoot(); hubVersion();
+}
+function paintFoot(){
+  const f = $("#foot"); if (!f || !ME) return;
+  const t = new Date(FRESH_AT).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  f.innerHTML = `${esc(H.org)} · ${APPS.length} systems available to you · <span class="foot-fresh">Updated ${t}</span>${HUB_VER ? ` · <b>Hub ${esc(HUB_VER)}</b>` : ""}`;
+}
+/* the version is the service-worker cache name (abc-hub-v34 → v34), bumped with every release */
+async function hubVersion(){
+  try {
+    const t = await (await fetch("/sw.js", { cache: "no-cache" })).text(), m = /abc-hub-(v\d+)/.exec(t);
+    if (m && m[1] !== HUB_VER){ HUB_VER = m[1]; const v = $("#hubVer"); if (v) v.textContent = HUB_VER; paintFoot(); }
+  } catch {}
+}
 async function boot(){
   try {
     ME = await api("me");
@@ -1274,10 +1298,11 @@ function startHub(){
     `<span class="chip">${esc(ME.user.positionLabel || ME.user.roleLabel)}${["DIRECTOR", "CDSO"].includes(ME.user.role) ? " · " + esc(ME.user.sitesLabel) : ME.user.siteName ? " · " + esc(ME.user.siteName) : ""}</span>`;
   paintAvatar();
   paintSeason();   // Seasonal themes
-  $("#foot").textContent = `${H.org} · ${APPS.length} systems available to you`;
+  paintFoot();
   buildMenu();
   renderHome();
   loadAnnouncements();
+  hubVersion();
   loadBrief();
   loadMoment(); setInterval(loadMoment, 5 * 60000);   // Message of the moment
   loadHealth();
@@ -1285,11 +1310,18 @@ function startHub(){
   buildToolsMenu();
   loadToolSummary();
   loadToday();
-  setInterval(() => { if (!document.hidden){ loadHealth(); loadNotifications(); loadToolSummary(); loadToday(); } }, 60 * 1000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden){ loadNotifications(); checkApprovals(); } });
+  setInterval(() => { if (!document.hidden){ loadHealth(); loadNotifications(); loadToolSummary(); loadToday(); FRESH_AT = Date.now(); paintFoot(); } }, 60 * 1000);
+  /* Refresh on return (Oct 2026): back on screen after 30 s or more away → reload the home data quietly (no page reload) */
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden){ HIDDEN_AT = Date.now(); return; }
+    if (HIDDEN_AT && Date.now() - HIDDEN_AT >= 30000) refreshHome(); else { loadNotifications(); checkApprovals(); }
+    HIDDEN_AT = 0;
+  });
+  addEventListener("pageshow", e => { if (e.persisted) refreshHome(); });   // restored from the browser's back/forward memory
+  addEventListener("online", () => refreshHome());                          // the connection is back
   checkApprovals();
   route();
-  setInterval(() => { if (!document.hidden) loadBrief(); }, 5 * 60 * 1000);
+  setInterval(() => { if (!document.hidden){ loadBrief(); if (seniorView()) loadRoleBrief(); } }, 5 * 60 * 1000);
   setTimeout(() => { if (!welcomeSeen()) welcomeSheet(); else offerPasskey(); }, 900);   // Welcome feature: first sign-in on this device
 }
 

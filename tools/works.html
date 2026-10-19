@@ -449,6 +449,7 @@ async function place({ st, name, png }){
   spot ? preview() : tapMode();
 }
 boot();
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>

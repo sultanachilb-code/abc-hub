@@ -414,6 +414,7 @@ $("#file").onchange = async e => {
   } catch (er){ toast(er.message, true); }
 };
 boot();
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>

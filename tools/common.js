@@ -151,3 +151,14 @@ async function exportExcel(){
   };
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", add) : add();
 })();
+
+/* ---------- Refresh on return (Oct 2026): a page that sets window.hubRefresh reloads its data when it comes back
+   on screen after 30 s or more away — not while a dialog is open or someone is typing ---------- */
+(function(){
+  let away = 0;
+  const busy = () => document.querySelector("dialog[open]") || (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && document.activeElement.type !== "search" && document.activeElement.id !== "q");
+  const go = () => { if (typeof window.hubRefresh === "function" && !busy()) { try { window.hubRefresh(); } catch (e) { console.warn(e); } } };
+  document.addEventListener("visibilitychange", () => { if (document.hidden) { away = Date.now(); return; } if (away && Date.now() - away >= 30000) go(); away = 0; });
+  addEventListener("pageshow", e => { if (e.persisted) go(); });
+  addEventListener("online", go);
+})();

@@ -65,6 +65,7 @@ async function load(){
 app.addEventListener("click", e => { const r = e.target.closest("tr.t"); if (!r) return; const i = +r.dataset.i; OPEN.has(i) ? OPEN.delete(i) : OPEN.add(i); load(); });
 $("#month").addEventListener("change", () => { OPEN.clear(); load(); });
 boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>

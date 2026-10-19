@@ -333,6 +333,7 @@ async function save(){
   } catch (e){ $("#fErr").textContent = e.message; b.disabled = false; }
 }
 boot();
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>
