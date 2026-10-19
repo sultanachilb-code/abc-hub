@@ -132,7 +132,7 @@ export async function patrolRoute(env, p, method, b, url, d) {
 /* the guards' link: /api/patrol-ext/<key>/pack (checkpoints for offline use) · /sync (the scans saved on the phone) */
 async function siteOfKey(env, key) {
   if (!/^[A-Za-z0-9]{24}$/.test(key)) return null;
-  const { results } = await env.DB.prepare("SELECT k, v FROM meta WHERE k LIKE 'patrol:cfg:%'").all();
+  const { results } = await env.DB.prepare("SELECT k, v FROM meta WHERE k >= 'patrol:cfg:' AND k < 'patrol:cfg;'").all();
   for (const r of results || []) { try { const c = JSON.parse(r.v); if (c.key && c.key.length === key.length) { let x = 0; for (let i = 0; i < key.length; i++) x |= key.charCodeAt(i) ^ c.key.charCodeAt(i); if (!x) return { site: r.k.slice(11), cfg: c }; } } catch {} }
   return null;
 }
@@ -196,7 +196,7 @@ export function roundEmailHtml(siteName, day, R, P, hubUrl) {
 }
 export async function patrolRun(env, d) {
   const now = beirut(new Date().toISOString());
-  const { results } = await env.DB.prepare("SELECT k, v FROM meta WHERE k LIKE 'patrol:cfg:%'").all().catch(() => ({ results: [] }));
+  const { results } = await env.DB.prepare("SELECT k, v FROM meta WHERE k >= 'patrol:cfg:' AND k < 'patrol:cfg;'").all().catch(() => ({ results: [] }));
   for (const r of results || []) {
     let cfg; try { cfg = JSON.parse(r.v); } catch { continue; }
     const site = r.k.slice(11);

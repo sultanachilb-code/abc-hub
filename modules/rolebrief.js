@@ -154,7 +154,14 @@ const tone = p => p == null ? "" : p >= 90 ? "g" : p >= 75 ? "a" : "r";
 
 /* restroom rounds of one day (operations inspections): done vs expected (rooms × windows already finished) */
 const RR_W = [["W1", "11:00"], ["W2", "13:30"], ["W3", "15:30"], ["W4", "17:30"], ["W5", "19:30"], ["W6", "21:30"]];
-async function rrRooms(env, f) { const r = await one(env.RR_DB.prepare("SELECT COUNT(DISTINCT room_id) AS n FROM inspection_logs WHERE flagship = ? AND log_date >= ?").bind(f, dayAdd(new Date().toISOString().slice(0, 10), -30))); return (r && r.n) || 0; }
+async function rrRooms(env, f) {   // rooms inspected in the last 30 days — counted once a day per flagship (D1 reads)
+  const day = new Date().toISOString().slice(0, 10), k = `rr:rooms:${f}:${day}`;
+  const c = await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k)); if (c) return Number(c.v) || 0;
+  const r = await one(env.RR_DB.prepare("SELECT COUNT(DISTINCT room_id) AS n FROM inspection_logs WHERE flagship = ? AND log_date >= ?").bind(f, dayAdd(day, -30))), n = (r && r.n) || 0;
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, String(n)).run().catch(() => {});
+  env.DB.prepare("DELETE FROM meta WHERE k >= 'rr:rooms:' AND k < 'rr:rooms;' AND k NOT LIKE ?").bind(`%:${day}`).run().catch(() => {});
+  return n;
+}
 async function rrDay(env, site, day) {
   const f = RR[site], rooms = await rrRooms(env, f), today = new Date().toISOString().slice(0, 10), now = nowHM();
   const ended = day < dayB(new Date().toISOString()) ? RR_W.length : RR_W.filter(([, end]) => end <= now).length;
@@ -253,7 +260,7 @@ async function contractsEnding(env, site, day) {
 async function kpiBrief(env, sites, period, d, cfg) {
   const day = d.today(), R = rangeOf(period, day), P = prevRange(R);
   const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}`;
-  try { const c = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(ck))) || {}).v || "null"); if (c && Date.now() - c.t < 10 * 60e3) return c.data; } catch {}
+  try { const c = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(ck))) || {}).v || "null"); if (c && Date.now() - c.t < 30 * 60e3) return c.data; } catch {}
   const snag = cfg.snags && d.snagReport ? await d.snagReport(R.from, R.to).catch(() => null) : null;
   const S = new Map(((snag && snag.sites) || []).map(s => [s.site, s]));
   const calc = async (site, k, r, prev) => {
@@ -290,7 +297,7 @@ async function kpiBrief(env, sites, period, d, cfg) {
   worst.sort((a, b) => a.v - b.v);
   const data = { kind: "kpi", period, range: R, sites: sites.map(s => ({ code: s, name: d.siteName(s) })), rows: out, worst: worst.slice(0, 3) };
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(ck, JSON.stringify({ t: Date.now(), data })).run().catch(() => {});
-  env.DB.prepare("DELETE FROM meta WHERE k LIKE 'brief:kpi:%' AND k NOT LIKE ?").bind(`%:${day}:%`).run().catch(() => {});
+  env.DB.prepare("DELETE FROM meta WHERE k >= 'brief:kpi:' AND k < 'brief:kpi;' AND k NOT LIKE ?").bind(`%:${day}:%`).run().catch(() => {});
   return data;
 }
 

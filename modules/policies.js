@@ -44,6 +44,8 @@ const toI8 = v => { let n = 0; for (const x of v) n += x * x; n = Math.sqrt(n) |
 const fromBlob = b => b instanceof Int8Array ? b : new Int8Array(b instanceof ArrayBuffer ? b : Uint8Array.from(b).buffer);
 let VC = null;   // { ver, ids, docs, dim, mat } — the vectors of the live library, loaded once per Worker instance and version
 async function bump(env) { await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pol:ver', ?)").bind(String(Date.now())).run().catch(() => {}); }
+/* D1 reads: the cron looks for passages to embed only after an upload / change ('pol:dirty'), not every 2 minutes */
+const dirty = (env, on) => env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pol:dirty', ?)").bind(on ? "1" : "0").run().catch(() => {});
 async function vectors(env) {
   const ver = ((await env.DB.prepare("SELECT v FROM meta WHERE k = 'pol:ver'").first().catch(() => null)) || {}).v || "0";
   if (VC && VC.ver === ver) return VC;
@@ -67,8 +69,9 @@ async function vecSearch(env, qv, k, coll) {
   return out.sort((a, b) => b[2] - a[2]).slice(0, k).filter(x => x[2] >= 0.42);
 }
 /* embeddings for passages that have none yet (after an upload; the cron finishes what is left) */
-export async function polEmbedPending(env, embed, { docId = 0, limit = 48 } = {}) {
+export async function polEmbedPending(env, embed, { docId = 0, limit = 48, cron = false } = {}) {
   if (!embed) return { done: 0, left: 0 };
+  if (cron) { const f = await env.DB.prepare("SELECT v FROM meta WHERE k = 'pol:dirty'").first().catch(() => null); if (f && f.v === "0") return { done: 0, left: 0, idle: true }; }
   const rows = (await env.DB.prepare(`SELECT c.id, c.doc_id, c.section, c.text FROM pol_chunks c JOIN pol_docs d ON d.id = c.doc_id LEFT JOIN pol_vec v ON v.chunk_id = c.id
     WHERE v.chunk_id IS NULL AND d.active = 1 ${docId ? "AND c.doc_id = ?" : ""} ORDER BY c.doc_id, c.n LIMIT ?`).bind(...(docId ? [docId, limit] : [limit])).all()).results || [];
   let done = 0;
@@ -80,6 +83,7 @@ export async function polEmbedPending(env, embed, { docId = 0, limit = 48 } = {}
     }
   }
   const left = Number(((await env.DB.prepare(`SELECT COUNT(*) AS n FROM pol_chunks c JOIN pol_docs d ON d.id = c.doc_id LEFT JOIN pol_vec v ON v.chunk_id = c.id WHERE v.chunk_id IS NULL AND d.active = 1 ${docId ? "AND c.doc_id = ?" : ""}`).bind(...(docId ? [docId] : [])).first()) || {}).n) || 0;
+  if (!docId) await dirty(env, left > 0);
   return { done, left };
 }
 
@@ -170,6 +174,7 @@ export async function polRoute(env, p, method, b, url, request, { me, now, canEd
     const id = r.meta.last_row_id;
     for (let i = 0; i < chunks.length; i += 40) {
       const part = chunks.slice(i, i + 40), ops = [];
+      await dirty(env, true);
       for (const c of part) ops.push(env.DB.prepare("INSERT INTO pol_chunks (doc_id, n, page, section, text) VALUES (?,?,?,?,?)").bind(id, c.n, c.page, c.section, c.text));
       await env.DB.batch(ops);
     }

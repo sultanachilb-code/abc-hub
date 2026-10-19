@@ -120,7 +120,8 @@ export async function remindersSchema(env) {
   /* one list per title (Oct 2026): the reminders made before belong to the operations team */
   await env.DB.prepare("ALTER TABLE reminders ADD COLUMN scope TEXT NOT NULL DEFAULT 'OPS'").run().catch(() => {});
   /* restroom windows changed (Oct 2026): move reminders that still use the old default times; edited ones are left alone */
-  await env.DB.batch(OLD_WINDOWS.flatMap(set => Object.entries(set)).filter(([w, to]) => WINDOWS[w] && WINDOWS[w].to !== to).map(([w, to]) => env.DB.prepare(
+  const mig = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('mig:rr-windows-oct26', '1')").run().catch(() => null);   // D1 reads: run once, not every 2 minutes
+  if (mig && mig.meta && mig.meta.changes === 1) await env.DB.batch(OLD_WINDOWS.flatMap(set => Object.entries(set)).filter(([w, to]) => WINDOWS[w] && WINDOWS[w].to !== to).map(([w, to]) => env.DB.prepare(
     "UPDATE reminders SET at_time = ?, until_time = ? WHERE kind = 'restroom' AND preset = ? AND at_time = ? AND until_time = ?")
     .bind(toHM(toMin(WINDOWS[w].to) - 15), WINDOWS[w].to, `rr-${w}`, toHM(toMin(to) - 15), to))).catch(() => {});
 }
