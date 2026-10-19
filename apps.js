@@ -66,6 +66,7 @@ window.HUB = {
     "cleanctl":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // Cleaning Control
     "beforeafter":     ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // Before / After: ghost camera + PowerPoint deck (on the device)
     "crm":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // CRM handhelds sheet
+    "induction":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   // Operations Induction deck per flagship
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -314,6 +315,7 @@ window.HUB = {
     { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Inspections", icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
     /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
     /* Cleaning Control — the cleaner app (own link) and the cleaning company's work against the schedule — see docs/FEATURE-cleaning-app.md */
+    { id: "induction", name: "Operations Induction", desc: "Newcomer induction PowerPoint per flagship — the current team with photos, animations", group: "Upcoming - Testing", icon: "users", color: "#4A1F73", url: "/tools/induction" },
     { id: "beforeafter", name: "Before / After", desc: "Ghost camera for same-angle before / after photos, and a PowerPoint deck — all on your phone, nothing sent to the hub", group: "Upcoming - Testing", icon: "camera", color: "#8B5A2B", url: "/tools/beforeafter" },
     { id: "cleanctl", name: "Cleaning Control", desc: "Cleaning schedule, before / after photos, compliance and the cleaner app phones", group: "Upcoming - Testing", icon: "clipboard", color: "#2F6F73", url: "/tools/cleanctl" },
     { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
