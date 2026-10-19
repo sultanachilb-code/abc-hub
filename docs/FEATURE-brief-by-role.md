@@ -7,7 +7,8 @@ The home-page brief now depends on the user's title.
 | Operations team (supervisors, officers, warehouse…) | No brief panel (its figures still feed the tile badges) |
 | Mall / Operations Manager (MANAGER) | **Action brief** for his flagship: tiles + "Your follow-ups" |
 | Property Advisor (ADVISOR) | **KPI brief**, every flagship, month to date by default |
-| Mall Director, CDSO | **KPI brief**, department stores only (Dbayeh DS, Verdun DS, Achrafieh DS) they can reach |
+| Mall Director | **KPI brief**, Verdun Mall and Achrafieh Mall only |
+| CDSO | **KPI brief**, Achrafieh DS, Verdun DS and Dbayeh DS only |
 | Admin | "Preview as" Manager / Advisor / Director / CDSO + **⚙ Brief settings** |
 
 ## Manager tiles

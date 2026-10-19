@@ -2339,7 +2339,7 @@ const SENIOR_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];
 const seniorView = () => !!(ME && ME.user && SENIOR_ROLES.includes(ME.user.role));
 const showD2D = () => !!(ME && ME.user) && (ME.user.role === "ADMIN" || !seniorView());   // Admin sees both the brief and the timeline
 /* ---------- Brief by role (Oct 2026, docs/FEATURE-brief-by-role.md) ----------
-   Manager → action brief for his flagship (tiles + follow-ups) · Advisor → KPI brief, all flagships · Director / CDSO → KPI brief, department stores.
+   Manager → action brief for his flagship (tiles + follow-ups) · Advisor → KPI brief, all flagships · Mall Director → Verdun Mall and Achrafieh Mall · CDSO → the three department stores.
    Admin → "Preview as…" and "Brief settings" (who sees what). Green ≥ 90 %, amber 75–89 %, red < 75 %. */
 const RB = { data: null, busy: false, as: store.get("hub.briefAs", "advisor"), period: store.get("hub.briefPeriod", "month"), site: store.get("hub.briefSite", ""), err: "" };
 const RB_APP = { incidents: "incidents", checklists: "forms", handover: "handover", malfunctions: "malfunctions", snaglist: "snaglist", restroom: "restroom", feedback: "feedback", marketing: "calendar", cleaning: "cleanctl", contractors: "contractor-access", contracts: "contracts",
@@ -2396,7 +2396,7 @@ async function briefSettings(){
       ${Object.entries(S.mgrItems).map(([k, n]) => `<tr><td>${esc(n)}</td>${aud.map(a => `<td>${a === "manager" ? `<input type="checkbox" data-a="${a}" data-k="${k}" ${S.cfg[a][k] ? "checked" : ""}>` : "—"}</td>`).join("")}</tr>`).join("")}
       <tr><td colspan="${aud.length + 1}" class="rb-mh">KPI rows</td></tr>
       ${Object.entries(S.kpiItems).map(([k, n]) => `<tr><td>${esc(n)}</td>${aud.map(a => `<td>${a !== "manager" ? `<input type="checkbox" data-a="${a}" data-k="${k}" ${S.cfg[a][k] ? "checked" : ""}>` : "—"}</td>`).join("")}</tr>`).join("")}
-    </tbody></table></div><p class="muted" style="font-size:.78rem;margin-top:8px">Director and CDSO see the department stores (Dbayeh, Verdun and Achrafieh DS) they can reach; the Advisor sees every flagship.</p></div>
+    </tbody></table></div><p class="muted" style="font-size:.78rem;margin-top:8px">The Advisor sees every flagship · the Mall Director sees Verdun Mall and Achrafieh Mall · the CDSO sees Achrafieh, Verdun and Dbayeh Department Stores · each Manager sees his own flagship.</p></div>
     <div class="sheet-f"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="rbSave">Save</button></div>`;
   sheet.classList.add("rb-wide"); sheet.addEventListener("close", () => sheet.classList.remove("rb-wide"), { once: true });
   sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
