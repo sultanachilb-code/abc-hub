@@ -590,7 +590,13 @@ async function route(request, env, ctx, url) {
     const site = opsSite(me, method === "GET" ? url.searchParams.get("site") : body.site);
     const sub = (p, s2, extra = "") => opsRoute(env, me, p, "GET", {}, new URL(`${url.origin}/api/ops/${p}?site=${s2}${extra}`));
     const r = await aiRoute(env, path, method, body, url, { me, site, can: rights(me, site), canSite, siteName, today: beirutToday, hm: beirutHM, posLabel: posLabel(me.position),
-      canTeach: me.role === "ADMIN" || me.role === "MANAGER", sites: sitesMap(me),
+      canTeach: me.role === "ADMIN" || me.role === "MANAGER", sites: sitesMap(me), full: isFull(me),
+      /* ABCON data router: hub users — name, position and flagships only (never email shown, phone or login data) */
+      people: async want => { const { results } = await env.DB.prepare("SELECT email, full_name, role, position, site_code, sites FROM users WHERE active = 1 AND role <> 'ADMIN'").all();
+        const rk = u => ({ ADVISOR: -10, DIRECTOR: -9, CDSO: -8 })[u.role] ?? ((TITLES[u.position] || POSITIONS[u.position] || {}).rank ?? 5);
+        return (results || []).map(u => ({ email: u.email, name: u.full_name, role: u.role, pos: posLabel(u.position) || ROLES[u.role] || u.role, sites: sitesOf(u), rk: rk(u) }))
+          .filter(u => u.sites.some(s3 => want.includes(s3))).sort((a, b2) => a.rk - b2.rk); },
+      snagReport: (from, to) => snagReport(env, CONNECTORS.snaglist.base, from, to),
       roleAllows: (u, app) => roleAllows(u, app),   // the same "who sees which tile" list as the hub (APP_ACCESS)
       policies: q2 => polSearch(env, q2, { limit: 5, embed: t => embedTexts(env, t) }),
       ext: s2 => extFacts(env, s2, beirutToday(), app => roleAllows(me, app), isFull(me)),

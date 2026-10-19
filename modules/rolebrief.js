@@ -321,3 +321,14 @@ export async function roleBriefRoute(env, p, method, b, url, d) {
   const period = ["today", "7d", "month"].includes(q("period")) ? q("period") : "month";
   return { audience: aud, ...(await kpiBrief(env, sites, period, d, cfgAll[aud])) };
 }
+
+/* ---------- for ABCON (modules/aidata.js): the KPI values of one flagship over any period ---------- */
+export const INC_NAME = INC, RR_NAME = RR;
+export async function kpiFor(env, site, from, to, today) {
+  const [restroom, pir, amcheck, pmcheck, handover, mfx, vrres, mk7, contractors] = await Promise.all([
+    restroomPct(env, site, from, to, today), pirOnTime(env, site, from, to),
+    checklistOnTime(env, site, from, to, "am", DEADLINES.amCheck, today), checklistOnTime(env, site, from, to, "pm", DEADLINES.pmCheck, today),
+    handoverOnTime(env, site, from, to, today), mf48(env, site, from, to), portalVrPct(env, site, from, to, today), portalMkPct(env, site, from, to, today),
+    contractorEntries(env, site, from, to)]);
+  return { restroom, pir, amcheck, pmcheck, handover, mf48: mfx, vrres, mk7, contractors };
+}

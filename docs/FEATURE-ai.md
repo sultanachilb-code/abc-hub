@@ -65,3 +65,15 @@ If the GitHub deploy ever fails on the AI binding, give the Cloudflare API token
 - The admin sees Cloudflare's own error message in the chat (everyone else: "try again in a minute").
 - Open `/api/ai/status?test=1` signed in as admin for a one-tap check (`"ok": true` = working).
 - If the first model fails, the hub tries the backup model once.
+
+## Data router (Oct 2026) — modules/aidata.js
+ABCON can now answer about all the hub data and the linked systems, not only today at one flagship.
+It still reads only ~11,000 characters per question (free allowance), so it fetches **only the slices the question needs**.
+The question is read without any AI call (no Neurons):
+- **Flagships** named in it (Verdun Mall / Achrafieh Mall / Dbayeh / Achrafieh DS / Verdun DS, English or Arabic); "all", "compare", "each" → every flagship on the asker's account; otherwise the flagship picked in the window.
+- **Period:** today, yesterday, this / last week, this / last month, a month name ("September"), "last N days", this year. Default: last 30 days. A follow-up keeps the subject of the question before.
+- **Subjects:** people (name, position, flagships, today's shift), portal (violations, breaches, requests, marketing, contractor permits, portal users for managers/leadership), malfunctions, incidents (Incident DB), restroom (Restroom DB), KPIs (the brief's figures for any period), contractors (visits, loading gate, quick passes, insurance), CRM handhelds (never the CRM login), projects, budget, calendar and MOM, training expiries, cleaning, fit-out and works forms, patrol, tenant feedback, Snaglist, GLA, and **a tenant named in the question** (unit, contract, portal items, feedback, CRM, works).
+- **Access:** every slice follows the asker's hub access — the flagships on his account and the tiles his title may open. When he asks about something he can't open, ABCON is told to say so instead of guessing.
+- **Privacy:** names and positions of hub users only; never phone numbers, emails, passwords, or visitors' personal data.
+- Today's flagship data is kept (shortened to 5,000 characters) when a slice is added; slices share 7,000 characters.
+- Not reachable: the Audit system (another Cloudflare account, no API).
