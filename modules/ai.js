@@ -9,6 +9,7 @@
    Routes : /api/ai/status · chat · summary · feedback · facts · fact/save|remove · reviews · review/fix|dismiss · history · history/get|save|remove
    See docs/FEATURE-ai.md
    ===================================================================== */
+import { routedFacts } from "./aidata.js";   // the data router: the slices of hub data this question needs
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
 export const AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";   // the big model (analysis); change with the AI_MODEL variable
@@ -337,12 +338,15 @@ export async function aiRoute(env, p, method, b, url, d) {
       if (c && Date.now() - c.t < CACHE_MIN * 60e3) { const st = await standing(env, me); return { answer: c.a, sources: c.s || [], follow: c.f || [], cached: true, cachedAt: hm(new Date(c.t).toISOString()), left: st.left, teamPct: st.teamPct }; } } catch {}
     const st = await standing(env, me);
     if (!st.open) throw Object.assign(err(st.msg, 429), { backAt: st.backAt });
-    const [facts, pol, taught] = await Promise.all([siteFacts(env, site, me, d), policyContext(env, d, qu, me), taughtFacts(env, site)]);
+    const routeQ = [prevQ && prevQ.content, qu].filter(Boolean).join(" \n ");   // a follow-up ("and last month?") keeps the subject of the question before
+    const [facts0, pol, taught, routed] = await Promise.all([siteFacts(env, site, me, d), policyContext(env, d, qu, me), taughtFacts(env, site),
+      d.people ? routedFacts(env, routeQ, me, d, site).catch(e => { console.error("ai router", e && e.message); return { text: "" }; }) : { text: "" }]);
+    const facts = routed.text ? `${facts0.slice(0, 5000)}\n${routed.text}` : facts0;
     const sys = `Your name is ABCON (ABC Operations Control). You are the assistant of the ABC Operations Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon). If asked who you are, say you are ABCON, the ABC Operations assistant.
 Sources, most trusted first:
 1. TAUGHT FACTS — confirmed by ABC management; they override everything else. Use them silently: state the information as a plain fact, never cite them, never say "taught fact", "T1" or that you were taught it.
 2. POLICIES — passages from the Policies & Procedures library. Quote the exact rule (hours, amounts, approvals); never invent a rule. If they do not cover the question, say the library has nothing on it and who to ask (Mall Management).
-3. DATA — the flagship's live hub data today and the last 30 days. Never invent names, times or numbers. For a broad question ("what is still open?", "any issues?") go through ALL of the DATA and list every open or pending item, grouped. Point out repeated problems (from the 30-day lines).
+3. DATA — the flagship's live hub data today and the last 30 days, plus the slices fetched for this question (other flagships, other periods, people, portal, KPIs…). Never invent names, times or numbers; if a figure is not in the DATA, say the hub has no data on it. People: give names and positions only (no phone numbers or emails). For a broad question ("what is still open?", "any issues?") go through ALL of the DATA and list every open or pending item, grouped. Point out repeated problems (from the 30-day lines).
 4. Your general know-how — only for how to handle a situation or word a message; mark it "Type: General advice".
 Answer in the language of the question (English, Arabic or Lebanese Arabic).
 ${FORMAT}
