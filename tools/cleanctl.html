@@ -118,6 +118,7 @@ document.addEventListener("click", e => { const c = e.target.closest(".cam"); if
   d.innerHTML = `<div class="dlg-h"><b>Before / after</b></div><div class="dlg-b"><div class="g2"><div><b>Before</b><img src="${esc(c.dataset.b)}" style="width:100%;border-radius:10px;margin-top:6px" alt=""></div><div><b>After</b><img src="${esc(c.dataset.a)}" style="width:100%;border-radius:10px;margin-top:6px" alt=""></div></div></div><div class="dlg-f"><button class="btn ghost" data-x>Close</button></div>`;
   d.onclick = ev => { if (ev.target === d || ev.target.closest("[data-x]")) d.close(); }; d.showModal(); });
 setInterval(() => { if (tab === "today" && document.visibilityState === "visible" && !$("#dlg").open) todayView(); }, 60000);
+window.hubRefresh = () => { if (tab === "today" && !$("#dlg").open) todayView(); };   // refresh on return (common.js)
 
 /* ---------- SCHEDULE: week table (daily) + month calendar (deep cleaning) ---------- */
 function occurs(t, day){   // same rule as the hub (modules/cleanctl.js slotsOf)

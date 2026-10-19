@@ -303,6 +303,7 @@ $("#day").addEventListener("change", load);
 $("#refresh").onclick = load;
 $("#printBtn").onclick = () => { document.querySelectorAll(".visit").forEach(v => v.classList.add("open")); print(); };
 boot(new URLSearchParams(location.search).get("site") || undefined).catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>

@@ -79,6 +79,7 @@ async function load(){
 app.addEventListener("click", e => { const b = e.target.closest("[data-open]"); if (!b) return; try { top.location.hash = "#/app/" + b.dataset.open; } catch { location.href = "/"; } });
 $("#refresh").onclick = load;
 boot().catch(e => { app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; });
+window.hubRefresh = () => load();   // refresh on return (common.js)
 </script>
 </body>
 </html>
