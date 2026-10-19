@@ -3,8 +3,7 @@
    • Operations team (Mall Officer, Mall Supervisor, Senior Mall Supervisor, Warehouse, Security): no brief.
    • Managers (Mall Manager / Senior Mall Manager, Operations Manager / Deputy): ACTION brief for their flagship, today —
      tiles (red / amber / green) + "Your follow-ups".
-   • Advisor: KPI brief across all flagships · Mall Director: Verdun Mall and Achrafieh Mall only ·
-     CDSO: the department stores only (Achrafieh DS, Verdun DS, Dbayeh DS). Month to date by default; Today / 7 days / Month. Green ≥ 90 %, amber 75–89 %, red < 75 %.
+   • Advisor, Mall Director, CDSO: KPI brief for the flagships ticked on their account (Admin → users). Month to date by default; Today / 7 days / Month. Green ≥ 90 %, amber 75–89 %, red < 75 %.
    • Admin: "Preview as…" any of them, and "Brief settings": which items each audience sees (meta 'brief:cfg').
    Route: GET /api/brief/role?as=&site=&period=today|7d|month · POST /api/brief/settings (admin)
    ===================================================================== */
@@ -20,7 +19,7 @@ const nowHM = () => hmB(new Date().toISOString());
 const pct = (a, b) => b ? Math.round(a / b * 100) : null;
 export const DS_SITES = ["ACS", "VRS", "DBS"];   // department stores — what the CDSO sees
 export const MALL_SITES = ["VRM", "ACM"];        // the malls — what the Mall Director sees
-/* the brief follows the position structure: Advisor all flagships · Mall Director the malls · CDSO the department stores */
+/* each user's brief shows the flagships ticked on his account; these lists are only for Admin's "Preview as" */
 const POS_SITES = { director: MALL_SITES, cdso: DS_SITES };
 const INC = { VRM: "Verdun Mall", ACM: "Achrafieh Mall", DBS: "Dbayeh Mall", VRS: "Verdun DS", ACS: "Achrafieh DS" };
 const RR = { VRM: "verdun_mall", ACM: "achrafieh_mall", DBS: "dbayeh", VRS: "verdun_ds", ACS: "achrafieh_ds" };
@@ -316,7 +315,8 @@ export async function roleBriefRoute(env, p, method, b, url, d) {
     const site = me.role === "ADMIN" ? (mine.includes(q("site")) ? q("site") : mine[0]) : (mine.includes(q("site")) ? q("site") : (me.site_code && mine.includes(me.site_code) ? me.site_code : mine[0]));
     return { audience: aud, ...(await managerBrief(env, site, d, cfgAll.manager)), sites: me.role === "ADMIN" || mine.length > 1 ? mine : [] };
   }
-  const sites = aud === "advisor" ? mine : POS_SITES[aud];
+  /* real users: the flagships ticked on their account (Admin → users). Admin "Preview as": the usual flagships of that position */
+  const sites = me.role === "ADMIN" && aud !== "advisor" ? POS_SITES[aud].filter(s => mine.includes(s)) : mine;
   if (!sites.length) return { kind: "none" };
   const period = ["today", "7d", "month"].includes(q("period")) ? q("period") : "month";
   return { audience: aud, ...(await kpiBrief(env, sites, period, d, cfgAll[aud])) };
