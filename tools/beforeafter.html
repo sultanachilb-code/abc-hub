@@ -66,6 +66,42 @@ dialog .pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1
 dialog .pairs button{border:2px solid var(--line);border-radius:12px;overflow:hidden;text-align:left}.pairs button.on{border-color:var(--brand)}
 dialog .pairs .th{display:grid;grid-template-columns:1fr 1fr}.pairs img{width:100%;height:60px;object-fit:cover}.pairs small{display:block;font-size:.66rem;padding:4px 6px;color:var(--muted)}
 @media (max-width:640px){.sl-card{grid-template-columns:1fr}.sl-th{width:100%}.sl-b{grid-auto-flow:column;justify-content:start}}
+
+/* v2 camera: before list + full-screen camera */
+.addb{display:flex;justify-content:center;align-items:center;gap:8px;padding:14px;border:2px dashed #C9B8DD;border-radius:16px;font-weight:800;color:var(--brand);cursor:pointer;background:var(--surface)}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.bc{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.bc .im{height:128px;background-size:cover;background-position:center;position:relative}.bc .im small{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:.62rem;font-weight:800;border-radius:6px;padding:2px 6px}
+.bc .t{padding:8px 10px 10px;display:grid;gap:2px}.bc .t b{font-size:.86rem}.bc .t span{font-size:.72rem;color:var(--muted)}
+.bc .bb{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.bc .bb .btn{font-size:.74rem;padding-left:8px;padding-right:8px}.bc .bb .btn{flex:1;justify-content:center}.bc .bb .ghost[data-del]{flex:none}
+.noscroll,.noscroll body{overflow:hidden;height:100%}
+.fcam{position:fixed;inset:0;z-index:9999;background:#000;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
+.fv{position:absolute;overflow:hidden;background:#111}
+.fv video,.fv .gh{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.fv video{transform-origin:50% 50%}
+.fv .gh{pointer-events:none;transition:opacity .12s}.fv .gh.edges{mix-blend-mode:screen}
+.fv .grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.25) 1px,transparent 1px);background-size:33.333% 33.333%}
+.fv.aligned{box-shadow:inset 0 0 0 4px #34C759}.fv.flash::after{content:"";position:absolute;inset:0;background:#fff;opacity:.7}
+.fv .msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;font-weight:600;line-height:1.5}
+.ftop{position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;display:flex;gap:8px;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+.fp{background:rgba(0,0,0,.5);border-radius:99px;padding:7px 12px;font-size:.8rem;font-weight:800;color:#fff;white-space:nowrap}.fp.pl{max-width:42%;overflow:hidden;text-overflow:ellipsis}
+.fp.ok{background:#34C759;color:#03250f}.fp.mid{background:#FFD60A;color:#2a2200}.fp.low{background:rgba(255,69,58,.85)}
+.fside{position:absolute;right:10px;top:34%;display:grid;gap:10px}.fs{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:.68rem;font-weight:800}.fs.on{background:#FFD60A;color:#2a2200}
+.fhint{position:absolute;left:12px;right:68px;top:calc(env(safe-area-inset-top,0px) + 58px);font-size:.8rem;font-weight:800;text-shadow:0 1px 3px #000}.fhint.ok{color:#34C759}
+.fzoom{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 168px);display:flex;justify-content:center;gap:8px}
+.fzoom button{width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:.74rem;font-weight:800}.fzoom button.on{color:#FFD60A;width:44px;height:44px}
+.fgh{position:absolute;left:40px;right:40px;bottom:calc(env(safe-area-inset-bottom,0px) + 128px);display:flex;gap:8px;align-items:center;font-size:.72rem;font-weight:700}.fgh input{flex:1;accent-color:#FFD60A}
+.fbot{position:absolute;left:0;right:0;bottom:0;height:calc(env(safe-area-inset-bottom,0px) + 112px);padding:0 28px env(safe-area-inset-bottom,0px);background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:space-between}
+.fthumb{width:54px;height:54px;border-radius:10px;border:2px solid #fff;background-size:cover;background-position:center}
+.fshut{width:78px;height:78px;border-radius:50%;border:5px solid #fff;display:grid;place-items:center;background:none}.fshut i{width:62px;height:62px;border-radius:50%;background:#fff;transition:transform .1s}.fshut:active i{transform:scale(.9)}
+.fios{width:58px;height:54px;border-radius:12px;background:rgba(255,255,255,.16);font-size:.62rem;font-weight:800;display:grid;place-items:center;text-align:center;line-height:1.2;cursor:pointer}
+.fres{position:absolute;inset:0;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 62px) 14px calc(env(safe-area-inset-bottom,0px) + 20px);display:grid;gap:12px;align-content:start;justify-items:center}
+.fres .ftop{position:fixed}
+.cmp{position:relative;width:min(100%,560px);border-radius:16px;overflow:hidden;background:#111;touch-action:none}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.cmp .cb{position:absolute;inset:0;width:50%;overflow:hidden}.cmp .cb img{width:min(100vw - 28px,560px);max-width:none;height:100%}
+.cmp i{position:absolute;top:0;bottom:0;left:50%;width:3px;background:#fff;box-shadow:0 0 6px #000}
+.cmp em{position:absolute;top:10px;font-style:normal;font-size:.66rem;font-weight:900;border-radius:99px;padding:3px 9px}.cmp em.b{left:10px;background:#C0392B}.cmp em.a{right:10px;background:#2E8B57}
+.fnote{font-size:.78rem;color:#cfc6dc;text-align:center;max-width:520px;line-height:1.45}
+.fact{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 </style>
 </head>
 <body>
@@ -113,83 +149,248 @@ async function boot(){
 }
 const render = () => TAB === "cam" ? camView() : deckView();
 
-/* ================= CAMERA (after photos only — the before photo always comes from the gallery) ================= */
+/* ================= CAMERA (Oct 2026 v2) — docs/FEATURE-before-after.md
+   • "Before photos" list: every before photo waiting for its after has a "📷 Take after" button; finished pairs below.
+   • Full-screen ghost camera like the iPhone camera: the frame has the before photo's exact shape, the before photo is a faint ghost,
+     a live "Match %" (and which way to move) tells when the after sits on the same spot, hold the eye button to peek at the before.
+   • The after photo: the highest resolution the phone gives the browser, JPEG quality 95 %, no filters — saved to Photos (share sheet → Save Image).
+   • "iPhone Camera": the phone's own camera app (full quality, Apple's processing) — no ghost, but the after is fine-aligned onto the before automatically.
+   • The side-by-side picture uses the after aligned onto the before (shift / zoom found automatically), so both look taken from the same tripod.
+   Nothing is sent to the hub: photos are kept on this device (IndexedDB) for the list and the deck. ================= */
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+async function fitBlob(src, max, q = .9){ return shrink(src, max, q); }
 async function camView(){
+  const shots = await all("shots"), pairs = (await all("pairs")).sort((a, b) => (b.afterAt || "").localeCompare(a.afterAt || ""));
+  const paired = new Set(pairs.map(p => p.beforeId)), byId = new Map(shots.map(s2 => [s2.id, s2]));
+  const waiting = shots.filter(s2 => s2.kind === "before" && !paired.has(s2.id)).sort((a, b) => b.at.localeCompare(a.at));
+  const done = pairs.filter(p => byId.has(p.beforeId) && byId.has(p.afterId)).slice(0, 30);
+  const card = (img, tag, title, sub, btn, cls = "", data = "") => `<div class="bc ${cls}" ${data}><div class="im" style="background-image:url(${img})"><small>${tag}</small></div><div class="t"><b>${esc(title)}</b><span>${esc(sub)}</span>${btn}</div></div>`;
   $("#app").innerHTML = `
     <div class="card" style="display:grid;gap:10px">
       <div class="row"><select class="sel" id="site">${Object.entries(CTX.sites).map(([c, n]) => `<option value="${c}" ${c === S.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
         <input class="inp" id="place" placeholder="Area, e.g. L2 corridor near Zara" value="${esc(S.place)}"></div>
-      <div class="bpick">${S.before ? `<img src="${S.before.url}" alt=""><div><b>Before photo</b><small>${esc(S.before.name || "From your gallery")}${S.before.at ? " · " + esc(fmtD(S.before.at)) : ""}</small></div>` : `<div class="bph">1</div><div><b>Choose the before photo</b><small>From your gallery — it shows over the camera as a faint ghost</small></div>`}
-        <label class="btn ${S.before ? "ghost" : "gold"} small">${S.before ? "Change" : "＋ From gallery"}<input type="file" accept="image/*" id="pickB" hidden></label></div>
-      <label class="chk"><input type="checkbox" id="stamp" ${S.stamp ? "checked" : ""}> Print date, time and place on the photo</label>
+      <label class="addb">＋ Add before photos from Photos<input type="file" accept="image/*" id="pickB" multiple hidden></label>
+      <label class="chk"><input type="checkbox" id="stamp" ${S.stamp ? "checked" : ""}> Print date, time and place on the after photo</label>
     </div>
-    <div class="view" id="view">
-      <video id="vid" playsinline muted autoplay></video>
-      ${S.before ? `<img class="gh${S.edges ? " edges" : ""}" id="gh" src="${S.edges ? S.before.edges || "" : S.before.url}" style="opacity:${S.edges ? .85 : S.ghostOp / 100}" alt="">` : ""}
-      ${S.grid ? `<div class="grid"></div>` : ""}
-      <span class="tag after">AFTER</span>${S.stream ? `<span class="zbadge" id="zb">${S.zoom.toFixed(1)}×</span>` : ""}
-      ${S.stream ? "" : `<div class="msg"><b style="font-size:1.05rem">${S.before ? "Ready" : "Choose the before photo first"}</b>
-        <p>${S.before ? "The before photo shows as a faint ghost. Zoom and move until the real scene sits exactly on it, then take the after photo." : "Tap “From gallery” above and pick the before photo."}</p>
-        ${S.before ? `<button class="btn gold" id="open">Open the camera</button>` : ""}</div>`}
-      ${S.stream ? `<div class="bar">
-        <div class="sl">Zoom <input type="range" min="${S.zMin}" max="${S.zMax}" step="0.1" value="${S.zoom}" id="zm"> <span class="zq">${[1, 2, 3].filter(z => z <= S.zMax).map(z => `<button data-z="${z}" class="${Math.abs(S.zoom - z) < .05 ? "on" : ""}">${z}×</button>`).join("")}</span></div>
-        <div class="sl">Ghost <input type="range" min="8" max="65" value="${S.ghostOp}" id="op" ${S.edges ? "disabled" : ""}> <span id="opv">${S.ghostOp}%</span></div>
-        <div class="ctr"><button class="s ${S.grid ? "on" : ""}" id="gridB">Grid</button><button class="s ${S.edges ? "on" : ""}" id="edgeB">Edges</button>
-          <button class="shutter" id="snap" aria-label="Take the after photo"></button><button class="s" id="flip">⟲ Flip</button><span style="min-width:0"></span></div></div>` : ""}
-    </div>
-    <div id="out"></div>
-    <p class="note" style="text-align:center">Pinch the camera (or use the slider) to zoom. Photos are saved to your gallery and kept on this device for the deck (latest 60). Nothing is sent to the hub.${touch && /iPhone|iPad/.test(navigator.userAgent) ? " On iPhone, tap <b>Save Image</b> in the share sheet." : ""}</p>`;
+    <div class="lbl" style="margin-top:4px">Waiting for the after photo · ${waiting.length}</div>
+    <div class="bgrid">${waiting.map(s2 => card(s2.thumb, `BEFORE · ${fmtD(s2.at)}`, s2.place || "Area", CTX.sites[s2.site] || "",
+        `<div class="bb"><button class="btn small" data-take="${s2.id}">📷 Take after</button><button class="btn small ghost" data-del="${s2.id}" title="Remove from this list">✕</button></div>`)).join("")
+      || `<div class="card empty" style="grid-column:1/-1">Add the before photos of the job from Photos — then tap “Take after” when the work is finished.</div>`}</div>
+    ${done.length ? `<div class="lbl" style="margin-top:8px">Done · ${done.length}</div><div class="bgrid">${done.map(p => card(byId.get(p.afterId).thumb, `PAIR · ${fmtD(p.afterAt)}`, p.place || "Area", CTX.sites[p.site] || "",
+        `<div class="bb"><button class="btn small ghost" data-open="${p.id}">Side by side</button><button class="btn small ghost" data-deck="${p.id}">+ Deck</button></div>`, "done")).join("")}</div>` : ""}
+    <p class="note" style="text-align:center">Photos are saved to your Photos and kept on this device only (latest 60). Nothing is sent to the hub.${isIOS ? " Open the hub from its home-screen icon for a full-screen camera." : ""}</p>`;
   $("#site").onchange = e => S.site = e.target.value;
   $("#place").oninput = e => S.place = e.target.value;
   $("#stamp").onchange = e => S.stamp = e.target.checked;
-  $("#pickB").onchange = async e => { const f = e.target.files[0]; if (!f) return; const blob = await shrink(f, 1600, .85);
-    await useBefore(blob, { id: "g" + uid(), name: f.name, place: S.place, at: new Date(f.lastModified || Date.now()).toISOString(), site: S.site }); };
-  const o = $("#open"); if (o) o.onclick = startCam;
-  if (S.stream){ $("#vid").srcObject = S.stream; applyZoom(S.zoom); }
-  const op = $("#op"); if (op) op.oninput = e => { S.ghostOp = +e.target.value; $("#gh").style.opacity = S.ghostOp / 100; $("#opv").textContent = S.ghostOp + "%"; };
-  const zm = $("#zm"); if (zm) zm.oninput = e => applyZoom(+e.target.value);
-  document.querySelectorAll("[data-z]").forEach(b => b.onclick = () => applyZoom(+b.dataset.z));
-  const gb = $("#gridB"); if (gb) gb.onclick = () => { S.grid = !S.grid; camView(); };
-  const eb = $("#edgeB"); if (eb) eb.onclick = async () => { S.edges = !S.edges; if (S.edges && !S.before.edges) S.before.edges = await edgesOf(S.before.url); camView(); };
-  const fl = $("#flip"); if (fl) fl.onclick = async () => { S.facing = S.facing === "environment" ? "user" : "environment"; stopCam(); await startCam(); };
-  const sn = $("#snap"); if (sn) sn.onclick = snap;
-  pinch($("#view"));
-  if (S.shot) showShot();
+  $("#pickB").onchange = async e => { const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
+    toast(`Adding ${fs.length} photo${fs.length > 1 ? "s" : ""}…`);
+    for (const f of fs){ const blob = await fitBlob(f, 2400, .9); await put("shots", { id: "b" + uid(), kind: "before", site: CTX.sites[S.site] ? S.site : CTX.site, place: S.place, at: new Date(f.lastModified || Date.now()).toISOString(), blob, thumb: await blobToData(await shrink(blob, 360, .72)) }); }
+    camView(); };
+  document.querySelectorAll("[data-take]").forEach(b => b.onclick = async () => { const s2 = byId.get(b.dataset.take); S.before = { ...s2, url: URL.createObjectURL(s2.blob) }; if (s2.place) S.place = s2.place; if (s2.site) S.site = s2.site; openCam(); });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (!(await confirmBox("Remove this before photo?", "It is removed from this list only — your Photos are not touched.", "Remove"))) return; await del("shots", b.dataset.del); camView(); });
+  document.querySelectorAll("[data-open]").forEach(b => b.onclick = async () => { const p = pairs.find(x => x.id === b.dataset.open); await reopenPair(p, byId); });
+  document.querySelectorAll("[data-deck]").forEach(b => b.onclick = () => pickDeckFor(pairs.find(x => x.id === b.dataset.deck)));
 }
-async function useBefore(blob, meta){
-  if (S.before && S.before.url) URL.revokeObjectURL(S.before.url);
-  S.before = { ...meta, blob, url: URL.createObjectURL(blob) }; S.edges = false; if (meta.place && !S.place) S.place = meta.place;
-  camView();
+
+/* ---------- the full-screen camera ---------- */
+let CAM = null;   // { el, raf, timer, ghost:{w,h,small}, match }
+async function openCam(){
+  const bimg = await blobToImg(S.before.blob);
+  S.before.w = bimg.naturalWidth; S.before.h = bimg.naturalHeight;
+  const el = document.createElement("div"); el.className = "fcam"; document.body.append(el); document.documentElement.classList.add("noscroll");
+  CAM = { el, before: bimg, match: null };
+  el.innerHTML = `<div class="fv" id="fv"><video id="vid" playsinline muted autoplay></video>
+      <img class="gh" id="gh" src="${S.before.url}" style="opacity:${S.ghostOp / 100}" alt="">${S.grid ? `<div class="grid"></div>` : ""}<div class="msg" id="cmsg">Opening the camera…</div></div>
+    <div class="ftop"><button class="fp" id="cx" aria-label="Close">✕</button><span class="fp" id="mt">Match —</span><span class="fp pl">${esc(S.place || CTX.sites[S.site] || "")}</span></div>
+    <div class="fside"><button class="fs ${S.edges ? "on" : ""}" id="edgeB">Edges</button><button class="fs ${S.grid ? "on" : ""}" id="gridB">Grid</button><button class="fs" id="peek" title="Hold to see the before photo">👁</button><button class="fs" id="flip">⟲</button></div>
+    <div class="fhint" id="hint"></div>
+    <div class="fzoom" id="fz"></div>
+    <div class="fgh"><span>Ghost</span><input type="range" min="8" max="70" value="${S.ghostOp}" id="op"><b id="opv">${S.ghostOp}%</b></div>
+    <div class="fbot"><button class="fthumb" id="fth" style="background-image:url(${S.before.thumb || S.before.url})" aria-label="Before photos"></button>
+      <button class="fshut" id="snap" aria-label="Take the after photo"><i></i></button>
+      <label class="fios" title="The iPhone camera app — full quality, no ghost">iPhone<br>Camera<input type="file" accept="image/*" capture="environment" id="nat" hidden></label></div>`;
+  layoutCam();
+  addEventListener("resize", layoutCam);
+  $("#cx").onclick = closeCam; $("#fth").onclick = closeCam;
+  $("#op").oninput = e => { S.ghostOp = +e.target.value; if (!S.edges) $("#gh").style.opacity = S.ghostOp / 100; $("#opv").textContent = S.ghostOp + "%"; };
+  $("#gridB").onclick = () => { S.grid = !S.grid; $("#gridB").classList.toggle("on", S.grid); const g = el.querySelector(".grid"); if (g) g.remove(); else $("#fv").insertAdjacentHTML("beforeend", `<div class="grid"></div>`); };
+  $("#edgeB").onclick = async () => { S.edges = !S.edges; $("#edgeB").classList.toggle("on", S.edges); const g = $("#gh");
+    if (S.edges){ if (!S.before.edges) S.before.edges = await edgesOf(S.before.url); g.src = S.before.edges; g.classList.add("edges"); g.style.opacity = .85; } else { g.src = S.before.url; g.classList.remove("edges"); g.style.opacity = S.ghostOp / 100; } };
+  const pk = $("#peek"), on = () => { const g = $("#gh"); g.dataset.o = g.style.opacity; g.style.opacity = 1; }, off = () => { const g = $("#gh"); g.style.opacity = g.dataset.o || S.ghostOp / 100; };
+  pk.addEventListener("pointerdown", on); pk.addEventListener("pointerup", off); pk.addEventListener("pointerleave", off); pk.addEventListener("pointercancel", off);
+  $("#flip").onclick = async () => { S.facing = S.facing === "environment" ? "user" : "environment"; stopCam(); await startCam(); };
+  $("#snap").onclick = snap;
+  $("#nat").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; await finishAfter(await blobToImg(f), f, "iphone"); };
+  pinch($("#fv"));
+  await startCam();
+}
+function layoutCam(){   // the frame has the before photo's shape, as large as the screen allows
+  if (!CAM) return; const fv = $("#fv"); if (!fv) return;
+  const W = innerWidth, H = innerHeight, top = 0, bottom = 0, ar = S.before.w / S.before.h;
+  let w = W, h = W / ar; if (h > H - top - bottom){ h = H - top - bottom; w = h * ar; }
+  Object.assign(fv.style, { width: w + "px", height: h + "px", left: (W - w) / 2 + "px", top: Math.max(0, (H - h) / 2) + "px" });
+}
+function closeCam(){
+  stopCam(); clearInterval(CAM && CAM.timer); removeEventListener("resize", layoutCam);
+  if (CAM && CAM.el) CAM.el.remove(); CAM = null; document.documentElement.classList.remove("noscroll"); camView();
 }
 async function startCam(){
+  const m = $("#cmsg");
   try {
-    S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: S.facing }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
-    /* zoom: the camera's own zoom when the phone offers it (most Android phones), otherwise a digital zoom up to 4× */
+    /* ask for the largest picture the phone offers (iPhone: up to 4K in the browser) */
+    const tries = [{ width: { ideal: 4032 }, height: { ideal: 3024 } }, { width: { ideal: 3840 }, height: { ideal: 2160 } }, { width: { ideal: 1920 }, height: { ideal: 1440 } }];
+    for (const t of tries){ try { S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: S.facing }, ...t }, audio: false }); break; } catch (e){ if (e.name === "NotAllowedError") throw e; } }
+    if (!S.stream) throw new Error("no camera");
     const tr = S.stream.getVideoTracks()[0], cap = tr && tr.getCapabilities ? tr.getCapabilities() : {};
     S.native = !!(cap.zoom && cap.zoom.max > 1);
     S.zMin = S.native ? Math.max(1, cap.zoom.min || 1) : 1; S.zMax = S.native ? Math.min(cap.zoom.max, 10) : 4; S.zoom = S.zMin;
-    camView();
-  } catch (e){ toast(e.name === "NotAllowedError" ? "Allow the camera for the hub in your browser settings" : "The camera could not open: " + e.message, true); }
+    const v = $("#vid"); v.srcObject = S.stream; await v.play().catch(() => {});
+    if (m) m.remove();
+    $("#fz").innerHTML = [1, 2, 3].filter(z => z <= S.zMax).map(z => `<button data-z="${z}" class="${z === 1 ? "on" : ""}">${z}×</button>`).join("");
+    $("#fz").onclick = e => { const b = e.target.closest("[data-z]"); if (b) applyZoom(+b.dataset.z); };
+    applyZoom(S.zoom);
+    clearInterval(CAM.timer); CAM.timer = setInterval(liveMatch, 450);
+  } catch (e){ if (m) m.innerHTML = e.name === "NotAllowedError" ? "Allow the camera for the hub in Settings → Safari → Camera.<br><br>You can still use <b>iPhone Camera</b> below." : "The camera could not open here — use <b>iPhone Camera</b> below."; }
 }
 function applyZoom(z){
   S.zoom = Math.max(S.zMin, Math.min(S.zMax, z));
   const v = $("#vid"); if (!v) return;
   if (S.native){ const tr = S.stream && S.stream.getVideoTracks()[0]; if (tr) tr.applyConstraints({ advanced: [{ zoom: S.zoom }] }).catch(() => {}); v.style.transform = S.facing === "user" ? "scaleX(-1)" : ""; }
   else v.style.transform = `scale(${S.zoom})${S.facing === "user" ? " scaleX(-1)" : ""}`;   // digital zoom: the picture is cropped the same way
-  const zb = $("#zb"); if (zb) zb.textContent = S.zoom.toFixed(1) + "×";
-  const zm = $("#zm"); if (zm && +zm.value !== S.zoom) zm.value = S.zoom;
-  document.querySelectorAll("[data-z]").forEach(b => b.classList.toggle("on", Math.abs(S.zoom - +b.dataset.z) < .05));
+  document.querySelectorAll("#fz [data-z]").forEach(b => b.classList.toggle("on", Math.abs(S.zoom - +b.dataset.z) < .05));
 }
-/* two fingers on the camera = zoom */
 function pinch(el){
   if (!el || el.dataset.pinch) return; el.dataset.pinch = "1";
   const P = new Map(); let d0 = 0, z0 = 1;
-  el.addEventListener("pointerdown", e => { if (!S.stream || e.target.closest(".bar")) return; P.set(e.pointerId, e); if (P.size === 2){ const [a, b] = [...P.values()]; d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); z0 = S.zoom; } });
+  el.addEventListener("pointerdown", e => { if (!S.stream) return; P.set(e.pointerId, e); if (P.size === 2){ const [a, b] = [...P.values()]; d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); z0 = S.zoom; } });
   el.addEventListener("pointermove", e => { if (!P.has(e.pointerId)) return; P.set(e.pointerId, e); if (P.size === 2 && d0){ const [a, b] = [...P.values()]; applyZoom(z0 * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / d0); } });
   const up = e => { P.delete(e.pointerId); if (P.size < 2) d0 = 0; }; el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
 }
 function stopCam(){ if (S.stream){ S.stream.getTracks().forEach(t => t.stop()); S.stream = null; } }
 addEventListener("pagehide", stopCam);
+
+/* the part of the camera picture that matches the before photo's shape (and the digital zoom) */
+function frameRect(vw, vh){
+  const ar = S.before.w / S.before.h, z = S.native ? 1 : S.zoom;
+  let w = vw, h = vw / ar; if (h > vh){ h = vh; w = vh * ar; }
+  w /= z; h /= z; return { x: (vw - w) / 2, y: (vh - h) / 2, w, h };
+}
+/* ---------- matching: small grey edge maps, the best shift / zoom between the before and the camera ---------- */
+function edgeMap(src, sx, sy, sw, sh, W, H){
+  const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d", { willReadFrequently: true });
+  x.drawImage(src, sx, sy, sw, sh, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, g = new Float32Array(W * H), e = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) g[i] = d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11;
+  for (let y = 1; y < H - 1; y++) for (let k = 1; k < W - 1; k++){ const i = y * W + k; e[i] = Math.abs(g[i + 1] - g[i - 1]) + Math.abs(g[i + W] - g[i - W]); }
+  return e;
+}
+/* compare A (before) with B (after) sampled at scale s and shift dx,dy (in cells): normalised correlation */
+function corr(A, B, W, H, s, dx, dy){
+  let sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0, n = 0; const m = 3;
+  for (let y = m; y < H - m; y++){ const by = Math.round((y - H / 2) * s + H / 2 + dy); if (by < 1 || by >= H - 1) continue;
+    for (let k = m; k < W - m; k++){ const bx = Math.round((k - W / 2) * s + W / 2 + dx); if (bx < 1 || bx >= W - 1) continue;
+      const a = A[y * W + k], b = B[by * W + bx]; sa += a; sb += b; saa += a * a; sbb += b * b; sab += a * b; n++; } }
+  if (n < W * H * .4) return -1;
+  const cv = sab / n - (sa / n) * (sb / n), va = saa / n - (sa / n) ** 2, vb = sbb / n - (sb / n) ** 2;
+  return va > 0 && vb > 0 ? cv / Math.sqrt(va * vb) : -1;
+}
+function bestFit(A, B, W, H, range, scales, cx = 0, cy = 0, step = 1){
+  let best = { c: -2, s: 1, dx: 0, dy: 0 };
+  for (const s of scales) for (let dy = cy - range; dy <= cy + range; dy += step) for (let dx = cx - range; dx <= cx + range; dx += step){ const c = corr(A, B, W, H, s, dx, dy); if (c > best.c) best = { c, s, dx, dy }; }
+  return best;
+}
+function liveMatch(){
+  const v = $("#vid"); if (!CAM || !v || !v.videoWidth) return;
+  const W = 72, H = Math.max(24, Math.round(W * S.before.h / S.before.w));
+  if (!CAM.A) CAM.A = edgeMap(CAM.before, 0, 0, S.before.w, S.before.h, W, H);
+  const r = frameRect(v.videoWidth, v.videoHeight), B = edgeMap(v, r.x, r.y, r.w, r.h, W, H);
+  const here = corr(CAM.A, B, W, H, 1, 0, 0), f = bestFit(CAM.A, B, W, H, 4, [0.92, 1, 1.08]);
+  const pct = Math.max(0, Math.round(here * 100)), mt = $("#mt"); if (!mt) return;
+  mt.textContent = `Match ${pct}%`; mt.className = "fp " + (pct >= 70 ? "ok" : pct >= 45 ? "mid" : "low");
+  let tip = "";
+  if (f.c > here + .06){   // a better spot exists: say which way
+    const moves = [];
+    if (f.s > 1.02) moves.push("step back / zoom out"); else if (f.s < .98) moves.push("step closer / zoom in");
+    if (f.dx >= 2) moves.push("turn right"); else if (f.dx <= -2) moves.push("turn left");
+    if (f.dy >= 2) moves.push("tilt down"); else if (f.dy <= -2) moves.push("tilt up");
+    tip = moves.join(" · ");
+  }
+  const h = $("#hint"); if (h){ h.textContent = pct >= 70 ? "✓ Same spot — take the photo" : tip; h.className = "fhint" + (pct >= 70 ? " ok" : ""); }
+  $("#fv").classList.toggle("aligned", pct >= 70);
+}
+
+/* ---------- take the after photo ---------- */
+async function snap(){
+  const v = $("#vid"); if (!v || !v.videoWidth) return toast("The camera is still starting", true);
+  const r = frameRect(v.videoWidth, v.videoHeight), c = document.createElement("canvas"); c.width = Math.round(r.w); c.height = Math.round(r.h);
+  const x = c.getContext("2d"); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); }
+  x.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height); x.setTransform(1, 0, 0, 1, 0, 0);
+  $("#fv").classList.add("flash"); setTimeout(() => { const f = $("#fv"); if (f) f.classList.remove("flash"); }, 180);
+  await finishAfter(c, null, "ghost");
+}
+/* fine alignment: the after moved / zoomed onto the before (search on 160-px edge maps, then a finer pass) */
+function alignOf(beforeImg, afterSrc, aw, ah){
+  const W = 160, H = Math.max(40, Math.round(W * S.before.h / S.before.w));
+  /* the after reduced to the before's shape first (centre crop) */
+  const ar = S.before.w / S.before.h; let cw = aw, ch = aw / ar; if (ch > ah){ ch = ah; cw = ah * ar; }
+  const crop = { x: (aw - cw) / 2, y: (ah - ch) / 2, w: cw, h: ch };
+  const A = edgeMap(beforeImg, 0, 0, S.before.w, S.before.h, W, H), B = edgeMap(afterSrc, crop.x, crop.y, crop.w, crop.h, W, H);
+  const coarse = bestFit(A, B, W, H, 12, [0.88, 0.94, 1, 1.06, 1.12], 0, 0, 2);   // wide and quick…
+  const f = bestFit(A, B, W, H, 2, [-.03, -.015, 0, .015, .03].map(d => +(coarse.s + d).toFixed(3)), coarse.dx, coarse.dy);   // …then fine around it
+  /* the matching region of the after, in its own pixels (kept inside the photo) */
+  const k = crop.w / W; let rw = crop.w * f.s, rh = crop.h * f.s;
+  const fit = Math.min(1, aw / rw, ah / rh); rw *= fit; rh *= fit;
+  const rx = Math.max(0, Math.min(aw - rw, crop.x + (crop.w - rw) / 2 + f.dx * k)), ry = Math.max(0, Math.min(ah - rh, crop.y + (crop.h - rh) / 2 + f.dy * k));
+  return { ...f, rect: { x: rx, y: ry, w: rw, h: rh }, crop, useful: f.c > .25 && (Math.abs(f.dx) > 0 || Math.abs(f.dy) > 0 || Math.abs(f.s - 1) > .005) };
+}
+async function finishAfter(src, file, how){
+  const aw = src.naturalWidth || src.width, ah = src.naturalHeight || src.height, at = new Date().toISOString();
+  toast("Lining up with the before photo…");
+  const al = alignOf(CAM ? CAM.before : await blobToImg(S.before.blob), src, aw, ah);
+  /* 1) the after photo as taken — full resolution, quality 95 % (from iPhone Camera: the photo itself) */
+  const full = document.createElement("canvas"); full.width = aw; full.height = ah; full.getContext("2d").drawImage(src, 0, 0);
+  if (S.stamp) drawStamp(full, "AFTER", at);
+  const fullBlob = file && !S.stamp ? file : await toBlob(full, .95);
+  /* 2) the after lined up on the before (for the side by side and the deck) */
+  const al2 = document.createElement("canvas"), bw = S.before.w, bh = S.before.h, out = Math.min(1, 2400 / Math.max(bw, bh));
+  al2.width = Math.round(bw * out); al2.height = Math.round(bh * out);
+  const r = al.c > .25 ? al.rect : al.crop, ax = al2.getContext("2d"); ax.fillStyle = "#000"; ax.fillRect(0, 0, al2.width, al2.height);
+  ax.drawImage(src, r.x, r.y, r.w, r.h, 0, 0, al2.width, al2.height);
+  if (S.stamp) drawStamp(al2, "AFTER", at);
+  const small = await shrink(al2, 1600, .86), thumb = await blobToData(await shrink(al2, 360, .72));
+  const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
+  const shot = { id: uid(), kind: "after", site, place: S.place, at, blob: small, thumb, how };
+  await put("shots", shot);
+  const pair = { id: uid(), beforeId: S.before.id, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at, match: Math.round(al.c * 100) };
+  await put("pairs", pair);
+  const sbs = await sideBySide(S.before.blob, al2, S.before.at, at);
+  const files = [new File([fullBlob], `${base}_after.jpg`, { type: "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
+  const shots = (await all("shots")).sort((a, b) => b.at.localeCompare(a.at)); const keep = new Set(); for (const d of await all("decks")) for (const s2 of d.slides || []) { keep.add(s2.beforeId); keep.add(s2.afterId); }
+  for (const p of await all("pairs")) { keep.add(p.beforeId); }
+  for (const old of shots.slice(60)) if (!keep.has(old.id)) await del("shots", old.id);
+  showResult({ files, pair, beforeUrl: S.before.url, alignedUrl: URL.createObjectURL(small), sbsUrl: URL.createObjectURL(sbs), w: aw, h: ah, match: pair.match });
+}
+/* result: drag the line to compare, save to Photos */
+function showResult(R){
+  stopCam(); if (CAM){ clearInterval(CAM.timer); }
+  const el = CAM ? CAM.el : (() => { const d = document.createElement("div"); d.className = "fcam"; document.body.append(d); document.documentElement.classList.add("noscroll"); CAM = { el: d }; return d; })();
+  el.innerHTML = `<div class="fres"><div class="ftop"><button class="fp" id="cx">✕</button><span class="fp ${R.match >= 70 ? "ok" : R.match >= 45 ? "mid" : "low"}">Match ${R.match}%</span><span class="fp">${R.w} × ${R.h}</span></div>
+    <div class="cmp" id="cmp" style="aspect-ratio:${S.before.w}/${S.before.h}"><img src="${R.alignedUrl}" alt=""><div class="cb" id="cb"><img src="${R.beforeUrl}" alt=""></div><i id="cl"></i><em class="b">BEFORE</em><em class="a">AFTER</em></div>
+    <p class="fnote">Drag across the photo to compare. The after is lined up on the before automatically for the side-by-side.</p>
+    <div class="fact"><button class="btn gold" id="sv">⤓ Save to Photos (2)</button><button class="btn" id="dk">+ Deck</button><button class="btn ghost" id="re">Retake</button><button class="btn ghost" id="ok">Done</button></div></div>`;
+  const cmp = $("#cmp"), set = px => { const r = cmp.getBoundingClientRect(), p = Math.max(0, Math.min(1, (px - r.left) / r.width)); $("#cb").style.width = p * 100 + "%"; $("#cl").style.left = p * 100 + "%"; };
+  cmp.addEventListener("pointerdown", e => { set(e.clientX); cmp.setPointerCapture(e.pointerId); }); cmp.addEventListener("pointermove", e => { if (e.buttons || e.pressure) set(e.clientX); });
+  $("#sv").onclick = async () => { if (await saveFiles(R.files)) toast(isIOS ? "Saved — check Photos" : "Saved"); };
+  $("#dk").onclick = () => pickDeckFor(R.pair);
+  $("#re").onclick = async () => { await del("pairs", R.pair.id); await del("shots", R.pair.afterId); CAM.el.remove(); CAM = null; openCam(); };
+  $("#ok").onclick = $("#cx").onclick = closeCam;
+}
+async function reopenPair(p, byId){
+  const b = byId.get(p.beforeId), a = byId.get(p.afterId); if (!b || !a) return;
+  S.before = { ...b, url: URL.createObjectURL(b.blob) }; const bi = await blobToImg(b.blob); S.before.w = bi.naturalWidth; S.before.h = bi.naturalHeight; S.place = p.place || S.place;
+  const ai = await blobToImg(a.blob), c = document.createElement("canvas"); c.width = ai.naturalWidth; c.height = ai.naturalHeight; c.getContext("2d").drawImage(ai, 0, 0);
+  const sbs = await sideBySide(b.blob, c, p.beforeAt, p.afterAt), base = `${p.site}_${slug(p.place)}_${stamp(new Date(p.afterAt))}`;
+  showResult({ files: [new File([a.blob], `${base}_after.jpg`, { type: "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })], pair: p, beforeUrl: S.before.url, alignedUrl: URL.createObjectURL(a.blob), sbsUrl: URL.createObjectURL(sbs), w: c.width, h: c.height, match: p.match ?? 0 });
+}
 /* edges of the before photo (outline mode): a simple Sobel filter, white lines on transparent */
 async function edgesOf(url){
   const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = url; });
@@ -208,50 +409,16 @@ function drawStamp(c, label, at){
   x.fillStyle = label === "BEFORE" ? "#FF8A7A" : "#7BE0A6"; x.fillText(label, 16 * u + pad, c.height - 16 * u - hh / 2 + 8 * u);
   x.fillStyle = "#fff"; x.fillText(txt.slice(label.length), 16 * u + pad + x.measureText(label).width, c.height - 16 * u - hh / 2 + 8 * u);
 }
-async function snap(){
-  const v = $("#vid"); if (!v || !v.videoWidth) return toast("The camera is still starting", true);
-  if (!S.before) return toast("Choose the before photo first", true);
-  const vw = v.videoWidth, vh = v.videoHeight, z = S.native ? 1 : S.zoom, sw = Math.round(vw / z), sh = Math.round(vh / z);
-  const at = new Date().toISOString(), c = document.createElement("canvas"); c.width = sw; c.height = sh;
-  const x = c.getContext("2d"); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); }
-  x.drawImage(v, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, sw, sh); x.setTransform(1, 0, 0, 1, 0, 0);
-  if (S.stamp) drawStamp(c, "AFTER", at);
-  const full = await toBlob(c, .92), small = await shrink(c, 1600, .84), thumb = await blobToData(await shrink(c, 240, .7));
-  const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
-  const shot = { id: uid(), kind: "after", site, place: S.place, at, blob: small, thumb };
-  await put("shots", shot);
-  let bId = S.before.id; if (!(await get("shots", bId))) { await put("shots", { id: bId, kind: "before", site, place: S.before.place || S.place, at: S.before.at || at, blob: S.before.blob, thumb: await blobToData(await shrink(S.before.blob, 240, .7)) }); }
-  const pair = { id: uid(), beforeId: bId, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at };
-  await put("pairs", pair);
-  const sbs = await sideBySide(S.before.blob, c, S.before.at, at);
-  const files = [new File([full], `${base}_after.jpg`, { type: "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
-  /* keep the device tidy: the latest 60 photos */
-  const shots = (await all("shots")).sort((a, b) => b.at.localeCompare(a.at)); const keep = new Set(); for (const d of await all("decks")) for (const s2 of d.slides || []) { keep.add(s2.beforeId); keep.add(s2.afterId); }
-  for (const old of shots.slice(60)) if (!keep.has(old.id)) await del("shots", old.id);
-  S.shot = { files, pair, urls: files.map(f => URL.createObjectURL(f)) };
-  showShot();
-}
 async function sideBySide(beforeBlob, afterCanvas, bAt, aAt){
-  const b = await blobToImg(beforeBlob), H = 1200, wb = Math.round(b.width * H / b.height), wa = Math.round(afterCanvas.width * H / afterCanvas.height), gap = 20, top = 70, bot = 60;
+  const b = await blobToImg(beforeBlob), H = 1600, wb = Math.round(b.width * H / b.height), wa = Math.round(afterCanvas.width * H / afterCanvas.height), gap = 24, top = 84, bot = 70;
   const c = document.createElement("canvas"); c.width = wb + wa + gap * 3; c.height = H + top + bot; const x = c.getContext("2d");
-  x.fillStyle = "#2A1146"; x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = "#2A1146"; x.fillRect(0, 0, c.width, c.height); x.imageSmoothingQuality = "high";
   x.drawImage(b, gap, top, wb, H); x.drawImage(afterCanvas, gap * 2 + wb, top, wa, H);
-  x.font = "800 34px system-ui, sans-serif";
-  const lab = (t, col, px) => { const w = x.measureText(t).width + 36; x.fillStyle = col; x.beginPath(); x.roundRect(px, 14, w, 44, 22); x.fill(); x.fillStyle = "#fff"; x.fillText(t, px + 18, 47); };
+  x.font = "800 40px system-ui, sans-serif";
+  const lab = (t, col, px) => { const w = x.measureText(t).width + 40; x.fillStyle = col; x.beginPath(); x.roundRect(px, 16, w, 52, 26); x.fill(); x.fillStyle = "#fff"; x.fillText(t, px + 20, 56); };
   lab(`BEFORE · ${bAt ? fmtD(bAt) : ""}`, "#C0392B", gap); lab(`AFTER · ${fmtD(aAt)}`, "#2E8B57", gap * 2 + wb);
-  x.font = "600 28px system-ui, sans-serif"; x.fillStyle = "#E9CF8A"; x.fillText(`${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}  ·  ABC Operations`, gap, c.height - 20);
-  return toBlob(c, .88);
-}
-function showShot(){
-  const s2 = S.shot, o = $("#out"); if (!s2 || !o) return;
-  o.innerHTML = `<div class="card res"><b>✓ After photo taken</b>
-    <div class="imgs ${s2.urls.length === 1 ? "one" : ""}">${s2.urls.map(u => `<img src="${u}" alt="">`).join("")}</div>
-    <div class="row"><button class="btn gold" id="sv">⤓ Save to gallery${s2.files.length > 1 ? ` (${s2.files.length} photos)` : ""}</button>${s2.pair ? `<button class="btn" id="toDeck">+ Add to a deck</button>` : ""}<button class="btn ghost" id="again">Next area</button></div>
-    <p class="note">The after photo and a side-by-side picture are ready.</p></div>`;
-  $("#sv").onclick = async () => { if (await saveFiles(s2.files)) toast("Saved"); };
-  $("#again").onclick = () => { S.shot = null; o.innerHTML = ""; S.before = null; S.place = ""; camView(); };
-  const td = $("#toDeck"); if (td) td.onclick = () => pickDeckFor(s2.pair);
-  o.scrollIntoView({ behavior: "smooth", block: "start" });
+  x.font = "600 32px system-ui, sans-serif"; x.fillStyle = "#E9CF8A"; x.fillText(`${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}  ·  ABC Operations`, gap, c.height - 24);
+  return toBlob(c, .92);
 }
 
 /* ================= DECK ================= */
