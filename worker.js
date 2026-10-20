@@ -30,7 +30,7 @@ import { ccSchema, ccHubRoute, ccHandover, ccDay } from "./modules/cleanctl.js";
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
 import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
 import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
-import { storageStatus, storageRun } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
+import { storageStatus, storageRun, d1Traffic, d1Top } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
@@ -366,12 +366,15 @@ async function ensureSchema(env) {
   await aiSchema(env);   // ABCON: taught facts, feedback, chat history
   await crmSchema(env);   // CRM handhelds sheet
   await inductionSchema(env);   // Operations Induction
-  /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table */
-  await env.DB.batch([
+  /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
+     Created once (meta idx:v1): checking them again on every start also counts as reads. */
+  const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
+  if (!idx) await env.DB.batch([
     "CREATE INDEX IF NOT EXISTS hub_events_at ON hub_events (at)", "CREATE INDEX IF NOT EXISTS hub_events_site_at ON hub_events (site, at)",
     "CREATE INDEX IF NOT EXISTS sched_cells_site_day ON sched_cells (site, day)", "CREATE INDEX IF NOT EXISTS handovers_site_day ON handovers (site, day)",
     "CREATE INDEX IF NOT EXISTS mom_actions_meeting ON mom_actions (meeting_id)", "CREATE INDEX IF NOT EXISTS mom_actions_site ON mom_actions (site, status)",
-    "CREATE INDEX IF NOT EXISTS contractors_ins ON contractors (ins_expiry)"
+    "CREATE INDEX IF NOT EXISTS contractors_ins ON contractors (ins_expiry)",
+    "INSERT OR REPLACE INTO meta (k, v) VALUES ('idx:v1', '1')"
   ].map(q => env.DB.prepare(q))).catch(e => console.error("indexes", e && e.message));
   await trainingSchema(env);   // Training tracker
   await digestSchema(env);   // Weekly digest per person
@@ -677,7 +680,9 @@ async function route(request, env, ctx, url) {
     if (a === "morning-test" && method === "POST") return ok(await morningTest(env, me));
     if (a === "morning-status" && method === "GET") return ok(await morningStatus(env));
     if (a === "mail-quota" && method === "GET") return ok(await mailQuota(env));   // Mail quota feature
-    if (a === "storage" && method === "GET") return ok(await storageStatus(env, url.searchParams.get("fresh") === "1"));   // Cloudflare storage meter (R2 / D1)
+    if (a === "storage" && method === "GET") return ok(await storageStatus(env, url.searchParams.get("fresh") === "1"));
+    if (a === "d1use" && method === "GET") return ok(await d1Traffic(env, url.searchParams.get("fresh") === "1"));   // Database usage: rows read / written today (all D1 databases)
+    if (a === "d1top" && method === "GET") return ok(await d1Top(env, url.searchParams.get("period")));            // Database usage: the queries reading the most   // Cloudflare storage meter (R2 / D1)
     if (a === "schedcc") return ok(await schedCcAdmin(env, method, body, SITES));   // Weekly schedule email: Cc per flagship
     if (a === "history" && method === "GET") return ok(await historyList(env, url));   // Change history feature
     /* Automation feature: backup download, backup status, End of Day email test */

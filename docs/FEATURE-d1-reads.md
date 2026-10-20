@@ -21,3 +21,12 @@ The Restroom system's own dashboard queries (softservices / inspection group-by,
 ## Check again
 Run "D1 usage report" (period 1d) the next day and compare. If the total stays near the limit, the next steps are a shared
 60-second cache for the home checks and slower background jobs; Workers Paid ($5 / month) raises the limit to 25 billion rows a month.
+
+## Admin → Storage → Database usage (Oct 2026)
+- Today's **rows read** and **rows written** for all D1 databases of the account against the free daily allowance (5 M / 100 K, UTC day = resets 03:00 Beirut),
+  per database, the last 7 days, and the **queries reading the most** (today / 7 days). Also a "DB reads today" meter on the admin overview bar.
+- Cloudflare GraphQL Analytics (`d1AnalyticsAdaptiveGroups`, `d1QueriesAdaptiveGroups`) with the read-only token the storage meter already uses
+  (`CF_API_TOKEN`, or `CF_ANALYTICS_TOKEN` if set). Cached 10 min (top queries 15 min) in `meta`.
+- Hourly check: the administrators get a notification at 70 % and 90 % of today's reads or writes.
+- Limits can be changed with `D1_FREE_READS` / `D1_FREE_WRITES` if the plan changes.
+- The new indexes are created once (`meta idx:v1`) instead of on every start.

@@ -3637,6 +3637,7 @@ async function storageBar(force){
   stAt = Date.now();
   if (!el.innerHTML) el.innerHTML = `<div class="mq" style="--mq:var(--muted)"><div class="tx"><small>Checking Cloudflare storage…</small></div></div>`;
   let d; try { d = await api("admin/storage" + (force ? "?fresh=1" : "")); } catch (e){ el.innerHTML = `<div class="mq" style="--mq:var(--muted)"><div class="tx"><small>Storage: ${esc(e.message)}</small></div></div>`; return; }
+  try { d.d1use = await api("admin/d1use" + (force ? "?fresh=1" : "")); if (d.d1use && !d.d1use.error) d.pct = { ...d.pct, d1reads: d.d1use.pct.reads, d1writes: d.d1use.pct.writes }; } catch {}
   const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>';
   const worst = Math.max(...Object.values(d.pct).filter(v => v != null), 0);
   const m = (label, used, lim, pct, f) => `<div class="mt" style="--mq:${pctTone(pct)}"><span>${label}<b>${f(used)} / ${f(lim)}</b></span><div class="bar" title="${pct == null ? "unknown" : pct + "%"}"><i style="width:${Math.max(2, Math.min(100, pct || 0))}%"></i></div></div>`;
@@ -3644,17 +3645,46 @@ async function storageBar(force){
   el.innerHTML = `<div class="mq" style="--mq:${pctTone(worst)}">
       <div class="ic">${icon}</div>
       <div class="tx" style="flex:0 1 210px"><b>Cloudflare storage</b><small>${!r2.setup ? "R2: add CF_ACCOUNT_ID and the CF_API_TOKEN secret to read it" : r2.error ? "R2: " + esc(r2.error) : `Free allowance · ${worst}% at most`} · ${new Date(d.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" })}</small></div>
-      <div class="meters">${r2.setup && !r2.error ? m("R2 stored", r2.bytes, L.r2Bytes, d.pct.r2, fmtBytes) + m("R2 writes (A)", r2.classA, L.classA, d.pct.classA, fmtN) + m("R2 reads (B)", r2.classB, L.classB, d.pct.classB, fmtN) : ""}${m("Hub database", d.d1.bytes, L.d1Bytes, d.pct.d1, fmtBytes)}</div>
+      <div class="meters">${d.d1use && !d.d1use.error ? m("DB reads today", d.d1use.reads, d.d1use.limits.reads, d.d1use.pct.reads, fmtN) : ""}${r2.setup && !r2.error ? m("R2 stored", r2.bytes, L.r2Bytes, d.pct.r2, fmtBytes) + m("R2 writes (A)", r2.classA, L.classA, d.pct.classA, fmtN) + m("R2 reads (B)", r2.classB, L.classB, d.pct.classB, fmtN) : ""}${m("Hub database", d.d1.bytes, L.d1Bytes, d.pct.d1, fmtBytes)}</div>
       <button class="btn small ghost" id="stRe">Refresh</button>
       ${worst >= 80 ? `<div class="warn">Close to the free allowance — open the Storage tab to see which bucket uses the space. Above 100% Cloudflare starts charging.</div>` : ""}
     </div>`;
   $("#stRe").onclick = () => storageBar(true);
   return d;
 }
+/* Database usage (D1, all databases of the account): today's rows read / written against the free daily allowance, 7 days, top queries */
+let d1Period = "1d";
+async function d1UsagePanel(force){
+  const el = $("#d1Use"); if (!el) return;
+  let u, t; try { [u, t] = await Promise.all([api("admin/d1use" + (force ? "?fresh=1" : "")), api("admin/d1top?period=" + d1Period).catch(e => ({ error: e.message }))]); } catch (e){ el.innerHTML = `<p style="color:var(--alert)">${esc(e.message)}</p>`; return; }
+  if (u.error){ el.innerHTML = `<h3>Database usage</h3><p style="color:var(--alert)">${esc(u.error)}</p>`; return; }
+  const L = u.limits, tone = pctTone, maxD = Math.max(L.reads, ...u.days.map(x => x.rowsRead));
+  const bar = (v, lim, lab) => { const c = tone(Math.round(v / lim * 1000) / 10); return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;gap:8px;font-size:.82rem;font-weight:700"><span>${lab}</span><b>${fmtN(v)} / ${fmtN(lim)}</b></div>
+    <div style="height:10px;border-radius:99px;background:var(--paper);overflow:hidden;margin-top:7px"><i style="display:block;height:100%;border-radius:99px;width:${Math.max(1, Math.min(100, v / lim * 100))}%;background:${c}"></i></div></div>`; };
+  el.innerHTML = `<h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px">Database usage · today <button class="btn small ghost" id="d1Re">Refresh</button></h3>
+    <p class="brief-empty" style="font-size:.84rem;margin-bottom:10px">All the databases of the account share one free allowance: <b>${fmtN(L.reads)} rows read</b> and <b>${fmtN(L.writes)} rows written</b> a day. "Rows read" counts every row a query looks through. The day resets at 03:00 Beirut time · checked ${esc(new Date(u.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }))}${u.cached ? " (kept 10 min)" : ""}.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:12px">${bar(u.reads, L.reads, `Rows read · ${u.pct.reads}%`)}${bar(u.writes, L.writes, `Rows written · ${u.pct.writes}%`)}</div>
+    <table class="st-tbl"><tr><th>Database</th><th style="width:34%">Share of today's reads</th><th class="n">Rows read</th><th class="n">Rows written</th><th class="n">Queries</th></tr>
+      ${u.databases.map(b => `<tr><td><b>${esc(b.name)}</b></td><td><div class="sb"><i style="width:${Math.max(1, b.rowsRead / Math.max(1, u.reads) * 100)}%"></i></div></td><td class="n">${fmtN(b.rowsRead)}</td><td class="n">${fmtN(b.rowsWritten)}</td><td class="n">${fmtN(b.queries)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nothing read yet today.</td></tr>`}</table>
+    <div style="margin:16px 0 6px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Rows read · last 7 days (UTC days)</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:130px;position:relative">
+      ${u.days.map(x => { const p = x.rowsRead / L.reads * 100; return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%" title="${esc(x.date)}: ${x.rowsRead.toLocaleString("en-US")} rows read · ${x.rowsWritten.toLocaleString("en-US")} written">
+        <b style="font-size:.68rem">${fmtN(x.rowsRead)}</b><div style="width:60%;height:${Math.max(2, x.rowsRead / maxD * 100)}%;border-radius:6px 6px 2px 2px;background:${tone(p)}"></div>
+        <small style="font-size:.66rem;color:var(--muted)">${esc(new Date(x.date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" }))}</small></div>`; }).join("")}
+      <div style="position:absolute;left:0;right:0;bottom:calc(${L.reads / maxD * 100}% * .78 + 34px);border-top:1px dashed var(--alert);opacity:.6" title="Free daily limit"></div></div>
+    <div style="margin:18px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Queries reading the most</span>
+      <span class="seg" style="display:inline-flex;gap:4px">${[["1d", "Today"], ["7d", "7 days"]].map(([k, n]) => `<button class="btn small ${d1Period === k ? "" : "ghost"}" data-d1p="${k}">${n}</button>`).join("")}</span></div>
+    ${t.error ? `<p style="color:var(--alert)">${esc(t.error)}</p>` : `<table class="st-tbl"><tr><th>Database</th><th>Query</th><th class="n">Rows read</th><th class="n">Runs</th><th class="n">Per run</th></tr>
+      ${t.queries.map(q => `<tr><td><b>${esc(q.db)}</b></td><td><code style="font-size:.72rem;white-space:normal;word-break:break-word">${esc(q.query)}</code></td><td class="n">${fmtN(q.rowsRead)}</td><td class="n">${fmtN(q.runs)}</td><td class="n">${fmtN(Math.round(q.rowsRead / Math.max(1, q.runs)))}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">No queries yet.</td></tr>`}</table>`}
+    <p class="brief-empty" style="font-size:.8rem;margin-top:10px">The administrators get a notification at 70% and again at 90% of today's reads or writes (checked every hour).</p>`;
+  $("#d1Re").onclick = () => d1UsagePanel(true);
+  el.querySelectorAll("[data-d1p]").forEach(b => b.onclick = () => { d1Period = b.dataset.d1p; d1UsagePanel(); });
+}
 async function adminStorage(body){
   const d = await api("admin/storage"), r2 = d.r2 || {}, L = d.limits;
   const B = r2.buckets || [], top = Math.max(1, ...B.map(b => b.bytes));
-  body.innerHTML = `<div class="panel"><h3>R2 buckets</h3>
+  body.innerHTML = `<div class="panel" id="d1Use"><h3>Database usage</h3><p class="brief-empty">Reading Cloudflare…</p></div><div class="panel"><h3>R2 buckets</h3>
       ${!r2.setup ? `<p class="brief-empty" style="font-size:.9rem;line-height:1.6">To read R2 the hub needs a read-only Cloudflare token:<br>
         1. Cloudflare → <b>My Profile → API Tokens → Create token</b> → Custom token → permission <b>Account · Account Analytics · Read</b> → your account.<br>
         2. Workers → <b>operations-hub</b> → Settings → Variables and Secrets: add the secret <b>CF_API_TOKEN</b> (the token) and the variable <b>CF_ACCOUNT_ID</b> (Account home → Account ID).</p>`
@@ -3665,6 +3695,7 @@ async function adminStorage(body){
     <div class="panel"><h3>Hub database (D1)</h3><p style="font-size:.9rem">${fmtBytes(d.d1.bytes)} of ${fmtBytes(L.d1Bytes)} free (${d.pct.d1 == null ? "—" : d.pct.d1 + "%"}). Uploaded work forms, mall plans and photos kept by the hub count here.</p></div>
     <div class="panel"><p class="brief-empty" style="font-size:.84rem;line-height:1.55">The administrators get a notification when anything passes 80% and again at 95% of the free allowance (checked daily at 09:00).
       Limits used: R2 ${fmtBytes(L.r2Bytes)} stored, ${fmtN(L.classA)} writes and ${fmtN(L.classB)} reads per month; D1 ${fmtBytes(L.d1Bytes)}. If your Cloudflare plan changes, set R2_FREE_GB / R2_FREE_CLASS_A / R2_FREE_CLASS_B / D1_FREE_GB.</p></div>`;
+  d1UsagePanel();
 }
 /* Backup — Automation feature (weekly email every Sunday 03:00, download any time) */
 async function adminBackup(body){
