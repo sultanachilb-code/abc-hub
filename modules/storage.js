@@ -60,6 +60,58 @@ async function d1Usage(env) {
   } catch { return { bytes: null }; }
 }
 
+/* ---------- D1 reads and writes (all databases of the account) — Database usage, Oct 2026 ----------
+   Free plan: 5 M rows read and 100 K rows written a day (all databases together), reset 00:00 UTC = 03:00 Beirut. */
+const D1_NAMES = { "e7ae150f-de70-4376-a15b-65390159f65c": "Hub", "51391d36-fab9-4028-b5ae-26990a1f9c3d": "Restroom inspections", "61054354-17c3-4dfa-8658-be538e364003": "Incidents",
+  "74b31408-7910-45ab-845f-720515654155": "Dashboard users", "74112098-468d-492d-8334-c06f3846a18e": "Wedding venue" };
+export const d1Limits = env => ({ reads: Number(env.D1_FREE_READS) || 5_000_000, writes: Number(env.D1_FREE_WRITES) || 100_000 });
+async function gql(env, query, variables) {
+  const token = env.CF_ANALYTICS_TOKEN || env.CF_API_TOKEN, acc = env.CF_ACCOUNT_ID || "61f649b35159d4a26df7dde3c09a91dd";
+  if (!token) throw Object.assign(new Error("Add the CF_API_TOKEN secret (Account Analytics: Read)"), { setup: false });
+  const r = await fetch("https://api.cloudflare.com/client/v4/graphql", { method: "POST", signal: AbortSignal.timeout(12000),
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ query, variables: { acc, ...variables } }) });
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || (j.errors && j.errors.length)) throw new Error((j && j.errors && j.errors[0] && j.errors[0].message) || `Cloudflare API HTTP ${r.status}`);
+  return (j.data && j.data.viewer && j.data.viewer.accounts && j.data.viewer.accounts[0]) || {};
+}
+const dbName = id => D1_NAMES[id] || (id ? "Database " + String(id).slice(0, 8) : "—");
+/* today (UTC day) per database + the last 7 days */
+export async function d1Traffic(env, fresh) {
+  if (!fresh) { const c = await env.DB.prepare("SELECT v FROM meta WHERE k = 'd1use:last'").first().catch(() => null);
+    if (c) { const v = JSON.parse(c.v); if (Date.now() - Date.parse(v.at) < 10 * 60000) return { ...v, cached: true }; } }
+  const L = d1Limits(env), today = new Date().toISOString().slice(0, 10), from = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+  let out;
+  try {
+    const a = await gql(env, `query($acc: String!, $f: Date!, $t: Date!) { viewer { accounts(filter: { accountTag: $acc }) {
+      d1AnalyticsAdaptiveGroups(limit: 500, filter: { date_geq: $f, date_leq: $t }) { sum { rowsRead rowsWritten readQueries writeQueries } dimensions { date databaseId } } } } }`, { f: from, t: today });
+    const G = a.d1AnalyticsAdaptiveGroups || [], days = {}, dbs = {};
+    for (const g of G) { const d = g.dimensions.date, s = g.sum;
+      days[d] = days[d] || { date: d, rowsRead: 0, rowsWritten: 0 }; days[d].rowsRead += s.rowsRead || 0; days[d].rowsWritten += s.rowsWritten || 0;
+      if (d === today) { const id = g.dimensions.databaseId; dbs[id] = { id, name: dbName(id), rowsRead: s.rowsRead || 0, rowsWritten: s.rowsWritten || 0, queries: (s.readQueries || 0) + (s.writeQueries || 0) }; } }
+    const series = []; for (let i = 6; i >= 0; i--) { const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10); series.push(days[d] || { date: d, rowsRead: 0, rowsWritten: 0 }); }
+    const t = series[series.length - 1];
+    out = { setup: true, at: new Date().toISOString(), day: today, limits: L, reads: t.rowsRead, writes: t.rowsWritten,
+      pct: { reads: Math.round(t.rowsRead / L.reads * 1000) / 10, writes: Math.round(t.rowsWritten / L.writes * 1000) / 10 },
+      databases: Object.values(dbs).sort((x, y) => y.rowsRead - x.rowsRead), days: series };
+  } catch (e) { out = { setup: e.setup !== false, error: String(e.message || e), at: new Date().toISOString(), limits: L }; }
+  if (!out.error) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('d1use:last', ?)").bind(JSON.stringify(out)).run().catch(() => {});
+  return out;
+}
+/* the queries that read the most rows (today since 00:00 UTC, or the last 7 days) */
+export async function d1Top(env, period) {
+  const k = `d1use:top:${period === "7d" ? "7d" : "1d"}`;
+  const c = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k).first().catch(() => null);
+  if (c) { const v = JSON.parse(c.v); if (Date.now() - Date.parse(v.at) < 15 * 60000) return v; }
+  const now = new Date(), from = period === "7d" ? new Date(Date.now() - 7 * 864e5) : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const a = await gql(env, `query($acc: String!, $f: Time!, $t: Time!) { viewer { accounts(filter: { accountTag: $acc }) {
+    d1QueriesAdaptiveGroups(limit: 12, filter: { datetimeHour_geq: $f, datetimeHour_leq: $t }, orderBy: [sum_rowsRead_DESC]) { sum { rowsRead rowsWritten } count dimensions { query databaseId } } } } }`,
+    { f: from.toISOString(), t: now.toISOString() });
+  const v = { at: now.toISOString(), period: period === "7d" ? "7d" : "1d", from: from.toISOString(),
+    queries: (a.d1QueriesAdaptiveGroups || []).map(q => ({ db: dbName(q.dimensions.databaseId), query: String(q.dimensions.query || "").replace(/\s+/g, " ").slice(0, 400), rowsRead: q.sum.rowsRead || 0, rowsWritten: q.sum.rowsWritten || 0, runs: q.count || 0 })) };
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, JSON.stringify(v)).run().catch(() => {});
+  return v;
+}
+
 export async function storageStatus(env, fresh) {
   if (!fresh) {
     const c = await env.DB.prepare("SELECT v FROM meta WHERE k = 'storage:last'").first().catch(() => null);
@@ -78,6 +130,22 @@ export async function storageStatus(env, fresh) {
 
 /* cron: once a day after 09:00 Beirut — tell the administrators when any allowance passes 80 % or 95 % (once per level and month) */
 export async function storageRun(env, d) {
+  /* D1 reads / writes: checked once an hour — the administrators hear at 70 % and 90 % of today's free allowance */
+  const hourK = "d1use:check:" + new Date().toISOString().slice(0, 13), hc = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(hourK, d.now()).run().catch(() => null);
+  if (hc && hc.meta && hc.meta.changes === 1) {
+    env.DB.prepare("DELETE FROM meta WHERE k >= 'd1use:check:' AND k < 'd1use:check;' AND k < ?").bind("d1use:check:" + new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 13)).run().catch(() => {});
+    const t = await d1Traffic(env, true).catch(() => null);
+    if (t && !t.error) {
+      const admins = ((await env.DB.prepare("SELECT email FROM users WHERE role = 'ADMIN' AND active = 1").all()).results || []).map(r => r.email);
+      for (const [key, label] of [["reads", "rows read"], ["writes", "rows written"]]) {
+        const v = t.pct[key]; if (!(v >= 70)) continue;
+        const level = v >= 90 ? 90 : 70, c = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(`d1use:alert:${key}:${t.day}:${level}`, d.now()).run().catch(() => null);
+        if (!c || !c.meta || c.meta.changes !== 1) continue;
+        for (const email of admins) await d.raiseEvent(env, { app: "storage", email, tone: level === 90 ? "alert" : "warn",
+          title: `Databases at ${v}% of today's free ${label}`, body: `Hub administration → Storage → Database usage shows which queries read the most. The counter resets at 03:00 Beirut time; above 100% the databases stop answering until then.` });
+      }
+    }
+  }
   if (d.hour() < 9) return;
   const day = d.today(), claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind("storage:check:" + day, d.now()).run();
   if (!claim.meta || claim.meta.changes !== 1) return;
