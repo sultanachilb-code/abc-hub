@@ -1,6 +1,6 @@
 /* =====================================================================
    FOLLOW-UPS — the personal flag from Outlook (Oct 2026) — docs/FEATURE-followups.md
-   Each person flags emails from the Outlook add-in (subject, due date, priority High / Medium / Low).
+   Each person flags emails from the Outlook add-in (subject, due date, priority High / Medium / Low) — or keeps a Note (no due date, no reminder).
    Personal only: everyone sees and is reminded of their own follow-ups.
    • Reminders (hub notification + push): the day before (from 09:00 Beirut) and on the due day (from 09:00).
    • Hub home page: "Action needed" — open follow-ups due today (and overdue) and tomorrow, High first.
@@ -31,22 +31,24 @@ export async function followupRoute(env, p, method, b, me, d) {
 
   /* the home page: overdue + today + tomorrow (open only) */
   if (p === "fu/list") {
-    const { results } = await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND status = 'open' AND due <= ? ORDER BY due, id").bind(email, addDays(today, 1)).all();
-    const L = (results || []).map(out).sort((a, c) => (a.due > today ? 1 : 0) - (c.due > today ? 1 : 0) || PRI[a.priority] - PRI[c.priority] || a.due.localeCompare(c.due));
-    return { today, tomorrow: addDays(today, 1), list: L };
+    const { results } = await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND status = 'open' AND (due = '' OR due <= ?) ORDER BY due, id LIMIT 200").bind(email, addDays(today, 1)).all();
+    const all = (results || []).map(out);
+    const L = all.filter(x => x.due).sort((a, c) => (a.due > today ? 1 : 0) - (c.due > today ? 1 : 0) || PRI[a.priority] - PRI[c.priority] || a.due.localeCompare(c.due));
+    const notes = all.filter(x => !x.due).sort((a, c) => PRI[a.priority] - PRI[c.priority] || c.id - a.id);   // notes: follow-ups without a due date
+    return { today, tomorrow: addDays(today, 1), list: L, notes };
   }
   /* the add-in: is this email already flagged? */
   if (p === "fu/item") {
     const id = clip(b.msgId, 400);
     const r = id ? await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND msg_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, id).first() : null;
-    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM followups WHERE email = ? AND status = 'open' AND due <= ?").bind(email, today).first();
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM followups WHERE email = ? AND status = 'open' AND due != '' AND due <= ?").bind(email, today).first();
     return { item: r ? out(r) : null, dueToday: Number(n.n) || 0, today };
   }
   if (method !== "POST") throw err("Unknown request", 404);
   if (p === "fu/save") {
-    const subject = clip(b.subject, 250) || "(no subject)", due = isDay(b.due) ? b.due : "";
-    if (!due) throw err("Choose the due date");
-    if (due < today) throw err("The due date is in the past");
+    const subject = clip(b.subject, 250) || "(no subject)", note = !!b.note, due = note ? "" : isDay(b.due) ? b.due : "";   // note = no due date, no reminder
+    if (!note && !due) throw err("Choose the due date");
+    if (due && due < today) throw err("The due date is in the past");
     const priority = PRI[b.priority] ? b.priority : "medium", msgId = clip(b.msgId, 400);
     const ex = b.id ? await mine(b.id) : msgId ? await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND msg_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, msgId).first() : null;
     if (ex) {   // same email flagged again → change it (reminders start over when the date changes)
@@ -76,7 +78,7 @@ export async function followupRun(env, d) {
   if (g && g.v === key) return;
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('fu:run', ?)").bind(key).run();
   const tomorrow = addDays(today, 1);
-  const { results } = await env.DB.prepare("SELECT * FROM followups WHERE status = 'open' AND due <= ? AND ((due = ? AND rem_before = 0) OR (due <= ? AND rem_day = 0)) LIMIT 300")
+  const { results } = await env.DB.prepare("SELECT * FROM followups WHERE status = 'open' AND due != '' AND due <= ? AND ((due = ? AND rem_before = 0) OR (due <= ? AND rem_day = 0)) LIMIT 300")
     .bind(tomorrow, tomorrow, today).all();
   const tag = { high: "🔴 High", medium: "🟠 Medium", low: "🟡 Low" };
   for (const r of results || []) {

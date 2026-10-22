@@ -433,10 +433,11 @@ body.hl-docked main{padding-bottom:110px}
 .fu-sec .fu-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .fu-sec .fu-h h2{margin:0;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .fu-sec .fu-h span{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.fu-notes summary{cursor:pointer;list-style:none;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 7px}.fu-notes summary::-webkit-details-marker{display:none}
 .fu-sub{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 7px}
 .fu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .fu-c{border-radius:16px;padding:11px 13px;border:1px solid var(--line);border-left:6px solid var(--c);background:color-mix(in srgb,var(--c) 7%,var(--surface));min-width:0}
-.fu-c.high{--c:#E5484D}.fu-c.medium{--c:#F08C2E}.fu-c.low{--c:#E8B923}
+.fu-c.note{--c:#9A90AC}.fu-c.high{--c:#E5484D}.fu-c.medium{--c:#F08C2E}.fu-c.low{--c:#E8B923}
 .fu-c .t{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--c) 75%,#000)}
 :root[data-theme="dark"] .fu-c .t{color:var(--c)}
 .fu-c b{display:block;font-size:.88rem;margin:3px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1218,16 +1219,17 @@ async function loadFollowups(){
   const s = $("#fuSlot"); if (s) s.innerHTML = fuHtml();
 }
 function fuHtml(){
-  if (!FU || !FU.list.length) return "";
+  if (!FU || (!FU.list.length && !(FU.notes || []).length)) return "";
   const PL = { high: "High", medium: "Medium", low: "Low" };
   const day = d => d === FU.today ? "Today" : d === FU.tomorrow ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-  const card = f => `<div class="fu-c ${f.priority}"><div class="t">● ${PL[f.priority]} · ${f.due < FU.today ? "Overdue · " + day(f.due) : day(f.due)}</div>
+  const card = f => `<div class="fu-c ${f.priority}"><div class="t">● ${PL[f.priority]} · ${!f.due ? "📝 Note" : f.due < FU.today ? "Overdue · " + day(f.due) : day(f.due)}</div>
       <b title="${esc(f.subject)}">${esc(f.subject)}</b><small>${esc(f.sender || "")}${f.sender ? " · " : ""}flagged ${esc(new Date(f.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</small>
-      <div class="bt"><button data-fu="done" data-id="${f.id}">✓ Done</button><button data-fu="later" data-id="${f.id}">+1 day</button>${f.link ? `<a href="${esc(f.link)}" target="_blank" rel="noopener">Open email</a>` : ""}</div></div>`;
-  const now = FU.list.filter(f => f.due <= FU.today), next = FU.list.filter(f => f.due === FU.tomorrow);
-  return `<section class="fu-sec" id="fuSec"><div class="fu-h"><span style="font-size:1.1rem;margin:0">🚩</span><h2>Action needed · your follow-ups</h2><span>Today ${now.length} · Tomorrow ${next.length}</span></div>
+      <div class="bt"><button data-fu="done" data-id="${f.id}">✓ Done</button><button data-fu="later" data-id="${f.id}">${f.due ? "+1 day" : "Remind tomorrow"}</button>${f.link ? `<a href="${esc(f.link)}" target="_blank" rel="noopener">Open email</a>` : ""}</div></div>`;
+  const now = FU.list.filter(f => f.due <= FU.today), next = FU.list.filter(f => f.due === FU.tomorrow), notes = FU.notes || [];
+  return `<section class="fu-sec" id="fuSec"><div class="fu-h"><span style="font-size:1.1rem;margin:0">🚩</span><h2>Action needed · your follow-ups</h2><span>Today ${now.length} · Tomorrow ${next.length}${notes.length ? ` · Notes ${notes.length}` : ""}</span></div>
     ${now.length ? `<div class="fu-sub">Today</div><div class="fu-grid">${now.map(card).join("")}</div>` : ""}
-    ${next.length ? `<div class="fu-sub">Tomorrow</div><div class="fu-grid">${next.map(card).join("")}</div>` : ""}</section>`;
+    ${next.length ? `<div class="fu-sub">Tomorrow</div><div class="fu-grid">${next.map(card).join("")}</div>` : ""}
+    ${notes.length ? `<details class="fu-notes" ${now.length || next.length ? "" : "open"}><summary>📝 Notes · ${notes.length} — no due date ▾</summary><div class="fu-grid">${notes.map(card).join("")}</div></details>` : ""}</section>`;
 }
 document.addEventListener("click", async e => {
   const b = e.target.closest("[data-fu]"); if (!b) return;

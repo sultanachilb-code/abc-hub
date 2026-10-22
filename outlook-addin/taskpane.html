@@ -15,6 +15,13 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 .hd img{width:32px;height:32px}
 .hd b{font-size:1rem;letter-spacing:.01em}
 .pad{padding:12px}
+.ptabs{display:grid;width:100%;grid-template-columns:1fr 1fr;gap:4px;background:#EDE8F3;border-radius:14px;padding:4px;margin-bottom:12px}
+.ptabs button{border:0;border-radius:11px;padding:9px 4px;font:inherit;font-weight:800;font-size:.8rem;background:transparent;color:#5A4E70;cursor:pointer}
+.ptabs button.on{background:#fff;color:#4A1F73;box-shadow:0 2px 6px rgba(42,15,69,.12)}
+.dates2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.pickrow{display:flex;gap:6px;margin-top:6px;align-items:center}
+.pickrow input{flex:1;height:40px;border:1.5px solid #4A1F73;border-radius:12px;padding:0 10px;font:inherit;background:#fff;color:#22163A}
+.fc.note{--c:#9A90AC}
 .lbl{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#7A7090;margin:14px 2px 7px}
 /* flag form */
 .hero{border-radius:18px;padding:15px;background:linear-gradient(150deg,#4A1F73,#2A0F45 72%);color:#fff;position:relative;overflow:hidden}
@@ -74,7 +81,7 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DEMO = new URLSearchParams(location.search).has("demo");
-let CTX = null, ITEM = null, site = "", FLAG = null, pick = { due: "", priority: "high" }, editing = false;
+let CTX = null, ITEM = null, site = "", FLAG = null, pick = { due: "", priority: "high", note: false }, editing = false, TAB = "fu", showPick = false;
 
 /* ---------- token + flagship: Outlook roaming settings (follow the person), else this browser ---------- */
 const store = {
@@ -167,7 +174,7 @@ async function start(){
 async function main(){
   ITEM = await readItem();
   FLAG = null; editing = false;
-  pick = { due: addD(bday(), 1), priority: "high" };
+  pick = { due: addD(bday(), 1), priority: "high", note: false }; showPick = false; TAB = "fu";
   try { const r = await api("fu/item?msgId=" + encodeURIComponent(ITEM.id)); FLAG = r.item; } catch {}
   $("#foot").innerHTML = `${esc(CTX.user.name)} · ${esc(CTX.sites[site] || "")} · <a href="#" id="chg">Change flagship</a> · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
   $("#chg").onclick = e => { e.preventDefault(); chooseSite(); };
@@ -181,21 +188,28 @@ const doneKey = () => "abchub.done." + (ITEM.id || ITEM.subject).slice(-80);
 const doneGet = () => { try { return JSON.parse(sessionStorage.getItem(doneKey()) || "{}"); } catch { return {}; } };
 const doneSet = k => { try { const o = doneGet(); o[k] = 1; sessionStorage.setItem(doneKey(), JSON.stringify(o)); } catch {} };
 function flagForm(){
-  const t = bday(), D = [["Today", t, "today"], ["Tomorrow", addD(t, 1), fmt(addD(t, 1), { weekday: "short", day: "numeric", month: undefined })], ["Monday", nextMonday(t), fmt(nextMonday(t), { weekday: undefined, day: "numeric", month: "short" })]];
-  const custom = !D.some(x => x[1] === pick.due);
+  const t = bday(), D = [["Today", t, "by tonight"], ["Tomorrow", addD(t, 1), fmt(addD(t, 1), { weekday: "short", day: "numeric", month: undefined })], ["Monday", nextMonday(t), fmt(nextMonday(t), { weekday: undefined, day: "numeric", month: "short" })]];
+  const custom = !pick.note && !D.some(x => x[1] === pick.due);
+  const whenTxt = pick.note ? "Note · no date" : pick.due === t ? "Today" : pick.due === addD(t, 1) ? "Tomorrow" : fmt(pick.due);
   return `<div class="hero"><div class="k"><div class="flagic">🚩</div><small>Follow up this email</small></div>
       <div class="subj">${esc(ITEM.subject || "(no subject)")}</div><div class="from">${esc(ITEM.fromName || ITEM.fromEmail)}${ITEM.date ? " · " + esc(new Date(ITEM.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })) : ""}</div></div>
     <div class="lbl">Due</div>
-    <div class="dates">${D.map(([n, d, s]) => `<button class="d ${pick.due === d ? "on" : ""}" data-due="${d}"><b>${n}</b><small>${n === "Today" ? "by tonight" : esc(s)}</small></button>`).join("")}
-      <label class="d ${custom ? "on" : ""}"><b>📅</b><small>${custom ? esc(fmt(pick.due, { weekday: undefined })) : "Pick"}</small><input type="date" id="dPick" min="${t}" value="${custom ? pick.due : ""}"></label></div>
+    <div class="dates" style="grid-template-columns:repeat(3,minmax(0,1fr))">${D.map(([n, d, sm]) => `<button class="d ${!pick.note && pick.due === d ? "on" : ""}" data-due="${d}"><b>${n}</b><small>${esc(sm)}</small></button>`).join("")}</div>
+    <div class="dates2"><button class="d ${custom ? "on" : ""}" id="pickBtn"><b>📅 ${custom ? esc(fmt(pick.due)) : "Pick a date"}</b><small>${custom ? "tap to change" : "any day"}</small></button>
+      <button class="d ${pick.note ? "on" : ""}" id="noteBtn"><b>📝 Note</b><small>no due date</small></button></div>
+    ${showPick ? `<div class="pickrow"><input type="date" id="dPick" min="${t}" value="${custom ? pick.due : ""}"><button class="d on" id="pickOk" style="padding:10px 12px"><b>OK</b></button></div>` : ""}
     <div class="lbl">Priority</div>
     <div class="pri">${["high", "medium", "low"].map(p => `<button class="pr ${p} ${pick.priority === p ? "on" : ""}" data-pri="${p}"><i></i>${PL[p]}</button>`).join("")}</div>
-    <button class="go" id="flagGo">🚩 Flag · ${esc(pick.due === t ? "Today" : pick.due === addD(t, 1) ? "Tomorrow" : fmt(pick.due))} · ${PL[pick.priority]}</button>
-    <div class="hint">Reminder the day before and on the day · shown on your hub home page</div>
+    <button class="go" id="flagGo">${pick.note ? "📝 Save note" : "🚩 Flag · " + esc(whenTxt)} · ${PL[pick.priority]}</button>
+    <div class="hint">${pick.note ? "Kept in your notes on the hub home page — no reminder" : "Reminder the day before and on the day · shown on your hub home page"}</div>
     ${editing ? `<div class="hint"><a href="#" id="flagCancel">Cancel</a></div>` : ""}`;
 }
 function flagCard(){
-  const t = bday(), when = FLAG.due === t ? "today" : FLAG.due === addD(t, 1) ? "tomorrow" : fmt(FLAG.due);
+  const t = bday();
+  if (!FLAG.due) return `<div class="fc ${FLAG.priority}"><div class="rib">${PL[FLAG.priority].toUpperCase()}</div><small>📝 Note · no due date</small>
+      <b>${esc(FLAG.subject)}</b><small>On your hub home page under Notes · no reminder</small>
+      <div class="acts"><button data-fa="done">✓ Done</button><button data-fa="change">Add a date / change</button><button data-fa="remove">Remove</button></div></div>`;
+  const when = FLAG.due === t ? "today" : FLAG.due === addD(t, 1) ? "tomorrow" : fmt(FLAG.due);
   return `<div class="fc ${FLAG.priority}"><div class="rib">${PL[FLAG.priority].toUpperCase()}</div><small>🚩 Flagged · due ${esc(when)}</small>
       <b>${esc(FLAG.subject)}</b><small>${FLAG.due > addD(t, 1) ? `Reminder ${esc(fmt(addD(FLAG.due, -1)))} · 09:00` : FLAG.due === t ? "Due today · it is on your hub home page" : "Reminder today, then tomorrow 09:00"}</small>
       <div class="acts"><button data-fa="done">✓ Done</button><button data-fa="change">Change</button><button data-fa="remove">Remove</button></div></div>`;
@@ -203,22 +217,31 @@ function flagCard(){
 const TAPS = [["works", "📄", "Works", "#EDE4F7", "Sent to Works"], ["handover", "🔁", "Handover", "#E2F1EE", "In handover"], ["calendar", "📅", "Calendar", "#E7EEFB", "In calendar"], ["feedback", "💬", "Feedback", "#FFF1E2", "Logged"]];
 function draw(){
   const dn = doneGet();
-  $("#app").innerHTML = `${FLAG && !editing ? flagCard() : flagForm()}
-    <div class="lbl" style="margin-top:18px">One tap — nothing to type</div>
-    <div class="qa">${TAPS.map(([k, ic, n, bg, ok]) => `<button class="q ${dn[k] ? "done" : ""}" data-tap="${k}"><div class="ic" style="background:${bg}">${dn[k] ? "✓" : ic}</div>${dn[k] ? ok : n}</button>`).join("")}</div>
-    <div id="out"></div>`;
-  $("#app").querySelectorAll("[data-due]").forEach(b => b.onclick = () => { pick.due = b.dataset.due; draw(); });
-  const dp = $("#dPick"); if (dp) dp.onchange = () => { if (dp.value) { pick.due = dp.value; draw(); } };
+  const tabs = `<div class="ptabs"><button data-tab="fu" class="${TAB === "fu" ? "on" : ""}">🚩 Follow up</button><button data-tab="tap" class="${TAB === "tap" ? "on" : ""}">⚡ One tap</button></div>`;
+  const body = TAB === "fu" ? (FLAG && !editing ? flagCard() : flagForm())
+    : `<div class="hero" style="padding:12px 15px"><small>One tap — nothing to type</small><div class="subj" style="font-size:.86rem;margin-top:6px">${esc(ITEM.subject || "(no subject)")}</div></div>
+      <div class="lbl">Send this email to</div>
+      <div class="qa">${TAPS.map(([k, ic, n, bg, ok]) => `<button class="q ${dn[k] ? "done" : ""}" data-tap="${k}"><div class="ic" style="background:${bg}">${dn[k] ? "✓" : ic}</div>${dn[k] ? ok : n}</button>`).join("")}</div>
+      <div class="hint" style="text-align:left;margin-top:12px;line-height:1.6"><b>Works</b> – PDF attachments → Tenant Works Forms<br><b>Handover</b> – "sender: subject" in today's handover<br><b>Calendar</b> – on the follow-up date (or today)<br><b>Feedback</b> – logged as tenant feedback, to check in the hub</div>`;
+  $("#app").innerHTML = `${tabs}${body}<div id="out"></div>`;
+  $("#app").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { TAB = b.dataset.tab; draw(); });
+  $("#app").querySelectorAll("[data-due]").forEach(b => b.onclick = () => { pick.due = b.dataset.due; pick.note = false; showPick = false; draw(); });
+  const pb = $("#pickBtn"); if (pb) pb.onclick = () => { showPick = true; draw(); const i = $("#dPick"); if (i){ i.focus(); try { i.showPicker(); } catch {} } };
+  const setPick = () => { const i = $("#dPick"); if (i && i.value){ if (i.value < bday()) return say("Choose today or a later date", true); pick.due = i.value; pick.note = false; showPick = false; draw(); } };
+  const dp = $("#dPick"); if (dp) dp.onchange = setPick;
+  const po = $("#pickOk"); if (po) po.onclick = setPick;
+  const nb = $("#noteBtn"); if (nb) nb.onclick = () => { pick.note = true; showPick = false; draw(); };
   $("#app").querySelectorAll("[data-pri]").forEach(b => b.onclick = () => { pick.priority = b.dataset.pri; draw(); });
   const fg = $("#flagGo"); if (fg) fg.onclick = async () => {
     fg.disabled = true;
-    try { FLAG = (await api("fu/save", { id: FLAG ? FLAG.id : 0, msgId: ITEM.id, subject: ITEM.subject, sender: ITEM.fromName || ITEM.fromEmail, link: ITEM.link, due: pick.due, priority: pick.priority, site })).item; editing = false; draw(); }
+    try { FLAG = (await api("fu/save", { id: FLAG ? FLAG.id : 0, msgId: ITEM.id, subject: ITEM.subject, sender: ITEM.fromName || ITEM.fromEmail, link: ITEM.link,
+      due: pick.note ? "" : pick.due, note: pick.note, priority: pick.priority, site })).item; editing = false; draw(); }
     catch (e){ fg.disabled = false; say(e.message, true); }
   };
   const fc = $("#flagCancel"); if (fc) fc.onclick = e => { e.preventDefault(); editing = false; draw(); };
   $("#app").querySelectorAll("[data-fa]").forEach(b => b.onclick = async () => {
     const a = b.dataset.fa;
-    if (a === "change"){ editing = true; pick = { due: FLAG.due, priority: FLAG.priority }; return draw(); }
+    if (a === "change"){ editing = true; pick = { due: FLAG.due || addD(bday(), 1), priority: FLAG.priority, note: false }; showPick = false; return draw(); }
     try { await api(a === "done" ? "fu/done" : "fu/remove", { id: FLAG.id }); FLAG = null; draw(); say(a === "done" ? "✓ Follow-up done" : "Flag removed"); }
     catch (e){ say(e.message, true); }
   });
