@@ -434,6 +434,21 @@ body.hl-docked main{padding-bottom:110px}
 .fu-sec .fu-h h2{margin:0;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .fu-sec .fu-h span{margin-left:auto;font-size:.78rem;color:var(--muted)}
 .fu-notes summary{cursor:pointer;list-style:none;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 7px}.fu-notes summary::-webkit-details-marker{display:none}
+.fu-nav{display:flex;align-items:center;gap:6px;margin-left:auto}
+.fu-nav b{font-size:.8rem;min-width:118px;text-align:center}
+.fu-nav button,.fu-plus{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:1.05rem;font-weight:800;color:var(--brand-2);cursor:pointer;display:grid;place-items:center;padding:0}
+.fu-nav button:disabled{opacity:.35;cursor:default}
+.fu-plus{background:var(--brand);color:#fff;border-color:var(--brand)}
+.fu-add{border:1px dashed var(--line);border-radius:14px;padding:10px;margin:0 0 10px;display:grid;gap:8px}
+.fu-add #fuT{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;background:var(--surface);color:var(--text)}
+.fu-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fu-ch{font:inherit;font-size:.76rem;font-weight:700;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;height:32px}
+.fu-ch.on{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,var(--surface));color:var(--brand-2)}
+.fu-ch.pr-high.on{border-color:#E5484D;color:#B0283C;background:#FDECEC}.fu-ch.pr-medium.on{border-color:#F08C2E;color:#B85C00;background:#FFF1E2}.fu-ch.pr-low.on{border-color:#E8B923;color:#8A6E00;background:#FFF9D9}
+.fu-empty{font-size:.84rem;color:var(--muted);padding:12px 4px}.fu-empty a{color:var(--brand-2);font-weight:700}
+.fu-more{font-size:.74rem;color:var(--muted);margin-top:8px}
+.fu-ch.pr-high{color:#B0283C}.fu-ch.pr-medium{color:#B85C00}.fu-ch.pr-low{color:#8A6E00}
+@media (max-width:600px){.fu-sec .fu-h{flex-wrap:wrap}.fu-sec .fu-h h2{flex:1;min-width:0;font-size:.7rem;letter-spacing:.08em}.fu-plus{order:2;margin-left:0}.fu-nav{margin-left:0;order:3;width:100%;justify-content:space-between}.fu-nav b{flex:1}}
 .fu-sub{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 7px}
 .fu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .fu-c{border-radius:16px;padding:11px 13px;border:1px solid var(--line);border-left:6px solid var(--c);background:color-mix(in srgb,var(--c) 7%,var(--surface));min-width:0}
@@ -1215,28 +1230,62 @@ const show = id => ["boot","auth","home","appview","admin"].forEach(v => $("#" +
 /* ---------- Follow-ups (Oct 2026): flagged emails from the Outlook add-in — "Action needed" on the home page ---------- */
 let FU = null;
 async function loadFollowups(){
-  try { FU = await api("fu/list"); } catch { FU = null; }
+  try { FU = await api("fu/all"); } catch { FU = null; }
+  if (FU && (!FUDAY || FUDAY < FU.today)) FUDAY = FU.today;
   const s = $("#fuSlot"); if (s) s.innerHTML = fuHtml();
 }
+let FUDAY = "", FUADD = null;   // the day shown (arrows) · the "+ Task" form when open
+const fuAdd = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 function fuHtml(){
-  if (!FU || (!FU.list.length && !(FU.notes || []).length)) return "";
-  const PL = { high: "High", medium: "Medium", low: "Low" };
-  const day = d => d === FU.today ? "Today" : d === FU.tomorrow ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-  const card = f => `<div class="fu-c ${f.priority}"><div class="t">● ${PL[f.priority]} · ${!f.due ? "📝 Note" : f.due < FU.today ? "Overdue · " + day(f.due) : day(f.due)}</div>
-      <b title="${esc(f.subject)}">${esc(f.subject)}</b><small>${esc(f.sender || "")}${f.sender ? " · " : ""}flagged ${esc(new Date(f.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</small>
+  if (!FU) return "";
+  const PL = { high: "High", medium: "Medium", low: "Low" }, T = FU.today;
+  const nice = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const day = d => d === T ? "Today" : d === FU.tomorrow ? "Tomorrow" : nice(d);
+  const card = f => `<div class="fu-c ${f.priority}"><div class="t">● ${PL[f.priority]} · ${!f.due ? "📝 Note" : f.due < T ? "Overdue · " + day(f.due) : day(f.due)}</div>
+      <b title="${esc(f.subject)}">${f.msgId || f.link ? "" : "✍️ "}${esc(f.subject)}</b><small>${esc(f.sender || (f.msgId || f.link ? "" : "My task"))}${f.sender || !(f.msgId || f.link) ? " · " : ""}added ${esc(new Date(f.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</small>
       <div class="bt"><button data-fu="done" data-id="${f.id}">✓ Done</button><button data-fu="later" data-id="${f.id}">${f.due ? "+1 day" : "Remind tomorrow"}</button>${f.link ? `<a href="${esc(f.link)}" target="_blank" rel="noopener">Open email</a>` : ""}</div></div>`;
-  const now = FU.list.filter(f => f.due <= FU.today), next = FU.list.filter(f => f.due === FU.tomorrow), notes = FU.notes || [];
-  return `<section class="fu-sec" id="fuSec"><div class="fu-h"><span style="font-size:1.1rem;margin:0">🚩</span><h2>Action needed · your follow-ups</h2><span>Today ${now.length} · Tomorrow ${next.length}${notes.length ? ` · Notes ${notes.length}` : ""}</span></div>
-    ${now.length ? `<div class="fu-sub">Today</div><div class="fu-grid">${now.map(card).join("")}</div>` : ""}
-    ${next.length ? `<div class="fu-sub">Tomorrow</div><div class="fu-grid">${next.map(card).join("")}</div>` : ""}
-    ${notes.length ? `<details class="fu-notes" ${now.length || next.length ? "" : "open"}><summary>📝 Notes · ${notes.length} — no due date ▾</summary><div class="fu-grid">${notes.map(card).join("")}</div></details>` : ""}</section>`;
+  const D = FUDAY || T, L = FU.list.filter(f => D === T ? f.due <= T : f.due === D), notes = FU.notes || [];
+  const later = FU.list.filter(f => f.due > D).length;
+  const nextDue = FU.list.map(f => f.due).filter(d => d > D).sort()[0] || "";
+  const A = FUADD;
+  const form = !A ? "" : `<div class="fu-add">
+      <input id="fuT" maxlength="200" placeholder="What do you need to do?" value="${esc(A.title || "")}">
+      <div class="fu-row">${[["Today", T], ["Tomorrow", FU.tomorrow], ["Monday", (() => { const w = new Date(T + "T12:00:00Z").getUTCDay(); return fuAdd(T, ((8 - w) % 7) || 7); })()]].map(([n, d]) => `<button class="fu-ch ${!A.note && A.due === d ? "on" : ""}" data-fuad="${d}">${n}</button>`).join("")}
+        <input type="date" class="fu-ch ${!A.note && ![T, FU.tomorrow].includes(A.due) ? "on" : ""}" id="fuDate" min="${T}" value="${esc(A.due || "")}"><button class="fu-ch ${A.note ? "on" : ""}" data-fuad="note">📝 Note</button></div>
+      <div class="fu-row">${["high", "medium", "low"].map(p => `<button class="fu-ch pr-${p} ${A.priority === p ? "on" : ""}" data-fuap="${p}">● ${PL[p]}</button>`).join("")}
+        <span style="flex:1"></span><button class="fu-ch" data-fuadd="close">Cancel</button><button class="btn small" id="fuSave">Add task</button></div></div>`;
+  return `<section class="fu-sec" id="fuSec"><div class="fu-h"><span style="font-size:1.1rem;margin:0">🚩</span><h2>Action needed · your follow-ups</h2>
+      <div class="fu-nav"><button data-fud="-1" ${D <= T ? "disabled" : ""} aria-label="Previous day">‹</button><b>${esc(day(D))}${D !== T && D !== FU.tomorrow ? "" : ` · ${esc(nice(D))}`}</b><button data-fud="1" aria-label="Next day" title="${nextDue ? "Next: " + esc(day(nextDue)) : ""}">›</button></div>
+      <button class="fu-plus" data-fuadd="open" title="Add a task">＋</button></div>
+    ${form}
+    ${L.length ? `<div class="fu-grid">${L.map(card).join("")}</div>`
+      : `<div class="fu-empty">Nothing due ${D === T ? "today" : "on " + esc(day(D))}.${nextDue ? ` <a href="#" data-fujump="${nextDue}">Next: ${esc(day(nextDue))} ›</a>` : ""}</div>`}
+    ${later && L.length ? `<div class="fu-more">${later} more later · use ›</div>` : ""}
+    ${notes.length ? `<details class="fu-notes"><summary>📝 Notes · ${notes.length} ▾</summary><div class="fu-grid">${notes.map(card).join("")}</div></details>` : ""}</section>`;
 }
+const fuDraw = () => { const s = $("#fuSlot"); if (s) s.innerHTML = fuHtml(); };
 document.addEventListener("click", async e => {
+  const nav = e.target.closest("[data-fud]"); if (nav && FU){ FUDAY = fuAdd(FUDAY || FU.today, +nav.dataset.fud); if (FUDAY < FU.today) FUDAY = FU.today; return fuDraw(); }
+  const jump = e.target.closest("[data-fujump]"); if (jump){ e.preventDefault(); FUDAY = jump.dataset.fujump; return fuDraw(); }
+  const ad = e.target.closest("[data-fuadd]"); if (ad && FU){ FUADD = ad.dataset.fuadd === "open" && !FUADD ? { title: "", due: FUDAY || FU.today, priority: "medium", note: false } : null; fuDraw(); const t = $("#fuT"); if (t) t.focus(); return; }
+  const keep = () => { if (FUADD && $("#fuT")) FUADD.title = $("#fuT").value; };
+  const dd = e.target.closest("[data-fuad]"); if (dd && FUADD){ keep(); if (dd.dataset.fuad === "note") FUADD.note = true; else { FUADD.note = false; FUADD.due = dd.dataset.fuad; } return fuDraw(); }
+  const pp = e.target.closest("[data-fuap]"); if (pp && FUADD){ keep(); FUADD.priority = pp.dataset.fuap; return fuDraw(); }
+  if (e.target.id === "fuSave" && FUADD){
+    keep(); if (!FUADD.title.trim()) return toast("Write the task", true);
+    e.target.disabled = true;
+    try { await api("fu/save", { subject: FUADD.title.trim(), due: FUADD.note ? "" : FUADD.due, note: FUADD.note, priority: FUADD.priority, site: (ME.user && ME.user.site) || "" });
+      if (!FUADD.note) FUDAY = FUADD.due; FUADD = null; toast("Task added"); }
+    catch (er){ e.target.disabled = false; return toast(er.message, true); }
+    return loadFollowups();
+  }
   const b = e.target.closest("[data-fu]"); if (!b) return;
   b.disabled = true;
   try { await api("fu/" + b.dataset.fu, { id: +b.dataset.id }); } catch (er){ toast(er.message, true); }
   loadFollowups();
 });
+document.addEventListener("change", e => { if (e.target.id === "fuDate" && FUADD && e.target.value){ if ($("#fuT")) FUADD.title = $("#fuT").value; FUADD.note = false; FUADD.due = e.target.value; fuDraw(); } });
+document.addEventListener("keydown", e => { if (e.target.id === "fuT" && e.key === "Enter"){ e.preventDefault(); const s = $("#fuSave"); if (s) s.click(); } });
 /* ---------- Refresh on return + hub version (Oct 2026) ---------- */
 let HIDDEN_AT = 0, FRESH_AT = Date.now(), HUB_VER = "";
 function refreshHome(){

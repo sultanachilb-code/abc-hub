@@ -14,6 +14,7 @@ Each person's own assistant: flag an email from the Outlook add-in, the hub remi
 ## Hub
 - Table `followups` (personal: only the owner can see or change them). Routes `/api/fu/{list,all,item,save,done,later,remove}` (hub session or add-in token).
 - Notes (no due date) are listed under **📝 Notes** in the same section (folded when there are dated items); "Remind tomorrow" gives a note a date.
+- Home page section has **‹ day ›** arrows (one day at a time; today includes overdue; an empty day offers "Next: …"), a **＋** to add a personal task (no email; ✍️), and 📝 Notes folded until pressed. The add-in's My flags tab has the same **＋ Add a task**.
 - Home page **"Action needed · your follow-ups"** between Day to Day and All tools: overdue + today, then tomorrow; High first; Done / +1 day / Open email. Hidden when nothing is due.
 - Reminders (hub notification + phone push, only to the owner): the day before and on the due day, from 09:00 Beirut (checked hourly 09:00–21:00).
 - Done follow-ups are deleted after 90 days.
