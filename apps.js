@@ -36,6 +36,9 @@ window.HUB = {
        SMS  Senior Mall Supervisor   MS  Mall Supervisor   MO  Mall Officer   WH  Warehouse
        SEC  Security                 LEAD  Property Advisor / Mall Director / CDSO
      A system missing from this list is seen by everyone. Keep APP_ACCESS in worker.js in line (push notifications). */
+  /* Upcoming - Testing: every tile in the testing folder is seen by everyone while it is tested, whatever ACCESS says (Oct 2026).
+     Only the admin settings pages listed here stay admin-only. Keep TESTING_OPEN in worker.js in line. */
+  TESTING_ADMIN_ONLY: ["moments", "seasons"],
   ACCESS: {
     "schedule":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
     "mom":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
@@ -318,6 +321,7 @@ window.HUB = {
     { id: "induction", name: "Operations Induction", desc: "Newcomer induction PowerPoint per flagship — the current team with photos, animations", group: "Upcoming - Testing", icon: "users", color: "#4A1F73", url: "/tools/induction" },
     { id: "beforeafter", name: "Before / After", desc: "Ghost camera for same-angle before / after photos, and a PowerPoint deck — all on your phone, nothing sent to the hub", group: "Upcoming - Testing", icon: "camera", color: "#8B5A2B", url: "/tools/beforeafter" },
     { id: "cleanctl", name: "Cleaning Control", desc: "Cleaning schedule, before / after photos, compliance and the cleaner app phones", group: "Upcoming - Testing", icon: "clipboard", color: "#2F6F73", url: "/tools/cleanctl" },
+    { id: "coverage", name: "Supervisor Coverage", desc: "Hour-by-hour timeline of the week — who covers each hour (SMS / MS), management hours and gaps", group: "Upcoming - Testing", icon: "calendar", color: "#2E9E5B", url: "/tools/coverage" },
     { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
     {
       id: "restroom",

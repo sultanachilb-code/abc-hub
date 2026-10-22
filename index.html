@@ -1290,7 +1290,8 @@ function startHub(){
   const role = ME.user.role;
   /* who sees each tile: the ACCESS list in apps.js, by position (Admin sees everything) */
   const key = accessKey(ME.user), ACC = H.ACCESS || {}; MYKEY = key;
-  APPS = ALL_APPS.filter(a => role === "ADMIN" || !ACC[a.id] || ACC[a.id].includes(key));
+  const TEST_ADMIN = H.TESTING_ADMIN_ONLY || [];   // Upcoming - Testing is open to everyone (apart from the admin settings pages)
+  APPS = ALL_APPS.filter(a => role === "ADMIN" || (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key));
   $("#hubTitle").textContent = H.title;
   const hr = new Date().getHours();
   const first = ME.user.name.split(" ")[0];
