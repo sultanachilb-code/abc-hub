@@ -81,6 +81,7 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 .li small{font-size:10.5px;color:#7A7090}
 .li .ok{border:0;background:#F1EAF8;color:#4A1F73;border-radius:6px;font:inherit;font-size:11px;font-weight:700;padding:4px 7px;cursor:pointer;flex:none}
 .empty2{text-align:center;color:#7A7090;font-size:12px;padding:24px 8px}
+html,body{height:100%}body{display:flex;flex-direction:column;min-height:100vh}#app{flex:1}.foot{margin-top:auto;border-top:1px solid #ECE7F2}
 /* compact, Outlook-sized (Oct 2026): Segoe UI 13px, smaller controls */
 body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:13px}
 .hd{padding:9px 12px;gap:8px}.hd img{width:24px;height:24px}.hd b{font-size:.95rem;font-weight:600}
@@ -113,7 +114,7 @@ body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:13px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DEMO = new URLSearchParams(location.search).has("demo");
-let CTX = null, ITEM = null, site = "", FLAG = null, pick = { due: "", priority: "high", note: false }, editing = false, TAB = "fu", showPick = false;
+let CTX = null, ITEM = null, site = "", FLAG = null, pick = { due: "", priority: "high", note: false }, editing = false, TAB = "list", showPick = false;
 
 /* ---------- token + flagship: Outlook roaming settings (follow the person), else this browser ---------- */
 const store = {
@@ -206,9 +207,9 @@ async function start(){
 async function main(){
   ITEM = await readItem();
   FLAG = null; editing = false;
-  pick = { due: addD(bday(), 1), priority: "high", note: false }; showPick = false; TAB = "fu";
+  pick = { due: addD(bday(), 1), priority: "high", note: false }; showPick = false;   // the tab stays as it is when the email changes (default: My flags)
   try { const r = await api("fu/item?msgId=" + encodeURIComponent(ITEM.id)); FLAG = r.item; } catch {}
-  $("#foot").innerHTML = `${esc(CTX.user.name)} · ${esc(CTX.sites[site] || "")} · <a href="#" id="chg">Change flagship</a> · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
+  $("#foot").innerHTML = `<div id="footHint" style="margin-bottom:4px"></div>${esc(CTX.user.name)} · ${esc(CTX.sites[site] || "")} · <a href="#" id="chg">Change flagship</a> · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
   $("#chg").onclick = e => { e.preventDefault(); chooseSite(); };
   $("#dis").onclick = async e => { e.preventDefault(); await api("addin/disconnect", {}).catch(() => {}); store.set(TOKEN, ""); connect(); };
   draw(); loadAll();
@@ -232,7 +233,7 @@ function listHtml(){
       <button class="ok" data-okid="${x.id}" title="Done">✓</button></div>`;
   const parts = G.map(([n, f, c]) => { const L = ALL.list.filter(f); return L.length ? `<div class="ls-h ${c || ""}"><span>${n}</span><span>${L.length}</span></div>${L.map(row).join("")}` : ""; }).join("");
   const notes = ALL.notes.length ? `<div class="ls-h"><span>📝 Notes</span><span>${ALL.notes.length}</span></div>${ALL.notes.map(row).join("")}` : "";
-  return parts || notes ? parts + notes + `<div class="hint" style="margin-top:8px">Tap an item to open the email · ✓ when done</div>` : `<div class="empty2">Nothing flagged yet.<br>Open an email → 🚩 Follow up.</div>`;
+  return parts || notes ? parts + notes : `<div class="empty2">Nothing flagged yet.<br>Open an email → 🚩 Follow up.</div>`;
 }
 const doneKey = () => "abchub.done." + (ITEM.id || ITEM.subject).slice(-80);
 const doneGet = () => { try { return JSON.parse(sessionStorage.getItem(doneKey()) || "{}"); } catch { return {}; } };
@@ -267,13 +268,14 @@ function flagCard(){
 const TAPS = [["works", "📄", "Works", "#EDE4F7", "Sent to Works"], ["handover", "🔁", "Handover", "#E2F1EE", "In handover"], ["calendar", "📅", "Calendar", "#E7EEFB", "In calendar"], ["feedback", "💬", "Feedback", "#FFF1E2", "Logged"]];
 function draw(){
   const dn = doneGet();
-  const tabs = `<div class="ptabs"><button data-tab="fu" class="${TAB === "fu" ? "on" : ""}">🚩 Follow up</button><button data-tab="list" class="${TAB === "list" ? "on" : ""}">🗂 My flags${ALL ? ` (${ALL.list.length + ALL.notes.length})` : ""}</button><button data-tab="tap" class="${TAB === "tap" ? "on" : ""}">⚡ One tap</button></div>`;
+  const tabs = `<div class="ptabs"><button data-tab="list" class="${TAB === "list" ? "on" : ""}">🗂 My flags${ALL ? ` (${ALL.list.length + ALL.notes.length})` : ""}</button><button data-tab="fu" class="${TAB === "fu" ? "on" : ""}">🚩 Follow up</button><button data-tab="tap" class="${TAB === "tap" ? "on" : ""}">⚡ One tap</button></div>`;
   const body = TAB === "list" ? listHtml() : TAB === "fu" ? (FLAG && !editing ? flagCard() : flagForm())
     : `<div class="hero" style="padding:12px 15px"><small>One tap — nothing to type</small><div class="subj" style="font-size:.86rem;margin-top:6px">${esc(ITEM.subject || "(no subject)")}</div></div>
       <div class="lbl">Send this email to</div>
       <div class="qa">${TAPS.map(([k, ic, n, bg, ok]) => `<button class="q ${dn[k] ? "done" : ""}" data-tap="${k}"><div class="ic" style="background:${bg}">${dn[k] ? "✓" : ic}</div>${dn[k] ? ok : n}</button>`).join("")}</div>
       <div class="hint" style="text-align:left;margin-top:12px;line-height:1.6"><b>Works</b> – PDF attachments → Tenant Works Forms<br><b>Handover</b> – "sender: subject" in today's handover<br><b>Calendar</b> – on the follow-up date (or today)<br><b>Feedback</b> – logged as tenant feedback, to check in the hub</div>`;
   $("#app").innerHTML = `${tabs}${body}<div id="out"></div>`;
+  const fh = $("#footHint"); if (fh) fh.textContent = TAB === "list" && ALL && (ALL.list.length + ALL.notes.length) ? "Tap an item to open the email · ✓ when done" : "";
   $("#app").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { TAB = b.dataset.tab; if (TAB === "list") loadAll(); draw(); });
   $("#app").querySelectorAll("[data-open]").forEach(el => el.onclick = e => { if (e.target.closest("[data-okid]")) return; openMail(el.dataset.open, el.dataset.link); });
   $("#app").querySelectorAll("[data-okid]").forEach(b => b.onclick = async () => { b.disabled = true; try { await api("fu/done", { id: +b.dataset.okid }); if (FLAG && FLAG.id === +b.dataset.okid) FLAG = null; await loadAll(); } catch (e){ say(e.message, true); } });

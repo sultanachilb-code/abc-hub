@@ -4,7 +4,7 @@ Each person's own assistant: flag an email from the Outlook add-in, the hub remi
 
 ## Outlook add-in (outlook-addin/taskpane.html, pinnable)
 - Purple banner with the ABC logo (no flagship). First time: choose the flagship (pre-selected from the hub account; remembered in Outlook's roaming settings; "Change flagship" in the footer).
-- Three tabs: **🚩 Follow up** (default) · **🗂 My flags (n)** — all open follow-ups: Overdue / Today / Tomorrow / This week / Later, then 📝 Notes; tap = open the email in Outlook (`displayMessageForm`), ✓ = done · **⚡ One tap**.
+- Three tabs: **🗂 My flags (n)** (first, default) · **🚩 Follow up** — all open follow-ups: Overdue / Today / Tomorrow / This week / Later, then 📝 Notes; tap = open the email in Outlook (`displayMessageForm`), ✓ = done · **⚡ One tap**.
 - **Follow up**: the email's subject filled in · Due: Today / Tomorrow / Monday / 📅 Pick a date (opens a date field) / 📝 Note (no due date, no reminder) · Priority: High (red) / Medium (orange) / Low (yellow) → "🚩 Flag".
   Flagged emails show a card with Done / Change / Remove. Flagging the same email again changes its date/priority.
 - **One tap, nothing to type**:
