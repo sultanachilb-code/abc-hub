@@ -99,7 +99,7 @@ export async function followupRun(env, d) {
   const tag = { high: "🔴 High", medium: "🟠 Medium", low: "🟡 Low" };
   for (const r of results || []) {
     const isDayOf = r.due <= today;
-    await d.raiseEvent(env, { app: "followup", email: r.email, site: r.site || "", tone: r.priority === "high" ? "alert" : r.priority === "medium" ? "warn" : "info",
+    await d.raiseEvent(env, { app: "followup", email: r.email, site: "", tone: r.priority === "high" ? "alert" : r.priority === "medium" ? "warn" : "info",
       title: `${isDayOf ? (r.due < today ? "Overdue" : "Due today") : "Due tomorrow"} · ${r.subject}`.slice(0, 140),
       body: `${tag[r.priority] || ""} follow-up${r.sender ? " · " + r.sender : ""} — open the hub home page (Action needed)` }).catch(() => {});
     await env.DB.prepare(isDayOf ? "UPDATE followups SET rem_day = 1, rem_before = 1 WHERE id = ?" : "UPDATE followups SET rem_before = 1 WHERE id = ?").bind(r.id).run();
