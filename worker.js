@@ -40,7 +40,8 @@ import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.j
 import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
 import { extFacts } from "./modules/extdb.js";
 import { crmSchema, crmRoute } from "./modules/crm.js";
-import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";   // Operations Induction deck per flagship
+import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
+import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
@@ -366,6 +367,7 @@ async function ensureSchema(env) {
   await aiSchema(env);   // ABCON: taught facts, feedback, chat history
   await crmSchema(env);   // CRM handhelds sheet
   await inductionSchema(env);   // Operations Induction
+  await outlookSchema(env);   // Outlook sending
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
   const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
@@ -510,6 +512,7 @@ export default {
       if (beirutHour() >= 8) await projectsRun(env, { today: beirutToday, now: nowIso, raiseEvent }).catch(e => console.error("projects", e && e.message));   // Projects feature
       if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
       await polEmbedPending(env, t => embedTexts(env, t), { limit: 48, cron: true }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
+      await outlookRun(env, { today: beirutToday, notifyAdmins, fallback: relayScript }).catch(e => console.error("outlook", e && e.message));   // Outlook sending: queue + secret expiry
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -564,6 +567,7 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("qp-pass/") && method === "GET") return ok(await qpPublic(env, path.slice(8), { siteName }));   // Quick Access Pass: the visitor's page (the token is the key)
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
+  if (path === "ms/callback" && method === "GET") return outlookCallback(env, url, HUB_URL);   // Outlook sending: Microsoft sends the browser back here
   if (path === "addin/pair" && method === "POST") return ok(await addinPair(env, body, request));   // Outlook add-in: email + 6-digit code → token
   let me = await readSession(request, env);
   if (!me) {   // Outlook add-in: the panel signs in with its own token (limited to /me, /ops/* and /addin/*)
@@ -580,6 +584,7 @@ async function route(request, env, ctx, url) {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES });
   }
+  if (path.startsWith("ms/")) return ok(await outlookRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, HUB_URL));   // Outlook sending
   if (path.startsWith("addin/")) {   // Outlook add-in feature
     const r = await addinRoute(env, path, method, body, request, me, { context: u => ({ user: userOut(u), sites: sitesMap(u), today: beirutToday(),
       feedback: { categories: FEEDBACK.categories, actions: FEEDBACK.actions }, calKinds: CAL_KINDS, docTypes: DOC_TYPES,
@@ -660,6 +665,7 @@ async function route(request, env, ctx, url) {
     const a = path.slice(6);
     if (a === "seasons") return ok(await seasonsAdmin(env, method, body, me, nowIso));   // Seasonal decorations
     if (a === "moments") return ok(await momentsAdmin(env, method, body, me, nowIso));   // Message of the moment
+    if (a === "ms") return ok(await outlookAdmin(env, method, body, me));   // Outlook sending: settings + connected people
     if (a === "users" && method === "GET") return ok(await listUsers(env));
     if (a === "users" && method === "POST") {   // Change history: people & roles
       const before = await env.DB.prepare("SELECT email, full_name AS name, role, site_code AS site, position FROM users WHERE email = ?").bind(String(body.email || "").trim().toLowerCase()).first().catch(() => null);
@@ -704,7 +710,7 @@ async function route(request, env, ctx, url) {
       const site = SITES[String(body.site || "").toUpperCase()] ? String(body.site).toUpperCase() : (me.site_code || "VRM");
       if (!env.MAIL_RELAY_URL) throw fail("Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub");
       const R = await eodReport(env, me, site, beirutDate());
-      const r = await relay(env, { to: [me.email], subject: `End of Day Report — ABC ${SITES[site]} — ${beirutDate()} (test)`, html: eodEmailHtml(R, HUB_URL) });
+      const r = await relay(env, { from: me.email, to: [me.email], subject: `End of Day Report — ABC ${SITES[site]} — ${beirutDate()} (test)`, html: eodEmailHtml(R, HUB_URL) });
       if (!r.ok) throw fail(r.error || "The email could not be sent");
       return ok({ to: me.email });
     }
@@ -1081,7 +1087,20 @@ async function handoverRecipients(env, site, shift) {
     names: mgrs.map(u => ({ email: u.email, name: u.full_name, title: TITLES[u.position].label })), group: g.emails };
 }
 
-async function relay(env, { to, cc = [], replyTo = "", subject, html, attachment = null }) {
+/* every hub email goes through here: the sender's own Outlook (or the automatic sender) when connected — modules/outlook.js —
+   otherwise the old mail relay (Google Apps Script, ~100 recipients a day). m.from = the person who pressed send. */
+async function relay(env, m) {
+  const o = await outlookSend(env, m).catch(e => { console.error("outlook", e && e.message); return null; });
+  if (o) return o;
+  return relayScript(env, m);
+}
+async function notifyAdmins(env, title, body, tone = "warn") {
+  const { results } = await env.DB.prepare("SELECT email FROM users WHERE active = 1 AND role = 'ADMIN'").all();
+  for (const u of results || []) await raiseEvent(env, { app: "admin", email: u.email, tone, title, body }).catch(() => {});
+  const to = (results || []).map(u => u.email);
+  if (to.length) await relay(env, { to, subject: title, html: `<p style="font-family:Calibri,Arial">${escH(body)}</p>` });
+}
+async function relayScript(env, { to, cc = [], replyTo = "", subject, html, attachment = null }) {
   try {
     const r = await fetch(env.MAIL_RELAY_URL, {
       method: "POST", redirect: "follow",
@@ -2067,7 +2086,7 @@ async function opsRoute(env, me, p, method, b, url) {
         else if (!R.to.length) mail = { sent: false, error: "No group email or manager for this flagship" };
         else {
           const html = String(b.mail.html).slice(0, 250000), subject = String(b.mail.subject || `ABC ${siteName(site)} | Handover ${b.day}`).slice(0, 200);
-          const r = await relay(env, { to: R.to, cc: R.cc, replyTo: me.email, subject, html });
+          const r = await relay(env, { from: me.email, to: R.to, cc: R.cc, replyTo: me.email, subject, html });
           mail = r.ok ? { sent: true, to: R.to, cc: R.cc, at: nowIso() } : { sent: false, error: r.error };
         }
         const L2 = JSON.parse((await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first()).handoffs || "[]");
