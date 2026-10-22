@@ -7,77 +7,110 @@
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="/tools/tools.css">
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-<!-- Outlook add-in feature — see docs/FEATURE-outlook-addin.md -->
+<!-- Outlook add-in (Oct 2026 redesign) — Follow up (personal flag) + one-tap Works / Handover / Calendar / Feedback.
+     See docs/FEATURE-outlook-addin.md and docs/FEATURE-followups.md -->
 <style>
-body{font-size:14px;background:var(--paper)}
-.hd{background:linear-gradient(135deg,#2A0F45,#4A1F73);color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center}
-.hd img{width:30px;height:30px}
-.hd b{font-size:.95rem;flex:1}
-.hd select{height:30px;border-radius:8px;border:0;padding:0 6px;font:inherit;font-size:.8rem;max-width:150px}
+body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
+.hd{background:linear-gradient(135deg,#4A1F73,#2A0F45);color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.hd img{width:32px;height:32px}
+.hd b{font-size:1rem;letter-spacing:.01em}
 .pad{padding:12px}
-.mail{padding:10px 12px;margin-bottom:10px}
-.mail b{display:block;font-size:.88rem;line-height:1.3;overflow-wrap:anywhere}
-.mail small{display:block;color:var(--muted);font-size:.74rem;margin-top:3px}
-.tabs2{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:10px}
-.tabs2 button{padding:8px 2px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:.72rem;line-height:1.2;display:grid;gap:3px;justify-items:center;color:var(--muted)}
-.tabs2 button span{font-size:1.1rem}
-.tabs2 button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.f{display:grid;gap:9px}
-.f label{display:grid;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
-.f .inp,.f .sel,.f textarea{width:100%;font-size:.88rem;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text)}
-.f textarea{min-height:84px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.att{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:.84rem}
-.att input{width:18px;height:18px;accent-color:var(--brand)}
-.att span{flex:1;overflow-wrap:anywhere}
-.att small{color:var(--muted)}
-.go{width:100%;height:42px;margin-top:4px}
-.msg{padding:9px 11px;border-radius:10px;font-size:.84rem;margin-top:8px;line-height:1.45}
-.msg.ok{background:rgba(46,139,87,.12);color:var(--ok)} .msg.err{background:rgba(192,57,43,.12);color:var(--alert)}
-.chk{display:flex!important;grid-auto-flow:column;gap:8px;align-items:center;text-transform:none!important;letter-spacing:0!important;font-size:.84rem!important;color:var(--text)!important}
-.chk input{width:18px;height:18px;accent-color:var(--brand)}
-.foot{font-size:.72rem;color:var(--muted);text-align:center;padding:10px 12px 16px}
-.foot a{color:var(--brand-2)}
-.code{font-size:1.4rem!important;letter-spacing:.3em!important;text-align:center}
+.lbl{font-size:.66rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#7A7090;margin:14px 2px 7px}
+/* flag form */
+.hero{border-radius:18px;padding:15px;background:linear-gradient(150deg,#4A1F73,#2A0F45 72%);color:#fff;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-34px;top:-34px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(200,162,74,.5),transparent 70%);pointer-events:none}
+.hero .k{display:flex;gap:10px;align-items:center}
+.flagic{width:38px;height:38px;border-radius:12px;background:#C8A24A;display:grid;place-items:center;font-size:19px;box-shadow:0 6px 14px rgba(0,0,0,.25);flex:none}
+.hero small{opacity:.75;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
+.subj{font-size:.95rem;font-weight:700;line-height:1.3;margin:9px 0 3px;overflow-wrap:anywhere}
+.from{font-size:.74rem;opacity:.75}
+.dates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.d{background:#fff;border:1.5px solid #E4DEEC;border-radius:12px;padding:7px 2px;text-align:center;cursor:pointer;font:inherit;color:inherit;position:relative}
+.d b{display:block;font-size:.78rem}.d small{font-size:.66rem;color:#7A7090}
+.d.on{border-color:#4A1F73;background:#F1EAF8}.d.on b{color:#4A1F73}
+.d input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.pri{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pr{border-radius:12px;padding:9px 4px;text-align:center;font-weight:800;font-size:.8rem;border:1.5px solid transparent;cursor:pointer;font-family:inherit}
+.pr i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.pr.high{background:#FDECEC;color:#B0283C}.pr.high i{background:#E5484D}.pr.high.on{border-color:#E5484D;box-shadow:0 0 0 3px rgba(229,72,77,.15)}
+.pr.medium{background:#FFF1E2;color:#B85C00}.pr.medium i{background:#F08C2E}.pr.medium.on{border-color:#F08C2E;box-shadow:0 0 0 3px rgba(240,140,46,.18)}
+.pr.low{background:#FFF9D9;color:#8A6E00}.pr.low i{background:#E8B923}.pr.low.on{border-color:#E8B923;box-shadow:0 0 0 3px rgba(232,185,35,.2)}
+.go{width:100%;margin-top:14px;border:0;border-radius:14px;padding:13px;font:inherit;font-weight:800;font-size:.9rem;color:#fff;background:#4A1F73;cursor:pointer}
+.go:disabled{opacity:.6}
+.hint{font-size:.7rem;color:#7A7090;text-align:center;margin-top:7px}
+/* flagged card */
+.fc{border-radius:18px;padding:14px 15px;background:#fff;border:1.5px solid var(--c);position:relative}
+.fc.high{--c:#E5484D}.fc.medium{--c:#F08C2E}.fc.low{--c:#E8B923}
+.fc .rib{position:absolute;top:-1.5px;right:14px;background:var(--c);color:#fff;font-size:.62rem;font-weight:800;letter-spacing:.05em;padding:5px 8px 9px;clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+.fc small{color:#7A7090;font-size:.74rem}
+.fc b{display:block;font-size:.92rem;margin:5px 0 4px;padding-right:46px;overflow-wrap:anywhere}
+.fc .acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.fc .acts button{border:0;border-radius:9px;padding:6px 11px;font:inherit;font-size:.74rem;font-weight:700;background:#F1EAF8;color:#4A1F73;cursor:pointer}
+/* one tap */
+.qa{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.q{background:#fff;border:1px solid #E4DEEC;border-radius:14px;padding:10px 2px 8px;text-align:center;font:inherit;font-size:.7rem;font-weight:700;color:#4A3E60;cursor:pointer}
+.q .ic{width:38px;height:38px;border-radius:12px;margin:0 auto 5px;display:grid;place-items:center;font-size:18px}
+.q.busy{opacity:.55}
+.q.done{border-color:#7BC89A;background:#F0FAF4;color:#2E8B57}.q.done .ic{background:#D9F1E3!important}
+.res{margin-top:8px;border-radius:10px;padding:8px 10px;font-size:.76rem;font-weight:600;line-height:1.4}
+.res.ok{background:#2E8B57;color:#fff}.res.err{background:#FDECEC;color:#B0283C}
+.res a{color:inherit}
+/* first run / connect */
+.t{font-size:1.05rem;font-weight:800;margin:6px 2px 4px}.s{font-size:.8rem;color:#7A7090;line-height:1.5;margin:0 2px 12px}
+.site{width:100%;display:flex;justify-content:space-between;align-items:center;background:#fff;border:1.5px solid #E4DEEC;border-radius:14px;padding:12px 14px;margin-bottom:8px;font:inherit;font-weight:600;cursor:pointer;color:inherit}
+.site span{width:20px;height:20px;border-radius:50%;border:2px solid #CFC8DA}
+.site.on{border-color:#4A1F73;background:#F1EAF8;color:#4A1F73}.site.on span{border:6px solid #4A1F73}
+.inp2{width:100%;height:44px;border:1.5px solid #E4DEEC;border-radius:12px;padding:0 12px;font:inherit;background:#fff;margin:4px 0 10px}
+.code{font-size:1.4rem;letter-spacing:.3em;text-align:center}
+.foot{font-size:.7rem;color:#7A7090;text-align:center;padding:12px}
+.foot a{color:#7B4BB0}
 </style>
 </head>
 <body>
-<div class="hd"><img src="/icons/abc-logo-white.png" alt=""><b>ABC Operations Hub</b><select id="site" class="hidden" aria-label="Flagship"></select></div>
-<div class="pad" id="app"><div class="empty">Loading…</div></div>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><b>Operations Hub</b></div>
+<div class="pad" id="app"><div class="hint">Loading…</div></div>
 <div class="foot" id="foot"></div>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DEMO = new URLSearchParams(location.search).has("demo");
-let CTX = null, ITEM = null, tab = "works", site = "";
+let CTX = null, ITEM = null, site = "", FLAG = null, pick = { due: "", priority: "high" }, editing = false;
 
-/* ---------- token: kept in Outlook's roaming settings (follows the person to every Outlook), else this browser ---------- */
+/* ---------- token + flagship: Outlook roaming settings (follow the person), else this browser ---------- */
 const store = {
-  get(){ try { const r = Office.context.roamingSettings; const v = r && r.get("abchub"); if (v) return v; } catch {} try { return localStorage.getItem("abchub.token") || ""; } catch { return ""; } },
-  set(v){ try { localStorage.setItem("abchub.token", v || ""); } catch {}
-    try { const r = Office.context.roamingSettings; if (r){ v ? r.set("abchub", v) : r.remove("abchub"); r.saveAsync(); } } catch {} }
+  get(k){ try { const r = Office.context.roamingSettings; const v = r && r.get(k); if (v) return v; } catch {} try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k, v){ try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {}
+    try { const r = Office.context.roamingSettings; if (r){ v ? r.set(k, v) : r.remove(k); r.saveAsync(); } } catch {} }
 };
+const TOKEN = "abchub", SITE = "abchub.site";
 async function api(path, body){
-  const t = store.get();
+  const t = store.get(TOKEN);
   const r = await fetch("/api/" + path, { method: body === undefined ? "GET" : "POST", credentials: "omit",
     headers: { "content-type": "application/json", ...(t ? { authorization: "Bearer " + t } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
   let j = null; try { j = await r.json(); } catch {}
-  if (r.status === 401 && path !== "addin/pair"){ store.set(""); connect(); throw new Error("Please connect again."); }
+  if (r.status === 401 && path !== "addin/pair"){ store.set(TOKEN, ""); connect(); throw new Error("Please connect again."); }
   if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || `Error ${r.status}`);
   return j.data;
 }
 
+/* ---------- dates (Beirut) ---------- */
+const bday = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(d);
+const addD = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const fmt = (d, o) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", Object.assign({ timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }, o || {}));
+const nextMonday = d => { const w = new Date(d + "T12:00:00Z").getUTCDay(); return addD(d, ((8 - w) % 7) || 7); };
+
 /* ---------- the open email ---------- */
 function readItem(){
-  if (DEMO) return Promise.resolve({ subject: "RE: Approval to start on site — Zara L1-014", from: "Rami (RDM) <rami@rdm.com.lb>", fromName: "Rami (RDM)", fromEmail: "rami@rdm.com.lb",
-    date: new Date().toISOString(), body: "Dear team,\nPlease find attached the approval to start on site for Zara L1-014. Works start Monday 06:00.\nRegards",
-    atts: [{ id: "1", name: "Approval to start - Zara.pdf", size: 182000, pdf: true }, { id: "2", name: "logo.png", size: 4000, pdf: false }] });
+  if (DEMO) return Promise.resolve({ id: "demo-1", link: "", subject: "PO12600246 - supply of Network switch, power supply and wireless bridge", fromName: "Noura Nader", fromEmail: "noura@abc.com.lb",
+    from: "Noura Nader <noura@abc.com.lb>", date: new Date().toISOString(), body: "Dear Sultan,\nPlease find attached the PO for the network switch.\nRegards",
+    atts: [{ id: "1", name: "ABC-VS-260929RK-260809A.pdf", size: 122000, pdf: true }, { id: "2", name: "CHIP PO12600246.pdf", size: 20000, pdf: true }] });
   return new Promise(res => {
     const it = Office.context.mailbox.item;
     const from = it.from || it.sender || {};
-    const base = { subject: it.subject || "", fromName: from.displayName || "", fromEmail: from.emailAddress || "", from: `${from.displayName || ""} <${from.emailAddress || ""}>`,
-      date: (it.dateTimeCreated || new Date()).toISOString(), atts: (it.attachments || []).filter(a => !a.isInline).map(a => ({ id: a.id, name: a.name, size: a.size,
-        pdf: /pdf/i.test(a.contentType || "") || /\.pdf$/i.test(a.name || "") })) };
+    let link = ""; try { if (it.itemId) link = "https://outlook.office365.com/owa/?ItemID=" + encodeURIComponent(it.itemId) + "&exvsurl=1&viewmodel=ReadMessageItem"; } catch {}
+    const base = { id: it.itemId || it.internetMessageId || "", link, subject: it.subject || "", fromName: from.displayName || "", fromEmail: from.emailAddress || "",
+      from: `${from.displayName || ""} <${from.emailAddress || ""}>`, date: (it.dateTimeCreated || new Date()).toISOString(),
+      atts: (it.attachments || []).filter(a => !a.isInline).map(a => ({ id: a.id, name: a.name, size: a.size, pdf: /pdf/i.test(a.contentType || "") || /\.pdf$/i.test(a.name || "") })) };
     it.body.getAsync(Office.CoercionType.Text, r => res({ ...base, body: r.status === "succeeded" ? String(r.value || "").replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim() : "" }));
   });
 }
@@ -92,102 +125,162 @@ function attachmentBase64(id){
 
 /* ---------- connect (email + 6-digit code from the hub) ---------- */
 function connect(msg){
-  $("#site").classList.add("hidden");
-  $("#app").innerHTML = `<div class="card mail"><b>Connect Outlook to the hub</b><small>In the hub: your picture → Profile settings → <strong>Outlook</strong> → <strong>Connect Outlook</strong>. Type the 6-digit code here.</small></div>
-    <div class="f"><label>Your work email<input class="inp" id="cE" type="email" autocomplete="username" value="${esc(DEMO ? "" : (Office.context.mailbox && Office.context.mailbox.userProfile ? Office.context.mailbox.userProfile.emailAddress : ""))}"></label>
-      <label>Code from the hub<input class="inp code" id="cC" inputmode="numeric" maxlength="6" placeholder="––––––"></label>
-      <button class="btn go" id="cGo">Connect</button><div id="cMsg">${msg ? `<div class="msg err">${esc(msg)}</div>` : ""}</div></div>`;
+  $("#app").innerHTML = `<div class="t">Connect Outlook to the hub</div>
+    <div class="s">In the hub: your picture → Profile settings → <b>Outlook</b> → <b>Connect Outlook</b>, then type the 6-digit code here.</div>
+    <label class="hint" style="text-align:left;display:block">Your work email</label><input class="inp2" id="cE" type="email" autocomplete="username" value="${esc(DEMO ? "" : (Office.context.mailbox && Office.context.mailbox.userProfile ? Office.context.mailbox.userProfile.emailAddress : ""))}">
+    <label class="hint" style="text-align:left;display:block">Code from the hub</label><input class="inp2 code" id="cC" inputmode="numeric" maxlength="6" placeholder="––––––">
+    <button class="go" id="cGo">Connect</button><div id="cMsg">${msg ? `<div class="res err">${esc(msg)}</div>` : ""}</div>`;
   $("#cGo").onclick = async () => {
-    try { const r = await api("addin/pair", { email: $("#cE").value, code: $("#cC").value }); store.set(r.token); start(); }
-    catch (e){ $("#cMsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    try { const r = await api("addin/pair", { email: $("#cE").value, code: $("#cC").value }); store.set(TOKEN, r.token); start(); }
+    catch (e){ $("#cMsg").innerHTML = `<div class="res err">${esc(e.message)}</div>`; }
   };
   $("#foot").innerHTML = "";
 }
 
-async function start(){
-  if (!store.get()) return connect();
-  try { CTX = await api("addin/context"); } catch (e){ if (!store.get()) return; return connect(e.message); }
-  ITEM = await readItem();
+/* ---------- first time: choose the flagship ---------- */
+function chooseSite(){
   const S = Object.entries(CTX.sites);
-  site = site || CTX.user.site || (S[0] || [])[0] || "";
-  const sel = $("#site"); sel.innerHTML = S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join(""); sel.classList.toggle("hidden", S.length < 2);
-  sel.onchange = () => { site = sel.value; draw(); };
-  $("#foot").innerHTML = `Signed in as ${esc(CTX.user.name)} · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
-  $("#dis").onclick = async e => { e.preventDefault(); await api("addin/disconnect", {}).catch(() => {}); store.set(""); connect(); };
+  let sel = store.get(SITE) || CTX.user.site || (S[0] || [])[0] || "";
+  const draw = () => {
+    $("#app").innerHTML = `<div class="t">Welcome, ${esc(CTX.user.name.split(" ")[0])}</div>
+      <div class="s">Which flagship do you work for? Works forms, handover, calendar and feedback from Outlook go there. You can change it later.</div>
+      ${S.map(([c, n]) => `<button class="site ${c === sel ? "on" : ""}" data-s="${c}">${esc(n)}<span></span></button>`).join("")}
+      <button class="go" id="sGo">Continue</button>`;
+    $("#app").querySelectorAll("[data-s]").forEach(b => b.onclick = () => { sel = b.dataset.s; draw(); });
+    $("#sGo").onclick = () => { store.set(SITE, sel); site = sel; main(); };
+  };
+  $("#foot").innerHTML = "";
   draw();
 }
-const TABS = [["works", "📄", "Works form"], ["handover", "🔁", "Handover"], ["feedback", "💬", "Feedback"], ["calendar", "📅", "Calendar"]];
+
+async function start(){
+  if (!store.get(TOKEN)) return connect();
+  try { CTX = await api("addin/context"); } catch (e){ if (!store.get(TOKEN)) return; return connect(e.message); }
+  const S = Object.keys(CTX.sites);
+  site = store.get(SITE);
+  if (!site || !S.includes(site)){
+    if (S.length === 1){ site = S[0]; store.set(SITE, site); }
+    else return chooseSite();
+  }
+  main();
+}
+async function main(){
+  ITEM = await readItem();
+  FLAG = null; editing = false;
+  pick = { due: addD(bday(), 1), priority: "high" };
+  try { const r = await api("fu/item?msgId=" + encodeURIComponent(ITEM.id)); FLAG = r.item; } catch {}
+  $("#foot").innerHTML = `${esc(CTX.user.name)} · ${esc(CTX.sites[site] || "")} · <a href="#" id="chg">Change flagship</a> · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
+  $("#chg").onclick = e => { e.preventDefault(); chooseSite(); };
+  $("#dis").onclick = async e => { e.preventDefault(); await api("addin/disconnect", {}).catch(() => {}); store.set(TOKEN, ""); connect(); };
+  draw();
+}
+
+/* ---------- the panel ---------- */
+const PL = { high: "High", medium: "Medium", low: "Low" };
+const doneKey = () => "abchub.done." + (ITEM.id || ITEM.subject).slice(-80);
+const doneGet = () => { try { return JSON.parse(sessionStorage.getItem(doneKey()) || "{}"); } catch { return {}; } };
+const doneSet = k => { try { const o = doneGet(); o[k] = 1; sessionStorage.setItem(doneKey(), JSON.stringify(o)); } catch {} };
+function flagForm(){
+  const t = bday(), D = [["Today", t, "today"], ["Tomorrow", addD(t, 1), fmt(addD(t, 1), { weekday: "short", day: "numeric", month: undefined })], ["Monday", nextMonday(t), fmt(nextMonday(t), { weekday: undefined, day: "numeric", month: "short" })]];
+  const custom = !D.some(x => x[1] === pick.due);
+  return `<div class="hero"><div class="k"><div class="flagic">🚩</div><small>Follow up this email</small></div>
+      <div class="subj">${esc(ITEM.subject || "(no subject)")}</div><div class="from">${esc(ITEM.fromName || ITEM.fromEmail)}${ITEM.date ? " · " + esc(new Date(ITEM.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })) : ""}</div></div>
+    <div class="lbl">Due</div>
+    <div class="dates">${D.map(([n, d, s]) => `<button class="d ${pick.due === d ? "on" : ""}" data-due="${d}"><b>${n}</b><small>${n === "Today" ? "by tonight" : esc(s)}</small></button>`).join("")}
+      <label class="d ${custom ? "on" : ""}"><b>📅</b><small>${custom ? esc(fmt(pick.due, { weekday: undefined })) : "Pick"}</small><input type="date" id="dPick" min="${t}" value="${custom ? pick.due : ""}"></label></div>
+    <div class="lbl">Priority</div>
+    <div class="pri">${["high", "medium", "low"].map(p => `<button class="pr ${p} ${pick.priority === p ? "on" : ""}" data-pri="${p}"><i></i>${PL[p]}</button>`).join("")}</div>
+    <button class="go" id="flagGo">🚩 Flag · ${esc(pick.due === t ? "Today" : pick.due === addD(t, 1) ? "Tomorrow" : fmt(pick.due))} · ${PL[pick.priority]}</button>
+    <div class="hint">Reminder the day before and on the day · shown on your hub home page</div>
+    ${editing ? `<div class="hint"><a href="#" id="flagCancel">Cancel</a></div>` : ""}`;
+}
+function flagCard(){
+  const t = bday(), when = FLAG.due === t ? "today" : FLAG.due === addD(t, 1) ? "tomorrow" : fmt(FLAG.due);
+  return `<div class="fc ${FLAG.priority}"><div class="rib">${PL[FLAG.priority].toUpperCase()}</div><small>🚩 Flagged · due ${esc(when)}</small>
+      <b>${esc(FLAG.subject)}</b><small>${FLAG.due > addD(t, 1) ? `Reminder ${esc(fmt(addD(FLAG.due, -1)))} · 09:00` : FLAG.due === t ? "Due today · it is on your hub home page" : "Reminder today, then tomorrow 09:00"}</small>
+      <div class="acts"><button data-fa="done">✓ Done</button><button data-fa="change">Change</button><button data-fa="remove">Remove</button></div></div>`;
+}
+const TAPS = [["works", "📄", "Works", "#EDE4F7", "Sent to Works"], ["handover", "🔁", "Handover", "#E2F1EE", "In handover"], ["calendar", "📅", "Calendar", "#E7EEFB", "In calendar"], ["feedback", "💬", "Feedback", "#FFF1E2", "Logged"]];
 function draw(){
+  const dn = doneGet();
+  $("#app").innerHTML = `${FLAG && !editing ? flagCard() : flagForm()}
+    <div class="lbl" style="margin-top:18px">One tap — nothing to type</div>
+    <div class="qa">${TAPS.map(([k, ic, n, bg, ok]) => `<button class="q ${dn[k] ? "done" : ""}" data-tap="${k}"><div class="ic" style="background:${bg}">${dn[k] ? "✓" : ic}</div>${dn[k] ? ok : n}</button>`).join("")}</div>
+    <div id="out"></div>`;
+  $("#app").querySelectorAll("[data-due]").forEach(b => b.onclick = () => { pick.due = b.dataset.due; draw(); });
+  const dp = $("#dPick"); if (dp) dp.onchange = () => { if (dp.value) { pick.due = dp.value; draw(); } };
+  $("#app").querySelectorAll("[data-pri]").forEach(b => b.onclick = () => { pick.priority = b.dataset.pri; draw(); });
+  const fg = $("#flagGo"); if (fg) fg.onclick = async () => {
+    fg.disabled = true;
+    try { FLAG = (await api("fu/save", { id: FLAG ? FLAG.id : 0, msgId: ITEM.id, subject: ITEM.subject, sender: ITEM.fromName || ITEM.fromEmail, link: ITEM.link, due: pick.due, priority: pick.priority, site })).item; editing = false; draw(); }
+    catch (e){ fg.disabled = false; say(e.message, true); }
+  };
+  const fc = $("#flagCancel"); if (fc) fc.onclick = e => { e.preventDefault(); editing = false; draw(); };
+  $("#app").querySelectorAll("[data-fa]").forEach(b => b.onclick = async () => {
+    const a = b.dataset.fa;
+    if (a === "change"){ editing = true; pick = { due: FLAG.due, priority: FLAG.priority }; return draw(); }
+    try { await api(a === "done" ? "fu/done" : "fu/remove", { id: FLAG.id }); FLAG = null; draw(); say(a === "done" ? "✓ Follow-up done" : "Flag removed"); }
+    catch (e){ say(e.message, true); }
+  });
+  $("#app").querySelectorAll("[data-tap]").forEach(b => b.onclick = () => tap(b));
+}
+function say(t, bad){ const o = $("#out"); if (o) o.innerHTML = `<div class="res ${bad ? "err" : "ok"}">${t.startsWith("<") ? t : esc(t)}</div>`; }
+
+/* ---------- one tap: everything is filled from the email ---------- */
+const clean = s => String(s || "").replace(/^((re|fw|fwd|tr)\s*:\s*)+/i, "").trim();
+async function tap(btn){
+  const k = btn.dataset.tap;
+  if (btn.classList.contains("busy")) return;
+  btn.classList.add("busy");
   const can = CTX.can[site] || {};
-  const pdfs = ITEM.atts.filter(a => a.pdf);
-  const short = String(ITEM.body || "").slice(0, 400);
-  let f = "";
-  if (tab === "works") f = pdfs.length ? `<div class="f">${pdfs.map(a => `<label class="att"><input type="checkbox" data-att="${esc(a.id)}" checked><span>${esc(a.name)}</span><small>${Math.round(a.size / 1024)} KB</small></label>`).join("")}
-      <button class="btn go" id="go">Send to Tenant Works Forms</button><div class="muted" style="font-size:.76rem">They open in the hub for you to pick the form and the tenant, then sign.</div></div>`
-    : `<div class="card empty" style="padding:22px">This email has no PDF attachment.</div>`;
-  if (tab === "handover") f = `<div class="f"><label>Section<select class="sel" id="hS"><option value="today">Today</option><option value="tomorrow">Tomorrow</option><option value="ongoing">Scheduled works (ongoing)</option></select></label>
-      <label>Handover line<textarea id="hT" maxlength="500">${esc(ITEM.fromName ? ITEM.fromName.split("<")[0].trim() + ": " : "")}${esc(ITEM.subject)}</textarea></label>
-      <label class="chk"><input type="checkbox" id="hC"> ATT CCTV</label>
-      <button class="btn go" id="go" ${can.handover ? "" : "disabled"}>Add to ${esc(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} handover</button></div>`;
-  if (tab === "feedback"){
-    const cats = Object.keys(CTX.feedback.categories);
-    f = `<div class="f"><label>Tenant<input class="inp" id="fT" list="fTl" placeholder="Start typing…"><datalist id="fTl"></datalist></label>
-      <div class="two"><label>Date<input class="inp" type="date" id="fD" value="${CTX.today}"></label><label>Time<input class="inp" type="time" id="fH" value="${new Date().toTimeString().slice(0, 5)}"></label></div>
-      <label>Type<select class="sel" id="fC">${cats.map(c => `<option ${c === "Operations Violation" ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
-      <label>Description<select class="sel" id="fDe"></select></label>
-      <label>Action<select class="sel" id="fA">${CTX.feedback.actions.map(a => `<option ${a === "None" ? "selected" : ""}>${esc(a)}</option>`).join("")}</select></label>
-      <label>Details<textarea id="fX" maxlength="500">${esc(ITEM.subject)}${short ? "\n" + esc(short) : ""}</textarea></label>
-      <button class="btn go" id="go" ${can.feedback ? "" : "disabled"}>Log tenant feedback</button></div>`;
-  }
-  if (tab === "calendar") f = `<div class="f"><label>Add as<select class="sel" id="kK"><option value="marketing">Marketing event</option><option value="ops">Ops activity</option><option value="expiry">Expiry date (document)</option></select></label>
-      <label>Title<input class="inp" id="kT" maxlength="160" value="${esc(ITEM.subject.replace(/^(re|fw|fwd)\s*:\s*/i, ""))}"></label>
-      <div class="two"><label><span id="kDl">From</span><input class="inp" type="date" id="kS" value="${CTX.today}"></label><label id="kEl">To<input class="inp" type="date" id="kE"></label></div>
-      <label id="kDocL" class="hidden">Document type<select class="sel" id="kDoc">${CTX.docTypes.map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
-      <label>Notes<textarea id="kN" maxlength="2000">From: ${esc(ITEM.from)}\n${esc(short)}</textarea></label>
-      <button class="btn go" id="go">Add to the Operations Calendar</button></div>`;
-  $("#app").innerHTML = `<div class="card mail"><b>${esc(ITEM.subject || "(no subject)")}</b><small>${esc(ITEM.fromName || ITEM.fromEmail)} · ${esc(new Date(ITEM.date).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}${ITEM.atts.length ? ` · ${ITEM.atts.length} attachment${ITEM.atts.length === 1 ? "" : "s"}` : ""}</small></div>
-    <div class="tabs2">${TABS.map(([k, i, l]) => `<button data-t="${k}" class="${k === tab ? "on" : ""}"><span>${i}</span>${l}</button>`).join("")}</div>${f}<div id="out"></div>`;
-  $("#app").querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; draw(); });
-  if (tab === "feedback"){
-    const fill = () => { const L = CTX.feedback.categories[$("#fC").value] || []; $("#fDe").innerHTML = (L.length ? "" : `<option value="">—</option>`) + L.map(x => `<option>${esc(x)}</option>`).join(""); };
-    $("#fC").onchange = fill; fill();
-    api(`ops/feedback/tenants?site=${site}`).then(r => { $("#fTl").innerHTML = r.tenants.map(t => `<option value="${esc(t)}">`).join(""); }).catch(() => {});
-  }
-  if (tab === "calendar") $("#kK").onchange = e => { const x = e.target.value === "expiry"; $("#kEl").classList.toggle("hidden", x); $("#kDocL").classList.toggle("hidden", !x); $("#kDl").textContent = x ? "Expiry date" : "From"; };
-  const go = $("#go"); if (go) go.onclick = () => send(go);
-}
-async function send(btn){
-  const out = t => $("#out").innerHTML = t;
-  btn.disabled = true; const label = btn.textContent; btn.textContent = "Sending…";
   try {
-    if (tab === "works"){
-      const ids = [...document.querySelectorAll("[data-att]:checked")].map(x => x.dataset.att);
-      if (!ids.length) throw new Error("Tick at least one PDF");
-      let n = 0;
-      for (const id of ids){ const a = ITEM.atts.find(x => x.id === id); const data = await attachmentBase64(id);
-        await api("ops/works/add", { site, name: a.name, data: "data:application/pdf;base64," + data }); n++; }
-      out(`<div class="msg ok">✓ ${n} form${n === 1 ? "" : "s"} sent to Tenant Works Forms. <a href="/tools/works?site=${site}" target="_blank">Open</a></div>`);
+    if (k === "works"){
+      const pdfs = ITEM.atts.filter(a => a.pdf);
+      if (!pdfs.length) throw new Error("This email has no PDF attachment to send to Works Forms.");
+      for (const a of pdfs) await api("ops/works/add", { site, name: a.name, data: "data:application/pdf;base64," + await attachmentBase64(a.id) });
+      say(`<span>✓ ${pdfs.length} attachment${pdfs.length === 1 ? "" : "s"} sent to Tenant Works Forms · <a href="/tools/works?site=${site}" target="_blank">Open</a></span>`);
     }
-    if (tab === "handover"){
-      const r = await api("ops/handover/append", { site, section: $("#hS").value, text: $("#hT").value, cctv: $("#hC").checked });
-      out(`<div class="msg ok">✓ Added to the ${esc(r.day)} handover. <a href="/tools/handover?site=${site}" target="_blank">Open</a></div>`);
+    if (k === "handover"){
+      if (!can.handover) throw new Error("You cannot add to this flagship's handover.");
+      const who = (ITEM.fromName || "").split("<")[0].trim();
+      const r = await api("ops/handover/append", { site, section: "today", text: `${who ? who + ": " : ""}${clean(ITEM.subject)}`.slice(0, 500), cctv: false });
+      say(`<span>✓ Added to the ${esc(r.day)} handover · <a href="/tools/handover?site=${site}" target="_blank">Open</a></span>`);
     }
-    if (tab === "feedback"){
-      const det = $("#fX").value;
-      await api("ops/feedback/save", { site, entry: { tenant: $("#fT").value, day: $("#fD").value, time: $("#fH").value, category: $("#fC").value, description: $("#fDe").value, action: $("#fA").value, actionDesc: det } });
-      out(`<div class="msg ok">✓ Tenant feedback logged.</div>`);
+    if (k === "calendar"){
+      const day = FLAG && FLAG.due ? FLAG.due : bday();
+      const r = await api("ops/cal/save", { site, kind: "ops", title: clean(ITEM.subject).slice(0, 160) || "Email follow-up", start: day, end: "",
+        notes: `From: ${ITEM.from}\n${String(ITEM.body || "").slice(0, 600)}`, category: "", extra: { status: "Planned" } });
+      say(`<span>✓ In the Operations Calendar on ${esc(fmt(day))} · <a href="/tools/calendar?site=${site}&id=${r.item.id}" target="_blank">Open</a></span>`);
     }
-    if (tab === "calendar"){
-      const kind = $("#kK").value;
-      const r = await api("ops/cal/save", { site, kind, title: $("#kT").value, start: $("#kS").value, end: kind === "expiry" ? "" : $("#kE").value, notes: $("#kN").value,
-        category: kind === "expiry" ? $("#kDoc").value : "", extra: kind === "expiry" ? { provider: ITEM.fromName || "" } : { status: "Planned" } });
-      out(`<div class="msg ok">✓ Added to the Operations Calendar. <a href="/tools/calendar?site=${site}&id=${r.item.id}" target="_blank">Open</a></div>`);
+    if (k === "feedback"){
+      let tenant = "";
+      try {
+        const T = (await api(`ops/feedback/tenants?site=${site}`)).tenants || [];
+        /* whole words in the subject, the body and the sender's company domain — never a person's name */
+        const dom = (String(ITEM.fromEmail).split("@")[1] || "").split(".")[0].replace(/[-_]/g, " ");
+        const hay = ` ${clean(ITEM.subject)} ${String(ITEM.body || "").slice(0, 1500)} ${/^(abc|gmail|hotmail|outlook|yahoo|icloud|live)$/i.test(dom) ? "" : dom} `.toLowerCase();
+        const rx = t => t.toLowerCase().replace(/[.*+?^$()|[\]\\{}]/g, "\\$&");
+        const word = t => new RegExp("(^|[^\\p{L}\\d])" + rx(t) + "($|[^\\p{L}\\d])", "u").test(hay);
+        tenant = T.filter(t => t && t.length > 2 && word(t)).sort((a, b) => b.length - a.length)[0] || "";
+      } catch {}
+      tenant = tenant || "To check (from Outlook)";
+      await api("ops/feedback/save", { site, entry: { tenant, day: bday(), time: new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit" }),
+        category: "Operations Violation", description: "Other", action: "None", actionDesc: `${clean(ITEM.subject)}\n${String(ITEM.body || "").slice(0, 400)}`.slice(0, 500) } });
+      say(`<span>✓ Logged as tenant feedback for <b>${esc(tenant)}</b> · <a href="/tools/feedback?site=${site}" target="_blank">Open to edit</a></span>`);
     }
-  } catch (e){ out(`<div class="msg err">${esc(e.message)}</div>`); }
-  btn.disabled = false; btn.textContent = label;
+    doneSet(k);
+    btn.classList.remove("busy"); btn.classList.add("done");
+    const T = TAPS.find(x => x[0] === k); btn.innerHTML = `<div class="ic" style="background:${T[3]}">✓</div>${T[4]}`;
+  } catch (e){ btn.classList.remove("busy"); say(e.message, true); }
 }
+
 if (DEMO || typeof Office === "undefined") { window.Office = window.Office || {}; start(); }
-else Office.onReady(() => { if (!Office.context || !Office.context.mailbox){ $("#app").innerHTML = `<div class="card empty">Open this panel from an email in Outlook (“ABC Hub” button).</div>`; return; } start(); if (Office.context.mailbox && Office.context.mailbox.addHandlerAsync) Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => { if (CTX) readItem().then(i => { ITEM = i; draw(); }); }); });
+else Office.onReady(() => {
+  if (!Office.context || !Office.context.mailbox){ $("#app").innerHTML = `<div class="hint">Open this panel from an email in Outlook (“ABC Hub” button).</div>`; return; }
+  start();
+  /* pinned panel: follow the email the person is reading */
+  if (Office.context.mailbox.addHandlerAsync) Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, () => { if (CTX && site && Office.context.mailbox.item) main(); });
+});
 </script>
 </body>
 </html>

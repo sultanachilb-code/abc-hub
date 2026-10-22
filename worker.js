@@ -41,6 +41,7 @@ import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
 import { extFacts } from "./modules/extdb.js";
 import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
+import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
@@ -368,6 +369,7 @@ async function ensureSchema(env) {
   await crmSchema(env);   // CRM handhelds sheet
   await inductionSchema(env);   // Operations Induction
   await outlookSchema(env);   // Outlook sending
+  await followupSchema(env);   // Follow-ups
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
   const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
@@ -513,6 +515,7 @@ export default {
       if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
       await polEmbedPending(env, t => embedTexts(env, t), { limit: 48, cron: true }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
       await outlookRun(env, { today: beirutToday, notifyAdmins, fallback: relayScript }).catch(e => console.error("outlook", e && e.message));   // Outlook sending: queue + secret expiry
+      await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -584,6 +587,7 @@ async function route(request, env, ctx, url) {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES });
   }
+  if (path.startsWith("fu/")) return ok(await followupRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, { today: beirutToday, now: nowIso }));   // Follow-ups
   if (path.startsWith("ms/")) return ok(await outlookRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, HUB_URL));   // Outlook sending
   if (path.startsWith("addin/")) {   // Outlook add-in feature
     const r = await addinRoute(env, path, method, body, request, me, { context: u => ({ user: userOut(u), sites: sitesMap(u), today: beirutToday(),
@@ -1363,7 +1367,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
+  const names = { followup: "🚩 Follow-up", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1373,7 +1377,7 @@ async function pushRun(env) {
     if (!mine.length) continue;
     if (mine.length <= 3) {
       for (const e of mine.reverse()) {
-        await sendPush(env, sub, { title: `${names[e.app] || e.app} · ${e.title}`, body: e.body, tone: e.tone, url: `/#/app/${e.app}`, tag: e.id });
+        await sendPush(env, sub, { title: `${names[e.app] || e.app} · ${e.title}`, body: e.body, tone: e.tone, url: e.app === "followup" ? "/" : `/#/app/${e.app}`, tag: e.id });
       }
     } else {
       const alerts = mine.filter(e => e.tone === "alert").length;
