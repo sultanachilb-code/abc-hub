@@ -4,7 +4,8 @@ Each person's own assistant: flag an email from the Outlook add-in, the hub remi
 
 ## Outlook add-in (outlook-addin/taskpane.html, pinnable)
 - Purple banner with the ABC logo (no flagship). First time: choose the flagship (pre-selected from the hub account; remembered in Outlook's roaming settings; "Change flagship" in the footer).
-- **Follow up**: the email's subject filled in · Due: Today / Tomorrow / Monday / pick a date · Priority: High (red) / Medium (orange) / Low (yellow) → "🚩 Flag".
+- Two tabs: **🚩 Follow up** (default) and **⚡ One tap**.
+- **Follow up**: the email's subject filled in · Due: Today / Tomorrow / Monday / 📅 Pick a date (opens a date field) / 📝 Note (no due date, no reminder) · Priority: High (red) / Medium (orange) / Low (yellow) → "🚩 Flag".
   Flagged emails show a card with Done / Change / Remove. Flagging the same email again changes its date/priority.
 - **One tap, nothing to type**:
   Works = all PDF attachments → Tenant Works Forms · Handover = "sender: subject" in today's handover ·
@@ -12,6 +13,7 @@ Each person's own assistant: flag an email from the Outlook add-in, the hub remi
 
 ## Hub
 - Table `followups` (personal: only the owner can see or change them). Routes `/api/fu/{list,item,save,done,later,remove}` (hub session or add-in token).
+- Notes (no due date) are listed under **📝 Notes** in the same section (folded when there are dated items); "Remind tomorrow" gives a note a date.
 - Home page **"Action needed · your follow-ups"** between Day to Day and All tools: overdue + today, then tomorrow; High first; Done / +1 day / Open email. Hidden when nothing is due.
 - Reminders (hub notification + phone push, only to the owner): the day before and on the due day, from 09:00 Beirut (checked hourly 09:00–21:00).
 - Done follow-ups are deleted after 90 days.
