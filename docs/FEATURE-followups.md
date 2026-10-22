@@ -20,3 +20,11 @@ Each person's own assistant: flag an email from the Outlook add-in, the hub remi
 
 ## Not yet (needs Mail.ReadWrite from IT)
 Setting Outlook's own red flag on the email, and "tell me if no reply".
+
+## Opening flagged emails (Oct 2026)
+- Outlook's item id changes when an email is moved to another folder (rules, archiving, manual move). Each follow-up also keeps the email's
+  **Internet message id** (`imid`, never changes). When the person opens that email again, the panel finds the follow-up by `imid`
+  and stores the new item id — the link repairs itself.
+- Open uses `displayMessageFormAsync`; if Outlook cannot open it, the panel says so and copies the subject for Outlook's search.
+- With Mail.Read (IT, pending) the hub can find any moved email by `imid` directly.
+- My flags: 📝 Notes folded behind ▾ (the open/closed choice is remembered).

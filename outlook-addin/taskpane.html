@@ -80,6 +80,9 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 .li .tx{flex:1;min-width:0}.li b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .li small{font-size:10.5px;color:#7A7090}
 .li .ok{border:0;background:#F1EAF8;color:#4A1F73;border-radius:6px;font:inherit;font-size:11px;font-weight:700;padding:4px 7px;cursor:pointer;flex:none}
+.nbox summary{cursor:pointer;list-style:none;align-items:center;background:#EFEAF5;border-radius:8px;padding:7px 9px;margin-top:14px}
+.nbox summary::-webkit-details-marker{display:none}.nbox summary .arr{font-size:13px;transition:transform .2s}.nbox[open] summary .arr{transform:rotate(180deg)}
+.nbox[open] summary{margin-bottom:6px}
 .empty2{text-align:center;color:#7A7090;font-size:12px;padding:24px 8px}
 html,body{height:100%}body{display:flex;flex-direction:column;min-height:100vh}#app{flex:1}.foot{margin-top:auto;border-top:1px solid #ECE7F2}
 /* compact, Outlook-sized (Oct 2026): Segoe UI 13px, smaller controls */
@@ -148,7 +151,7 @@ function readItem(){
     const it = Office.context.mailbox.item;
     const from = it.from || it.sender || {};
     let link = ""; try { if (it.itemId) link = "https://outlook.office365.com/owa/?ItemID=" + encodeURIComponent(it.itemId) + "&exvsurl=1&viewmodel=ReadMessageItem"; } catch {}
-    const base = { id: it.itemId || it.internetMessageId || "", link, subject: it.subject || "", fromName: from.displayName || "", fromEmail: from.emailAddress || "",
+    const base = { id: it.itemId || it.internetMessageId || "", imid: it.internetMessageId || "", link, subject: it.subject || "", fromName: from.displayName || "", fromEmail: from.emailAddress || "",
       from: `${from.displayName || ""} <${from.emailAddress || ""}>`, date: (it.dateTimeCreated || new Date()).toISOString(),
       atts: (it.attachments || []).filter(a => !a.isInline).map(a => ({ id: a.id, name: a.name, size: a.size, pdf: /pdf/i.test(a.contentType || "") || /\.pdf$/i.test(a.name || "") })) };
     it.body.getAsync(Office.CoercionType.Text, r => res({ ...base, body: r.status === "succeeded" ? String(r.value || "").replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim() : "" }));
@@ -208,7 +211,7 @@ async function main(){
   ITEM = await readItem();
   FLAG = null; editing = false;
   pick = { due: addD(bday(), 1), priority: "high", note: false }; showPick = false;   // the tab stays as it is when the email changes (default: My flags)
-  try { const r = await api("fu/item?msgId=" + encodeURIComponent(ITEM.id)); FLAG = r.item; } catch {}
+  try { const r = await api("fu/item?msgId=" + encodeURIComponent(ITEM.id) + "&imid=" + encodeURIComponent(ITEM.imid || "") + "&link=" + encodeURIComponent(ITEM.link || "")); FLAG = r.item; } catch {}
   $("#foot").innerHTML = `<div id="footHint" style="margin-bottom:4px"></div>${esc(CTX.user.name)} · ${esc(CTX.sites[site] || "")} · <a href="#" id="chg">Change flagship</a> · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
   $("#chg").onclick = e => { e.preventDefault(); chooseSite(); };
   $("#dis").onclick = async e => { e.preventDefault(); await api("addin/disconnect", {}).catch(() => {}); store.set(TOKEN, ""); connect(); };
@@ -220,19 +223,28 @@ const PL = { high: "High", medium: "Medium", low: "Low" };
 let ALL = null;
 async function loadAll(){ try { ALL = await api("fu/all"); } catch { ALL = ALL || { list: [], notes: [], today: bday(), tomorrow: addD(bday(), 1) }; } if (TAB === "list") draw(); else { const b = document.querySelector('[data-tab="list"]'); if (b) b.textContent = `🗂 My flags (${ALL.list.length + ALL.notes.length})`; } }
 /* open the flagged email: inside Outlook (desktop or web) by its id; otherwise the web link */
-function openMail(id, link){
-  try { if (id && Office.context && Office.context.mailbox && Office.context.mailbox.displayMessageForm){ Office.context.mailbox.displayMessageForm(id); return; } } catch {}
-  if (link) window.open(link, "_blank"); else say("This email cannot be opened from here.", true);
+function openMail(id, link, subject){
+  const fail = () => {
+    try { if (navigator.clipboard) navigator.clipboard.writeText(subject || "").catch(() => {}); } catch {}
+    say(`Outlook could not open this email — it was probably moved to another folder or archived. The subject is copied: paste it in Outlook's search. Once you open the email, the panel repairs this link.`, true);
+  };
+  const mb = Office.context && Office.context.mailbox;
+  if (id && mb && mb.displayMessageFormAsync){
+    try { return mb.displayMessageFormAsync(id, r => { if (!r || r.status !== "succeeded") fail(); }); } catch {}
+  }
+  if (id && mb && mb.displayMessageForm){ try { mb.displayMessageForm(id); return; } catch {} }
+  if (link) window.open(link, "_blank"); else fail();
 }
 function listHtml(){
   if (!ALL) return `<div class="empty2">Loading…</div>`;
   const t = ALL.today, tm = ALL.tomorrow, wk = addD(t, 7);
   const G = [["Overdue", x => x.due < t, "r"], ["Today", x => x.due === t], ["Tomorrow", x => x.due === tm], ["This week", x => x.due > tm && x.due <= wk], ["Later", x => x.due > wk]];
-  const row = x => `<div class="li ${x.priority}" data-open="${esc(x.msgId)}" data-link="${esc(x.link)}" title="Open the email">
+  const row = x => `<div class="li ${x.priority}" data-open="${esc(x.msgId)}" data-link="${esc(x.link)}" data-subj="${esc(x.subject)}" title="Open the email">
       <div class="tx"><b>${esc(x.subject)}</b><small>${x.due ? esc(x.due === t ? "Today" : x.due === tm ? "Tomorrow" : fmt(x.due)) + " · " : ""}${PL[x.priority]}${x.sender ? " · " + esc(x.sender) : ""}</small></div>
       <button class="ok" data-okid="${x.id}" title="Done">✓</button></div>`;
   const parts = G.map(([n, f, c]) => { const L = ALL.list.filter(f); return L.length ? `<div class="ls-h ${c || ""}"><span>${n}</span><span>${L.length}</span></div>${L.map(row).join("")}` : ""; }).join("");
-  const notes = ALL.notes.length ? `<div class="ls-h"><span>📝 Notes</span><span>${ALL.notes.length}</span></div>${ALL.notes.map(row).join("")}` : "";
+  let nOpen = false; try { nOpen = localStorage.getItem("abchub.notesOpen") === "1"; } catch {}
+  const notes = ALL.notes.length ? `<details class="nbox" id="notesBox" ${nOpen ? "open" : ""}><summary class="ls-h"><span>📝 Notes · ${ALL.notes.length}</span><span class="arr">▾</span></summary>${ALL.notes.map(row).join("")}</details>` : "";
   return parts || notes ? parts + notes : `<div class="empty2">Nothing flagged yet.<br>Open an email → 🚩 Follow up.</div>`;
 }
 const doneKey = () => "abchub.done." + (ITEM.id || ITEM.subject).slice(-80);
@@ -277,7 +289,8 @@ function draw(){
   $("#app").innerHTML = `${tabs}${body}<div id="out"></div>`;
   const fh = $("#footHint"); if (fh) fh.textContent = TAB === "list" && ALL && (ALL.list.length + ALL.notes.length) ? "Tap an item to open the email · ✓ when done" : "";
   $("#app").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { TAB = b.dataset.tab; if (TAB === "list") loadAll(); draw(); });
-  $("#app").querySelectorAll("[data-open]").forEach(el => el.onclick = e => { if (e.target.closest("[data-okid]")) return; openMail(el.dataset.open, el.dataset.link); });
+  $("#app").querySelectorAll("[data-open]").forEach(el => el.onclick = e => { if (e.target.closest("[data-okid]")) return; openMail(el.dataset.open, el.dataset.link, el.dataset.subj); });
+  const nd = $("#notesBox"); if (nd) nd.ontoggle = () => { try { localStorage.setItem("abchub.notesOpen", nd.open ? "1" : ""); } catch {} };
   $("#app").querySelectorAll("[data-okid]").forEach(b => b.onclick = async () => { b.disabled = true; try { await api("fu/done", { id: +b.dataset.okid }); if (FLAG && FLAG.id === +b.dataset.okid) FLAG = null; await loadAll(); } catch (e){ say(e.message, true); } });
   $("#app").querySelectorAll("[data-due]").forEach(b => b.onclick = () => { pick.due = b.dataset.due; pick.note = false; showPick = false; draw(); });
   const pb = $("#pickBtn"); if (pb) pb.onclick = () => { showPick = true; draw(); const i = $("#dPick"); if (i){ i.focus(); try { i.showPicker(); } catch {} } };
@@ -288,7 +301,7 @@ function draw(){
   $("#app").querySelectorAll("[data-pri]").forEach(b => b.onclick = () => { pick.priority = b.dataset.pri; draw(); });
   const fg = $("#flagGo"); if (fg) fg.onclick = async () => {
     fg.disabled = true;
-    try { FLAG = (await api("fu/save", { id: FLAG ? FLAG.id : 0, msgId: ITEM.id, subject: ITEM.subject, sender: ITEM.fromName || ITEM.fromEmail, link: ITEM.link,
+    try { FLAG = (await api("fu/save", { id: FLAG ? FLAG.id : 0, msgId: ITEM.id, imid: ITEM.imid, subject: ITEM.subject, sender: ITEM.fromName || ITEM.fromEmail, link: ITEM.link,
       due: pick.note ? "" : pick.due, note: pick.note, priority: pick.priority, site })).item; editing = false; draw(); loadAll(); }
     catch (e){ fg.disabled = false; say(e.message, true); }
   };

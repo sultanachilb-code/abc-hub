@@ -21,8 +21,11 @@ export async function followupSchema(env) {
     env.DB.prepare("CREATE INDEX IF NOT EXISTS followups_mine ON followups (email, status, due)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS followups_due ON followups (status, due)")
   ]);
+  /* imid = the email's Internet message id: it never changes, unlike Outlook's item id (which changes when the email moves folder) */
+  const cols = (await env.DB.prepare("PRAGMA table_info(followups)").all()).results || [];
+  if (cols.length && !cols.some(c => c.name === "imid")) await env.DB.prepare("ALTER TABLE followups ADD COLUMN imid TEXT NOT NULL DEFAULT ''").run();
 }
-const out = r => ({ id: r.id, site: r.site, msgId: r.msg_id, subject: r.subject, sender: r.sender, link: r.link, due: r.due, priority: r.priority,
+const out = r => ({ id: r.id, site: r.site, msgId: r.msg_id, imid: r.imid || "", subject: r.subject, sender: r.sender, link: r.link, due: r.due, priority: r.priority,
   status: r.status, createdAt: r.created_at, doneAt: r.done_at });
 
 export async function followupRoute(env, p, method, b, me, d) {
@@ -46,8 +49,13 @@ export async function followupRoute(env, p, method, b, me, d) {
   }
   /* the add-in: is this email already flagged? */
   if (p === "fu/item") {
-    const id = clip(b.msgId, 400);
-    const r = id ? await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND msg_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, id).first() : null;
+    const id = String(b.msgId || "").slice(0, 1500), imid = clip(b.imid, 400);
+    let r = id ? await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND msg_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, id).first() : null;
+    if (!r && imid) {   // the email moved folder since it was flagged: find it by its Internet message id and keep the new item id / link
+      r = await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND imid = ? AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, imid).first();
+      if (r && id) { await env.DB.prepare("UPDATE followups SET msg_id = ?, link = CASE WHEN ? != '' THEN ? ELSE link END WHERE id = ?").bind(id, String(b.link || ""), String(b.link || "").slice(0, 1500), r.id).run(); r.msg_id = id; }
+    }
+    if (r && id && !r.imid && imid) await env.DB.prepare("UPDATE followups SET imid = ? WHERE id = ?").bind(imid, r.id).run();
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM followups WHERE email = ? AND status = 'open' AND due != '' AND due <= ?").bind(email, today).first();
     return { item: r ? out(r) : null, dueToday: Number(n.n) || 0, today };
   }
@@ -56,15 +64,16 @@ export async function followupRoute(env, p, method, b, me, d) {
     const subject = clip(b.subject, 250) || "(no subject)", note = !!b.note, due = note ? "" : isDay(b.due) ? b.due : "";   // note = no due date, no reminder
     if (!note && !due) throw err("Choose the due date");
     if (due && due < today) throw err("The due date is in the past");
-    const priority = PRI[b.priority] ? b.priority : "medium", msgId = clip(b.msgId, 400);
-    const ex = b.id ? await mine(b.id) : msgId ? await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND msg_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, msgId).first() : null;
+    const priority = PRI[b.priority] ? b.priority : "medium", msgId = String(b.msgId || "").slice(0, 1500), imid = clip(b.imid, 400);
+    const ex = b.id ? await mine(b.id) : msgId ? await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND (msg_id = ? OR (imid != '' AND imid = ?)) AND status = 'open' ORDER BY id DESC LIMIT 1").bind(email, msgId, imid).first() : null;
     if (ex) {   // same email flagged again → change it (reminders start over when the date changes)
+      if (msgId) await env.DB.prepare("UPDATE followups SET msg_id = ?, imid = CASE WHEN ? != '' THEN ? ELSE imid END WHERE id = ?").bind(msgId, imid, imid, ex.id).run();
       await env.DB.prepare(`UPDATE followups SET due = ?, priority = ?, rem_before = CASE WHEN due = ? THEN rem_before ELSE 0 END, rem_day = CASE WHEN due = ? THEN rem_day ELSE 0 END WHERE id = ?`)
         .bind(due, priority, due, due, ex.id).run();
       return { item: out(await mine(ex.id)) };
     }
-    const r = await env.DB.prepare(`INSERT INTO followups (email, site, msg_id, subject, sender, link, due, priority, created_at) VALUES (?,?,?,?,?,?,?,?,?)`)
-      .bind(email, clip(b.site, 8), msgId, subject, clip(b.sender, 120), /^https:\/\//.test(String(b.link || "")) ? String(b.link).slice(0, 1500) : "", due, priority, d.now()).run();
+    const r = await env.DB.prepare(`INSERT INTO followups (email, site, msg_id, imid, subject, sender, link, due, priority, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+      .bind(email, clip(b.site, 8), msgId, imid, subject, clip(b.sender, 120), /^https:\/\//.test(String(b.link || "")) ? String(b.link).slice(0, 1500) : "", due, priority, d.now()).run();
     return { item: out(await mine(r.meta.last_row_id)) };
   }
   if (p === "fu/done") { const r = await mine(b.id); await env.DB.prepare("UPDATE followups SET status = 'done', done_at = ? WHERE id = ?").bind(d.now(), r.id).run(); return { done: true }; }
