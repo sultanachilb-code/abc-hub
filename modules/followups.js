@@ -37,6 +37,13 @@ export async function followupRoute(env, p, method, b, me, d) {
     const notes = all.filter(x => !x.due).sort((a, c) => PRI[a.priority] - PRI[c.priority] || c.id - a.id);   // notes: follow-ups without a due date
     return { today, tomorrow: addDays(today, 1), list: L, notes };
   }
+  /* the add-in: all my open follow-ups (dated by date, then Notes) */
+  if (p === "fu/all") {
+    const { results } = await env.DB.prepare("SELECT * FROM followups WHERE email = ? AND status = 'open' ORDER BY due, id LIMIT 300").bind(email).all();
+    const all = (results || []).map(out);
+    return { today, tomorrow: addDays(today, 1), list: all.filter(x => x.due).sort((a, c) => a.due.localeCompare(c.due) || PRI[a.priority] - PRI[c.priority]),
+      notes: all.filter(x => !x.due).sort((a, c) => PRI[a.priority] - PRI[c.priority] || c.id - a.id) };
+  }
   /* the add-in: is this email already flagged? */
   if (p === "fu/item") {
     const id = clip(b.msgId, 400);

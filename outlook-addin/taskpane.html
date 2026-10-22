@@ -15,7 +15,7 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 .hd img{width:32px;height:32px}
 .hd b{font-size:1rem;letter-spacing:.01em}
 .pad{padding:12px}
-.ptabs{display:grid;width:100%;grid-template-columns:1fr 1fr;gap:4px;background:#EDE8F3;border-radius:14px;padding:4px;margin-bottom:12px}
+.ptabs{display:grid;width:100%;grid-template-columns:1fr 1fr 1fr;gap:4px;background:#EDE8F3;border-radius:14px;padding:4px;margin-bottom:12px}
 .ptabs button{border:0;border-radius:11px;padding:9px 4px;font:inherit;font-weight:800;font-size:.8rem;background:transparent;color:#5A4E70;cursor:pointer}
 .ptabs button.on{background:#fff;color:#4A1F73;box-shadow:0 2px 6px rgba(42,15,69,.12)}
 .dates2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
@@ -72,6 +72,15 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 .foot{font-size:.7rem;color:#7A7090;text-align:center;padding:12px}
 .foot a{color:#7B4BB0}
 
+.ls-h{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#7A7090;margin:12px 2px 5px;display:flex;justify-content:space-between}
+.ls-h.r{color:#B0283C}
+.li{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #E4DEEC;border-left:4px solid var(--c);border-radius:8px;padding:7px 8px;margin-bottom:5px;cursor:pointer}
+.li.high{--c:#E5484D}.li.medium{--c:#F08C2E}.li.low{--c:#E8B923}
+.li:hover{background:#FAF7FD}
+.li .tx{flex:1;min-width:0}.li b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li small{font-size:10.5px;color:#7A7090}
+.li .ok{border:0;background:#F1EAF8;color:#4A1F73;border-radius:6px;font:inherit;font-size:11px;font-weight:700;padding:4px 7px;cursor:pointer;flex:none}
+.empty2{text-align:center;color:#7A7090;font-size:12px;padding:24px 8px}
 /* compact, Outlook-sized (Oct 2026): Segoe UI 13px, smaller controls */
 body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;font-size:13px}
 .hd{padding:9px 12px;gap:8px}.hd img{width:24px;height:24px}.hd b{font-size:.95rem;font-weight:600}
@@ -202,11 +211,29 @@ async function main(){
   $("#foot").innerHTML = `${esc(CTX.user.name)} · ${esc(CTX.sites[site] || "")} · <a href="#" id="chg">Change flagship</a> · <a href="#" id="dis">Disconnect</a> · <a href="/" target="_blank">Open the hub</a>`;
   $("#chg").onclick = e => { e.preventDefault(); chooseSite(); };
   $("#dis").onclick = async e => { e.preventDefault(); await api("addin/disconnect", {}).catch(() => {}); store.set(TOKEN, ""); connect(); };
-  draw();
+  draw(); loadAll();
 }
 
 /* ---------- the panel ---------- */
 const PL = { high: "High", medium: "Medium", low: "Low" };
+let ALL = null;
+async function loadAll(){ try { ALL = await api("fu/all"); } catch { ALL = ALL || { list: [], notes: [], today: bday(), tomorrow: addD(bday(), 1) }; } if (TAB === "list") draw(); else { const b = document.querySelector('[data-tab="list"]'); if (b) b.textContent = `🗂 My flags (${ALL.list.length + ALL.notes.length})`; } }
+/* open the flagged email: inside Outlook (desktop or web) by its id; otherwise the web link */
+function openMail(id, link){
+  try { if (id && Office.context && Office.context.mailbox && Office.context.mailbox.displayMessageForm){ Office.context.mailbox.displayMessageForm(id); return; } } catch {}
+  if (link) window.open(link, "_blank"); else say("This email cannot be opened from here.", true);
+}
+function listHtml(){
+  if (!ALL) return `<div class="empty2">Loading…</div>`;
+  const t = ALL.today, tm = ALL.tomorrow, wk = addD(t, 7);
+  const G = [["Overdue", x => x.due < t, "r"], ["Today", x => x.due === t], ["Tomorrow", x => x.due === tm], ["This week", x => x.due > tm && x.due <= wk], ["Later", x => x.due > wk]];
+  const row = x => `<div class="li ${x.priority}" data-open="${esc(x.msgId)}" data-link="${esc(x.link)}" title="Open the email">
+      <div class="tx"><b>${esc(x.subject)}</b><small>${x.due ? esc(x.due === t ? "Today" : x.due === tm ? "Tomorrow" : fmt(x.due)) + " · " : ""}${PL[x.priority]}${x.sender ? " · " + esc(x.sender) : ""}</small></div>
+      <button class="ok" data-okid="${x.id}" title="Done">✓</button></div>`;
+  const parts = G.map(([n, f, c]) => { const L = ALL.list.filter(f); return L.length ? `<div class="ls-h ${c || ""}"><span>${n}</span><span>${L.length}</span></div>${L.map(row).join("")}` : ""; }).join("");
+  const notes = ALL.notes.length ? `<div class="ls-h"><span>📝 Notes</span><span>${ALL.notes.length}</span></div>${ALL.notes.map(row).join("")}` : "";
+  return parts || notes ? parts + notes + `<div class="hint" style="margin-top:8px">Tap an item to open the email · ✓ when done</div>` : `<div class="empty2">Nothing flagged yet.<br>Open an email → 🚩 Follow up.</div>`;
+}
 const doneKey = () => "abchub.done." + (ITEM.id || ITEM.subject).slice(-80);
 const doneGet = () => { try { return JSON.parse(sessionStorage.getItem(doneKey()) || "{}"); } catch { return {}; } };
 const doneSet = k => { try { const o = doneGet(); o[k] = 1; sessionStorage.setItem(doneKey(), JSON.stringify(o)); } catch {} };
@@ -240,14 +267,16 @@ function flagCard(){
 const TAPS = [["works", "📄", "Works", "#EDE4F7", "Sent to Works"], ["handover", "🔁", "Handover", "#E2F1EE", "In handover"], ["calendar", "📅", "Calendar", "#E7EEFB", "In calendar"], ["feedback", "💬", "Feedback", "#FFF1E2", "Logged"]];
 function draw(){
   const dn = doneGet();
-  const tabs = `<div class="ptabs"><button data-tab="fu" class="${TAB === "fu" ? "on" : ""}">🚩 Follow up</button><button data-tab="tap" class="${TAB === "tap" ? "on" : ""}">⚡ One tap</button></div>`;
-  const body = TAB === "fu" ? (FLAG && !editing ? flagCard() : flagForm())
+  const tabs = `<div class="ptabs"><button data-tab="fu" class="${TAB === "fu" ? "on" : ""}">🚩 Follow up</button><button data-tab="list" class="${TAB === "list" ? "on" : ""}">🗂 My flags${ALL ? ` (${ALL.list.length + ALL.notes.length})` : ""}</button><button data-tab="tap" class="${TAB === "tap" ? "on" : ""}">⚡ One tap</button></div>`;
+  const body = TAB === "list" ? listHtml() : TAB === "fu" ? (FLAG && !editing ? flagCard() : flagForm())
     : `<div class="hero" style="padding:12px 15px"><small>One tap — nothing to type</small><div class="subj" style="font-size:.86rem;margin-top:6px">${esc(ITEM.subject || "(no subject)")}</div></div>
       <div class="lbl">Send this email to</div>
       <div class="qa">${TAPS.map(([k, ic, n, bg, ok]) => `<button class="q ${dn[k] ? "done" : ""}" data-tap="${k}"><div class="ic" style="background:${bg}">${dn[k] ? "✓" : ic}</div>${dn[k] ? ok : n}</button>`).join("")}</div>
       <div class="hint" style="text-align:left;margin-top:12px;line-height:1.6"><b>Works</b> – PDF attachments → Tenant Works Forms<br><b>Handover</b> – "sender: subject" in today's handover<br><b>Calendar</b> – on the follow-up date (or today)<br><b>Feedback</b> – logged as tenant feedback, to check in the hub</div>`;
   $("#app").innerHTML = `${tabs}${body}<div id="out"></div>`;
-  $("#app").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { TAB = b.dataset.tab; draw(); });
+  $("#app").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { TAB = b.dataset.tab; if (TAB === "list") loadAll(); draw(); });
+  $("#app").querySelectorAll("[data-open]").forEach(el => el.onclick = e => { if (e.target.closest("[data-okid]")) return; openMail(el.dataset.open, el.dataset.link); });
+  $("#app").querySelectorAll("[data-okid]").forEach(b => b.onclick = async () => { b.disabled = true; try { await api("fu/done", { id: +b.dataset.okid }); if (FLAG && FLAG.id === +b.dataset.okid) FLAG = null; await loadAll(); } catch (e){ say(e.message, true); } });
   $("#app").querySelectorAll("[data-due]").forEach(b => b.onclick = () => { pick.due = b.dataset.due; pick.note = false; showPick = false; draw(); });
   const pb = $("#pickBtn"); if (pb) pb.onclick = () => { showPick = true; draw(); const i = $("#dPick"); if (i){ i.focus(); try { i.showPicker(); } catch {} } };
   const setPick = () => { const i = $("#dPick"); if (i && i.value){ if (i.value < bday()) return say("Choose today or a later date", true); pick.due = i.value; pick.note = false; showPick = false; draw(); } };
@@ -258,14 +287,14 @@ function draw(){
   const fg = $("#flagGo"); if (fg) fg.onclick = async () => {
     fg.disabled = true;
     try { FLAG = (await api("fu/save", { id: FLAG ? FLAG.id : 0, msgId: ITEM.id, subject: ITEM.subject, sender: ITEM.fromName || ITEM.fromEmail, link: ITEM.link,
-      due: pick.note ? "" : pick.due, note: pick.note, priority: pick.priority, site })).item; editing = false; draw(); }
+      due: pick.note ? "" : pick.due, note: pick.note, priority: pick.priority, site })).item; editing = false; draw(); loadAll(); }
     catch (e){ fg.disabled = false; say(e.message, true); }
   };
   const fc = $("#flagCancel"); if (fc) fc.onclick = e => { e.preventDefault(); editing = false; draw(); };
   $("#app").querySelectorAll("[data-fa]").forEach(b => b.onclick = async () => {
     const a = b.dataset.fa;
     if (a === "change"){ editing = true; pick = { due: FLAG.due || addD(bday(), 1), priority: FLAG.priority, note: false }; showPick = false; return draw(); }
-    try { await api(a === "done" ? "fu/done" : "fu/remove", { id: FLAG.id }); FLAG = null; draw(); say(a === "done" ? "✓ Follow-up done" : "Flag removed"); }
+    try { await api(a === "done" ? "fu/done" : "fu/remove", { id: FLAG.id }); FLAG = null; draw(); say(a === "done" ? "✓ Follow-up done" : "Flag removed"); loadAll(); }
     catch (e){ say(e.message, true); }
   });
   $("#app").querySelectorAll("[data-tap]").forEach(b => b.onclick = () => tap(b));
