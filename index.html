@@ -1100,6 +1100,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
     </div>
   </div>
   <div class="adm-quota" id="admQuota"></div>
+  <div class="adm-quota" id="admOutlook"></div>
   <div class="adm-quota" id="admStore"></div>
   <div class="adm-body" id="admBody"></div>
 </div>
@@ -1288,6 +1289,12 @@ function accessKey(u){
 }
 function startHub(){
   const role = ME.user.role;
+  { const o = new URLSearchParams(location.search).get("outlook");   // back from the Microsoft sign-in (Outlook sending)
+    if (o){ history.replaceState(null, "", location.pathname + location.hash);
+      const M = { connected: ["Outlook connected — hub emails now leave from your mailbox", false], denied: ["Outlook was not connected (cancelled or not approved by IT)", true],
+        mismatch: ["Sign in to Microsoft with the same email as your hub account", true], expired: ["The Outlook sign-in took too long — try again", true],
+        off: ["Outlook sending is not set up yet", true], error: ["Outlook could not be connected — see Profile → Outlook", true] }[o] || ["Outlook: " + o, true];
+      setTimeout(() => toast(M[0], M[1]), 600); } }
   /* who sees each tile: the ACCESS list in apps.js, by position (Admin sees everything) */
   const key = accessKey(ME.user), ACC = H.ACCESS || {}; MYKEY = key;
   const TEST_ADMIN = H.TESTING_ADMIN_ONLY || [];   // Upcoming - Testing is open to everyone (apart from the admin settings pages)
@@ -1466,6 +1473,7 @@ async function profileSheet(focus){
       <div class="set-label">Two-step login</div>
       <div id="tfBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Outlook</div>
+      <div id="olSend"></div>
       <div id="olBox" style="margin-bottom:18px"><p class="brief-empty" style="font-size:.86rem">Checking…</p></div>
       <div class="set-label">Password</div>
       <div class="pf-pw" id="pfPw"><button class="btn ghost small" id="pwOpen">Change password</button></div>
@@ -1791,7 +1799,25 @@ async function offerPasskey(){
   sheet.showModal();
 }
 /* ---- Outlook add-in: connect with a 6-digit code (Profile settings → Outlook) ---- */
+/* ---- Outlook sending: the hub sends my emails from my own Outlook (Microsoft sign-in once) — docs/FEATURE-outlook-send.md ---- */
+async function renderOutlookSend(){
+  const box = $("#olSend"); if (!box) return;
+  let s; try { s = await api("ms/status"); } catch (e){ box.innerHTML = ""; return; }
+  const dt = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "never";
+  box.innerHTML = `<div class="tf-row" style="margin-bottom:10px"><div class="main"><b>Send from my Outlook${s.connected ? `<span class="tf-on">Connected</span>` : ""}</b>
+      <small>${!s.on ? "Not available yet — waiting for IT to finish the Microsoft setup."
+        : s.connected ? `Hub emails you send (schedule, handover, reminders…) leave from <b>${esc(s.msUser)}</b> and appear in your Sent Items. Connected ${esc(dt(s.connectedAt))} · ${s.sent} sent · last used ${esc(dt(s.lastUsed))}${s.auto ? " · <b>also sends the automatic hub emails</b>" : ""}`
+        : "Connect once with your Microsoft account: emails you send from the hub then leave from your own Outlook — no daily limit of the old mail relay."}</small>
+      ${s.error ? `<div class="msg err" style="margin-top:8px">${esc(s.error)}</div>` : ""}<div id="olSendMsg"></div></div>
+      ${!s.on ? "" : s.connected ? `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" id="olsTest">Send me a test</button><button class="btn ghost small" id="olsOff">Disconnect</button></div>`
+        : `<button class="btn small" id="olsGo">Connect my Outlook</button>`}</div>`;
+  const msg = (t, okm) => { $("#olSendMsg").innerHTML = `<div class="msg ${okm ? "okm" : "err"}" style="margin-top:8px">${esc(t)}</div>`; };
+  const go = $("#olsGo"); if (go) go.onclick = async () => { try { const r = await api("ms/connect"); location.href = r.url; } catch (e){ msg(e.message); } };
+  const te = $("#olsTest"); if (te) te.onclick = async () => { te.disabled = true; try { await api("ms/test", {}); msg("Sent — check your inbox and Sent Items.", true); } catch (e){ msg(e.message); } te.disabled = false; };
+  const off = $("#olsOff"); if (off) off.onclick = async () => { if (!confirm("Disconnect your Outlook? Hub emails will go through the old mail relay again.")) return; await api("ms/disconnect", {}).catch(() => {}); renderOutlookSend(); };
+}
 async function renderOutlookBox(){
+  renderOutlookSend();
   const box = $("#olBox"); if (!box) return;
   let d; try { d = await api("addin/list"); } catch (e){ box.innerHTML = `<p class="brief-empty">${esc(e.message)}</p>`; return; }
   const dt = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "never";
@@ -3410,7 +3436,7 @@ const siteOptions = (sel, allLabel) => (allLabel ? `<option value="ALL">${esc(al
 async function renderAdmin(){
   if (ME.user.role !== "ADMIN") return goHome();
   show("admin");
-  mailQuotaBar(); storageBar();
+  mailQuotaBar(); storageBar(); outlookAdminBar();
   const body = $("#admBody");
   body.innerHTML = `<div class="panel"><div class="sk"></div></div>`;
   try { admTab === "users" ? await adminUsers(body) : admTab === "control" ? await adminControl(body) : admTab === "usage" ? await adminUsage(body) : admTab === "backup" ? await adminBackup(body) : admTab === "covers" ? await adminCovers(body) : admTab === "history" ? await adminHistory(body) : admTab === "storage" ? await adminStorage(body) : await adminAnnouncements(body); }
@@ -3626,6 +3652,32 @@ async function mailQuotaBar(force){
       ${n != null && n < 20 ? `<div class="warn">Almost used up — hub emails may fail until the quota resets (about 24 hours after the first sends). Every address in To/Cc counts; send to distribution lists where you can.</div>` : ""}
     </div>`;
   $("#mqRe").onclick = () => mailQuotaBar(true);
+}
+/* Outlook sending (Microsoft Graph): set-up state, client secret expiry, automatic sender, who is connected */
+async function outlookAdminBar(){
+  const el = $("#admOutlook"); if (!el) return;
+  let d; try { d = await api("admin/ms"); } catch (e){ el.innerHTML = ""; return; }
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>';
+  const live = d.users.filter(u => u.live), today = new Date().toISOString().slice(0, 10);
+  const days = d.expiry ? Math.round((Date.parse(d.expiry) - Date.parse(today)) / 864e5) : null;
+  const tone = !d.on ? "var(--muted)" : days != null && days <= 7 ? "var(--alert)" : days != null && days <= 30 ? "var(--warn)" : !d.expiry ? "var(--warn)" : "var(--ok)";
+  const dt = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—";
+  el.innerHTML = `<div class="mq" style="--mq:${tone}"><div class="ic">${icon}</div>
+    <div class="tx"><b>${!d.on ? "Outlook sending · not set up" : `Outlook sending · ${live.length} connected`}</b>
+      <small>${!d.on ? `Waiting for the Microsoft details — add ${d.missing.map(esc).join(", ")} in Cloudflare → operations-hub → Settings → Variables and Secrets.`
+        : `Client secret ${d.expiry ? `expires <strong>${esc(d.expiry)}</strong>${days != null ? ` (${days < 0 ? "expired" : days + " days"})` : ""}` : "<strong>expiry date not set</strong>"} · last 24 h: ${d.queue.sent} sent from the queue · ${d.queue.wait} waiting · ${d.queue.failed} failed`}</small></div>
+    ${d.on ? `<button class="btn small ghost" id="olaMore">Settings</button>` : ""}
+    <div id="olaBody" class="hidden" style="flex-basis:100%;display:grid;gap:10px;margin-top:6px">
+      <label class="field" style="margin:0"><span>Client secret expiry (from IT) — reminders 30, 7 and 1 day before</span><input type="date" id="olaExp" value="${esc(d.expiry)}"></label>
+      <label class="field" style="margin:0"><span>Automatic emails (morning brief, End of Day, digests, sign-in codes) are sent from</span>
+        <select id="olaAuto"><option value="">The old mail relay</option>${live.map(u => `<option value="${esc(u.email)}" ${u.email === d.auto ? "selected" : ""}>${esc(u.name)} · ${esc(u.msUser)}</option>`).join("")}</select></label>
+      <div style="display:flex;gap:8px"><button class="btn small" id="olaSave">Save</button><span id="olaMsg"></span></div>
+      <div style="font-size:.8rem;line-height:1.6">${d.users.length ? d.users.map(u => `<div>${u.live ? "🟢" : "🔴"} <b>${esc(u.name)}</b> · ${esc(u.msUser)} · ${u.sent} sent · last ${esc(dt(u.lastUsed))}${u.error ? ` · <span style="color:var(--alert)">${esc(u.error)}</span>` : ""}</div>`).join("") : "Nobody has connected their Outlook yet (Profile → Outlook → Connect my Outlook)."}</div>
+    </div></div>`;
+  const more = $("#olaMore"); if (more) more.onclick = () => $("#olaBody").classList.toggle("hidden");
+  const sv = $("#olaSave"); if (sv) sv.onclick = async () => {
+    try { await api("admin/ms", { expiry: $("#olaExp").value, auto: $("#olaAuto").value }); outlookAdminBar(); }
+    catch (e){ $("#olaMsg").innerHTML = `<span style="color:var(--alert)">${esc(e.message)}</span>`; } };
 }
 /* Cloudflare storage meter — R2 (all buckets) and the hub database (D1) against the free allowance (see docs/FEATURE-storage-meter.md) */
 const fmtBytes = n => n == null ? "—" : n >= 1024 ** 3 ? (n / 1024 ** 3).toFixed(2) + " GB" : n >= 1024 ** 2 ? (n / 1024 ** 2).toFixed(1) + " MB" : Math.round(n / 1024) + " KB";

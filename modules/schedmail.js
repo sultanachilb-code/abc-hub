@@ -170,7 +170,7 @@ export async function schedMailRoute(env, p, method, b, url, d) {
     const c = await compose(env, site, monday, me, d, !!sent);
     if (!c.W.filled) throw err("This week is empty — fill the schedule first");
     if (!c.to.length) throw err("Nobody in To — add the recipients (Recipients button) or set the Mall Manager in People & roles");
-    const r = await d.relay(env, { to: c.to.map(x => x.email), cc: c.cc.map(x => x.email), replyTo: me.email, subject: c.subject, html: c.html });
+    const r = await d.relay(env, { from: me.email, to: c.to.map(x => x.email), cc: c.cc.map(x => x.email), replyTo: me.email, subject: c.subject, html: c.html });
     if (!r.ok) throw err("The email could not be sent: " + (r.error || "mail relay error"), 502);
     const rec = { at: d.now(), by: me.full_name, email: me.email, sig: await hashOf(c.W.sig), count: ((sent && sent.count) || 0) + 1, subject: c.subject };
     await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(`schedsent:${site}:${monday}`, JSON.stringify(rec)).run();
