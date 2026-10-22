@@ -7,11 +7,11 @@
            xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
            xsi:type="MailApp">
   <Id>6f3b2a1e-8c4d-4e7a-9b1f-2d5c7a9e4b10</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.1.0.0</Version>
   <ProviderName>ABC Operations</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="ABC Operations Hub"/>
-  <Description DefaultValue="Send attachments to Tenant Works Forms, add an email to the shift handover, log tenant feedback or add it to the Operations Calendar."/>
+  <Description DefaultValue="Follow up emails with your own flags and reminders (High / Medium / Low, notes), and in one tap send attachments to Tenant Works Forms, add an email to the handover, the Operations Calendar or tenant feedback."/>
   <IconUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-128.png"/>
   <SupportUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/"/>
