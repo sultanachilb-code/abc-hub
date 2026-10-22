@@ -41,6 +41,7 @@ import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
 import { extFacts } from "./modules/extdb.js";
 import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
+import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
@@ -235,6 +236,7 @@ const APP_ACCESS = {
   exec: ["MM",  "OM",  "LEAD"],
   accuracy: ["MM",  "OM"],
   projects: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
+  "keybox-late": ["MM", "OM", "SMS", "MS", "MO"],   // Key Box: late-key alerts go to the operations team only
   budget: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snaglist: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snagreport: ["MM", "OM", "SMS", "LEAD"],
@@ -370,6 +372,7 @@ async function ensureSchema(env) {
   await inductionSchema(env);   // Operations Induction
   await outlookSchema(env);   // Outlook sending
   await followupSchema(env);   // Follow-ups
+  await keyboxSchema(env);   // Key Box
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
   const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
@@ -515,6 +518,7 @@ export default {
       if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
       await polEmbedPending(env, t => embedTexts(env, t), { limit: 48, cron: true }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
       await outlookRun(env, { today: beirutToday, notifyAdmins, fallback: relayScript }).catch(e => console.error("outlook", e && e.message));   // Outlook sending: queue + secret expiry
+      await keyboxRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("keybox", e && e.message));   // Key Box: late keys
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await pushRun(env).catch(e => console.error("push", e && e.message));
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -1259,11 +1263,12 @@ async function notificationsFor(env, me) {
     notifyCache.set(site, { at: Date.now(), events });
   }
   const mySites = sitesOf(me);
-  events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))).slice(0, 80);
+  events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))
+    && (e.app !== "keybox-late" || roleAllows(me, e.app))).slice(0, 80);   // Key Box late keys: operations team only
   return { events, readAt: me.notif_read_at || "" };
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
-const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage"]);
+const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox"]);
 const roleAllows = (u, app) => u.role === "ADMIN" || TESTING_OPEN.has(app) || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u));
 
 /* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
@@ -1367,7 +1372,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { followup: "🚩 Follow-up", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
+  const names = { followup: "🚩 Follow-up", "keybox-late": "🔑 Key Box", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1700,6 +1705,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
+  if (p.startsWith("kb/")) return keyboxRoute(env, p, method, b, url, { site, me, canSite, siteName, audit: auditMe,   // Key Box (modules/keybox.js)
+    isOps: u => u.role === "ADMIN" || isFull(u) || u.role === "SECURITY" || (u.role === "SUPERVISOR" && u.position !== "WH") });
   if (p.startsWith("ind/")) {   // Operations Induction (modules/induction.js)
     if (!roleAllows(me, "induction")) throw fail("Not allowed", 403);   // testing: open to everyone
     return inductionRoute(env, p, method, b, url, { site, me, canSite, siteName, now: nowIso, canEdit: isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS"),
