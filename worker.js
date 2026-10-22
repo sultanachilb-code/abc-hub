@@ -1239,7 +1239,9 @@ async function notificationsFor(env, me) {
   events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))).slice(0, 80);
   return { events, readAt: me.notif_read_at || "" };
 }
-const roleAllows = (u, app) => u.role === "ADMIN" || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u));
+/* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
+const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage"]);
+const roleAllows = (u, app) => u.role === "ADMIN" || TESTING_OPEN.has(app) || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u));
 
 /* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
 async function vapidKeys(env) {
@@ -1676,7 +1678,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
   if (p.startsWith("ind/")) {   // Operations Induction (modules/induction.js)
-    if (!roleAllows(me, "induction") || isWarehouse(me)) throw fail("Not allowed", 403);
+    if (!roleAllows(me, "induction")) throw fail("Not allowed", 403);   // testing: open to everyone
     return inductionRoute(env, p, method, b, url, { site, me, canSite, siteName, now: nowIso, canEdit: isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS"),
       team: async s2 => { const { results } = await env.DB.prepare("SELECT email, full_name, role, position, site_code, sites, photo_at FROM users WHERE active = 1 AND role IN ('MANAGER','SUPERVISOR','SECURITY','ADVISOR','DIRECTOR','CDSO')").all();
         const rk = u => ({ ADVISOR: -10, DIRECTOR: -9, CDSO: -8 })[u.role] ?? ((TITLES[u.position] || POSITIONS[u.position] || {}).rank ?? 6);
@@ -1688,7 +1690,7 @@ async function opsRoute(env, me, p, method, b, url) {
     return crmRoute(env, p, method, b, url, { site, me, now: nowIso, canEdit: isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH"), glaSeed: s2 => glaSeed(env, s2) });
   }
   if (p.startsWith("cc/")) {   // Cleaning Control: the cleaning company's work against the schedule (modules/cleanctl.js)
-    if (!roleAllows(me, "cleanctl") || isWarehouse(me)) throw fail("Not allowed", 403);
+    if (!roleAllows(me, "cleanctl")) throw fail("Not allowed", 403);   // testing: open to everyone
     return ccHubRoute(env, p, method, b, url, { site, me, can, now: nowIso, canManage: isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH") });
   }
   if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
@@ -1796,6 +1798,14 @@ async function opsRoute(env, me, p, method, b, url) {
     ]);
     const staff = await schedStaff(env, site);   // order and sections set with "Arrange"
     return { site, staff, cells: cells.results || [], notes: notes.results || [], can, groups: Object.fromEntries(Object.entries(POSITIONS).filter(([, v]) => !v.viewOnly).map(([k, v]) => [k, v.label])) };
+  }
+  if (p === "coverage" && method === "GET") {   // Supervisor coverage timeline (Upcoming - Testing): SMS / MS shifts of one week, read-only, everyone
+    const from = q("from"), to = q("to");
+    if (!isDay(from) || !isDay(to) || to < from) throw fail("Choose a week");
+    const people = (await siteStaff(env, site)).filter(s => s.atSite && ["SMS", "MS"].includes(s.position)).map(s => ({ email: s.email, name: s.name, position: s.position, positionLabel: s.positionLabel }));
+    const ids = new Set(people.map(s => s.email));
+    const cells = ((await env.DB.prepare("SELECT day, email, val FROM sched_cells WHERE site = ? AND day BETWEEN ? AND ?").bind(site, from, to).all()).results || []).filter(c => ids.has(c.email));
+    return { site, siteName: siteName(site), people, cells };
   }
   if (p === "schedule/order" && method === "POST") {   // Arrange: row order and section of each person (schedule only — the position in People & roles does not change)
     if (!can.schedule) throw fail("Only the flagship's Manager or Senior Mall Supervisor can arrange the schedule", 403);

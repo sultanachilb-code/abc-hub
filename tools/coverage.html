@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supervisor Coverage · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Supervisor coverage timeline (Upcoming - Testing) — docs/FEATURE-coverage.md */
+.weekbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.weekbar .range{font-weight:800;font-size:1rem;min-width:180px;text-align:center}
+.nav{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:1.1rem}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 10px}
+.kpis div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:.76rem;color:var(--muted)}
+.kpis b{display:block;font-size:1.35rem;color:var(--text);font-variant-numeric:tabular-nums}
+.kpis .bad b{color:#C2283C}
+.lg{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:.76rem;color:var(--muted);margin:0 0 10px}
+.lg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tw{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px;overflow-x:auto}
+table.cov{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;min-width:320px}
+.cov th{font-size:.72rem;color:var(--muted);font-weight:700;padding:4px 2px;line-height:1.2}
+.cov thead th{color:var(--text);font-size:.76rem}
+.cov thead th.today{color:var(--brand-2)}
+.cov tbody th{width:46px;text-align:right;padding-right:6px;font-variant-numeric:tabular-nums}
+.cov td{height:26px;text-align:center;font-size:.68rem;font-weight:800;border-radius:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 2px}
+.g{background:#2E9E5B;color:#fff} .y{background:#FFC83D;color:#5A3D00} .r{background:#E5484D;color:#fff}
+.gaps{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px;font-size:.84rem;line-height:1.6}
+.gaps b{color:#C2283C}
+.gaps.ok b{color:#2E9E5B}
+.who{font-size:.76rem;color:var(--muted);margin-top:8px;line-height:1.6}
+.ptitle{display:none;font-weight:800;font-size:16px;margin-bottom:8px}
+@media print{ .weekbar,.top{display:none!important} .ptitle{display:block!important} .g,.y,.r,.lg i{-webkit-print-color-adjust:exact;print-color-adjust:exact} .tw{border:0;padding:0} .cov td{height:20px} }
+@media (max-width:520px){ .cov td{font-size:.6rem} .cov tbody th{width:38px;padding-right:3px} }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Supervisor Coverage <small id="sub"></small></h1>
+  <span id="siteBox"></span>
+  <button class="btn ghost small" id="printBtn">Print / PDF</button>
+</div>
+<div class="wrap">
+  <div class="weekbar">
+    <button class="nav" id="prev" aria-label="Previous week">‹</button>
+    <div class="range" id="range"></div>
+    <button class="nav" id="next" aria-label="Next week">›</button>
+    <button class="btn ghost small" id="todayBtn">This week</button>
+  </div>
+  <div class="ptitle" id="ptitle"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="lg">
+    <span><i class="g"></i>Senior Mall Supervisor / Mall Supervisor on duty</span>
+    <span><i class="y"></i>No supervisor · Mon–Fri 08:00–16:00, management in the mall</span>
+    <span><i class="r"></i>Not covered</span>
+  </div>
+  <div id="board"><p class="muted">Loading…</p></div>
+</div>
+
+<script src="common.js"></script>
+<script>
+/* Built from the weekly Operations Schedule: an hour is covered when an SMS or MS shift covers at least 30 minutes of it.
+   Each day runs 07:00 → 01:00 (a shift ending after midnight covers the 00:00 row of the day it started). */
+const HOURS = [...Array(18)].map((_, i) => 7 + i);   // 07 … 24 (24 = 00:00–01:00)
+const MGMT = { from: 8, to: 16 };                    // Mon–Fri, management present
+let CTX = null, WEEK = null, COV = null;
+const hmv = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim()); return m ? Number(m[1]) + Number(m[2]) / 60 : null; };
+const pad = h => String(h % 24).padStart(2, "0") + ":00";
+function span(v){
+  if (!v || !String(v).includes("-")) return null;
+  const [a, b] = String(v).split("-").map(hmv); if (a == null || b == null) return null;
+  return [a, b <= a ? b + 24 : b];
+}
+function tags(people){   // short initials, made unique
+  const seen = {}, out = {};
+  for (const p of people){
+    let t = initials(p.name) || "?";
+    if (seen[t]){ const w = p.name.split(/\s+/); t = (w[0].slice(0, 2) + (w[1] ? w[1][0] : "")).toUpperCase(); }
+    seen[t] = 1; out[p.email] = t;
+  }
+  return out;
+}
+
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  WEEK = WEEK || D.monday(CTX.today);
+  await load();
+}
+async function load(){
+  const days = [...Array(7)].map((_, i) => D.add(WEEK, i));
+  $("#range").textContent = `${D.fmt(days[0])} – ${D.fmt(days[6], { year: "numeric" })}`;
+  $("#board").innerHTML = `<p class="muted">Loading…</p>`;
+  COV = await api(`ops/coverage?site=${CTX.site}&from=${days[0]}&to=${days[6]}`);
+  $("#sub").textContent = COV.siteName;
+  $("#ptitle").textContent = `ABC ${COV.siteName} — Supervisor coverage — ${D.fmt(days[0])} to ${D.fmt(days[6], { year: "numeric" })}`;
+  render(days);
+}
+function render(days){
+  const T = tags(COV.people), by = {};
+  for (const c of COV.cells){ const s = span(c.val); if (s) (by[c.day] = by[c.day] || []).push({ email: c.email, s }); }
+  const grid = days.map((day, di) => HOURS.map(h => {
+    const on = (by[day] || []).filter(x => Math.min(x.s[1], h + 1) - Math.max(x.s[0], h) >= 0.5).map(x => T[x.email]);
+    if (on.length) return { c: "g", t: on.join(" ") };
+    if (di < 5 && h >= MGMT.from && h < MGMT.to) return { c: "y", t: "Mgmt" };
+    return { c: "r", t: "—" };
+  }));
+  const n = { g: 0, y: 0, r: 0 }; grid.flat().forEach(x => n[x.c]++);
+  const tot = n.g + n.y + n.r;
+  $("#kpis").innerHTML = `<div><b>${Math.round(n.g * 100 / tot)}%</b>Covered by SMS / MS</div><div><b>${n.y}h</b>Management on duty</div><div class="${n.r ? "bad" : ""}"><b>${n.r}h</b>Not covered</div>`;
+  const today = CTX.today;
+  const head = `<tr><th></th>${days.map(d => `<th class="${d === today ? "today" : ""}">${D.parse(d).toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short" })}<br>${D.parse(d).getUTCDate()}</th>`).join("")}</tr>`;
+  const body = HOURS.map((h, hi) => `<tr><th>${pad(h)}</th>${days.map((d, di) => { const x = grid[di][hi];
+      return `<td class="${x.c}" title="${esc(D.fmt(d))} ${pad(h)}–${pad(h + 1)}">${esc(x.t)}</td>`; }).join("")}</tr>`).join("");
+  const gaps = [];
+  days.forEach((d, di) => { let st = null;
+    HOURS.concat([99]).forEach((h, hi) => { const red = h !== 99 && grid[di][hi].c === "r";
+      if (red && st == null) st = h;
+      if (!red && st != null){ gaps.push(`${D.parse(d).toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric" })} ${pad(st)}–${pad(h === 99 ? 25 : h)}`); st = null; } }); });
+  const who = COV.people.length ? COV.people.map(p => `<b>${esc(T[p.email])}</b> ${esc(p.name)} (${p.position})`).join(" · ")
+    : "No Senior Mall Supervisor or Mall Supervisor is linked to this flagship in Admin → Hub users.";
+  $("#board").innerHTML = `<div class="tw"><table class="cov"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <div class="gaps ${gaps.length ? "" : "ok"}"><b>${gaps.length ? "Gaps to fill:" : "No gaps this week."}</b> ${gaps.map(esc).join(" · ")}</div>
+    <div class="who">${who}</div>`;
+}
+$("#prev").onclick = () => { WEEK = D.add(WEEK, -7); load(); };
+$("#next").onclick = () => { WEEK = D.add(WEEK, 7); load(); };
+$("#todayBtn").onclick = () => { WEEK = D.monday(CTX.today); load(); };
+$("#printBtn").onclick = () => print();
+window.hubRefresh = () => load();
+boot().catch(e => { $("#board").innerHTML = `<p class="muted">${esc(e.message)}</p>`; });
+</script>
+</body>
+</html>
