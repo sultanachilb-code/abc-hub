@@ -204,47 +204,69 @@ async function loadDay(){
   drawDay();
   if (DAY && DAY.canPair) loadPhones();
 }
-/* ---------- managers (hub only): loading-area phones on the separate Loading Gate link ---------- */
+/* ---------- managers (hub only): gate accounts for the separate Loading Gate link (Oct 2026) ----------
+   One username + password per gate post, shared by the guards. A phone stays signed in 90 days after its last use. */
 async function loadPhones(){
   const box = $("#phones"); if (!box) return;
   let P; try { P = await api(`ops/gate/devices?site=${site}`); } catch (e){ box.innerHTML = ""; return; }
-  const ago = iso => iso ? `${D.fmt(iso.slice(0, 10))} ${hm(iso)}` : "never";
-  box.innerHTML = `<h2 class="sec">Loading-area phones <span class="sp"></span><button class="btn small" id="phAdd">+ Pair a phone</button></h2>
+  const bday = t => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(t);
+  const ago = iso => { if (!iso) return "never"; const d = bday(new Date(iso)); return `${d === bday(new Date()) ? "today" : D.fmt(d)} ${hm(iso)}`; };
+  const link = P.gateUrl.replace(/^https:\/\//, "");
+  box.innerHTML = `<h2 class="sec">Gate accounts <span class="sp"></span><button class="btn small" id="gaNew">+ New gate account</button></h2>
     ${P.ready ? "" : `<div class="card note warn" style="margin:0 0 8px">The Loading Gate link is not switched on yet: add the secret <b>GATE_KEY</b> to both workers (see docs/FEATURE-gate.md).</div>`}
-    <div class="log">${P.list.length ? P.list.map(x => `<div class="card ph"><div><b>${esc(x.name)}</b>
-        <small>${x.paired ? `Paired · last used ${esc(ago(x.lastSeen))}${x.lastAgent ? ` · on duty: ${esc(x.lastAgent)}` : ""}` : x.pending ? `Waiting for pairing — code valid until ${hm(x.pairExp)}` : "Not paired — make a new code"}</small></div>
-        <div style="display:flex;gap:6px">${x.paired ? "" : `<button class="btn ghost small" data-new="${x.id}" data-name="${esc(x.name)}">New code</button>`}<button class="btn ghost small danger" data-rm="${x.id}" data-name="${esc(x.name)}">Remove</button></div></div>`).join("")
-      : `<div class="card empty" style="padding:20px">No phone yet. The loading-area agent uses its own link <b>${esc(P.gateUrl.replace(/^https:\/\//, ""))}</b> — no hub account. Pair the phone once here.</div>`}</div>`;
-  $("#phAdd").onclick = () => phoneName().then(n => n && newCode({ name: n }));
-  box.querySelectorAll("[data-new]").forEach(b => b.onclick = () => newCode({ id: +b.dataset.new, name: b.dataset.name }));
-  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
-    const d = $("#dlg");
-    d.innerHTML = `<div class="dlg-h"><b>Remove ${esc(b.dataset.name)}?</b><small>The phone is cut off at once. To use it again, pair it with a new code.</small></div>
-      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1" style="background:var(--out)">Remove</button></div>`;
-    d.onclick = async e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return; d.close();
-      if (v && v.dataset.v === "1"){ try { await api("ops/gate/devices/revoke", { site, id: +b.dataset.rm, name: b.dataset.name }); toast("Phone removed"); loadPhones(); } catch (er){ toast(er.message, true); } } };
-    d.showModal();
-  });
+    <p class="muted" style="font-size:.8rem;margin:0 0 8px">The guards open <b>${esc(link)}</b> and sign in with the gate account. Phones stay signed in ${P.days} days after their last use.</p>
+    <div class="log">${P.accounts.length ? P.accounts.map(a => `<div class="card ph"><div><b>${esc(a.username)}</b> <span class="pill ${a.disabled ? "" : "brand"}" style="font-size:.7rem">${a.disabled ? "Disabled" : "Active"}</span>
+        <small>${esc(a.label || "")}${a.label ? " · " : ""}${a.phones ? `signed in on ${a.phones} phone${a.phones === 1 ? "" : "s"} · last used ${esc(ago(a.lastSeen))}${a.lastAgent ? ` by ${esc(a.lastAgent)}` : ""}` : "no phone signed in"}</small></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${a.disabled ? "" : `<button class="btn ghost small" data-pw="${a.id}" data-u="${esc(a.username)}">Reset password</button>`}
+          ${a.phones ? `<button class="btn ghost small" data-so="${a.id}" data-u="${esc(a.username)}">Sign out phones</button>` : ""}
+          <button class="btn ghost small ${a.disabled ? "" : "danger"}" data-off="${a.disabled ? 0 : 1}" data-id="${a.id}" data-u="${esc(a.username)}">${a.disabled ? "Enable" : "Disable"}</button></div></div>`).join("")
+      : `<div class="card empty" style="padding:20px">No gate account yet. Create one per gate post — the guards sign in with it on <b>${esc(link)}</b> (no hub account).</div>`}</div>
+    ${P.legacy.length ? `<h2 class="sec" style="margin-top:14px">Phones paired with the old codes</h2>
+      <p class="muted" style="font-size:.8rem;margin:0 0 8px">They keep working. Once the phone is signed in with a gate account, remove it here.</p>
+      <div class="log">${P.legacy.map(x => `<div class="card ph"><div><b>${esc(x.name)}</b><small>Last used ${esc(ago(x.lastSeen))}${x.lastAgent ? ` · ${esc(x.lastAgent)}` : ""}</small></div>
+        <button class="btn ghost small danger" data-rm="${x.id}" data-name="${esc(x.name)}">Remove</button></div>`).join("")}</div>` : ""}`;
+  $("#gaNew").onclick = () => accountForm(P);
+  box.querySelectorAll("[data-pw]").forEach(b => b.onclick = () => ask(`New password for ${b.dataset.u}?`, "Phones already signed in stay signed in. Give the new password to the guards.", "Make a new password", async () => showPw(await api("ops/gate/accounts/reset", { site, id: +b.dataset.pw }), "New password")));
+  box.querySelectorAll("[data-so]").forEach(b => b.onclick = () => ask(`Sign out all phones of ${b.dataset.u}?`, "Each phone will ask for the username and password again.", "Sign out phones", async () => { await api("ops/gate/accounts/signout", { site, id: +b.dataset.so }); toast("Phones signed out"); }, true));
+  box.querySelectorAll("[data-off]").forEach(b => b.onclick = () => b.dataset.off === "1"
+    ? ask(`Disable ${b.dataset.u}?`, "Its phones are signed out at once and it cannot sign in until you enable it again.", "Disable", async () => { await api("ops/gate/accounts/disable", { site, id: +b.dataset.id, off: true }); toast("Account disabled"); }, true)
+    : api("ops/gate/accounts/disable", { site, id: +b.dataset.id, off: false }).then(() => { toast("Account enabled"); loadPhones(); }).catch(er => toast(er.message, true)));
+  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => ask(`Remove ${b.dataset.name}?`, "The phone is cut off at once. It can sign in again with a gate account.", "Remove", async () => { await api("ops/gate/devices/revoke", { site, id: +b.dataset.rm, name: b.dataset.name }); toast("Phone removed"); }, true));
 }
-function phoneName(){
-  return new Promise(res => {
-    const d = $("#dlg");
-    d.innerHTML = `<div class="dlg-h"><b>Pair a loading-area phone</b><small>Give it a name you will recognise.</small></div>
-      <div class="dlg-b"><input class="inp" id="phName" placeholder="e.g. Loading dock B1 phone" style="width:100%;height:46px"></div>
-      <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Make the code</button></div>`;
-    d.onclick = e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return; const n = $("#phName").value.trim(); d.close(); res(v && v.dataset.v === "1" ? (n || "Loading area phone") : ""); };
-    d.showModal(); setTimeout(() => $("#phName").focus(), 50);
-  });
-}
-async function newCode(x){
-  let r; try { r = await api("ops/gate/devices/new", { site, ...x }); } catch (e){ return toast(e.message, true); }
+function ask(title, sub, label, run, danger){
   const d = $("#dlg");
-  d.innerHTML = `<div class="dlg-h"><b>${esc(r.name)}</b><small>On the loading-area phone, scan this QR with the camera, or open <b>${esc(r.gateUrl.replace(/^https:\/\//, ""))}</b> and type the code. Valid until ${hm(r.exp)}, one use only.</small></div>
-    <div class="dlg-b"><div class="qrbox" id="phQr"></div><div class="code">${esc(r.code)}</div></div>
-    <div class="dlg-f"><button class="btn" data-v="1">Done</button></div>`;
-  d.onclick = e => { if (e.target.closest("[data-v]") || e.target === d){ d.close(); loadPhones(); } };
+  d.innerHTML = `<div class="dlg-h"><b>${esc(title)}</b><small>${esc(sub)}</small></div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1" ${danger ? 'style="background:var(--out)"' : ""}>${esc(label)}</button></div>`;
+  d.onclick = async e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return; d.close();
+    if (v && v.dataset.v === "1"){ try { await run(); } catch (er){ toast(er.message, true); } loadPhones(); } };
   d.showModal();
-  const draw = () => { try { const q = qrcode(0, "M"); q.addData(r.link); q.make(); $("#phQr").innerHTML = q.createSvgTag({ cellSize: 5, margin: 2 }); } catch {} };
+}
+function accountForm(P){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg-h"><b>New gate account</b><small>One account per gate post, shared by the guards on duty. They still write their name each day.</small></div>
+    <div class="dlg-b" style="display:grid;gap:10px">
+      <label><span class="muted" style="font-size:.78rem;font-weight:700">Username</span><input class="inp" id="gaU" value="${esc(P.suggest)}" autocapitalize="none" spellcheck="false" style="width:100%;height:46px;margin-top:4px"></label>
+      <label><span class="muted" style="font-size:.78rem;font-weight:700">Gate post (optional)</span><input class="inp" id="gaL" placeholder="e.g. Main loading dock" style="width:100%;height:46px;margin-top:4px"></label>
+      <label><span class="muted" style="font-size:.78rem;font-weight:700">Password — leave empty to make one</span><input class="inp" id="gaP" placeholder="at least 6 characters" style="width:100%;height:46px;margin-top:4px"></label>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Create</button></div>`;
+  d.onclick = async e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return;
+    if (!v || v.dataset.v === "0"){ d.close(); return; }
+    try { const r = await api("ops/gate/accounts/new", { site, username: $("#gaU").value.trim(), label: $("#gaL").value.trim(), password: $("#gaP").value.trim() }); d.close(); showPw(r, "Gate account created"); loadPhones(); }
+    catch (er){ toast(er.message, true); } };
+  d.showModal(); setTimeout(() => $("#gaL").focus(), 50);
+}
+function showPw(r, title){
+  const d = $("#dlg"), link = r.gateUrl.replace(/^https:\/\//, "");
+  const txt = `ABC Loading Gate\n${r.gateUrl}\nUsername: ${r.username}\nPassword: ${r.password}`;
+  d.innerHTML = `<div class="dlg-h"><b>${esc(title)}</b><small>Shown once — give it to the guards. On the loading-area phone, scan the QR or open <b>${esc(link)}</b>, sign in, then Share → Add to Home Screen.</small></div>
+    <div class="dlg-b"><div class="qrbox" id="phQr"></div>
+      <div class="card" style="padding:12px 14px;line-height:1.8;font-size:.95rem">Username <b>${esc(r.username)}</b><br>Password <b class="code" style="display:inline;font-size:1.15rem">${esc(r.password)}</b></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="pwCopy">Copy</button><button class="btn" data-v="1">Done</button></div>`;
+  d.onclick = e => { if (e.target.closest("[data-v]") || e.target === d){ d.close(); loadPhones(); } };
+  $("#pwCopy").onclick = e => { e.stopPropagation(); navigator.clipboard.writeText(txt).then(() => toast("Copied"), () => toast("Copy failed", true)); };
+  d.showModal();
+  const draw = () => { try { const q = qrcode(0, "M"); q.addData(r.gateUrl); q.make(); $("#phQr").innerHTML = q.createSvgTag({ cellSize: 5, margin: 2 }); } catch {} };
   if (window.qrcode) draw(); else { const sc = document.createElement("script"); sc.src = "/tools/qrcode.js"; sc.onload = draw; document.head.append(sc); }
 }
 function drawDay(){

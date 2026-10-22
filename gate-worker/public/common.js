@@ -19,7 +19,7 @@ const D = {
 };
 
 /* ---------- this phone ---------- */
-const GK = { token: "gate.token", agent: "gate.agent", agentDay: "gate.agentDay", info: "gate.info", outbox: "gate.outbox" };
+const GK = { user: "gate.user", token: "gate.token", agent: "gate.agent", agentDay: "gate.agentDay", info: "gate.info", outbox: "gate.outbox" };
 const ls = { get(k){ try { return localStorage.getItem(k) || ""; } catch { return ""; } }, set(k, v){ try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} } };
 let GINFO = null; try { GINFO = JSON.parse(ls.get(GK.info) || "null"); } catch {}
 const beirutDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
@@ -41,28 +41,49 @@ function gateScreen(html){
 }
 const closeScreen = () => { const o = $("#gateScreen"); if (o) o.remove(); };
 
-function pairScreen(msg){
+const standalone = () => { try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch { return false; } };
+function loginScreen(msg){
   return new Promise(res => {
-    const pre = (location.hash.match(/pair=([A-Za-z0-9-]+)/) || [])[1] || "";
-    const o = gateScreen(`<p style="font-weight:800;margin-bottom:4px">Pair this phone</p>
-      <p class="muted" style="font-size:.86rem;line-height:1.5;margin-bottom:14px">Ask the mall manager for the pairing code (hub → Loading Gate → Loading-area phones). It is used once, on this phone only.<br><span class="ar" dir="rtl">اطلب رمز الربط من مدير المول</span></p>
+    const tip = standalone() ? "" : `<div style="background:#FFF7E0;color:#6A4B00;border-radius:12px;padding:10px 12px;font-size:.8rem;line-height:1.45;margin-top:14px">📌 Share → <b>Add to Home Screen</b>, then always open the Gate from that icon — not from WhatsApp.<br><span class="ar" dir="rtl">أضف البوابة إلى الشاشة الرئيسية وافتحها دائماً من الأيقونة</span></div>`;
+    gateScreen(`<p style="font-weight:800;margin-bottom:4px">Sign in</p>
+      <p class="muted" style="font-size:.86rem;line-height:1.5;margin-bottom:12px">Use the gate account from the mall manager.<br><span class="ar" dir="rtl">ادخل اسم المستخدم وكلمة السر</span></p>
       ${msg ? `<p style="color:var(--alert);font-weight:700;font-size:.86rem;margin-bottom:10px">${esc(msg)}</p>` : ""}
-      <input class="inp" id="gpCode" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX" value="${esc(pre)}" style="width:100%;height:52px;font-size:1.3rem;letter-spacing:.12em;text-align:center;text-transform:uppercase">
-      <button class="btn" id="gpGo" style="width:100%;height:50px;margin-top:12px;font-size:1rem">Pair phone</button>`);
+      <label class="muted" style="font-size:.78rem;font-weight:700">Username</label>
+      <input class="inp" id="glUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" value="${esc(ls.get(GK.user))}" style="width:100%;height:50px;font-size:1.1rem;margin:4px 0 10px">
+      <label class="muted" style="font-size:.78rem;font-weight:700">Password</label>
+      <div style="position:relative;margin-top:4px"><input class="inp" id="glPw" type="password" autocomplete="current-password" style="width:100%;height:50px;font-size:1.1rem;padding-right:64px">
+        <button type="button" id="glShow" style="position:absolute;right:6px;top:7px;height:36px;border:0;background:none;color:var(--brand-2);font-weight:800">Show</button></div>
+      <button class="btn" id="glGo" style="width:100%;height:50px;margin-top:14px;font-size:1rem">Sign in · دخول</button>
+      <p class="muted" style="font-size:.76rem;line-height:1.45;margin-top:10px">Stays signed in on this phone for 90 days of use. No signal never signs you out.</p>${tip}`);
+    $("#glShow").onclick = () => { const p = $("#glPw"); p.type = p.type === "password" ? "text" : "password"; $("#glShow").textContent = p.type === "password" ? "Show" : "Hide"; };
     const go = async () => {
-      const code = $("#gpCode").value.trim(); if (!code) return;
-      $("#gpGo").disabled = true;
+      const username = $("#glUser").value.trim(), password = $("#glPw").value;
+      if (!username || !password) return toast("Write the username and the password", true);
+      $("#glGo").disabled = true;
       try {
-        const r = await fetch("/api/pair", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code }) });
+        const r = await fetch("/api/login", { method: "POST", headers: { "content-type": "application/json", "x-gate-agent": encodeURIComponent(ls.get(GK.agent)) }, body: JSON.stringify({ username, password }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.ok) throw new Error(j.error || `Error ${r.status}`);
-        ls.set(GK.token, j.data.token); GINFO = { site: j.data.site, siteName: j.data.siteName, device: j.data.device }; ls.set(GK.info, JSON.stringify(GINFO));
-        history.replaceState(null, "", "/"); res();
-      } catch (e){ $("#gpGo").disabled = false; toast(navigator.onLine ? e.message : "No signal — pairing needs a connection", true); }
+        ls.set(GK.user, username.toLowerCase()); ls.set(GK.token, j.data.token);
+        GINFO = { site: j.data.site, siteName: j.data.siteName, device: j.data.device }; ls.set(GK.info, JSON.stringify(GINFO));
+        if (location.hash) history.replaceState(null, "", "/");
+        res();
+      } catch (e){ $("#glGo").disabled = false; toast(navigator.onLine ? e.message : "No signal — signing in needs a connection", true); }
     };
-    $("#gpGo").onclick = go; $("#gpCode").onkeydown = e => { if (e.key === "Enter") go(); };
-    if (pre && !msg) go();
+    $("#glGo").onclick = go; $("#glPw").onkeydown = e => { if (e.key === "Enter") go(); };
+    $("#glUser").onkeydown = e => { if (e.key === "Enter") $("#glPw").focus(); };
+    setTimeout(() => (ls.get(GK.user) ? $("#glPw") : $("#glUser")).focus(), 50);
   });
+}
+/* the page's storage was cleared but the cookie of this link may still hold the sign-in */
+async function fromCookie(){
+  try {
+    const r = await fetch("/api/me", { headers: { "x-gate-agent": encodeURIComponent(ls.get(GK.agent)) } });
+    if (r.status === 401) return false;
+    const j = await r.json().catch(() => null);
+    if (r.ok && j && j.ok){ ls.set(GK.token, "cookie"); GINFO = { site: j.data.site, siteName: j.data.siteName, device: j.data.device }; ls.set(GK.info, JSON.stringify(GINFO)); return true; }
+    return false;
+  } catch { return false; }
 }
 function agentScreen(){
   return new Promise(res => {
@@ -81,7 +102,8 @@ function ready(){
   if (READY) return READY;
   READY = (async () => {
     if (document.readyState === "loading") await new Promise(r => addEventListener("DOMContentLoaded", r, { once: true }));
-    if (!ls.get(GK.token) || /pair=/.test(location.hash)) await pairScreen();
+    if (/pair=/.test(location.hash)) history.replaceState(null, "", "/");   // old pairing links are retired
+    if (!ls.get(GK.token) && !(await fromCookie())) await loginScreen();
     if (!ls.get(GK.agent) || ls.get(GK.agentDay) !== beirutDay()) await agentScreen();   // the name is asked again every day
     closeScreen();
   })();
@@ -91,12 +113,15 @@ ready();
 
 /* ---------- calls to the hub (through this link only) ---------- */
 function headers(){
-  return { "content-type": "application/json", authorization: "Bearer " + ls.get(GK.token), "x-gate-agent": encodeURIComponent(ls.get(GK.agent)) };
+  const t = ls.get(GK.token), h = { "content-type": "application/json", "x-gate-agent": encodeURIComponent(ls.get(GK.agent)) };
+  if (/^[0-9a-f]{64}$/.test(t)) h.authorization = "Bearer " + t;   // otherwise the link's cookie carries the sign-in
+  return h;
 }
 async function apiRaw(p, body){
   const r = await fetch("/api/" + p, body === undefined ? { headers: headers() } : { method: "POST", headers: headers(), body: JSON.stringify(body) });
   let j = null; try { j = await r.json(); } catch {}
-  if (r.status === 401){ ls.set(GK.token, ""); ls.set(GK.info, ""); READY = null; await pairScreen(j && j.error); closeScreen(); location.reload(); throw Object.assign(new Error("Not paired"), { status: 401 }); }
+  /* signed out only when the hub says so clearly (JSON answer, 401) — no signal / server trouble keep the sign-in */
+  if (r.status === 401 && j && j.ok === false){ ls.set(GK.token, ""); READY = null; await loginScreen(j.error); closeScreen(); location.reload(); throw Object.assign(new Error("Signed out"), { status: 401 }); }
   if (!r.ok || !j || !j.ok){ const e = new Error((j && j.error) || `Error ${r.status}`); e.status = r.status; throw e; }
   return j.data;
 }
@@ -133,7 +158,7 @@ async function offFlush(){
     try {
       const r = await fetch("/api/decide", { method: "POST", headers: { ...headers(), "x-gate-agent": encodeURIComponent(x.agent || ls.get(GK.agent)) }, body: JSON.stringify(x.body) });
       const j = await r.json().catch(() => null);
-      if (!r.ok && r.status >= 500) break;
+      if (!r.ok && (r.status >= 500 || r.status === 401)) break;   // keep it on the phone until it can be sent
       outWrite(outRead().filter(y => y.clientId !== x.clientId));
       if (r.ok && j && j.ok){ sent++; dispatchEvent(new CustomEvent("hub-synced", { detail: { path: "ops/gate/decide", body: x.body, result: j.data } })); }
       else toast(`A decision saved offline could not be sent: ${(j && j.error) || r.status}`, true);
