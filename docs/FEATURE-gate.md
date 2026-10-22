@@ -108,3 +108,20 @@ The gate also reads **Quick Passes** (`…/qp/<token>` or typed `QP-ABCDEF`): va
 A **CP-xxxxxx** code is a pass the operations or technical team creates for tenants or our own contractors. It is **not** a Tenant Connect REQ:
 gate scans with a CP number are never linked to a REQ line (even with the same digits). They are listed in *Contractor access not in this handover* as
 "loading gate · CP operations pass", and **+ Add to handover** adds them as their own line; that line is matched by the exact CP code.
+
+## Gate accounts — username + password (Oct 2026, replaces pairing codes)
+Complaints: guards were "logged out" again and again. The pairing token lived only in the page's storage, which iPhone clears
+(opened from WhatsApp, Safari data cleared, 7 days without the Home Screen icon), and any 401 wiped it.
+
+- **Hub → Loading Gate → Gate accounts** (managers): one account per gate post, shared by the guards (option A).
+  New account (password typed or made, shown once, with the gate link QR) · Reset password (phones stay signed in) ·
+  Sign out phones · Disable / Enable. Passwords: PBKDF2-SHA256, 100 000 rounds, salted (`gate_accounts`).
+- **Gate app**: sign-in screen (username, password, Show, Home Screen tip). Each sign-in = a `gate_devices` row with
+  `account_id` and `expires` (90 days, renewed on use). The guard still writes his name each day.
+- **Kept signed in**: the token is in localStorage *and* in an HttpOnly cookie `gate_t` set by the gate worker (90 days,
+  renewed on `me`) — a wiped page storage signs back in from the cookie.
+- **Signed out only** on a clear 401 from the hub (account disabled, phones signed out, 90 days unused). Server errors (500),
+  no signal and 502 never sign out; decisions waiting offline stay on the phone until they can be sent.
+- Wrong passwords: 8 per 15 minutes per connection, then locked 15 minutes.
+- Old pairing codes: `gate/devices/new` answers 410. Phones paired before keep working and are listed under
+  "Phones paired with the old codes" until a manager removes them.
