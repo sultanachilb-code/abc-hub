@@ -66,7 +66,7 @@ export async function addinUser(env, request) {
   return Object.assign(u, { _addin: true });
 }
 /* paths a token may use */
-export const addinAllowed = path => path === "me" || path.startsWith("ops/") || path === "addin/context" || path === "addin/disconnect";
+export const addinAllowed = path => path === "me" || path.startsWith("ops/") || path.startsWith("fu/") || path === "addin/context" || path === "addin/disconnect";
 
 /* signed in (hub session): make a code, list / remove connected Outlooks.  Token: context, disconnect */
 export async function addinRoute(env, path, method, b, request, me, d) {

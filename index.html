@@ -429,6 +429,21 @@ body.hl-docked main{padding-bottom:110px}
 .refresh.spin svg{animation:sp .8s linear infinite}
 .brief-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 /* ---------- Day to Day Operations: live timeline of today (see docs/FEATURE-day-to-day.md) ---------- */
+.fu-sec{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px 20px}
+.fu-sec .fu-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.fu-sec .fu-h h2{margin:0;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.fu-sec .fu-h span{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.fu-sub{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 7px}
+.fu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.fu-c{border-radius:16px;padding:11px 13px;border:1px solid var(--line);border-left:6px solid var(--c);background:color-mix(in srgb,var(--c) 7%,var(--surface));min-width:0}
+.fu-c.high{--c:#E5484D}.fu-c.medium{--c:#F08C2E}.fu-c.low{--c:#E8B923}
+.fu-c .t{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--c) 75%,#000)}
+:root[data-theme="dark"] .fu-c .t{color:var(--c)}
+.fu-c b{display:block;font-size:.88rem;margin:3px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fu-c small{font-size:.74rem;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fu-c .bt{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.fu-c .bt button,.fu-c .bt a{font:inherit;font-size:.72rem;font-weight:700;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--brand-2);cursor:pointer;text-decoration:none}
+@media (max-width:600px){.fu-sec{padding:14px;border-radius:18px}.fu-grid{grid-template-columns:1fr}}
 .d2d{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:20px;position:relative}
 .d2d-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 main section.d2d h2{margin:0;font-size:.82rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -1196,12 +1211,36 @@ const show = id => ["boot","auth","home","appview","admin"].forEach(v => $("#" +
 /* =====================================================================
    BOOT & SIGN-IN
    ===================================================================== */
+/* ---------- Follow-ups (Oct 2026): flagged emails from the Outlook add-in — "Action needed" on the home page ---------- */
+let FU = null;
+async function loadFollowups(){
+  try { FU = await api("fu/list"); } catch { FU = null; }
+  const s = $("#fuSlot"); if (s) s.innerHTML = fuHtml();
+}
+function fuHtml(){
+  if (!FU || !FU.list.length) return "";
+  const PL = { high: "High", medium: "Medium", low: "Low" };
+  const day = d => d === FU.today ? "Today" : d === FU.tomorrow ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const card = f => `<div class="fu-c ${f.priority}"><div class="t">● ${PL[f.priority]} · ${f.due < FU.today ? "Overdue · " + day(f.due) : day(f.due)}</div>
+      <b title="${esc(f.subject)}">${esc(f.subject)}</b><small>${esc(f.sender || "")}${f.sender ? " · " : ""}flagged ${esc(new Date(f.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</small>
+      <div class="bt"><button data-fu="done" data-id="${f.id}">✓ Done</button><button data-fu="later" data-id="${f.id}">+1 day</button>${f.link ? `<a href="${esc(f.link)}" target="_blank" rel="noopener">Open email</a>` : ""}</div></div>`;
+  const now = FU.list.filter(f => f.due <= FU.today), next = FU.list.filter(f => f.due === FU.tomorrow);
+  return `<section class="fu-sec" id="fuSec"><div class="fu-h"><span style="font-size:1.1rem;margin:0">🚩</span><h2>Action needed · your follow-ups</h2><span>Today ${now.length} · Tomorrow ${next.length}</span></div>
+    ${now.length ? `<div class="fu-sub">Today</div><div class="fu-grid">${now.map(card).join("")}</div>` : ""}
+    ${next.length ? `<div class="fu-sub">Tomorrow</div><div class="fu-grid">${next.map(card).join("")}</div>` : ""}</section>`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-fu]"); if (!b) return;
+  b.disabled = true;
+  try { await api("fu/" + b.dataset.fu, { id: +b.dataset.id }); } catch (er){ toast(er.message, true); }
+  loadFollowups();
+});
 /* ---------- Refresh on return + hub version (Oct 2026) ---------- */
 let HIDDEN_AT = 0, FRESH_AT = Date.now(), HUB_VER = "";
 function refreshHome(){
   if (!ME || !ME.user) return;
   FRESH_AT = Date.now();
-  loadBrief(); if (seniorView()) loadRoleBrief();
+  loadBrief(); if (seniorView()) loadRoleBrief(); loadFollowups();
   loadHealth(); loadNotifications(); loadToolSummary(); loadToday(); loadAnnouncements(); checkApprovals();
   paintFoot(); hubVersion();
 }
@@ -1311,7 +1350,7 @@ function startHub(){
   renderHome();
   loadAnnouncements();
   hubVersion();
-  loadBrief();
+  loadBrief(); loadFollowups();
   loadMoment(); setInterval(loadMoment, 5 * 60000);   // Message of the moment
   loadHealth();
   loadNotifications();
@@ -3138,6 +3177,7 @@ function renderHome(){
   if (!q){   // Home layouts: Smart cards · Orbit · Glass dock (search keeps the plain list below)
     html += `<div id="momentSlot">${momentHtml()}</div>`;   // Message of the moment, above Day to Day
     if (groups.includes(DAY_GROUP) && showD2D()) html += d2dHtml();
+    html += `<div id="fuSlot">${fuHtml()}</div>`;   // Follow-ups: "Action needed" between Day to Day and All tools
     html += hlHtml(groups);
   } else hlDock(null);
   if (!q) groups.length = 0;
