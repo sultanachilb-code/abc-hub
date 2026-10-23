@@ -129,6 +129,12 @@ button{background:none;border:0;cursor:pointer}
 .tf-on{font-size:.72rem;font-weight:800;color:var(--ok);background:rgba(46,139,87,.12);border-radius:999px;padding:2px 8px;margin-left:6px}
 .pf-mob{display:flex;gap:6px;align-items:center;justify-content:flex-end;min-width:0}
 .pf-mob input{height:34px;width:150px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);padding:0 10px;font:inherit;font-size:.86rem;text-align:right}
+dialog.wl-big{width:min(680px,calc(100% - 20px));max-height:94dvh}
+.wl-big .wl-hero{padding:26px 28px;gap:18px}.wl-big .wl-hero img{width:58px;height:58px}.wl-big .wl-hero b{font-size:1.4rem}.wl-big .wl-hero small{font-size:.92rem}
+.wl-big .sheet-body{padding:18px 22px}.wl-big .wl-row{padding:15px 16px;gap:14px;margin-bottom:10px;border-radius:16px}
+.wl-big .wl-row b{font-size:1.02rem}.wl-big .wl-row small{font-size:.86rem}.wl-big .wl-ic{font-size:1.7rem;width:44px}
+.wl-big .wl-row .btn{min-width:96px;height:40px}.wl-big .sheet-f{padding:14px 22px 18px}.wl-big .sheet-f .btn{height:44px;min-width:120px}
+@media (max-width:560px){.wl-big .wl-hero{padding:20px 18px}.wl-big .wl-hero b{font-size:1.15rem}.wl-big .sheet-body{padding:14px}.wl-big .wl-row{padding:12px}.wl-big .wl-row .btn{min-width:0}}
 .wl-hero{display:flex;gap:14px;align-items:center;padding:20px 22px;background:linear-gradient(135deg,#2A0F45,#4A1F73);color:#fff}
 .wl-hero img{width:46px;height:46px;object-fit:contain}
 .wl-hero b{display:block;font-size:1.12rem}
@@ -1433,7 +1439,8 @@ let welcomeShownSession = false;
 function welcomeSeen(){ if (welcomeShownSession) return true; try { return !!localStorage.getItem(WKEY()); } catch { return false; } }
 function welcomeDone(){ welcomeShownSession = true; try { localStorage.setItem(WKEY(), new Date().toISOString()); } catch {} }
 async function welcomeState(){
-  const st = { push: "todo", install: isStandalone() ? "done" : "todo", camera: "todo", passkey: "todo" };
+  const st = { push: "todo", install: isStandalone() ? "done" : "todo", camera: "todo", passkey: "todo", outlook: "todo" };
+  try { const o = await api("ms/status"); st.outlook = !o.on ? "na" : o.connected ? "done" : "todo"; } catch { st.outlook = "na"; }   // Outlook sending
   try { if (!pushSupported()) st.push = iOS && !isStandalone() ? "later" : "na"; else if (Notification.permission === "denied") st.push = "blocked"; else if (Notification.permission === "granted" && await currentSub()) st.push = "done"; } catch {}
   try { const p = navigator.permissions && await navigator.permissions.query({ name: "camera" }); if (p && p.state === "granted") st.camera = "done"; else if (p && p.state === "denied") st.camera = "blocked"; } catch {}
   if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) st.camera = "na";
@@ -1445,12 +1452,13 @@ async function welcomeState(){
 async function welcomeSheet(){
   welcomeShownSession = true;
   const first = esc(String(ME.user.name || "").split(" ")[0]);
-  const ICON = { push: "🔔", install: "📲", camera: "📷", passkey: "🔑" };
+  const ICON = { push: "🔔", install: "📲", camera: "📷", passkey: "🔑", outlook: "📧" };
   const ITEMS = [
     ["push", "Alerts on this device", "Emergency alerts, reminders and handovers — even when the hub is closed.", "Allow"],
     ["install", "Install the hub", "Opens like an app from your home screen or taskbar. Needed on iPhone for alerts.", "Install"],
     ["camera", "Camera", "Photos in checklists, works forms and QR scanning.", "Allow"],
-    ["passkey", "Face ID / fingerprint / Windows Hello", "Sign in safely without a code — your second step on this device.", "Turn on"]
+    ["passkey", "Face ID / fingerprint / Windows Hello", "Sign in safely without a code — your second step on this device.", "Turn on"],
+    ["outlook", "Connect your Outlook", "Hub emails you send (schedule, handover, reminders) leave from your own mailbox and appear in your Sent Items.", "Connect"]
   ];
   const draw = async () => {
     const st = await welcomeState();
@@ -1460,7 +1468,8 @@ async function welcomeSheet(){
         : v === "later" ? `<span class="wl-na">After installing</span>` : `<button class="btn small" data-w="${k}">${btn}</button>`;
       return `<div class="wl-row ${v === "done" ? "ok" : ""}"><span class="wl-ic">${ICON[k]}</span><div class="main"><b>${esc(t)}</b><small>${esc(d)}</small></div>${right}</div>`; };
     const left = ITEMS.filter(([k]) => st[k] === "todo").length;
-    sheet.classList.remove("pf-sheet");
+    sheet.classList.remove("pf-sheet"); sheet.classList.add("wl-big");
+    sheet.addEventListener("close", () => sheet.classList.remove("wl-big"), { once: true });   // the same sheet is used by other windows
     sheet.innerHTML = `<div class="wl-hero"><img src="icons/abc-logo-white.png" alt="ABC"><div><b>Welcome to the hub, ${first}</b><small>Give this device what it needs — one tap each. You can change any of it later in Profile settings.</small></div></div>
       <div class="sheet-body">${ITEMS.map(row).join("")}<div id="wlMsg"></div></div>
       <div class="sheet-f"><button class="btn ghost" data-w="later">Later</button><button class="btn" data-w="done">${left ? "Done for now" : "All set"}</button></div>`;
@@ -1469,8 +1478,9 @@ async function welcomeSheet(){
   sheet.onclick = async e => {
     const b = e.target.closest("[data-w]"); if (!b) return;
     const k = b.dataset.w, msg = t => { const m = $("#wlMsg"); if (m) m.innerHTML = t ? `<div class="msg err" style="margin-top:8px">${esc(t)}</div>` : ""; };
-    if (k === "later"){ welcomeShownSession = true; return sheet.close(); }
-    if (k === "done"){ welcomeDone(); return sheet.close(); }
+    if (k === "later"){ welcomeShownSession = true; sheet.classList.remove("wl-big"); return sheet.close(); }
+    if (k === "done"){ welcomeDone(); sheet.classList.remove("wl-big"); return sheet.close(); }
+    if (k === "outlook"){ b.disabled = true; try { const r = await api("ms/connect"); location.href = r.url; } catch (er){ b.disabled = false; msg(er.message); } return; }   // comes back here after the Microsoft sign-in
     b.disabled = true; msg("");
     try {
       if (k === "push") await pushOn("important");
