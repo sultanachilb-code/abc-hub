@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Preventive Maintenance · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<!-- Preventive Maintenance: the tenant's page, opened from the email link /pm/<token> (no hub account). See docs/FEATURE-pm.md -->
+<style>
+:root{--brand:#4A1F73;--deep:#2A0F45;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--line:#E6E0EE;--ok:#1E8A4C;--warn:#B8740F;--bad:#B03A2E}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh}
+.hd{background:linear-gradient(140deg,var(--deep),var(--brand));color:#fff;padding:22px 20px 74px;text-align:center}
+.hd img{height:34px}.hd small{display:block;opacity:.8;font-size:.8rem;margin-top:8px;letter-spacing:.06em;text-transform:uppercase}
+.wrap{width:min(640px,calc(100% - 24px));margin:-56px auto 30px}
+.card{background:var(--card);border-radius:22px;box-shadow:0 18px 50px rgba(42,15,69,.14);padding:20px 18px}
+h1{font-size:1.3rem}.sub{color:var(--muted);font-size:.88rem;margin-top:3px}
+.ar{direction:rtl;font-size:.86rem;color:var(--muted);margin-top:4px}
+.dl{display:flex;gap:10px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
+.pill{border-radius:99px;padding:6px 12px;font-weight:800;font-size:.8rem;background:rgba(74,31,115,.08);color:var(--brand)}
+.pill.ok{background:rgba(30,138,76,.12);color:var(--ok)}.pill.bad{background:rgba(176,58,46,.12);color:var(--bad)}
+.bar{height:8px;border-radius:4px;background:#EEE9F4;overflow:hidden;margin:12px 0 2px}.bar i{display:block;height:100%;background:var(--ok);border-radius:4px;transition:width .3s}
+.cert{display:flex;gap:12px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+.cert:first-of-type{border-top:0}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.missing .dot{background:#C9C2D4}.pending .dot{background:#E0A82E}.approved .dot{background:var(--ok)}.rejected .dot{background:var(--bad)}
+.cert .m{flex:1;min-width:0}.cert b{display:block;font-size:.95rem}.cert small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px;line-height:1.4}
+.rejected small{color:var(--bad);font-weight:600}
+.up{border:0;border-radius:12px;padding:10px 14px;font:inherit;font-weight:800;font-size:.84rem;background:var(--brand);color:#fff;cursor:pointer;white-space:nowrap}
+.up.again{background:var(--bad)}.up:disabled{opacity:.5}
+.st{font-size:.78rem;font-weight:800;white-space:nowrap}.pending .st{color:var(--warn)}.approved .st{color:var(--ok)}
+.note{font-size:.8rem;color:var(--muted);line-height:1.55;margin-top:16px}
+.msg{margin-top:12px;border-radius:12px;padding:10px 12px;font-size:.86rem;font-weight:600}
+.msg.ok{background:rgba(30,138,76,.12);color:var(--ok)}.msg.bad{background:rgba(176,58,46,.12);color:var(--bad)}
+.foot{text-align:center;font-size:.72rem;color:var(--muted);margin-top:18px}
+@media (prefers-color-scheme:dark){:root{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}.bar{background:#2E2440}}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><small id="site">Preventive maintenance</small></div>
+<div class="wrap"><div class="card" id="app"><p class="sub">Loading…</p></div>
+<div class="foot">ABC · Mall Operations · this page is personal to your shop</div></div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TK = (location.pathname.match(/\/pm\/([A-Za-z0-9]{18})/) || [])[1] || new URLSearchParams(location.search).get("t") || "";
+let D = null, MSG = "";
+async function call(path, body){
+  const r = await fetch(`/api/pm-ext/${TK}${path}`, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || "Something went wrong — try again");
+  return j.data;
+}
+async function load(){ try { D = await call(""); draw(); } catch (e){ $("#app").innerHTML = `<h1>Link not valid</h1><p class="sub">${esc(e.message)}</p>`; } }
+function draw(){
+  $("#site").textContent = `ABC ${D.siteName} · Preventive maintenance`;
+  const n = D.certs.length, ok = D.certs.filter(c => c.status === "approved").length, sent = D.certs.filter(c => c.status !== "missing" && c.status !== "rejected").length;
+  const dl = new Date(D.deadline + "T12:00:00Z"), days = Math.ceil((dl - Date.now()) / 864e5);
+  const dlTxt = dl.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  $("#app").innerHTML = `<h1>${esc(D.brand)}</h1><div class="sub">${esc(D.monthLabel)} — preventive maintenance certificates</div>
+    <div class="ar">شهادات الصيانة الوقائية — يرجى تحميل كل شهادة قبل الموعد النهائي</div>
+    <div class="dl">${D.completed ? `<span class="pill ok">✓ All approved — thank you</span>` : D.closed ? `<span class="pill bad">Upload period ended</span>`
+      : `<span class="pill ${days <= 5 ? "bad" : ""}">Deadline ${esc(dlTxt)}${days >= 0 ? ` · ${days} day${days === 1 ? "" : "s"} left` : " · passed"}</span>`}<span class="pill">${ok} of ${n} approved</span></div>
+    <div class="bar"><i style="width:${n ? Math.round(sent / n * 100) : 0}%"></i></div>
+    <div style="margin-top:8px">${D.certs.map(c => `<div class="cert ${c.status}"><span class="dot"></span><div class="m"><b>${esc(c.cert)}</b>
+        <small>${c.status === "missing" ? "Not uploaded yet" : c.status === "pending" ? `Uploaded ${esc(new Date(c.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} · under review` : c.status === "approved" ? "Approved" : `Rejected — ${esc(c.reason)}${c.comment ? ": " + esc(c.comment) : ""}. Upload a corrected certificate.`}</small></div>
+        ${c.status === "approved" ? `<span class="st">✓ Approved</span>` : D.closed ? "" : c.status === "pending" ? `<button class="up" style="background:#EEE9F4;color:#4A1F73" data-up="${c.id}">Replace</button>` : `<button class="up ${c.status === "rejected" ? "again" : ""}" data-up="${c.id}">${c.status === "rejected" ? "Upload again" : "Upload"}</button>`}</div>`).join("")}</div>
+    ${MSG}
+    <p class="note">Upload a PDF or a clear photo of each certificate (max 10 MB), issued and stamped by an approved contractor. The mall's operations team reviews each one.
+      Certificates not approved within 5 days after the deadline are treated as a breach (non-performance of preventive maintenance).</p>
+    <input type="file" id="file" accept="application/pdf,image/*" hidden>`;
+  $("#app").querySelectorAll("[data-up]").forEach(b => b.onclick = () => { const f = $("#file"); f.dataset.id = b.dataset.up; f.value = ""; f.click(); });
+  $("#file").onchange = upload;
+}
+async function shrink(file){
+  if (!/^image\//.test(file.type) || file.size < 1.5e6) return new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(file); });
+  const url = URL.createObjectURL(file), im = new Image(); await new Promise((res, rej) => { im.onload = res; im.onerror = rej; im.src = url; });
+  const s = Math.min(1, 2200 / Math.max(im.width, im.height)), cv = document.createElement("canvas"); cv.width = Math.round(im.width * s); cv.height = Math.round(im.height * s);
+  cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); return cv.toDataURL("image/jpeg", .85);
+}
+async function upload(e){
+  const f = e.target.files[0], id = Number(e.target.dataset.id); if (!f) return;
+  if (f.size > 10 * 1024 * 1024 && !/^image\//.test(f.type)) { MSG = `<div class="msg bad">The file is larger than 10 MB.</div>`; return draw(); }
+  document.querySelectorAll("[data-up]").forEach(b => b.disabled = true);
+  MSG = `<div class="msg">Uploading ${esc(f.name)}…</div>`; draw(); document.querySelectorAll("[data-up]").forEach(b => b.disabled = true);
+  try { await call("/upload", { certId: id, name: f.name, data: await shrink(f) }); MSG = `<div class="msg ok">✓ ${esc(f.name)} uploaded — the operations team will review it.</div>`; D = await call(""); }
+  catch (er){ MSG = `<div class="msg bad">${esc(er.message)}</div>`; }
+  draw();
+}
+load();
+</script>
+</body>
+</html>

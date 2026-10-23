@@ -41,9 +41,11 @@ import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
 import { extFacts } from "./modules/extdb.js";
 import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
+import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
+import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
-import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
+import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
@@ -236,7 +238,8 @@ const APP_ACCESS = {
   exec: ["MM",  "OM",  "LEAD"],
   accuracy: ["MM",  "OM"],
   projects: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
-  "keybox-late": ["MM", "OM", "SMS", "MS", "MO"],   // Key Box: late-key alerts go to the operations team only
+  "keybox-late": ["MM", "OM", "SMS", "MS", "MO"],
+  "pm-ops": ["MM", "OM", "SMS", "MS", "MO"],   // Preventive Maintenance: launches, extensions to approve, breaches → operations team   // Key Box: late-key alerts go to the operations team only
   budget: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snaglist: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   snagreport: ["MM", "OM", "SMS", "LEAD"],
@@ -373,6 +376,7 @@ async function ensureSchema(env) {
   await outlookSchema(env);   // Outlook sending
   await followupSchema(env);   // Follow-ups
   await keyboxSchema(env);   // Key Box
+  await pmSchema(env);   // Preventive Maintenance
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
   const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
@@ -488,6 +492,12 @@ export default {
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
       return new Response(r.body, { status: r.status, headers: h });
     }
+    /* Preventive Maintenance: the tenant's link opens the upload page (no hub account) */
+    if (/^\/pm\/[A-Za-z0-9]{18}\/?$/.test(url.pathname)) {
+      const r = await env.ASSETS.fetch(new Request(new URL("/tools/pmtenant", url), request));
+      const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
+      return new Response(r.body, { status: r.status, headers: h });
+    }
     if (/^\/reception\/[\w-]{16,40}\/?$/.test(url.pathname)) {
       const r = await env.ASSETS.fetch(new Request(new URL("/tools/directory", url), request));
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
@@ -518,6 +528,7 @@ export default {
       if (beirutHour() >= 8) await ccPackNotice(env).catch(e => console.error("cleanpack", e && e.message));   // Cleaning Control: the monthly cleaning pack is ready
       await polEmbedPending(env, t => embedTexts(env, t), { limit: 48, cron: true }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
       await outlookRun(env, { today: beirutToday, notifyAdmins, fallback: relayScript }).catch(e => console.error("outlook", e && e.message));   // Outlook sending: queue + secret expiry
+      await pmRun(env, { ...PM_DEPS, hour: beirutHour, raiseEvent }).catch(e => console.error("pm", e && e.message));   // Preventive Maintenance
       await keyboxRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("keybox", e && e.message));   // Key Box: late keys
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await pushRun(env).catch(e => console.error("push", e && e.message));
@@ -571,6 +582,7 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
     { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
   if (path.startsWith("patrol-ext/")) return ok(await patrolPublic(env, path.slice(11), method, body, { siteName, today: beirutToday, raiseEvent }));   // Security Patrol: the guards' shared link
+  if (path.startsWith("pm-ext/")) return ok(await pmPublic(env, path.slice(7), method, body, { siteName, now: nowIso, today: beirutToday }));   // Preventive Maintenance: the tenant's link
   if (path.startsWith("qp-pass/") && method === "GET") return ok(await qpPublic(env, path.slice(8), { siteName }));   // Quick Access Pass: the visitor's page (the token is the key)
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
@@ -664,6 +676,7 @@ async function route(request, env, ctx, url) {
   }   // Tenant Works Forms feature: the PDF
   if (path.startsWith("ops/")) {
     const out = await opsRoute(env, me, path.slice(4), method, body, url);
+    if (out instanceof Response) return out;   // files streamed from storage (e.g. PM certificates)
     if (method === "POST") await auditOps(env, me, path.slice(4), body || {}, out).catch(() => {});   // Change history feature
     return ok(out);
   }
@@ -1098,6 +1111,9 @@ async function handoverRecipients(env, site, shift) {
 
 /* every hub email goes through here: the sender's own Outlook (or the automatic sender) when connected — modules/outlook.js —
    otherwise the old mail relay (Google Apps Script, ~100 recipients a day). m.from = the person who pressed send. */
+/* Preventive Maintenance: shared helpers (bulk tenant emails go through the Outlook queue when it is set up) */
+const PM_DEPS = { SITES, siteName: s => SITES[s] || s, hubUrl: HUB_URL, now: () => nowIso(), today: () => beirutToday(), readSheet: (n, d) => readSheet(n, d),
+  sendMany: async (env, msgs) => { const q = await outlookBulk(env, msgs).catch(() => null); if (q) return q; let n = 0; for (const m of msgs) { const r = await relay(env, m); if (r.ok) n++; } return { sent: n }; } };
 async function relay(env, m) {
   const o = await outlookSend(env, m).catch(e => { console.error("outlook", e && e.message); return null; });
   if (o) return o;
@@ -1265,11 +1281,11 @@ async function notificationsFor(env, me) {
   }
   const mySites = sitesOf(me);
   events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))
-    && (e.app !== "keybox-late" || roleAllows(me, e.app))).slice(0, 80);   // Key Box late keys: operations team only
+    && (!["keybox-late", "pm-ops"].includes(e.app) || roleAllows(me, e.app))).slice(0, 80);   // Key Box late keys: operations team only
   return { events, readAt: me.notif_read_at || "" };
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
-const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox"]);
+const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm"]);
 const roleAllows = (u, app) => u.role === "ADMIN" || TESTING_OPEN.has(app) || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u));
 
 /* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
@@ -1373,7 +1389,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { followup: "🚩 Follow-up", "keybox-late": "🔑 Key Box", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
+  const names = { followup: "🚩 Follow-up", "keybox-late": "🔑 Key Box", "pm-ops": "🛠 Preventive Maintenance", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -1706,6 +1722,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "digest/set" && method === "POST") { await env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE email = ?").bind(b.on ? 1 : 0, me.email).run(); return { on: !!b.on }; }
   if (p.startsWith("tr/")) return trainingRoute(env, p, method, b, url, { site, me, can, now: nowIso, today: beirutToday, siteName, staff: siteStaff, posKey: accessKey });   // Training tracker
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
+  if (p.startsWith("pm/")) return pmRoute(env, p, method, b, url, { ...PM_DEPS, site, me, canSite, raiseEvent,   // Preventive Maintenance (modules/pm.js)
+    isOps: u => u.role === "ADMIN" || isFull(u) || (u.role === "SUPERVISOR" && u.position !== "WH"), isBoss: u => u.role === "ADMIN" || isFull(u) });
   if (p.startsWith("kb/")) return keyboxRoute(env, p, method, b, url, { site, me, canSite, siteName, audit: auditMe,   // Key Box (modules/keybox.js)
     isOps: u => u.role === "ADMIN" || isFull(u) || u.role === "SECURITY" || (u.role === "SUPERVISOR" && u.position !== "WH") });
   if (p.startsWith("ind/")) {   // Operations Induction (modules/induction.js)
