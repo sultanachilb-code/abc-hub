@@ -151,6 +151,13 @@ export async function queueMail(env, sender, msgs, batch = "") {
   for (let i = 0; i < ops.length; i += 90) await env.DB.batch(ops.slice(i, i + 90));
   return b;
 }
+/* bulk emails from the automatic sender (paced by the cron) — null when Outlook sending is not set up */
+export async function outlookBulk(env, msgs) {
+  if (!msOn(env)) return null;
+  const s = await pickSender(env, "");
+  if (!s) return null;
+  return { batch: await queueMail(env, s, msgs), queued: msgs.length, from: s };
+}
 export async function queueState(env, batch) {
   const r = await env.DB.prepare("SELECT status, COUNT(*) AS n FROM ms_queue WHERE batch = ? GROUP BY status").bind(batch).all();
   const o = { wait: 0, sent: 0, failed: 0 }; for (const x of r.results || []) o[x.status] = x.n;
