@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketing Participation · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Marketing Participation (Upcoming - Testing) — docs/FEATURE-mkt.md */
+.cmp{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;flex-wrap:wrap}
+.cmp:hover{border-color:var(--brand-2)}.cmp .m{flex:1;min-width:200px}.cmp .m b{display:block}.cmp small{color:var(--muted);font-size:.78rem}
+.pill2{font-size:.72rem;font-weight:800;border-radius:99px;padding:4px 9px;white-space:nowrap}
+.s-open{background:#FFF1D6;color:#8A6200}.s-scheduled{background:#EEE9F4;color:#5B4E70}.s-closed{background:#ECECEC;color:#555}
+.p-yes{background:#E3F4EA;color:#1E7A4F}.p-no{background:#FDECEC;color:#B0283C}.p-wait{background:#FFF1D6;color:#8A6200}.p-mail{background:#EEE9F4;color:#5B4E70}
+.sec{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.fm{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:4px}
+.fm label{font-size:.76rem;font-weight:700;color:var(--muted);margin-top:8px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.ck{display:flex;gap:6px;flex-wrap:wrap}
+.ck span{border:1px solid var(--line);border-radius:99px;padding:6px 11px;font-size:.8rem;cursor:pointer;background:var(--surface);user-select:none}
+.ck span.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.ck span small{opacity:.7;margin-left:4px}
+textarea.inp{min-height:110px;padding:10px;resize:vertical;line-height:1.45}
+.sites{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:12px 0}
+.site{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer}
+.site.on{border-color:var(--brand);box-shadow:0 0 0 2px rgba(74,31,115,.18)}
+.site b{font-size:.88rem}.pct{font-size:1.7rem;font-weight:800;color:#1E8A4C;line-height:1.2}
+.stk{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:8px 0 6px;background:var(--paper)}.stk i{display:block}
+.leg{display:flex;gap:9px;font-size:.72rem;color:var(--muted);flex-wrap:wrap}.leg em{font-style:normal;font-weight:800}
+.c1{background:#1E8A4C}.c2{background:#C2283C}.c3{background:#D9D2E3}
+.ft{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.ft span{border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:.78rem;font-weight:700;cursor:pointer;background:var(--surface)}
+.ft span.on{background:#2A0F45;color:#fff;border-color:#2A0F45}
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+table.t{width:100%;border-collapse:collapse;font-size:.82rem;min-width:680px}
+.t th{text-align:left;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);background:var(--paper)}
+.t td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.t td .inp{height:32px;min-width:180px}
+.mut{color:var(--muted);font-size:.76rem}
+.bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+dialog#ed{border:0;border-radius:18px;padding:0;width:min(440px,calc(100% - 24px))}
+dialog#ed .b{padding:16px;display:grid;gap:6px}dialog#ed label{font-size:.76rem;font-weight:700;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Marketing Participation <small>activation memos to tenants</small></h1>
+</div>
+<div class="wrap"><div id="view"><p class="muted">Loading…</p></div></div>
+<dialog id="ed"></dialog>
+<input type="file" id="pdf" accept="application/pdf" hidden>
+<script src="common.js"></script>
+<script>
+let L = null, C = null, SITE = "", FIL = "all", FORM = null;
+const fd = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
+const V = h => { $("#view").innerHTML = h; };
+const STATE = { open: "Open", scheduled: "Scheduled", closed: "Closed" };
+const ANS = { yes: `<span class="pill2 p-yes">✓ Participating</span>`, no: `<span class="pill2 p-no">✗ Not participating</span>`, "": `<span class="pill2 p-wait">No reply</span>` };
+const todayISO = () => new Date(Date.now() + 3 * 36e5).toISOString().slice(0, 10);
+
+async function list(){
+  C = null; L = await api("ops/mk/list");
+  V(`<div class="bar2" style="margin-bottom:12px"><span class="muted">${L.list.length} activation${L.list.length === 1 ? "" : "s"}</span>${L.ops ? `<button class="btn" id="new">＋ New activation</button>` : ""}</div>
+    ${L.list.map(c => `<div class="cmp" data-c="${c.id}"><div class="m"><b>${esc(c.title)}</b><small>${c.sites.map(s => esc(L.sites[s] || s)).join(" · ")} · send ${esc(fd(c.start))} · reply by ${esc(fd(c.end))}</small></div>
+      <span class="pill2 s-${c.state}">${STATE[c.state]}${c.state !== "scheduled" ? ` · ${c.stats.answered}% answered` : ""}</span>
+      <span class="pill2 p-yes">${c.stats.pct}% participating</span><span class="mut">${c.stats.yes}/${c.stats.invited}</span></div>`).join("")
+      || `<div class="card empty" style="padding:22px">No activation yet.${L.ops ? " Press “＋ New activation” to send the first memo." : ""}</div>`}`);
+  $("#view").querySelectorAll("[data-c]").forEach(x => x.onclick = () => open(+x.dataset.c));
+  const n = $("#new"); if (n) n.onclick = () => newForm();
+}
+
+/* ---------- new activation ---------- */
+async function newForm(){
+  const sites = Object.keys(L.sites);
+  FORM = FORM || { title: "", message: "", actFrom: "", actTo: "", start: todayISO(), end: "", sites: sites.length === 1 ? sites : [], depts: [], positions: [], memo: null, aud: null, off: new Set(), mails: {} };
+  const F = FORM, f = await api("ops/mk/filters?sites=" + F.sites.join(","));
+  V(`<button class="btn ghost small" id="back">‹ Activations</button>
+    <div class="fm" style="margin-top:10px">
+      <label>Title</label><input class="inp" id="fT" value="${esc(F.title)}" placeholder="e.g. Black Friday 2026">
+      <label>Message to the tenants</label><textarea class="inp" id="fM" placeholder="ABC is launching … Please confirm whether your shop will take part.">${esc(F.message)}</textarea>
+      <div class="g2"><div><label>Activity from</label><input class="inp" type="date" id="fA1" value="${F.actFrom}"></div><div><label>Activity to</label><input class="inp" type="date" id="fA2" value="${F.actTo}"></div>
+        <div><label>Send on (start)</label><input class="inp" type="date" id="fS" value="${F.start}" min="${todayISO()}"></div><div><label>Reply by (end)</label><input class="inp" type="date" id="fE" value="${F.end}" min="${todayISO()}"></div></div>
+      <p class="mut">The memo goes out on the start day, then a reminder every day until the reply-by date to tenants who haven't answered.</p>
+      <label>Memo (PDF, optional)</label><div><button class="btn ghost small" id="fP">${F.memo ? "📄 " + esc(F.memo.name) + " · change" : "Attach the memo PDF"}</button></div>
+      <label>Flagships</label><div class="ck" id="kS">${sites.map(s => `<span data-v="${s}" class="${F.sites.includes(s) ? "on" : ""}">${esc(L.sites[s])}</span>`).join("")}</div>
+      <label>Sub-category <span class="mut">(none selected = all)</span></label><div class="ck" id="kD">${f.depts.map(x => `<span data-v="${esc(x.name)}" class="${F.depts.includes(x.name) ? "on" : ""}">${esc(x.name)}<small>${x.n}</small></span>`).join("") || `<span class="mut" style="border:0">Choose a flagship first</span>`}</div>
+      <label>Send to contacts <span class="mut">(Tenants Directory position · none selected = all contacts)</span></label><div class="ck" id="kP">${f.positions.map(x => `<span data-v="${esc(x.name)}" class="${F.positions.includes(x.name) ? "on" : ""}">${esc(x.name)}<small>${x.n}</small></span>`).join("") || `<span class="mut" style="border:0">No contact positions in the Directory yet</span>`}</div>
+      <div style="margin-top:12px"><button class="btn" id="fV">Show the tenants</button></div>
+    </div><div id="aud"></div>`);
+  const keep = () => Object.assign(F, { title: $("#fT").value, message: $("#fM").value, actFrom: $("#fA1").value, actTo: $("#fA2").value, start: $("#fS").value, end: $("#fE").value });
+  $("#back").onclick = () => { keep(); list(); };
+  const tog = (id, key, reload) => $(id).onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; const v = s.dataset.v, a = F[key];
+    a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); s.classList.toggle("on"); F.aud = null; $("#aud").innerHTML = ""; if (reload) { keep(); newForm(); } };
+  tog("#kS", "sites", true); tog("#kD", "depts"); tog("#kP", "positions");
+  $("#fP").onclick = () => { const p = $("#pdf"); p.value = ""; p.onchange = () => { const x = p.files[0]; if (!x) return; if (x.size > 8e6) return toast("The memo is larger than 8 MB", true);
+    const r = new FileReader(); r.onload = () => { keep(); F.memo = { name: x.name, data: r.result }; newForm(); }; r.readAsDataURL(x); }; p.click(); };
+  $("#fV").onclick = async () => { keep(); if (!F.sites.length) return toast("Choose at least one flagship", true);
+    try { F.aud = (await api("ops/mk/audience", { sites: F.sites, depts: F.depts, positions: F.positions })).list; F.off = new Set(); audience(); } catch (e){ toast(e.message, true); } };
+  if (F.aud) audience();
+}
+function audience(){
+  const F = FORM, A = F.aud, key = t => `${t.site}|${t.brand}`;
+  const on = A.filter(t => !F.off.has(key(t))), noMail = on.filter(t => !(F.mails[key(t)] || t.emails)).length;
+  $("#aud").innerHTML = `<div class="sec">${on.length} of ${A.length} tenants selected · ${noMail ? `<span style="color:#B0283C">${noMail} without email</span>` : "all have an email ✓"}</div>
+    <div class="tw"><table class="t"><thead><tr><th><input type="checkbox" id="all" ${on.length === A.length ? "checked" : ""}></th><th>Tenant</th><th>Sub-category</th><th>Units</th><th>Emails</th></tr></thead><tbody>
+    ${A.map((t, i) => `<tr><td><input type="checkbox" data-i="${i}" ${F.off.has(key(t)) ? "" : "checked"}></td><td><b>${esc(t.brand)}</b>${F.sites.length > 1 ? `<br><span class="mut">${esc(L.sites[t.site])}</span>` : ""}</td><td>${esc(t.dept)}</td><td class="mut">${esc(t.units)}</td>
+      <td><input class="inp" data-m="${i}" value="${esc(F.mails[key(t)] ?? t.emails)}" placeholder="${t.contacts ? "no contact with this position" : "no contact in the Directory"}"></td></tr>`).join("")}</tbody></table></div>
+    <div class="bar2" style="margin-top:12px"><span class="mut">${F.start > todayISO() ? `Scheduled — the memo goes out on ${esc(fd(F.start))} at 09:00.` : "The memo goes out now."} Reminders every day until ${esc(fd(F.end) || "the reply-by date")}.</span>
+      <button class="btn" id="go">${F.start > todayISO() ? "Schedule" : "Send the memo"} to ${on.length} tenants</button></div>`;
+  $("#aud").querySelectorAll("[data-i]").forEach(c => c.onchange = () => { const k = key(A[+c.dataset.i]); c.checked ? F.off.delete(k) : F.off.add(k); audience(); });
+  $("#all").onchange = e => { F.off = e.target.checked ? new Set() : new Set(A.map(key)); audience(); };
+  $("#aud").querySelectorAll("[data-m]").forEach(c => c.onchange = () => { F.mails[key(A[+c.dataset.m])] = c.value; audience(); });
+  $("#go").onclick = async () => {
+    if (!F.title.trim()) return toast("Give the activation a title", true); if (!F.end) return toast("Set the reply-by date", true);
+    if (!(await confirmBox("Send the activation", `<b>${esc(F.title)}</b> to ${on.length} tenants${F.start > todayISO() ? ` on ${esc(fd(F.start))}` : " now"}, with a daily reminder until ${esc(fd(F.end))}?`, "Send"))) return;
+    $("#go").disabled = true;
+    try { const r = await api("ops/mk/create", { title: F.title, message: F.message, actFrom: F.actFrom, actTo: F.actTo, start: F.start, end: F.end, sites: F.sites, depts: F.depts, positions: F.positions,
+        memo: F.memo, only: on.map(key), extraEmails: F.mails });
+      toast(r.scheduled ? `Scheduled · ${r.tenants} tenants` : `Sent to ${r.mailed} tenants`); FORM = null; open(r.id); } catch (e){ $("#go").disabled = false; toast(e.message, true); } };
+}
+
+/* ---------- one activation ---------- */
+async function open(id){
+  V(`<p class="muted">Loading…</p>`);
+  C = await api(`ops/mk/campaign?id=${id}`);
+  if (SITE && !C.sites.some(s => s.site === SITE)) SITE = "";
+  draw();
+}
+function draw(){
+  const c = C.campaign, T = C.targets.filter(t => !SITE || t.site === SITE), live = c.state === "open";
+  const F = { all: T, yes: T.filter(t => t.answer === "yes"), no: T.filter(t => t.answer === "no"), wait: T.filter(t => !t.answer), mail: T.filter(t => !t.answer && !t.emails) };
+  const rows = F[FIL], waitN = F.wait.filter(t => t.emails).length;
+  V(`<button class="btn ghost small" id="back">‹ Activations</button>
+    <div class="bar2" style="margin-top:10px"><div><h2 style="margin:0">${esc(c.title)} <span class="pill2 s-${c.state}" style="vertical-align:middle">${STATE[c.state]}</span></h2>
+      <span class="mut">By ${esc(c.by)} · send ${esc(fd(c.start))} · reply by <b>${esc(fd(c.end))}</b>${live ? " · daily reminder at 09:00 to tenants who haven't answered" : ""}${c.memo ? ` · <a href="/api/ops/mk/memo?id=${c.id}" target="_blank">📄 ${esc(c.memoName)}</a>` : ""}</span></div>
+      <div class="acts">${C.ops && live ? `<button class="btn small" id="rem" ${waitN ? "" : "disabled"}>🔔 Remind no-reply (${waitN})</button>` : ""}<button class="btn ghost small" id="csv">⇣ Export</button>
+        ${C.ops ? `<button class="btn ghost small" id="ext">Change reply-by</button>${c.state !== "closed" ? `<button class="btn ghost small" id="cls">Close</button>` : ""}` : ""}</div></div>
+    <div class="sites">${C.sites.length > 1 ? card({ site: "", name: "All flagships", ...C.total }) : ""}${C.sites.map(card).join("")}</div>
+    <div class="ft">${[["all", "All"], ["yes", "Participating"], ["no", "Not participating"], ["wait", "No reply"], ["mail", "No email"]].map(([k, n]) => `<span data-f="${k}" class="${FIL === k ? "on" : ""}">${n} · ${F[k].length}</span>`).join("")}</div>
+    <div class="tw"><table class="t"><thead><tr><th>Tenant</th><th>Answer</th><th>Offer / reason</th><th>Reminders</th><th></th></tr></thead><tbody>
+    ${rows.map(t => `<tr><td><b>${esc(t.brand)}</b><br><span class="mut">${esc(t.units)}${t.dept ? " · " + esc(t.dept) : ""}${C.sites.length > 1 && !SITE ? " · " + esc(t.site) : ""}</span>${t.emails ? "" : `<br><span class="pill2 p-mail">no email</span>`}</td>
+      <td>${ANS[t.answer]}${t.at ? `<br><span class="mut">${esc(fd(t.at.slice(0, 10)))}${t.by && t.by !== "tenant" ? " · by " + esc(t.by) : ""}</span>` : t.opened ? `<br><span class="mut">opened the link</span>` : ""}</td>
+      <td>${t.answer === "yes" ? [t.offer, t.details, t.contact].filter(Boolean).map(esc).join("<br>") || "—" : t.answer === "no" ? [t.reason, t.comment].filter(Boolean).map(esc).join("<br>") || "—" : "—"}</td>
+      <td class="mut">${t.mails ? `${t.mails} sent<br>last ${esc(fd(t.lastMail))}` : "—"}</td>
+      <td style="white-space:nowrap">${C.ops ? `${live && !t.answer && t.emails ? `<button class="btn ghost small" data-r="${t.id}" title="Remind now">🔔</button> ` : ""}<button class="btn ghost small" data-e="${t.id}" title="Edit">✎</button> <button class="btn ghost small" data-l="${esc(t.link)}" title="Copy the tenant's link">🔗</button>` : ""}</td></tr>`).join("")
+      || `<tr><td colspan="5" class="mut" style="padding:16px">Nothing here.</td></tr>`}</tbody></table></div>`);
+  $("#back").onclick = () => list();
+  $("#view").querySelectorAll("[data-s]").forEach(x => x.onclick = () => { SITE = x.dataset.s; draw(); });
+  $("#view").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { FIL = x.dataset.f; draw(); });
+  const rem = $("#rem"); if (rem) rem.onclick = async () => { rem.disabled = true; try { const r = await api("ops/mk/remind", { id: c.id, site: SITE }); toast(`Reminder sent to ${r.sent} tenants`); open(c.id); } catch (e){ rem.disabled = false; toast(e.message, true); } };
+  $("#view").querySelectorAll("[data-r]").forEach(b => b.onclick = async () => { b.disabled = true; try { await api("ops/mk/remind", { id: c.id, target: +b.dataset.r }); toast("Reminder sent"); open(c.id); } catch (e){ b.disabled = false; toast(e.message, true); } });
+  $("#view").querySelectorAll("[data-l]").forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.l).then(() => toast("Tenant link copied"), () => toast(b.dataset.l)));
+  $("#view").querySelectorAll("[data-e]").forEach(b => b.onclick = () => edit(C.targets.find(t => t.id === +b.dataset.e)));
+  $("#csv").onclick = () => {
+    const out = [["Flagship", "Unit", "Tenant", "Sub-category", "Answer", "Answered on", "Offer", "Offer details", "Contact", "Reason", "Comment", "Emails", "Reminders sent"],
+      ...C.targets.filter(t => !SITE || t.site === SITE).map(t => [t.site, t.units, t.brand, t.dept, t.answer === "yes" ? "Participating" : t.answer === "no" ? "Not participating" : "No reply", (t.at || "").slice(0, 10), t.offer, t.details, t.contact, t.reason, t.comment, t.emails, t.mails])];
+    const csv = out.map(r => r.map(x => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })); a.download = `${c.title}.csv`; a.click(); };
+  const ex = $("#ext"); if (ex) ex.onclick = () => { const d = $("#ed"); d.innerHTML = `<div class="b"><b>Change the reply-by date</b><label>Reply by</label><input type="date" class="inp" id="nE" value="${c.end}" min="${todayISO()}">
+      <div class="acts" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="x">Cancel</button><button class="btn" id="ok">Save</button></div></div>`; d.showModal();
+    $("#x").onclick = () => d.close(); $("#ok").onclick = async () => { try { await api("ops/mk/edit", { id: c.id, end: $("#nE").value }); d.close(); toast("Reply-by date changed"); open(c.id); } catch (e){ toast(e.message, true); } }; };
+  const cl = $("#cls"); if (cl) cl.onclick = async () => { if (!(await confirmBox("Close the activation", "No more answers or reminders after this.", "Close"))) return; await api("ops/mk/close", { id: c.id }); toast("Closed"); open(c.id); };
+}
+function card(s){
+  return `<div class="site ${SITE === s.site ? "on" : ""}" data-s="${s.site}"><b>${esc(s.name)}</b><div class="pct">${s.pct}%</div><div class="mut">participating · ${s.answered}% answered</div>
+    <div class="stk"><i class="c1" style="width:${s.invited ? s.yes / s.invited * 100 : 0}%"></i><i class="c2" style="width:${s.invited ? s.no / s.invited * 100 : 0}%"></i><i class="c3" style="width:${s.invited ? s.wait / s.invited * 100 : 0}%"></i></div>
+    <div class="leg"><span><em style="color:#1E8A4C">${s.yes}</em> yes</span><span><em style="color:#C2283C">${s.no}</em> no</span><span><em>${s.wait}</em> no reply</span><span>of ${s.invited}</span></div></div>`;
+}
+function edit(t){
+  const d = $("#ed");
+  d.innerHTML = `<div class="b"><b>${esc(t.brand)}</b><span class="mut">${esc(t.units)}</span>
+    <label>Emails</label><input class="inp" id="eM" value="${esc(t.emails)}" placeholder="manager@brand.com, crm@brand.com">
+    <label>Answer (e.g. given by phone)</label><select class="sel" id="eA"><option value="">No reply</option><option value="yes" ${t.answer === "yes" ? "selected" : ""}>Participating</option><option value="no" ${t.answer === "no" ? "selected" : ""}>Not participating</option></select>
+    <label>Reason / comment</label><input class="inp" id="eC" value="${esc(t.answer === "no" ? t.reason : "")}" placeholder="optional">
+    <div class="acts" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="x">Cancel</button><button class="btn" id="ok">Save</button></div></div>`;
+  d.showModal(); $("#x").onclick = () => d.close();
+  $("#ok").onclick = async () => { const body = { id: C.campaign.id, target: t.id, emails: $("#eM").value };
+    if ($("#eA").value !== t.answer || ($("#eA").value === "no" && $("#eC").value !== t.reason)) Object.assign(body, { answer: $("#eA").value, reason: $("#eC").value });
+    try { await api("ops/mk/target", body); d.close(); toast("Saved"); open(C.campaign.id); } catch (e){ toast(e.message, true); } };
+}
+window.hubRefresh = () => C ? open(C.campaign.id) : list();
+list().catch(e => V(`<p class="muted">${esc(e.message)}</p>`));
+</script>
+</body>
+</html>
