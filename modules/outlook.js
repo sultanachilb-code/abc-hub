@@ -199,11 +199,12 @@ export async function outlookRun(env, deps) {
 
 /* ---------- routes ---------- */
 /* GET /api/ms/callback — Microsoft sends the browser back here (public route: the signed state says who it is) */
-export async function outlookCallback(env, url, hubUrl) {
+export async function outlookCallback(env, url, hubUrl, deps = {}) {
   const back = (q) => Response.redirect(`${hubUrl}/?outlook=${q}`, 302);
   if (!msOn(env)) return back("off");
   const state = url.searchParams.get("state") || "", code = url.searchParams.get("code") || "";
   const email = await readState(env, state);
+  if (email === ADDIN) return addinFinish(env, url, hubUrl, deps, state, code);   // the Outlook add-in's "Sign in with Microsoft"
   if (!email) return back("expired");
   if (url.searchParams.get("error")) {
     const e = url.searchParams.get("error");
@@ -226,6 +227,49 @@ export async function outlookCallback(env, url, hubUrl) {
       Date.now() + (Number(j.expires_in) || 3600) * 1000, at).run();
   await env.DB.prepare("DELETE FROM meta WHERE k = ?").bind("ms:lasterr:" + email).run().catch(() => {});
   return back("connected");
+}
+
+/* ---------- the Outlook add-in: "Sign in with Microsoft" instead of the 6-digit code ----------
+   The panel opens an Office dialog on /api/ms/addin-start → Microsoft sign-in → /api/ms/callback (state = add-in)
+   → the hub finds the hub user with the same email, issues the panel's token (and connects Outlook sending too)
+   → a small page hands the token to the panel with Office.context.ui.messageParent. */
+const ADDIN = "addin:";
+export async function outlookAddinStart(env, hubUrl) {
+  if (!msOn(env)) return new Response("Microsoft sign-in is not set up yet.", { status: 503 });
+  const state = await makeState(env, ADDIN);
+  const q = new URLSearchParams({ client_id: env.MS_CLIENT_ID, response_type: "code", redirect_uri: redirectUri(hubUrl), response_mode: "query",
+    scope: SCOPE, state, prompt: "select_account", code_challenge: await challengeOf(await verifierOf(env, state)), code_challenge_method: "S256" });
+  return Response.redirect(`https://login.microsoftonline.com/${env.MS_TENANT_ID}/oauth2/v2.0/authorize?${q}`, 302);
+}
+function addinPage(msg) {   // runs inside the Office dialog
+  const data = JSON.stringify(msg).replace(/</g, "\\u003c");
+  const text = msg.ok ? "Signed in — you can close this window." : (msg.error || "Sign-in failed");
+  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ABC Operations Hub</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script></head>
+<body style="font-family:Segoe UI,system-ui,sans-serif;background:#F7F5FA;color:#22163A;display:grid;place-items:center;height:100vh;margin:0">
+<div style="text-align:center;max-width:320px"><div style="font-size:34px">${msg.ok ? "✓" : "⚠️"}</div><p style="font-size:14px">${text.replace(/[<>&]/g, "")}</p></div>
+<script>const M = ${data}; function send(){ try { Office.context.ui.messageParent(JSON.stringify(M)); } catch (e) {} }
+if (window.Office && Office.onReady) Office.onReady(send); else setTimeout(send, 800);</script></body></html>`,
+    { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+}
+async function addinFinish(env, url, hubUrl, deps, state, code) {
+  if (url.searchParams.get("error")) return addinPage({ ok: false, error: url.searchParams.get("error") === "access_denied" ? "Sign-in was cancelled or is not approved by IT." : "Microsoft sign-in failed." });
+  let j;
+  try { j = await tokenCall(env, { grant_type: "authorization_code", code, redirect_uri: redirectUri(hubUrl), code_verifier: await verifierOf(env, state) }); }
+  catch (e) { return addinPage({ ok: false, error: e.message }); }
+  const me = await fetch("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName", { headers: { authorization: "Bearer " + j.access_token } }).then(r => r.json()).catch(() => ({}));
+  const ids = [me.mail, me.userPrincipalName].map(x => String(x || "").toLowerCase()).filter(Boolean);
+  let issued = null;
+  for (const e of ids) { issued = deps.addinIssue ? await deps.addinIssue(env, e) : null; if (issued) break; }
+  if (!issued) return addinPage({ ok: false, error: `${ids[0] || "This Microsoft account"} has no active hub account — ask the hub administrator to add you.` });
+  /* the same sign-in also connects Outlook sending for this person */
+  const at = new Date().toISOString();
+  if (j.refresh_token) await env.DB.prepare(`INSERT INTO ms_tokens (email, ms_user, ms_name, refresh, access, access_exp, connected_at, last_error) VALUES (?,?,?,?,?,?,?,'')
+    ON CONFLICT(email) DO UPDATE SET ms_user = excluded.ms_user, ms_name = excluded.ms_name, refresh = excluded.refresh, access = excluded.access,
+    access_exp = excluded.access_exp, connected_at = excluded.connected_at, last_error = ''`)
+    .bind(issued.email, ids[0] || issued.email, String(me.displayName || "").slice(0, 80), await seal(env, j.refresh_token), await seal(env, j.access_token),
+      Date.now() + (Number(j.expires_in) || 3600) * 1000, at).run().catch(() => {});
+  return addinPage({ ok: true, token: issued.token, name: issued.name });
 }
 
 /* /api/ms/* for the signed-in user */

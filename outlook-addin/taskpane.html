@@ -86,6 +86,9 @@ body{font-size:14px;background:#F7F5FA;color:#22163A;margin:0}
 .addt{width:100%;border:1px dashed #C9B8DD;background:#fff;color:#4A1F73;border-radius:8px;padding:7px;font:inherit;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:4px}
 .tform{display:grid;gap:6px;background:#fff;border:1px solid #E4DEEC;border-radius:10px;padding:8px;margin-bottom:6px}
 .tform #tT{height:32px;border:1px solid #E4DEEC;border-radius:8px;padding:0 9px;font:inherit}
+.go.ms{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#22163A;border:1px solid #8C8C8C;border-radius:6px;font-weight:600}
+.msq{display:grid;grid-template-columns:9px 9px;gap:2px}.msq i{width:9px;height:9px;display:block}.msq i:nth-child(1){background:#F25022}.msq i:nth-child(2){background:#7FBA00}.msq i:nth-child(3){background:#00A4EF}.msq i:nth-child(4){background:#FFB900}
+details.alt{margin-top:14px}details.alt summary{cursor:pointer;font-size:12px;color:#7B4BB0;font-weight:600}
 .empty2{text-align:center;color:#7A7090;font-size:12px;padding:24px 8px}
 html,body{height:100%}body{display:flex;flex-direction:column;min-height:100vh}#app{flex:1}.foot{margin-top:auto;border-top:1px solid #ECE7F2}
 /* compact, Outlook-sized (Oct 2026): Segoe UI 13px, smaller controls */
@@ -172,13 +175,34 @@ function attachmentBase64(id){
 /* ---------- connect (email + 6-digit code from the hub) ---------- */
 function connect(msg){
   $("#app").innerHTML = `<div class="t">Connect Outlook to the hub</div>
-    <div class="s">In the hub: your picture → Profile settings → <b>Outlook</b> → <b>Connect Outlook</b>, then type the 6-digit code here.</div>
-    <label class="hint" style="text-align:left;display:block">Your work email</label><input class="inp2" id="cE" type="email" autocomplete="username" value="${esc(DEMO ? "" : (Office.context.mailbox && Office.context.mailbox.userProfile ? Office.context.mailbox.userProfile.emailAddress : ""))}">
-    <label class="hint" style="text-align:left;display:block">Code from the hub</label><input class="inp2 code" id="cC" inputmode="numeric" maxlength="6" placeholder="––––––">
-    <button class="go" id="cGo">Connect</button><div id="cMsg">${msg ? `<div class="res err">${esc(msg)}</div>` : ""}</div>`;
+    <div class="s">Sign in once with your ABC Microsoft account — the panel stays connected and your hub emails can leave from your own Outlook.</div>
+    <button class="go ms" id="msGo"><span class="msq"><i></i><i></i><i></i><i></i></span>Sign in with Microsoft</button>
+    <div id="cMsg">${msg ? `<div class="res err">${esc(msg)}</div>` : ""}</div>
+    <details class="alt"><summary>Use a 6-digit code instead</summary>
+      <div class="s" style="margin-top:8px">In the hub: your picture → Profile settings → <b>Outlook</b> → <b>Connect Outlook</b>, then type the code here.</div>
+      <label class="hint" style="text-align:left;display:block">Your work email</label><input class="inp2" id="cE" type="email" autocomplete="username" value="${esc(DEMO ? "" : (Office.context.mailbox && Office.context.mailbox.userProfile ? Office.context.mailbox.userProfile.emailAddress : ""))}">
+      <label class="hint" style="text-align:left;display:block">Code from the hub</label><input class="inp2 code" id="cC" inputmode="numeric" maxlength="6" placeholder="––––––">
+      <button class="go" id="cGo" style="background:#EDE8F3;color:#4A1F73">Connect with the code</button></details>`;
+  const fail = t => { $("#cMsg").innerHTML = `<div class="res err">${esc(t)}</div>`; };
   $("#cGo").onclick = async () => {
     try { const r = await api("addin/pair", { email: $("#cE").value, code: $("#cC").value }); store.set(TOKEN, r.token); start(); }
-    catch (e){ $("#cMsg").innerHTML = `<div class="res err">${esc(e.message)}</div>`; }
+    catch (e){ fail(e.message); }
+  };
+  $("#msGo").onclick = () => {
+    const ui = window.Office && Office.context && Office.context.ui;
+    if (!ui || !ui.displayDialogAsync) return fail("Microsoft sign-in opens only inside Outlook — use the 6-digit code here.");
+    $("#msGo").disabled = true;
+    ui.displayDialogAsync(location.origin + "/api/ms/addin-start", { height: 65, width: 35, promptBeforeOpen: false }, res => {
+      if (res.status !== "succeeded"){ $("#msGo").disabled = false; return fail("Outlook could not open the sign-in window (" + ((res.error && res.error.message) || "blocked") + ")."); }
+      const dlg = res.value;
+      dlg.addEventHandler(Office.EventType.DialogMessageReceived, arg => {
+        let m = {}; try { m = JSON.parse(arg.message); } catch {}
+        try { dlg.close(); } catch {}
+        $("#msGo").disabled = false;
+        if (m.ok && m.token){ store.set(TOKEN, m.token); start(); } else fail(m.error || "Sign-in failed");
+      });
+      dlg.addEventHandler(Office.EventType.DialogEventReceived, () => { $("#msGo").disabled = false; });   // closed by the person
+    });
   };
   $("#foot").innerHTML = "";
 }

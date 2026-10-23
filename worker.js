@@ -18,7 +18,7 @@ import { calendarSchema, calendarRoute, calendarRun, calendarDayEvents, CAL_KIND
 import { historySchema, makeAudit, historyClean, historyList, historyOf } from "./modules/history.js";   // Change history feature — see docs/FEATURE-history.md
 import { evacSchema, evacRoute } from "./modules/evac.js";   // Tenant Evacuation Plan feature — see docs/FEATURE-evacuation.md
 import { projectsSchema, projectsRoute, projectsRun } from "./modules/projects.js";   // Projects feature — see docs/FEATURE-projects.md
-import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
+import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute, addinIssue } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
 import { portalSchema, portalRoute } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
@@ -43,7 +43,7 @@ import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
-import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
+import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
@@ -574,7 +574,8 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("qp-pass/") && method === "GET") return ok(await qpPublic(env, path.slice(8), { siteName }));   // Quick Access Pass: the visitor's page (the token is the key)
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
 
-  if (path === "ms/callback" && method === "GET") return outlookCallback(env, url, HUB_URL);   // Outlook sending: Microsoft sends the browser back here
+  if (path === "ms/callback" && method === "GET") return outlookCallback(env, url, HUB_URL, { addinIssue });
+  if (path === "ms/addin-start" && method === "GET") return outlookAddinStart(env, HUB_URL);   // Outlook add-in: "Sign in with Microsoft" (Office dialog)   // Outlook sending: Microsoft sends the browser back here
   if (path === "addin/pair" && method === "POST") return ok(await addinPair(env, body, request));   // Outlook add-in: email + 6-digit code → token
   let me = await readSession(request, env);
   if (!me) {   // Outlook add-in: the panel signs in with its own token (limited to /me, /ops/* and /addin/*)

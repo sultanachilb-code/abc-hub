@@ -22,3 +22,10 @@ Without the three secrets the feature is off and everything uses the old relay.
 ## Admin → Outlook sending (top of Hub administration)
 Status, client secret expiry date (alerts to admins 30 / 7 / 1 days before, in the hub and by email), automatic sender, connected people, queue counts.
 Secret renewal: paste the new value in `MS_CLIENT_SECRET` → Deploy, then update the date in Admin. Nobody reconnects.
+
+## Outlook add-in: "Sign in with Microsoft" (Oct 2026)
+- The panel's connect screen has **Sign in with Microsoft** (the 6-digit code stays under "Use a 6-digit code instead").
+- It opens an Office dialog on `/api/ms/addin-start` → Microsoft sign-in (same app, same delegated permissions) → `/api/ms/callback`
+  (state marked "addin:") → the hub finds the **active hub user with the same email** (mail or UPN), issues the panel token
+  (`addinIssue`, 120 days) and hands it back with `Office.context.ui.messageParent`. An email with no hub account is refused.
+- The same sign-in also connects **Outlook sending** for that person.
