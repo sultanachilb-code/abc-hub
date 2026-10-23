@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Marketing activation · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<!-- Marketing Participation: the tenant's answer page, opened from the email buttons /mk/<token>?a=yes|no (no hub account). See docs/FEATURE-mkt.md -->
+<style>
+:root{--brand:#4A1F73;--deep:#2A0F45;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--line:#E6E0EE;--ok:#1E8A4C;--no:#B03A2E}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh}
+.hd{background:linear-gradient(140deg,var(--deep),var(--brand));color:#fff;padding:22px 20px 74px;text-align:center}
+.hd img{height:34px}.hd small{display:block;opacity:.8;font-size:.78rem;margin-top:8px;letter-spacing:.06em;text-transform:uppercase}
+.wrap{width:min(600px,calc(100% - 24px));margin:-56px auto 30px}
+.card{background:var(--card);border-radius:22px;box-shadow:0 18px 50px rgba(42,15,69,.14);padding:20px 18px}
+h1{font-size:1.25rem}.sub{color:var(--muted);font-size:.88rem;margin-top:3px;line-height:1.5}
+.msg{white-space:pre-line;font-size:.9rem;line-height:1.55;margin:12px 0}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.86rem;margin:10px 0}.facts dt{color:var(--muted)}
+.memo{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:.84rem;color:var(--brand);font-weight:700;text-decoration:none;margin:4px 0 10px}
+.q{background:#F7F4FA;border-radius:16px;padding:16px;text-align:center;margin-top:10px}
+.q p{font-weight:800;margin-bottom:10px}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.b{border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;font-size:.95rem;cursor:pointer;min-width:180px}
+.b.y{background:var(--ok);color:#fff}.b.n{background:#fff;color:var(--no);border:2px solid var(--no)}
+.ar{direction:rtl;color:var(--muted);font-size:.82rem;margin-top:8px}
+.done{border-radius:14px;padding:13px 14px;font-weight:700;font-size:.92rem;margin:12px 0}
+.done.y{background:rgba(30,138,76,.1);color:var(--ok)}.done.n{background:rgba(176,58,46,.1);color:var(--no)}
+label{display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin:12px 0 5px}
+.in{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:.9rem;background:#fff;color:var(--text)}
+textarea.in{min-height:70px;resize:vertical}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:99px;padding:7px 11px;font-size:.8rem;cursor:pointer;background:#fff;color:var(--text)}.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.save{margin-top:14px;width:100%;background:var(--brand);color:#fff;border:0;border-radius:12px;padding:12px;font:inherit;font-weight:800;cursor:pointer}
+.switch{font-size:.82rem;color:var(--muted);margin-top:12px;text-align:center}.switch a{color:var(--brand);font-weight:700}
+.note{margin-top:10px;border-radius:10px;padding:9px 11px;font-size:.84rem;font-weight:600}.note.ok{background:rgba(30,138,76,.1);color:var(--ok)}.note.bad{background:rgba(176,58,46,.1);color:var(--no)}
+.foot{text-align:center;font-size:.72rem;color:var(--muted);margin-top:18px}
+@media (prefers-color-scheme:dark){:root{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}.q{background:#2A2040}.chip,.in,.b.n{background:#1F1730}}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><small id="site">Marketing activation</small></div>
+<div class="wrap"><div class="card" id="app"><p class="sub">Loading…</p></div>
+<div class="foot">ABC · Mall Operations · this page is personal to your shop</div></div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TK = (location.pathname.match(/\/mk\/([A-Za-z0-9]{18})/) || [])[1] || "";
+const WANT = new URLSearchParams(location.search).get("a");
+const day = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "";
+let D = null, NOTE = "";
+async function call(path, body){
+  const r = await fetch(`/api/mk-ext/${TK}${path}`, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || "Something went wrong — try again");
+  return j.data;
+}
+async function answer(a, extra){
+  try { await call("/answer", { answer: a, ...(extra || {}) }); D = await call(""); NOTE = extra ? `<div class="note ok">✓ Saved — thank you.</div>` : ""; }
+  catch (e){ NOTE = `<div class="note bad">${esc(e.message)}</div>`; }
+  draw();
+}
+async function load(){
+  try { D = await call(""); } catch (e){ $("#app").innerHTML = `<h1>Link not valid</h1><p class="sub">${esc(e.message)}</p>`; return; }
+  if ((WANT === "yes" || WANT === "no") && D.open) {
+    history.replaceState(null, "", location.pathname);
+    if (D.answer !== WANT) return answer(WANT);
+  }
+  draw();
+}
+function chips(list, cur, id){ return `<div class="chips" id="${id}">${list.map(c => `<span class="chip ${c === cur ? "on" : ""}" data-v="${esc(c)}">${esc(c)}</span>`).join("")}</div>`; }
+function draw(){
+  $("#site").textContent = `ABC ${D.siteName} · Marketing activation`;
+  const head = `<h1>${esc(D.title)}</h1><div class="sub">${esc(D.brand)}</div>
+    <dl class="facts">${D.actFrom ? `<dt>Dates</dt><dd>${esc(day(D.actFrom))}${D.actTo && D.actTo !== D.actFrom ? " – " + esc(day(D.actTo)) : ""}</dd>` : ""}<dt>Reply by</dt><dd><b>${esc(day(D.replyBy))}</b></dd></dl>
+    ${D.memo ? `<a class="memo" href="/api/mk-ext/${TK}/memo" target="_blank">📄 ${esc(D.memoName || "Memo")}</a>` : ""}`;
+  let body = "";
+  if (!D.answer) body = `<div class="msg">${esc(D.message)}</div>${D.open ? `<div class="q"><p>Will ${esc(D.brand)} participate?</p><div class="btns"><button class="b y" data-a="yes">✓ Participating</button><button class="b n" data-a="no">✗ Not participating</button></div>
+      <div class="ar">هل ستشاركون؟ اضغط على أحد الزرين</div></div>` : `<div class="done n">The reply period has ended.</div>`}`;
+  else if (D.answer === "yes") body = `<div class="done y">✓ Thank you — ${esc(D.brand)} is <b>participating</b>.</div>
+    ${D.open ? `<p class="sub">Optional — help Marketing prepare the campaign:</p>
+      <label>Your offer</label>${chips(D.offers, D.offer, "off")}
+      <label>Offer details</label><textarea class="in" id="det" placeholder="e.g. Up to 50% on the new collection">${esc(D.details)}</textarea>
+      <label>Contact person (name · mobile)</label><input class="in" id="con" value="${esc(D.contact)}" placeholder="Name · 03 …">
+      <button class="save" id="sv">Save details</button>
+      <p class="switch">Changed your mind? <a href="#" data-a="no">Switch to “Not participating”</a></p>` : ""}`;
+  else body = `<div class="done n">Noted — ${esc(D.brand)} is <b>not participating</b>.</div>
+    ${D.open ? `<label>Reason (helps us plan better)</label>${chips(D.reasons, D.reason, "rs")}
+      <label>Comment (optional)</label><textarea class="in" id="cm">${esc(D.comment)}</textarea>
+      <button class="save" id="sv">Send</button>
+      <p class="switch">Changed your mind? <a href="#" data-a="yes">Switch to “Participating”</a></p>` : ""}`;
+  $("#app").innerHTML = head + body + NOTE;
+  $("#app").querySelectorAll("[data-a]").forEach(b => b.onclick = e => { e.preventDefault(); answer(b.dataset.a); });
+  $("#app").querySelectorAll(".chips").forEach(g => g.onclick = e => { const c = e.target.closest(".chip"); if (!c) return; g.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); });
+  const sv = $("#sv"); if (sv) sv.onclick = () => { const on = id => { const c = document.querySelector(`#${id} .chip.on`); return c ? c.dataset.v : ""; };
+    answer(D.answer, D.answer === "yes" ? { offer: on("off"), details: $("#det").value, contact: $("#con").value } : { reason: on("rs"), comment: $("#cm").value }); };
+}
+load();
+</script>
+</body>
+</html>
