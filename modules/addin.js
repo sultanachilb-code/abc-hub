@@ -53,6 +53,15 @@ export async function addinPair(env, b, request) {
   return { token, name: u.full_name };
 }
 
+/* "Sign in with Microsoft" in the panel (modules/outlook.js): a token for a hub user Microsoft has just confirmed */
+export async function addinIssue(env, email, label = "Outlook · Microsoft sign-in") {
+  const u = await env.DB.prepare("SELECT email, full_name, active FROM users WHERE email = ?").bind(email).first();
+  if (!u || !u.active) return null;
+  const token = b64u(crypto.getRandomValues(new Uint8Array(32)));
+  await env.DB.prepare("INSERT INTO addin_tokens (hash, email, label, created_at, expires_at) VALUES (?,?,?,?,?)")
+    .bind(await sha(token), u.email, label, new Date().toISOString(), new Date(Date.now() + TOKEN_DAYS * 864e5).toISOString()).run();
+  return { token, name: u.full_name, email: u.email };
+}
 /* the person behind an "Authorization: Bearer" token (or null) */
 export async function addinUser(env, request) {
   const m = /^Bearer\s+([A-Za-z0-9_-]{30,})$/.exec(request.headers.get("authorization") || "");
