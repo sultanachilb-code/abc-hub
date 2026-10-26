@@ -483,10 +483,11 @@ async function readSession(request, env) {
     }
   }
   await touchSeen(env, u);
-  /* Administrator mode: an admin with a real role works in the hub with that role; after the ABC logo + password the hub opens as administrator */
-  if (u.is_admin && u.role !== "ADMIN" && u._admUnlocked) {
+  /* An admin with a real role (e.g. Mall Supervisor · Verdun) keeps every administrator access in the hub at all times — all flagships, all tools, all edits —
+     and is shown with the real position. The ABC logo + password only opens the Admin Control Center (administrator mode, /api/admin/*). */
+  if (u.is_admin && u.role !== "ADMIN") {
     u._real = { role: u.role, position: u.position, site: u.site_code || "", roleLabel: (POSITIONS[u.position] || TITLES[u.position] || {}).label || ROLES[u.role] || u.role };
-    u.role = "ADMIN"; u._adminMode = true;
+    u.role = "ADMIN"; u._adminMode = !!u._admUnlocked;
   }
   return u;
 }
