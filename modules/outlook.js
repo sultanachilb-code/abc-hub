@@ -66,10 +66,10 @@ const verifierOf = async (env, state) => (await hmac(env, "pkce:" + state)) + "x
 const challengeOf = async v => b64u(await crypto.subtle.digest("SHA-256", enc.encode(v)));
 
 /* ---------- Microsoft endpoints ---------- */
-async function tokenCall(env, form) {
+async function tokenCall(env, form, scope = SCOPE) {
   const r = await fetch(`https://login.microsoftonline.com/${env.MS_TENANT_ID}/oauth2/v2.0/token`, {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: env.MS_CLIENT_ID, client_secret: env.MS_CLIENT_SECRET, scope: SCOPE, ...form }) });
+    body: new URLSearchParams({ client_id: env.MS_CLIENT_ID, client_secret: env.MS_CLIENT_SECRET, scope, ...form }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) {
     const code = String(j.error || r.status), d = String(j.error_description || "").split("\r\n")[0].slice(0, 220);
@@ -211,7 +211,8 @@ export async function outlookCallback(env, url, hubUrl, deps = {}) {
   if (!msOn(env)) return back("off");
   const state = url.searchParams.get("state") || "", code = url.searchParams.get("code") || "";
   const email = await readState(env, state);
-  if (email === ADDIN) return addinFinish(env, url, hubUrl, deps, state, code);   // the Outlook add-in's "Sign in with Microsoft"
+  if (email === ADDIN) return addinFinish(env, url, hubUrl, deps, state, code);
+  if (email && email.startsWith(RMB)) return rmbFinish(env, url, hubUrl, state, code);   // the report mailbox (Admin Control Center)   // the Outlook add-in's "Sign in with Microsoft"
   if (!email) return back("expired");
   if (url.searchParams.get("error")) {
     const e = url.searchParams.get("error");
@@ -332,4 +333,58 @@ export async function outlookAdmin(env, method, b, me) {
     missing: ["MS_TENANT_ID", "MS_CLIENT_ID", "MS_CLIENT_SECRET"].filter(k => !env[k]),
     expiry: ex ? ex.v : "", auto: await autoSender(env), queue,
     users: (rows.results || []).map(r => ({ email: r.email, name: r.full_name || r.email, msUser: r.ms_user, connectedAt: r.connected_at, lastUsed: r.last_used, sent: r.sent, live: !!r.live, error: r.last_error })) };
+}
+
+/* =====================================================================
+   REPORT MAILBOX (Oct 2026) — docs/FEATURE-report-mailbox.md
+   One Microsoft 365 mailbox (e.g. opsverdunmall@abc.com.lb) where the Salesforce reports arrive. An administrator connects it once
+   in the Admin Control Center: signed in AS that mailbox (Mail.Read), or as a person with Full Access to it (Mail.Read.Shared).
+   Read only — the hub never sends, moves or deletes anything there. The refresh token is encrypted like the others.
+   ===================================================================== */
+const RMB = "rmb:", RMB_SCOPE = "offline_access User.Read Mail.Read Mail.Read.Shared";
+export async function rmbConnectUrl(env, hubUrl, adminEmail, hint) {
+  if (!msOn(env)) throw err("Microsoft sign-in is not set up yet", 503);
+  const state = await makeState(env, RMB + adminEmail);
+  const q = new URLSearchParams({ client_id: env.MS_CLIENT_ID, response_type: "code", redirect_uri: redirectUri(hubUrl), response_mode: "query",
+    scope: RMB_SCOPE, state, prompt: "select_account", code_challenge: await challengeOf(await verifierOf(env, state)), code_challenge_method: "S256" });
+  if (hint) q.set("login_hint", hint);
+  return `https://login.microsoftonline.com/${env.MS_TENANT_ID}/oauth2/v2.0/authorize?${q}`;
+}
+async function rmbFinish(env, url, hubUrl, state, code) {
+  const back = q => Response.redirect(`${hubUrl}/admin?mailbox=${q}#mb`, 302);
+  const by = (await readState(env, state) || "").slice(RMB.length);
+  const e = url.searchParams.get("error");
+  if (e) { await rmbErr(env, e === "access_denied" ? "Sign-in cancelled, or “Read mail” needs IT (admin) approval" : String(url.searchParams.get("error_description") || e).split("\r\n")[0]); return back(e === "access_denied" ? "denied" : "error"); }
+  let j;
+  try { j = await tokenCall(env, { grant_type: "authorization_code", code, redirect_uri: redirectUri(hubUrl), code_verifier: await verifierOf(env, state) }, RMB_SCOPE); }
+  catch (x) { await rmbErr(env, x.message); return back(/consent|admin/i.test(x.message) ? "denied" : "error"); }
+  const me = await fetch("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName", { headers: { authorization: "Bearer " + j.access_token } }).then(r => r.json()).catch(() => ({}));
+  const tok = { refresh: await seal(env, j.refresh_token || ""), access: await seal(env, j.access_token), exp: Date.now() + (Number(j.expires_in) || 3600) * 1000,
+    account: String(me.mail || me.userPrincipalName || "").toLowerCase(), name: String(me.displayName || "").slice(0, 80), at: new Date().toISOString(), by, error: "" };
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('rmb:tok', ?)").bind(JSON.stringify(tok)).run();
+  return back("connected");
+}
+async function rmbGet(env) { const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'rmb:tok'").first().catch(() => null); try { return r ? JSON.parse(r.v) : null; } catch { return null; } }
+async function rmbErr(env, msg) { const t = (await rmbGet(env)) || {}; t.error = String(msg || "").slice(0, 300); t.errorAt = new Date().toISOString(); await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('rmb:tok', ?)").bind(JSON.stringify(t)).run(); }
+export async function rmbStatus(env) {
+  const t = await rmbGet(env);
+  return { on: msOn(env), connected: !!(t && t.refresh), account: t ? t.account || "" : "", name: t ? t.name || "" : "", at: t ? t.at || "" : "", by: t ? t.by || "" : "", error: t ? t.error || "" : "", errorAt: t ? t.errorAt || "" : "" };
+}
+export async function rmbDisconnect(env) { await env.DB.prepare("DELETE FROM meta WHERE k = 'rmb:tok'").run(); }
+/* → { tok, account } or null (not connected / sign-in expired) */
+export async function rmbAccess(env) {
+  const t = await rmbGet(env); if (!t || !t.refresh) return null;
+  if (t.access && t.exp > Date.now() + 120000) { try { return { tok: await open(env, t.access), account: t.account }; } catch {} }
+  let j;
+  try { j = await tokenCall(env, { grant_type: "refresh_token", refresh_token: await open(env, t.refresh) }, RMB_SCOPE); }
+  catch (e) {
+    const dead = /invalid_grant|interaction_required|consent_required/.test(e.ms || "");
+    if (dead) { t.refresh = ""; t.access = ""; }
+    t.error = e.message.slice(0, 300); t.errorAt = new Date().toISOString();
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('rmb:tok', ?)").bind(JSON.stringify(t)).run();
+    if (dead) return null; throw e;
+  }
+  t.access = await seal(env, j.access_token); t.exp = Date.now() + (Number(j.expires_in) || 3600) * 1000; if (j.refresh_token) t.refresh = await seal(env, j.refresh_token); t.error = "";
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('rmb:tok', ?)").bind(JSON.stringify(t)).run();
+  return { tok: j.access_token, account: t.account };
 }

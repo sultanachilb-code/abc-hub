@@ -45,6 +45,7 @@ import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Pre
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
 import { tlSchema, tlRoute } from "./modules/tlist.js";   // Tenant List (YES / NO per tenant, SKU from the CRM sheet) — docs/FEATURE-tenant-list.md
 import { mkSchema, mkRoute, mkPublic, mkRun, extCfg, mailPreview, EMAIL_STYLES } from "./modules/mkt.js";
+import { mbSchema, mbRoute, mbRun } from "./modules/mailbox.js";   // Report mailbox (Outlook, read only) — docs/FEATURE-report-mailbox.md
 import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN, ADMIN_UNLOCK_H } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
@@ -274,6 +275,8 @@ const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
   : u.role === "SECURITY" ? "SEC" : u.role;
 
 /* Morning email */
+const MB_DEPS = { get SITES() { return SITES; }, canSite: (...a) => canSite(...a), isFull: (...a) => isFull(...a), now: () => nowIso(), today: () => beirutToday(),
+  raiseEvent: (...a) => raiseEvent(...a), audit: (...a) => audit(...a), notifyAdmins: (...a) => notifyAdmins(...a) };   // Report mailbox
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
 const beirutHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 const MAIL_HOUR = 8;   // Beirut time
@@ -384,6 +387,7 @@ async function ensureSchema(env) {
   await mkSchema(env);   // Marketing Participation
   await tlSchema(env);   // Tenant List
   await admSchema(env);   // Admin Control Center
+  await mbSchema(env);   // Report mailbox
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
   const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
@@ -582,6 +586,7 @@ export default {
       await mkRun(env, { ...PM_DEPS, hour: beirutHour, raiseEvent }).catch(e => console.error("mk", e && e.message));   // Marketing Participation: daily reminders
       await keyboxRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("keybox", e && e.message));   // Key Box: late keys
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
+      await mbRun(env, MB_DEPS).catch(e => console.error("mailbox", e && e.message));   // Report mailbox: 07:00–08:00 import + 08:05 missing check
       await pushRun(env).catch(e => console.error("push", e && e.message));
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -770,6 +775,7 @@ async function route(request, env, ctx, url) {
       const m = mailPreview({ hubUrl: HUB_URL, siteName: s => SITES[s] || s }, url.searchParams.get("style") || "B", url.searchParams.get("kind") === "reminder" ? "reminder" : "launch", url.searchParams.get("arabic") !== "0");
       return new Response(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#F1EEF4"><div style="font:12px Segoe UI,Arial;color:#6D6479;padding:10px 14px;background:#fff;border-bottom:1px solid #E6E1EC"><b>Subject:</b> ${m.subject.replace(/</g, "&lt;")}</div>${m.html}</body>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
     }
+    if (a.startsWith("cc/mailbox")) return ok(await mbRoute(env, a, method, body, me, { ...MB_DEPS, hubUrl: HUB_URL }));   // Report mailbox
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie,
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },

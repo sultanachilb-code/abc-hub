@@ -72,7 +72,7 @@ export function toDT(v) {
 }
 /* "Achrafieh DS L1", "Achrafieh Department Store", "… Verdun Mall" → the flagship; DS = Department Store */
 const dsN = t => norm(t).replace(/\bdepartment store\b/g, "ds");
-function siteOf(branch, account, SITES) {
+export function siteOf(branch, account, SITES) {
   const b = norm(branch);
   for (const [c, n] of Object.entries(SITES)) if (b && norm(n) === b) return c;
   for (const [c, n] of Object.entries(SITES)) if (b && (b.includes(norm(n)) || norm(n).includes(b))) return c;
