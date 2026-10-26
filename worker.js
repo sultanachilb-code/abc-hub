@@ -44,7 +44,7 @@ import { inductionSchema, inductionRoute, inductionCover } from "./modules/induc
 import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
 import { mkSchema, mkRoute, mkPublic, mkRun } from "./modules/mkt.js";
-import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
+import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN, ADMIN_UNLOCK_H } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
@@ -567,7 +567,7 @@ export default {
       await keyboxRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("keybox", e && e.message));   // Key Box: late keys
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await pushRun(env).catch(e => console.error("push", e && e.message));
-      await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
+      await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
@@ -726,7 +726,22 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("admin/")) {
     if (me.role !== "ADMIN") throw fail("Administrator access only", 403);
     const a = path.slice(6);
+    if (a === "unlock" && method === "POST") {   // Admin Control Center: the admin's password again (ABC logo / /admin) — opens it for 2 hours on this device
+      const lk = lockedMsg(me); if (lk) throw fail(lk, 423);
+      if (!same(await derive(String(body.password || ""), me.salt, me.iterations || ROUNDS), me.hash)) {
+        await logSignin(env, request, me.email, false, "Admin password wrong");
+        if (await passwordFailed(env, me, notifyAdmins)) throw fail(lockedMsg({ locked_until: new Date(Date.now() + 15 * 60000).toISOString() }), 423);
+        throw fail("Wrong password", 403);
+      }
+      await passwordOk(env, me); await logSignin(env, request, me.email, true, "Admin Control Center opened");
+      const exp = Date.now() + ADMIN_UNLOCK_H * 3600e3, vb = b64url(enc.encode(JSON.stringify({ e: me.email, exp })));
+      return json({ ok: true, data: { until: exp } }, 200, { "set-cookie": `hub_adm=${vb}.${await hmac(env.SESSION_SECRET, "adm." + vb)}; Path=/; Max-Age=${ADMIN_UNLOCK_H * 3600}; HttpOnly; Secure; SameSite=Strict` });
+    }
+    if (a === "lock" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": "hub_adm=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict" });
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
+      { const m = (request.headers.get("cookie") || "").match(/(?:^|;\s*)hub_adm=([^;]+)/); let okA = false;
+        if (m) { const [vb, vs] = m[1].split("."); if (vb && vs && same(await hmac(env.SESSION_SECRET, "adm." + vb), vs)) { const q = JSON.parse(new TextDecoder().decode(unb64url(vb))); okA = q.e === me.email && q.exp > Date.now(); } }
+        if (!okA) throw fail("Enter your admin password to open the Admin Control Center", 428, { needsAdminPassword: true }); }
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie,
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
         outlookRun: e => outlookRun(e, { today: beirutToday, notifyAdmins, fallback: relayScript }) });

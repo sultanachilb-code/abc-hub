@@ -1040,7 +1040,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
             <div id="tfabItems"></div>
           </div>
         </div>
-        <img src="icons/abc-logo-white.png" alt="ABC">
+        <img src="icons/abc-logo-white.png" alt="ABC" id="hubLogo">
         <span class="rule"></span>
         <div><h1 id="hubTitle">ABC Operations Hub</h1><p id="greet"></p></div>
       </div>
@@ -1383,6 +1383,21 @@ function accessKey(u){
   if (r === "SECURITY") return "SEC";
   return r;
 }
+/* Admin Control Center: the ABC logo (administrators) asks for the admin password, then opens /admin */
+function adminGate(){
+  let d = document.getElementById("admGate"); if (!d){ d = document.createElement("dialog"); d.id = "admGate"; document.body.append(d); }
+  d.style.cssText = "border:0;border-radius:20px;padding:0;width:min(360px,calc(100% - 24px));background:var(--card,#fff);color:var(--text,#221A2E)";
+  d.innerHTML = `<form method="dialog" id="agF" style="padding:22px;display:grid;gap:12px;text-align:center">
+    <div style="width:58px;height:58px;border-radius:16px;background:#2A0F45;display:grid;place-items:center;margin:0 auto"><img src="icons/abc-logo-white.png" alt="" style="height:34px"></div>
+    <b style="font-size:1.05rem">Admin Control Center</b><small style="color:var(--muted,#6D6479)">Enter your password to open it</small>
+    <input type="password" id="agP" autocomplete="current-password" placeholder="Your hub password" style="border:1px solid var(--line,#E6E0EE);border-radius:12px;padding:12px;font:inherit;background:transparent;color:inherit">
+    <div id="agE" style="color:#C2283C;font-size:.84rem;font-weight:700;min-height:1px"></div>
+    <div style="display:flex;gap:8px"><button type="button" id="agX" class="btn ghost" style="flex:1">Cancel</button><button id="agGo" class="btn" style="flex:1">Open</button></div></form>`;
+  d.showModal(); setTimeout(() => $("#agP").focus(), 50);
+  $("#agX").onclick = () => d.close();
+  $("#agF").onsubmit = async e => { e.preventDefault(); $("#agGo").disabled = true; $("#agE").textContent = "";
+    try { await api("admin/unlock", { password: $("#agP").value }); location.href = "/admin"; } catch (er){ $("#agE").textContent = er.message; $("#agGo").disabled = false; $("#agP").select(); } };
+}
 function startHub(){
   const role = ME.user.role;
   { const o = new URLSearchParams(location.search).get("outlook");   // back from the Microsoft sign-in (Outlook sending)
@@ -1406,6 +1421,7 @@ function startHub(){
     document.body.append(v);
   }
   $("#hubTitle").textContent = H.title;
+  if (role === "ADMIN" && !ME.viewAs) { const lg = $("#hubLogo"); if (lg && !lg.dataset.adm){ lg.dataset.adm = "1"; lg.style.cursor = "pointer"; lg.title = "Admin Control Center"; lg.onclick = adminGate; } }
   const hr = new Date().getHours();
   const first = ME.user.name.split(" ")[0];
   $("#greet").innerHTML = `${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(first)}` +
@@ -1541,7 +1557,7 @@ function buildMenu(){
     const a = e.target.closest("button")?.dataset.a; if (!a) return;
     m.classList.add("hidden");
     if (a === "admin") location.hash = "#/admin";
-    if (a === "cc") location.href = "/admin";
+    if (a === "cc") adminGate();
     if (a === "profile") profileSheet();
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));

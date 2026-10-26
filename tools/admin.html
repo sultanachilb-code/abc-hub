@@ -101,15 +101,29 @@ async function boot(){
   if (ME.user.role !== "ADMIN") { $("#root").innerHTML = `<div class="deny card"><h2>Administrators only</h2><p class="mut">This page is for hub administrators.</p><a class="b" href="/">Back to the hub</a></div>`; return; }
   $("#root").innerHTML = `<div class="app"><nav id="nav"><div class="lg"><img src="/icons/abc-logo-white.png" alt="ABC"><div><b>Admin Control</b><small>${esc(ME.user.name)}</small></div></div>
     ${NAV.map(n => n[0] === "sep" ? `<div class="sep">${n[1]}</div>` : `<button data-p="${n[0]}">${n[1]} ${n[2]}<span class="dt" id="dt-${n[0]}"></span></button>`).join("")}
-    <div class="sep">Hub</div><a href="/">← Back to the hub</a></nav><main id="main"></main></div>`;
+    <div class="sep">Hub</div><button id="lockB">🔒 Lock the Control Center</button><a href="/">← Back to the hub</a></nav><main id="main"></main></div>`;
   $("#nav").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
+  $("#lockB").onclick = async () => { await api("admin/lock", {}).catch(() => {}); lockScreen(); };
   go(PAGE);
 }
 function go(p){
   PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ ov, us, sec, al, sy, tl, bk, ct })[PAGE]().catch(e => V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ ov, us, sec, al, sy, tl, bk, ct })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+}
+/* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
+function lockScreen(){
+  $("#root").innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;background:linear-gradient(140deg,#2A0F45,#4A1F73);padding:16px">
+    <form class="card" id="ulk" style="width:min(380px,100%);text-align:center;display:grid;gap:12px;padding:26px 22px">
+      <div style="width:64px;height:64px;border-radius:18px;background:#2A0F45;display:grid;place-items:center;margin:0 auto"><img src="/icons/abc-logo-white.png" alt="ABC" style="height:38px"></div>
+      <h2 style="margin:0;font-size:1.2rem">Admin Control Center</h2><p class="mut" style="margin:0">${esc(ME.user.name)} — enter your password to open it</p>
+      <input type="password" id="apw" autocomplete="current-password" placeholder="Your hub password" style="border:1px solid var(--cline);border-radius:12px;padding:12px;font:inherit;background:var(--ccard);color:var(--ctext)" autofocus>
+      <button class="b" style="padding:12px;font-size:.9rem" id="ago">Open</button><div id="aerr" class="t-bad" style="font-size:.84rem;font-weight:700"></div>
+      <a href="/" class="mut">← Back to the hub</a></form></div>`;
+  $("#ulk").onsubmit = async e => { e.preventDefault(); $("#ago").disabled = true; $("#aerr").textContent = "";
+    try { await api("admin/unlock", { password: $("#apw").value }); boot(); } catch (er){ $("#aerr").textContent = er.message; $("#ago").disabled = false; $("#apw").select(); } };
+  setTimeout(() => $("#apw") && $("#apw").focus(), 50);
 }
 function dotNav(id, t){ const d = $("#dt-" + id); if (d){ d.className = "dt" + (t ? " on bg-" + t : ""); } }
 
