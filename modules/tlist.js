@@ -10,6 +10,8 @@ import { crmReady } from "./crm.js";
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
 const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, "");
+const STOP = /\b(s\s?a\s?r?\s?l|sarl|sal|co|company|ltd|llc|the|holding|international|intl|lebanon|leb)\b/g;
+const gkey = s => String(s || "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9؀-ۿ ]+/g, " ").replace(STOP, " ").replace(/\s+/g, "");
 const isOpen = s => /^open/i.test(String(s || "").trim());
 
 export async function tlSchema(env) {
@@ -17,7 +19,10 @@ export async function tlSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS tl_cfg (site TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', open_only INTEGER NOT NULL DEFAULT 1, depts TEXT NOT NULL DEFAULT '[]',
       started_at TEXT NOT NULL DEFAULT '', started_by TEXT NOT NULL DEFAULT '')`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS tl_answers (site TEXT NOT NULL, brand TEXT NOT NULL, answer TEXT NOT NULL, by_name TEXT NOT NULL DEFAULT '', at TEXT NOT NULL DEFAULT '',
-      PRIMARY KEY (site, brand))`)
+      PRIMARY KEY (site, brand))`),
+    /* parent group of each tenant (Leasing Sales Performance file → "Parent Group"), shared by every flagship; a hand edit wins over the file */
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS tl_groups (bkey TEXT PRIMARY KEY, brand TEXT NOT NULL, grp TEXT NOT NULL, src TEXT NOT NULL DEFAULT 'file',
+      by_name TEXT NOT NULL DEFAULT '', at TEXT NOT NULL DEFAULT '')`)
   ]);
 }
 
@@ -54,10 +59,14 @@ export async function tlRoute(env, p, method, b, url, d) {
     const pool = all.filter(t => !cfg.openOnly || t.open);
     const depts = {}; for (const t of all) { const k = t.dept || "(no category)"; depts[k] = depts[k] || { name: k, all: 0, open: 0 }; depts[k].all++; if (t.open) depts[k].open++; }
     const D = new Set(cfg.depts), list = cfg.set ? pool.filter(t => !D.size || D.has(t.dept || "(no category)")) : [];
+    const G = new Map(((await env.DB.prepare("SELECT bkey, grp FROM tl_groups").all()).results || []).map(r => [r.bkey, r.grp]));
+    for (const t of all) t.group = G.get(gkey(t.brand)) || "";
     const ans = new Map(((await env.DB.prepare("SELECT brand, answer, by_name, at FROM tl_answers WHERE site = ?").bind(site).all()).results || []).map(r => [norm(r.brand), r]));
     const rows = list.map(t => { const a = ans.get(norm(t.brand)); return { ...t, answer: a ? a.answer : "", by: a ? a.by_name : "", at: a ? a.at : "" }; });
     const yes = rows.filter(r => r.answer === "y").length, no = rows.filter(r => r.answer === "n").length;
-    return { site, siteName: d.siteName(site), edit, cfg, depts: Object.values(depts).sort((x, y) => x.name.localeCompare(y.name)), rows,
+    const groups = {}; for (const r of rows) if (r.group) groups[r.group] = (groups[r.group] || 0) + 1;
+    return { site, siteName: d.siteName(site), edit, cfg, groups: Object.entries(groups).map(([name, n]) => ({ name, n })).sort((x, y) => y.n - x.n || x.name.localeCompare(y.name)),
+      allGroups: [...new Set(G.values())].sort(), noGroup: all.filter(t => !t.group).length, depts: Object.values(depts).sort((x, y) => x.name.localeCompare(y.name)), rows,
       stats: { total: rows.length, yes, no, wait: rows.length - yes - no, pct: rows.length ? Math.round(yes / rows.length * 1000) / 10 : 0 }, at: d.now() };
   }
   if (method !== "POST") throw err("Unknown request", 404);
@@ -77,6 +86,35 @@ export async function tlRoute(env, p, method, b, url, d) {
     if (a) await env.DB.prepare("INSERT OR REPLACE INTO tl_answers (site, brand, answer, by_name, at) VALUES (?,?,?,?,?)").bind(site, brand, a, me.full_name, d.now()).run();
     else await env.DB.prepare("DELETE FROM tl_answers WHERE site = ? AND brand = ?").bind(site, brand).run();
     return { saved: true };
+  }
+  if (p === "tl/group") {   // set by hand (empty = back to no group)
+    const brand = clip(b.brand, 100), k = gkey(brand), g = clip(b.group, 60).toUpperCase(); if (!k) throw err("Choose the tenant");
+    if (g) await env.DB.prepare("INSERT OR REPLACE INTO tl_groups (bkey, brand, grp, src, by_name, at) VALUES (?,?,?,'hand',?,?)").bind(k, brand, g, me.full_name, d.now()).run();
+    else await env.DB.prepare("DELETE FROM tl_groups WHERE bkey = ?").bind(k).run();
+    return { saved: true };
+  }
+  if (p === "tl/groups/import") {   // rows read in the browser from "Sales Data Conso": [{ tenant, group }]
+    const rows = (Array.isArray(b.rows) ? b.rows : []).slice(0, 20000).map(r => ({ t: clip(r.tenant, 100), g: clip(r.group, 60).toUpperCase() })).filter(r => r.t && r.g);
+    if (!rows.length) throw err("No Parent Tenant / Parent Group found in the file");
+    const fileMap = new Map(); for (const r of rows) { const k = gkey(r.t); if (k && !fileMap.has(k)) fileMap.set(k, r); }
+    const G = ((await env.DB.prepare("SELECT DISTINCT site, brand FROM gla_units WHERE active = 1 AND section = 'Leasing' AND brand != ''").all()).results || []).filter(x => !/vacant/i.test(x.brand));
+    const here = new Set(G.filter(x => x.site === site).map(x => gkey(x.brand))), brands = G.map(x => x.brand);
+    const hand = new Set(((await env.DB.prepare("SELECT bkey FROM tl_groups WHERE src = 'hand'").all()).results || []).map(r => r.bkey));
+    const fileKeys = [...fileMap.keys()], used = new Set(), ops = [], unmatched = [], seen = new Set();
+    for (const brand of brands) {
+      const k = gkey(brand); if (!k || seen.has(k)) continue; seen.add(k);
+      let hit = fileMap.get(k);
+      if (!hit && k.length >= 4) {   // "PAUL" ↔ "PAUL BAKERY": one name starts the other, and only one candidate
+        const c = fileKeys.filter(f => f.length >= 4 && (f.startsWith(k) || k.startsWith(f)));
+        if (c.length === 1) hit = fileMap.get(c[0]);
+      }
+      if (!hit) { if (here.has(k)) unmatched.push(clip(brand, 100)); continue; }   // listed for this flagship only
+      used.add(gkey(hit.t));
+      if (hand.has(k)) continue;
+      ops.push(env.DB.prepare("INSERT OR REPLACE INTO tl_groups (bkey, brand, grp, src, by_name, at) VALUES (?,?,?,'file',?,?)").bind(k, clip(brand, 100), hit.g, me.full_name, d.now()));
+    }
+    for (let i = 0; i < ops.length; i += 50) await env.DB.batch(ops.slice(i, i + 50));
+    return { matched: ops.length, keptByHand: hand.size, unmatched: unmatched.sort(), groups: new Set(rows.map(r => r.g)).size, fileTenants: fileMap.size };
   }
   if (p === "tl/reset") {   // a new list: clear the answers (the name and filter stay, to be changed if needed)
     await env.DB.prepare("DELETE FROM tl_answers WHERE site = ?").bind(site).run();
