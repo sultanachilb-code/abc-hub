@@ -89,35 +89,33 @@ export async function t360Route(env, p, method, b, url, d) {
     return { site, siteName: siteName(site), today: T, units: listOf(D, T) };
   }
 
-  /* the Tenant 360 dashboard (Oct 2026): one call for the Overview tab */
+  /* Tenant 360 (v3, Oct 2026): the overview — general figures + "needs attention" = ABC Connect penalties & violations posted in the period
+     (period = "ytd" (default) or a month "YYYY-MM"), and the A–Z list to pick a tenant */
   if (p === "t360/overview") {
     const T = today(), D = await siteData(env, site, T), L = listOf(D, T), month = T.slice(0, 7);
-    const [C, CP, G] = await Promise.all([complianceFor(env, site, month).catch(() => null), complianceFor(env, site, prevMonthOf(month)).catch(() => null),
-      rows(env.DB.prepare("SELECT bkey, grp FROM tl_groups"))]);
+    const per = /^\d{4}-\d{2}$/.test(url.searchParams.get("period") || "") ? url.searchParams.get("period") : "ytd";
+    const from = per === "ytd" ? T.slice(0, 4) + "-01-01" : per + "-01", to = per === "ytd" ? T : per + "-31";
+    const [C, CP, G, posted] = await Promise.all([complianceFor(env, site, month).catch(() => null), complianceFor(env, site, prevMonthOf(month)).catch(() => null),
+      rows(env.DB.prepare("SELECT bkey, grp FROM tl_groups")),
+      rows(env.DB.prepare("SELECT name, kind, account, tenant, status, created_day, subject, type, active FROM portal_items WHERE site = ? AND kind IN ('bp','vr') AND created_day BETWEEN ? AND ? ORDER BY created_day DESC").bind(site, from, to))]);
     const GM = new Map(G.map(g => [g.bkey, g.grp]));
-    const scoreOf = brand => { if (!C || !brand || /vacant/i.test(brand)) return null; return C.tenants.find(x => same(brand, x.tenant)) || { score: 100, prevScore: 100, repeats: [] }; };   // nothing recorded = 100
-    const leasing = L.filter(u => u.section !== "DS" && u.brand && !/vacant/i.test(u.brand));
-    const open = leasing.filter(u => /^open/i.test(u.status || "")).length;
-    const vacant = L.filter(u => !u.brand || /vacant/i.test(u.brand) || /vacant/i.test(u.status || "")).length;
+    const units = L.filter(u => u.brand && !/vacant/i.test(u.brand) && u.section !== "DS");
+    const open = units.filter(u => /^open/i.test(u.status || "")).length, total = L.filter(u => u.section !== "DS").length;
     const fit = L.filter(u => u.flags.some(f => /^Fit-out/.test(f.t))).length;
-    const att = L.map(u => { const c = scoreOf(u.brand), flags = u.flags.slice(); let a = u.attention;
-        if (c) { if (c.score < 60) { a += 3; flags.unshift({ t: `Compliance ${c.score}`, tone: "al" }); } else if (c.prevScore - c.score >= 15) { a += 2; flags.unshift({ t: `Score drop −${c.prevScore - c.score}`, tone: "warn" }); }
-          if (c.repeats.some(r => r.n >= 3)) { a += 3; flags.unshift({ t: "Repeat offender", tone: "al" }); } }
-        return { ...u, flags, attention: a, score: c ? c.score : null }; })
-      .filter(u => u.attention > 0 || u.flags.length).sort((x, y) => y.attention - x.attention);
-    /* compliance bands (tenants with nothing this month score 100) */
-    const bands = [0, 0, 0, 0], issues = {};
-    if (C) { for (const t of C.tenants) { bands[t.score < 60 ? 0 : t.score < 75 ? 1 : t.score < 90 ? 2 : 3]++;
-        for (const e of t.entries) if (e.category !== "Customer Feedback") { const k = e.description || e.category; issues[k] = (issues[k] || 0) + 1; } }
-      bands[3] += Math.max(0, C.activeTenants - C.tenants.length); }
-    const ending = L.map(u => ({ id: u.id, code: u.code, brand: u.brand, ...(D.contractOf.get(u.id) || {}) })).filter(x => x.end && x.days != null && x.days <= 120)
-      .sort((a, b) => a.days - b.days);
-    return { site, siteName: siteName(site), today: T, month, canSales: !!d.canSales,
-      kpi: { open, vacant, fit, attention: att.filter(u => u.attention > 0).length, compliance: C ? C.average : null, compliancePrev: CP ? CP.average : null,
-        repeat: C ? C.repeatOffenders : 0, ending: ending.length, ending30: ending.filter(x => x.days <= 30).length },
-      attention: att.slice(0, 40).map(u => ({ ...u, group: GM.get(gkey(u.brand)) || "" })), bands, issues: Object.entries(issues).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([what, n]) => ({ what, n })),
-      ending: ending.slice(0, 12), units: L.map(u => ({ id: u.id, code: u.code, level: u.level, brand: u.brand, dept: u.dept, area: u.area, status: u.status, section: u.section, flags: u.flags,
-        attention: (att.find(x => x.id === u.id) || {}).attention || 0, score: (scoreOf(u.brand) || {}).score ?? null, group: GM.get(gkey(u.brand)) || "" })) };
+    const att = [];
+    for (const u of units) {
+      const mine = posted.filter(x => same(u.brand, x.tenant) || same(u.brand, x.account));
+      if (!mine.length) continue;
+      att.push({ id: u.id, code: u.code, brand: u.brand, dept: u.dept, group: GM.get(gkey(u.brand)) || "", bp: mine.filter(x => x.kind === "bp").length, vr: mine.filter(x => x.kind === "vr").length,
+        waiting: mine.filter(x => isFollowUp(cleanStatus(x.status))).length,
+        items: mine.slice(0, 6).map(x => ({ name: x.name, kind: x.kind, subject: x.subject || x.type, day: x.created_day, status: cleanStatus(x.status) })) });
+    }
+    att.sort((a, b) => (b.bp * 2 + b.vr) - (a.bp * 2 + a.vr) || b.waiting - a.waiting);
+    return { site, siteName: siteName(site), today: T, month, period: per, from, to, canSales: !!d.canSales,
+      kpi: { open, total, fit, attention: att.length, bp: posted.filter(x => x.kind === "bp").length, vr: posted.filter(x => x.kind === "vr").length,
+        compliance: C ? C.average : null, compliancePrev: CP ? CP.average : null },
+      attention: att, units: units.map(u => ({ id: u.id, code: u.code, level: u.level, brand: u.brand, dept: u.dept, area: u.area, status: u.status, group: GM.get(gkey(u.brand)) || "" }))
+        .sort((a, b) => a.brand.localeCompare(b.brand)) };
   }
   if (p === "t360/unit") {
     const id = Number(url.searchParams.get("id")) || 0;
@@ -150,6 +148,12 @@ export async function t360Route(env, p, method, b, url, d) {
         FROM pm_records r JOIN pm_cycles c ON c.id = r.cycle_id WHERE r.site = ? ORDER BY c.month DESC LIMIT 400`).bind(site)),
       rows(DB.prepare(`SELECT t.brand, t.answer, t.offer, t.reason, t.answered_at, m.title, m.start_day, m.end_day, m.act_from, m.act_to
         FROM mk_targets t JOIN mk_campaigns m ON m.id = t.campaign_id WHERE t.site = ? ORDER BY m.id DESC LIMIT 600`).bind(site))]);
+    const p12 = (await rows(DB.prepare("SELECT name, kind, account, tenant, status, created_day, subject, type, active, link, sf_id FROM portal_items WHERE site = ? AND kind IN ('bp','vr','nr') AND created_day >= ? ORDER BY created_day DESC").bind(site, dayAgo(T, 365))))
+      .filter(x => mine(x.tenant) || mine(x.account));
+    const closed = x => !x.active || /closed|resolved|cancel|rejected|completed|done/i.test(cleanStatus(x.status));
+    const portal12 = Object.fromEntries(["vr", "bp", "nr"].map(k => { const L2 = p12.filter(x => x.kind === k);
+      return [k, { total: L2.length, open: L2.filter(x => !closed(x)).length, items: L2.slice(0, 40).map(x => ({ name: x.name, subject: x.subject || x.type, day: x.created_day, status: cleanStatus(x.status), open: !closed(x), link: linkOf(env, x) })) }]; }));
+    let compNow = null; try { const C = await complianceFor(env, site, T.slice(0, 7)); compNow = C.tenants.find(x => brand && same(brand, x.tenant)) || null; } catch {}
     const crmMine = crm.filter(r => r.unit_id === u.id || (!r.unit_id && mine(r.sheet_name)));
     const gk = gkey(brand);
     const group = (grp.find(g => g.bkey === gk) || {}).grp || "";
@@ -177,7 +181,7 @@ export async function t360Route(env, p, method, b, url, d) {
       history: history.map(h => ({ kind: h.kind, date: h.eff_date, note: h.note, by: h.by_name, before: safe(h.before), after: safe(h.after) })),
       trend, group, sku: [...new Set(crmMine.map(r => r.sku).filter(Boolean))].join(", "),
       handhelds: crmMine.filter(r => r.serial || r.model).map(r => ({ serial: r.serial, model: r.model, connection: r.connection, status: r.status, crm: r.crm })),
-      pm: pmMine, marketing: mkMine, canSales: !!d.canSales,
+      pm: pmMine, marketing: mkMine, canSales: !!d.canSales, portal12, complianceEntries: compNow ? compNow.entries : [],
       evacuation: evac && (evac.corridor || evac.assembly) ? { corridor: evac.corridor || "", assembly: evac.assembly || "", note: evac.note || "" } : null
     };
   }

@@ -6,238 +6,231 @@
 <title>Tenant 360 · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
-<!-- Tenant 360 (v2, Oct 2026): one app for Tenant 360 + Tenants Directory + Tenant Compliance + Tenant Sales & Score Card.
-     Overview dashboard · Tenants list · Tenant profile are built here; Compliance, Sales and Directory are the existing pages inside (embed mode).
-     Sales are never saved: the Sales tab reads the file in memory and shares the figures with this page. See docs/FEATURE-tenant-360.md -->
+<!-- Tenant 360 (v3, Oct 2026): one screen — overview (open vs total, ABC Connect penalties & violations posted in the period) + a tenant search;
+     picking a tenant opens his KPI board (compliance, sales & score card, ABC Connect, employees), each row opens its details.
+     Sales are never saved: the Sales Performance file is read in this page only. See docs/FEATURE-tenant-360.md -->
 <style>
-:root{--cy:#7B4BB0;--ly:#A88426}
-:root[data-theme="dark"]{--cy:#A27BD6;--ly:#B08A2E}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cy:#A27BD6;--ly:#B08A2E}}
-.top .q{width:260px;max-width:100%}
-.tabs{display:flex;gap:4px;width:100%;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
-.tabs button{padding:9px 14px;border-radius:10px;font-weight:800;font-size:.86rem;color:var(--muted);white-space:nowrap}
-.tabs button.on{background:var(--brand);color:#fff}
-.k5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-.kp{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
-.kp b{display:block;font-size:1.7rem;line-height:1.15}.kp span{font-size:.76rem;color:var(--muted)}.kp em{display:block;font-style:normal;font-size:.74rem;font-weight:800;margin-top:2px}
-.up{color:var(--ok)}.dn{color:var(--alert)}.wn{color:var(--warn)}
-.g2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-top:14px}
-.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
-.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
-.box h3{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pick{position:relative;flex:1;max-width:560px;min-width:220px}
+.pick input{width:100%;height:42px;border:2px solid var(--brand-2);border-radius:12px;padding:0 14px 0 38px;font-size:.95rem;background:var(--surface);color:var(--text);outline:none}
+.pick:before{content:"🔍";position:absolute;left:12px;top:10px;font-size:.92rem}
+.sug{position:absolute;left:0;right:0;top:46px;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(42,15,69,.18);max-height:360px;overflow:auto;display:none}
+.sug button{display:block;width:100%;text-align:left;padding:9px 14px;border-bottom:1px solid var(--line)}.sug button:hover,.sug button.on{background:var(--paper)}
+.sug b{font-size:.88rem}.sug small{display:block;color:var(--muted);font-size:.72rem}
+.k4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kp{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}.kp b{display:block;font-size:1.7rem;line-height:1.15}.kp span{font-size:.76rem;color:var(--muted)}
+.kp em{display:block;font-style:normal;font-size:.74rem;font-weight:800;margin-top:2px}
+.mtr{height:8px;border-radius:4px;background:var(--paper);overflow:hidden;margin-top:8px}.mtr i{display:block;height:100%;background:var(--ok)}
+.up{color:var(--ok)}.dn{color:var(--alert)}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:14px}
+.box h3{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .row{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}.row:first-of-type{border-top:0}
 .row .m{flex:1;min-width:0}.row b{font-size:.9rem}.row small{display:block;color:var(--muted);font-size:.74rem;line-height:1.35}
 .row.go{cursor:pointer}.row.go:hover b{color:var(--brand-2)}
 .chip{font-size:.68rem;font-weight:800;border-radius:99px;padding:3px 8px;white-space:nowrap}
-.c-al{background:color-mix(in srgb,var(--alert) 14%,transparent);color:var(--alert)}.c-warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
-.c-ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}.c-info{background:color-mix(in srgb,var(--brand-2) 14%,transparent);color:var(--brand-2)}
-.c-mut{background:var(--paper);color:var(--muted)}
-.sc{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.88rem;color:#fff;flex:none;background:var(--muted)}
-.hb{display:flex;align-items:flex-end;gap:8px;height:160px}.hb div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
-.hb i{display:block;width:100%;border-radius:6px 6px 0 0;min-height:3px}.hb small{font-size:.68rem;color:var(--muted)}
-.cat{display:grid;grid-template-columns:130px 1fr 54px;gap:8px;align-items:center;font-size:.8rem;margin:7px 0}.cat .bars{display:grid;gap:3px}.cat .bars i{display:block;height:8px;border-radius:4px}
-.lg{display:flex;gap:14px;font-size:.72rem;color:var(--muted);margin-top:6px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-.none{color:var(--muted);font-size:.82rem;padding:4px 0}
-.salesup{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:.84rem}
-/* tenants list */
-.fl{display:flex;gap:6px;flex-wrap:wrap}.fl button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:.78rem;font-weight:800}
-.fl button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.ul{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:12px}
-.ul .row{padding:10px 14px;cursor:pointer}.ul .row:hover{background:var(--paper)}
-.fls{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
-/* profile */
-.ph{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:linear-gradient(120deg,#2A0F45,#4A1F73);color:#fff;border-radius:18px;padding:18px 20px}
-.ph .lgo{width:62px;height:62px;border-radius:16px;background:#fff;color:#4A1F73;display:grid;place-items:center;font-weight:900;font-size:1.25rem;flex:none}
-.ph h2{font-size:1.4rem}.ph p{opacity:.88;font-size:.84rem;margin-top:3px}.ph .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.ph .pills span{background:rgba(255,255,255,.14);border-radius:99px;padding:4px 10px;font-size:.74rem;font-weight:700}
-.ph .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.ph .act button,.ph .act a{background:#E9CF8A;color:#2A0F45;border-radius:10px;padding:9px 13px;font-weight:800;font-size:.82rem;text-decoration:none}
-.ph .act .gh{background:rgba(255,255,255,.14);color:#fff}
-.big{font-size:2rem;font-weight:900;line-height:1.1}.sub{font-size:.76rem;color:var(--muted);line-height:1.4}
-.spark{display:flex;align-items:flex-end;gap:4px;height:50px;margin-top:10px}.spark div{flex:1;height:100%;display:flex;align-items:flex-end}.spark i{display:block;width:100%;border-radius:4px 4px 0 0;min-height:3px}
-.sl{display:flex;justify-content:space-between;font-size:.66rem;color:var(--muted);margin-top:3px}
-.ct{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.ct:first-of-type{border-top:0}
-.ct .av{width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:.76rem;flex:none}
-.ct .m{flex:1;min-width:0}.ct b{font-size:.86rem}.ct small{display:block;color:var(--muted);font-size:.72rem}
-.ct a{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);display:grid;place-items:center;text-decoration:none;flex:none}
-.tl{border-left:2px solid var(--line);margin-left:6px;padding-left:14px}.tl div{position:relative;padding:6px 0;font-size:.82rem}
-.tl div:before{content:"";position:absolute;left:-20px;top:11px;width:10px;height:10px;border-radius:50%;background:var(--brand-2)}
-.tl small{color:var(--muted);display:block;font-size:.72rem}
-.ms{display:flex;gap:4px;margin:6px 0}.ms i{flex:1;height:8px;border-radius:4px;background:var(--line)}.ms i.d{background:var(--ok)}
-.frame{width:100%;border:0;display:block;min-height:calc(100vh - 140px);background:transparent}
-.pane{display:none}.pane.on{display:block}
-@media (max-width:900px){.k5{grid-template-columns:repeat(2,minmax(0,1fr))}.g2,.g3{grid-template-columns:1fr}.ph .act{margin-left:0}.top .q{width:100%}}
-@media print{.top,.noprint{display:none!important}body{background:#fff}.ph{-webkit-print-color-adjust:exact;print-color-adjust:exact}.pane:not(#p-prof){display:none!important}}
+.per{display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0}.per select{height:30px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font-weight:700;font-size:.78rem;padding:0 6px}
+.az{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0 18px}
+.az .row{padding:7px 0}
+/* tenant board — same pills as the leadership KPI board */
+.ph{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:linear-gradient(120deg,#2A0F45,#4A1F73);color:#fff;border-radius:18px;padding:16px 20px;margin-top:4px}
+.ph .lgo{width:54px;height:54px;border-radius:14px;background:#fff;color:#4A1F73;display:grid;place-items:center;font-weight:900;font-size:1.1rem;flex:none}
+.ph h2{font-size:1.3rem}.ph p{opacity:.88;font-size:.82rem;margin-top:2px}
+.ph .x{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.ph .x button,.ph .x a{background:rgba(255,255,255,.14);color:#fff;border-radius:10px;padding:8px 12px;font-weight:800;font-size:.8rem;text-decoration:none}
+table.k{width:100%;border-collapse:collapse;font-size:.86rem}
+table.k th{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);text-align:center}table.k th:first-child{text-align:left}
+table.k td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:center}table.k td:first-child{text-align:left;font-weight:700;font-size:.84rem}
+table.k tr.go{cursor:pointer}table.k tr.go:hover td{background:var(--paper)}
+.c{display:inline-block;min-width:58px;padding:5px 10px;border-radius:9px;font-weight:800;font-size:.84rem;background:var(--paper)}
+.c.g{background:#E6F4EC;color:#2E8B57}.c.a{background:#FFF1DA;color:#9A5B00}.c.r{background:#FDECEA;color:#C0392B}
+:root[data-theme="dark"] .c.g{background:#16382A;color:#5FD08A}:root[data-theme="dark"] .c.a{background:#3B2C12;color:#F0B44C}:root[data-theme="dark"] .c.r{background:#3D1A1A;color:#FF7A6B}
+.d{font-size:.7rem;font-weight:800;margin-left:4px}.d.up{color:#2E8B57}.d.dn{color:#C0392B}
+td small{display:block;font-size:.7rem;color:var(--muted);font-weight:600;margin-top:2px}
+.more{color:var(--brand-2);font-weight:800;font-size:.76rem;white-space:nowrap}
+tr.sec td{background:var(--paper);font-size:.66rem!important;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px!important;font-weight:800}
+.salesup{border:2px dashed var(--line);border-radius:12px;padding:12px;color:var(--muted);font-size:.82rem;font-weight:600}
+dialog.dl{border:0;border-radius:18px;padding:0;width:min(680px,94vw);max-height:86vh;background:var(--surface);color:var(--text);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog.dl::backdrop{background:rgba(20,8,35,.45)}
+.dl .h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:16px 18px 8px}.dl .h b{font-size:1rem}.dl .h small{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
+.dl .b{padding:4px 18px 18px;overflow:auto;max-height:70vh}
+.mo{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 10px}.mo button{border:1px solid var(--line);border-radius:99px;padding:5px 10px;font-size:.76rem;font-weight:800}.mo button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.spark{display:flex;align-items:flex-end;gap:5px;height:70px;margin:6px 0}.spark div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}.spark i{display:block;width:100%;border-radius:5px 5px 0 0;min-height:3px}.spark small{font-size:.66rem;color:var(--muted)}
+@media (max-width:760px){.k4{grid-template-columns:1fr 1fr}.ph .x{margin-left:0}table.k th:nth-child(3),table.k td:nth-child(3){display:none}}
+@media print{.top,.noprint{display:none!important}body{background:#fff}.ph{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 </head>
 <body>
-<div class="top"><h1>🏬 Tenant 360 <small id="sub"></small></h1><span id="sitePick"></span><input class="inp q" id="q" type="search" placeholder="Search tenant, unit, group…">
-  <div class="tabs" id="tabs"></div></div>
-<div class="wrap">
-  <div class="pane on" id="p-ov"><div class="empty">Loading…</div></div>
-  <div class="pane" id="p-list"></div>
-  <div class="pane" id="p-prof"></div>
-  <div class="pane" id="p-comp"></div>
-  <div class="pane" id="p-sales"></div>
-  <div class="pane" id="p-dir"></div>
-</div>
+<div class="top"><h1>🏬 Tenant 360 <small id="sub"></small></h1><span id="sitePick"></span>
+  <div class="pick"><input id="q" placeholder="Search a tenant, unit or group — or pick from the list" autocomplete="off"><div class="sug" id="sug"></div></div>
+  <button class="btn ghost small hidden" id="upB">⇡ Sales file</button></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<dialog class="dl" id="dl"></dialog>
 <input type="file" id="sfile" accept=".xlsx,.xlsm" hidden>
+<script src="exec-sales.js"></script>
 <script src="common.js"></script>
 <script>
-const UP = new URLSearchParams(location.search);
-let CTX = null, site = (UP.get("site") || "").toUpperCase(), O = null, TAB = "ov", FLT = "attn", Q = UP.get("q") || "", U = null, UID = Number(UP.get("unit")) || 0, SALES = null;
+const UP = new URLSearchParams(location.search), MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MNL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MIN_SQM = 20;   // as in Tenant Sales & Score Card: kiosks / ATMs under 20 m² are left out of the comparisons
+let CTX = null, site = (UP.get("site") || "").toUpperCase(), O = null, PER = "ytd", U = null, SD = null, SM = 0, SBU = "";
 const f0 = v => Math.round(v || 0).toLocaleString("en-US"), pc = v => isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(1) + " %" : "—";
-const k$ = v => v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + " M" : v >= 1e3 ? "$" + Math.round(v / 1e3) + " k" : "$" + f0(v);
-const scol = s => s == null ? "var(--muted)" : s >= 90 ? "var(--ok)" : s >= 75 ? "#C8A24A" : s >= 60 ? "#E07A3A" : "var(--alert)";
+const money = v => (v < 0 ? "−$" : "$") + f0(Math.abs(v));
 const nk = s => String(s || "").toLowerCase().replace(/&/g, "and").replace(/\b(s\.?a\.?r?\.?l|sarl|sal|co|ltd|llc|the)\b/g, "").replace(/[^a-z0-9]+/g, "");
-const dd = d => d ? new Date(String(d).length <= 10 ? d + "T12:00:00" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
-const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dd = d => d ? new Date(String(d).length <= 10 ? d + "T12:00:00" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+const tone = (v, g, a) => v == null ? "" : v >= g ? "g" : v >= a ? "a" : "r";
+const pill = (v, t, delta, sub) => `<span class="c ${t || ""}">${v}</span>${delta ? `<span class="d ${delta > 0 ? "up" : "dn"}">${delta > 0 ? "▲" : "▼"}${esc(String(Math.abs(delta)).replace(/^(\d+\.\d)\d+$/, "$1"))}</span>` : ""}${sub ? `<small>${sub}</small>` : ""}`;
 
 async function boot(s){
   CTX = await api("ops/context" + (s || site ? "?site=" + (s || site) : "")); site = CTX.site;
   $("#sub").textContent = CTX.siteName; $("#sitePick").innerHTML = siteSelect(CTX, x => { location.search = "?site=" + x; });
-  await loadOverview();
-  if (UID) openUnit(UID); else tab(UP.get("tab") || "ov");
+  await loadO();
+  const id = Number(UP.get("unit")) || 0; if (id) openUnit(id); else drawO();
 }
-async function loadOverview(){
-  try { O = await api(`ops/t360/overview?site=${site}`); } catch (e){ $("#p-ov").innerHTML = `<div class="box">${esc(e.message)}</div>`; return; }
-  tabsBar();
-  if (TAB === "ov") drawOverview(); if (TAB === "list") drawList();
+async function loadO(){ O = await api(`ops/t360/overview?site=${site}&period=${PER}`); $("#upB").classList.toggle("hidden", !O.canSales); }
+
+/* ---------- search / pick a tenant ---------- */
+let SI = -1;
+function sug(){
+  const q = $("#q").value.trim().toLowerCase(), box = $("#sug"); if (!O) return;
+  const L = O.units.filter(u => !q || (u.brand + " " + u.code + " " + u.group + " " + u.dept).toLowerCase().includes(q)).slice(0, 40);
+  box.innerHTML = L.map((u, i) => `<button data-u="${u.id}" class="${i === SI ? "on" : ""}"><b>${esc(u.brand)}</b><small>${esc([u.code, u.dept, u.group, u.status].filter(Boolean).join(" · "))}</small></button>`).join("") || `<div class="row" style="padding:10px 14px"><small>No tenant found</small></div>`;
+  box.style.display = "block";
 }
-function tabsBar(){
-  const T = [["ov", "📊 Overview"], ["list", "🏬 Tenants"], ...(U ? [["prof", "👤 " + (U.unit.brand || U.unit.code)]] : []), ["comp", "🛡 Compliance"], ...(O && O.canSales ? [["sales", "💳 Sales & Score Card"]] : []), ["dir", "📇 Directory"]];
-  $("#tabs").innerHTML = T.map(([k, t]) => `<button data-t="${k}" class="${TAB === k ? "on" : ""}">${esc(t)}</button>`).join("");
+$("#q").onfocus = () => { SI = -1; sug(); }; $("#q").oninput = () => { SI = -1; sug(); };
+$("#q").onkeydown = e => { const n = $("#sug").querySelectorAll("[data-u]").length;
+  if (e.key === "ArrowDown"){ SI = Math.min(n - 1, SI + 1); sug(); e.preventDefault(); } else if (e.key === "ArrowUp"){ SI = Math.max(0, SI - 1); sug(); e.preventDefault(); }
+  else if (e.key === "Enter"){ const b = $("#sug").querySelectorAll("[data-u]")[Math.max(0, SI)]; if (b) b.click(); } else if (e.key === "Escape") $("#sug").style.display = "none"; };
+$("#sug").onmousedown = e => { const b = e.target.closest("[data-u]"); if (b){ e.preventDefault(); $("#sug").style.display = "none"; $("#q").blur(); openUnit(Number(b.dataset.u)); } };
+$("#q").onblur = () => setTimeout(() => $("#sug").style.display = "none", 150);
+
+/* ---------- overview ---------- */
+function perOptions(){
+  const y = O.today.slice(0, 4), m = Number(O.today.slice(5, 7)), o = [`<option value="ytd" ${PER === "ytd" ? "selected" : ""}>Year to date ${y}</option>`];
+  for (let i = m; i >= 1; i--){ const k = `${y}-${String(i).padStart(2, "0")}`; o.push(`<option value="${k}" ${PER === k ? "selected" : ""}>${MNL[i - 1]} ${y}</option>`); }
+  return o.join("");
 }
-$("#tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b) tab(b.dataset.t); };
-function tab(t){
-  if (t === "sales" && !(O && O.canSales)) t = "ov";
-  if (t === "prof" && !U) t = "list";
-  TAB = t; tabsBar(); document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "p-" + t)); scrollTo(0, 0);
-  if (t === "ov") drawOverview(); else if (t === "list") drawList(); else if (t === "prof") drawProfile();
-  else if (t === "comp") frame("comp", "compliance"); else if (t === "sales") frame("sales", "sales"); else if (t === "dir") frame("dir", "directory");
+function drawO(){
+  U = null; history.replaceState(null, "", `?site=${site}`); const K = O.kpi, cd = K.compliance != null && K.compliancePrev != null ? K.compliance - K.compliancePrev : 0;
+  const perLabel = PER === "ytd" ? "this year" : MNL[Number(PER.slice(5)) - 1];
+  $("#app").innerHTML = `<div class="k4">
+      <div class="kp"><b>${K.open} <span style="font-size:1rem">/ ${K.total}</span></b><span>Open tenants of all units</span><div class="mtr"><i style="width:${K.total ? K.open / K.total * 100 : 0}%"></i></div></div>
+      <div class="kp"><b>${K.fit}</b><span>In fit-out (not open yet)</span></div>
+      <div class="kp"><b class="${K.attention ? "dn" : "up"}">${K.attention}</b><span>Need attention · ${K.bp} penalt${K.bp === 1 ? "y" : "ies"} and ${K.vr} violation${K.vr === 1 ? "" : "s"} posted ${esc(perLabel)}</span></div>
+      <div class="kp"><b style="color:${K.compliance == null ? "var(--muted)" : K.compliance >= 90 ? "var(--ok)" : K.compliance >= 75 ? "var(--warn)" : "var(--alert)"}">${K.compliance ?? "—"}</b><span>Average compliance (${MNL[Number(O.month.slice(5)) - 1]})</span>${cd ? `<em class="${cd > 0 ? "up" : "dn"}">${cd > 0 ? "▲" : "▼"} ${Math.abs(cd)} vs last month</em>` : ""}</div></div>
+    <div class="box"><h3><span>Needs attention · penalties & violations posted in ABC Connect</span><span class="per">Period <select id="per">${perOptions()}</select></span></h3>
+      ${O.attention.map(a => `<div class="row go" data-u="${a.id}"><div class="m"><b>${esc(a.brand)}</b><small>${esc([a.code, a.dept, a.group].filter(Boolean).join(" · "))}</small>
+        <small>${a.items.map(x => `${esc(x.name)} · ${esc(x.subject || "")} (${esc(dd(x.day))}, ${esc(x.status)})`).join(" — ")}</small></div>
+        <span class="chip c-al" style="background:color-mix(in srgb,var(--alert) 14%,transparent);color:var(--alert)">${[a.bp ? `${a.bp} penalt${a.bp === 1 ? "y" : "ies"}` : "", a.vr ? `${a.vr} violation${a.vr === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")}</span></div>`).join("")
+        || `<div class="row"><div class="m"><small>No penalty or violation posted ${esc(perLabel)} 👍</small></div></div>`}</div>
+    <div class="box"><h3><span>All tenants · A–Z</span><span>${O.units.length} · tap to open</span></h3><div class="az">
+      ${O.units.map(u => `<div class="row go" data-u="${u.id}"><div class="m"><b>${esc(u.brand)}</b><small>${esc([u.code, u.dept].filter(Boolean).join(" · "))}</small></div><span class="more">›</span></div>`).join("")}</div></div>`;
+  $("#per").onchange = async e => { PER = e.target.value; try { await loadO(); drawO(); } catch (er){ toast(er.message, true); } };
+  $("#app").querySelectorAll("[data-u]").forEach(r => r.onclick = () => openUnit(Number(r.dataset.u)));
 }
-/* the existing tools, inside (kept loaded: the Sales figures stay while the page is open) */
-function frame(k, page){
-  const p = $("#p-" + k); if (p.querySelector("iframe")) return p.querySelector("iframe");
-  p.innerHTML = `<iframe class="frame" src="/tools/${page}?embed=1&site=${site}" title="${esc(page)}"></iframe>`;
-  const f = p.querySelector("iframe");
-  const fit = () => { try { const h = f.contentDocument.documentElement.scrollHeight; if (h > 200) f.style.height = h + 20 + "px"; } catch {} };
-  f.onload = () => { fit(); try { new ResizeObserver(fit).observe(f.contentDocument.body); } catch {} };
-  return f;
-}
-window.onSales = s => { SALES = s && s.T && s.T.length ? s : null; if (TAB === "ov") drawOverview(); if (TAB === "prof") drawProfile(); };
-function salesOf(brand){ if (!SALES || !brand) return null; const b = nk(brand); return SALES.T.find(x => nk(x.name) === b) || SALES.T.find(x => { const n = nk(x.name); return b.length >= 4 && (n.startsWith(b) || b.startsWith(n)); }) || null; }
-/* the sales file: read by the Sales tab (in memory) */
-function uploadSales(){ $("#sfile").click(); }
+
+/* ---------- sales (Leasing Sales Performance YTD — in this page only, never saved) ---------- */
+$("#upB").onclick = () => $("#sfile").click();
 $("#sfile").onchange = async e => { const file = e.target.files[0]; e.target.value = ""; if (!file) return;
-  const f = frame("sales", "sales"); toast("Reading the sales file…");
-  for (let i = 0; i < 60; i++){ try { if (f.contentWindow.salesReady && f.contentWindow.salesReady()) break; } catch {} await new Promise(r => setTimeout(r, 150)); }
-  try { const W = f.contentWindow; await W.load(new W.File([await file.arrayBuffer()], file.name)); } catch (er){ toast(er.message, true); } };   // a File of the inner page (Excel reader checks its own ArrayBuffer type)
-
-/* ---------- Overview ---------- */
-function drawOverview(){
-  if (!O) return; const K = O.kpi, q = Q.toLowerCase();
-  const cmpD = K.compliance != null && K.compliancePrev != null ? K.compliance - K.compliancePrev : null;
-  const sT = SALES ? (SALES.tp ? (SALES.tc / SALES.tp - 1) * 100 : NaN) : null;
-  const att = O.attention.filter(u => !q || (u.brand + " " + u.code + " " + u.group).toLowerCase().includes(q)).slice(0, 12);
-  const bmax = Math.max(1, ...O.bands);
-  const salesKp = !O.canSales ? `<div class="kp"><b>${O.units.filter(u => u.group).length ? new Set(O.units.map(u => u.group).filter(Boolean)).size : "—"}</b><span>Parent groups at the flagship</span></div>`
-    : SALES ? `<div class="kp"><b class="${sT >= 0 ? "up" : "dn"}">${pc(sT)}</b><span>Sales YTD vs last year · to ${MN[SALES.M - 1]}</span><em class="up">Sales / m² $${f0(SALES.sp ? SALES.tc / SALES.sp : 0)}</em></div>`
-    : `<div class="kp" style="cursor:pointer" id="kSales"><b style="font-size:1.1rem;padding:6px 0">⇡ Sales file</b><span>Upload the Leasing Sales Performance file to see sales here (not saved)</span></div>`;
-  $("#p-ov").innerHTML = `<div class="k5">
-      <div class="kp"><b>${K.open}</b><span>Open tenants${K.fit ? ` · ${K.fit} in fit-out` : ""}${K.vacant ? ` · ${K.vacant} vacant units` : ""}</span></div>
-      <div class="kp"><b class="${K.attention ? "dn" : "up"}">${K.attention}</b><span>Need attention</span>${K.repeat ? `<em class="dn">${K.repeat} repeat offender${K.repeat === 1 ? "" : "s"}</em>` : ""}</div>
-      <div class="kp"><b style="color:${scol(K.compliance)}">${K.compliance ?? "—"}</b><span>Compliance score (${esc(MN[Number(O.month.slice(5)) - 1])})</span>${cmpD != null ? `<em class="${cmpD >= 0 ? "up" : "dn"}">${cmpD >= 0 ? "▲" : "▼"} ${Math.abs(cmpD)} vs last month</em>` : ""}</div>
-      ${salesKp}
-      <div class="kp"><b class="${K.ending30 ? "dn" : ""}">${K.ending}</b><span>Contracts ending ≤ 120 days</span>${K.ending30 ? `<em class="dn">${K.ending30} in the next 30 days</em>` : ""}</div></div>
-    <div class="g2"><div class="box"><h3>Needs attention <span class="chip c-info">tap → profile</span></h3>
-      ${att.map(u => `<div class="row go" data-u="${u.id}"><span class="sc" style="background:${scol(u.score)}">${u.score ?? "—"}</span><div class="m"><b>${esc(u.brand || u.code)}</b>
-        <small>${esc([u.code, u.dept, u.group].filter(Boolean).join(" · "))}</small><div class="fls">${u.flags.slice(0, 4).map(f => `<span class="chip c-${f.tone}">${esc(f.t)}</span>`).join("")}</div></div></div>`).join("") || `<div class="none">Nothing needs attention 👍</div>`}</div>
-      <div class="box"><h3>Compliance this month <span>${K.compliance != null ? "average " + K.compliance : ""}</span></h3>
-        <div class="hb">${[["< 60", "var(--alert)"], ["60–74", "#E07A3A"], ["75–89", "#C8A24A"], ["90–100", "var(--ok)"]].map(([l, c], i) => `<div><small><b>${O.bands[i]}</b></small><i style="height:${Math.max(2, O.bands[i] / bmax * 100)}%;background:${c}"></i><small>${l}</small></div>`).join("")}</div>
-        <div class="sub" style="margin-top:10px">${O.issues.length ? "Top issues: " + O.issues.map(x => `${esc(x.what)} (${x.n})`).join(" · ") : "No violation recorded this month."}</div></div></div>
-    <div class="g2">${O.canSales ? `<div class="box"><h3>Sales by category · YTD vs last year <span>${SALES ? esc(SALES.file) + " · not saved" : ""}</span></h3>
-        ${SALES ? (() => { const C = SALES.cats.slice().sort((a, b) => b.c - a.c).slice(0, 7), mx = Math.max(1, ...C.map(c => Math.max(c.c, c.p)));
-          return C.map(c => `<div class="cat"><span>${esc(c.cat)}</span><div class="bars"><i style="width:${c.c / mx * 100}%;background:var(--cy)"></i><i style="width:${c.p / mx * 100}%;background:var(--ly)"></i></div><b class="${c.dp >= 0 ? "up" : "dn"}">${isFinite(c.dp) ? (c.dp > 0 ? "+" : "") + Math.round(c.dp) + " %" : "—"}</b></div>`).join("")
-            + `<div class="lg"><span><i style="background:var(--cy)"></i>${SALES.year}</span><span><i style="background:var(--ly)"></i>${SALES.prevYear}</span></div>`; })()
-          : `<div class="salesup">Sales are never saved in the hub.<br><button class="btn small" id="upS" style="margin-top:10px">⇡ Upload the Leasing Sales Performance file</button></div>`}</div>` : ""}
-      <div class="box" ${O.canSales ? "" : 'style="grid-column:1/-1"'}><h3>Contracts ending</h3>${O.ending.map(c => `<div class="row go" data-u="${c.id}"><div class="m"><b>${esc(c.brand || c.code)}</b><small>${esc(c.code)} · ${esc(dd(c.end))} ${new Date(c.end).getFullYear()}</small></div>
-        <span class="chip ${c.days <= 30 ? "c-al" : c.days <= 90 ? "c-warn" : "c-ok"}">${c.days < 0 ? "ended" : c.days + " days"}</span></div>`).join("") || `<div class="none">No contract ends in the next 120 days.</div>`}</div></div>`;
-  $("#p-ov").querySelectorAll("[data-u]").forEach(r => r.onclick = () => openUnit(Number(r.dataset.u)));
-  const a = $("#upS"), b = $("#kSales"); if (a) a.onclick = uploadSales; if (b) b.onclick = uploadSales;
+  try { toast("Reading the sales file…"); await xlsxReady();
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const D = SalesLocal.parse(wb.SheetNames.map(n => ({ name: n, grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) })));
+    const units = D.units.filter(u => /mall$|department store$/i.test(u)), mine = (CTX.siteName || "").toLowerCase();
+    SBU = units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0];
+    SD = { D, file: file.name }; SM = D.upTo || 12; $("#upB").textContent = "✓ " + file.name.slice(0, 26); toast("Sales loaded — not saved");
+    if (U) drawU();
+  } catch (er){ toast(er.message, true); } };
+function salesFor(brand){
+  if (!SD) return null; const D = SD.D, R = D.rows.filter(r => r.bu === SBU), ytd = a => a.slice(0, SM).reduce((s, v) => s + v, 0), ten = {};
+  for (const r of R){ const k = r.ten.toLowerCase(); const x = ten[k] = ten[k] || { name: r.ten, cat: r.cat || "Other", grp: r.grp, cur: Array(12).fill(0), prev: Array(12).fill(0), space: 0 };
+    r.cur.forEach((v, i) => x.cur[i] += v); r.prev.forEach((v, i) => x.prev[i] += v); x.space += r.space; }
+  const T = Object.values(ten).map(x => ({ ...x, c: ytd(x.cur), p: ytd(x.prev) })).filter(x => x.space >= MIN_SQM && (x.c || x.p)).map(x => ({ ...x, sqm: x.c / x.space, sqmP: x.p / x.space, dp: x.p > 0 ? (x.c / x.p - 1) * 100 : NaN }));
+  const b = nk(brand), t = T.find(x => nk(x.name) === b) || T.find(x => { const n = nk(x.name); return b.length >= 4 && (n.startsWith(b) || b.startsWith(n)); });
+  if (!t) return { missing: true };
+  const C = T.filter(x => x.cat === t.cat), cc = C.reduce((s, x) => s + x.c, 0), cp = C.reduce((s, x) => s + x.p, 0), csp = C.reduce((s, x) => s + x.space, 0);
+  const rk = C.slice().sort((a, b2) => b2.sqm - a.sqm).findIndex(x => x === t) + 1;
+  return { ...t, catGrowth: cp > 0 ? (cc / cp - 1) * 100 : NaN, catSqm: csp ? cc / csp : 0, rank: rk, of: C.length, year: D.year, prevYear: D.prevYear };
 }
-/* ---------- Tenants list ---------- */
-function drawList(){
-  if (!O) return; const q = Q.toLowerCase();
-  const isOpen = u => /^open/i.test(u.status || ""), isFit = u => u.flags.some(f => /^Fit-out/.test(f.t));
-  const F = { attn: u => u.attention > 0 || u.flags.length, open: isOpen, fit: isFit, all: () => true };
-  const L = O.units.filter(u => u.brand || u.code).filter(F[FLT]).filter(u => !q || (u.brand + " " + u.code + " " + u.dept + " " + u.group).toLowerCase().includes(q))
-    .sort((a, b) => FLT === "attn" ? b.attention - a.attention : String(a.brand || a.code).localeCompare(String(b.brand || b.code)));
-  const n = k => O.units.filter(F[k]).length;
-  $("#p-list").innerHTML = `<div class="fl">${[["attn", "Needs attention"], ["open", "Open"], ["fit", "Fit-out"], ["all", "All units"]].map(([k, t]) => `<button data-f="${k}" class="${FLT === k ? "on" : ""}">${t} · ${n(k)}</button>`).join("")}</div>
-    <div class="ul">${L.map(u => `<div class="row" data-u="${u.id}"><span class="sc" style="background:${scol(u.score)}">${u.score ?? "—"}</span><div class="m"><b>${esc(u.brand || "— " + u.code)}</b>
-      <small>${esc([u.code, u.level, u.dept, u.area ? Math.round(u.area) + " m²" : "", u.group, u.status].filter(Boolean).join(" · "))}</small>
-      ${u.flags.length ? `<div class="fls">${u.flags.map(f => `<span class="chip c-${f.tone}">${esc(f.t)}</span>`).join("")}</div>` : ""}</div></div>`).join("") || `<div class="row"><div class="m none">Nothing here.</div></div>`}</div>`;
-  $("#p-list").querySelectorAll("[data-f]").forEach(b => b.onclick = () => { FLT = b.dataset.f; drawList(); });
-  $("#p-list").querySelectorAll("[data-u]").forEach(r => r.onclick = () => openUnit(Number(r.dataset.u)));
-}
-$("#q").value = Q; $("#q").oninput = e => { Q = e.target.value; if (TAB === "prof") tab("list"); else if (TAB === "ov") drawOverview(); else if (TAB === "list") drawList(); };
 
-/* ---------- Tenant profile ---------- */
+/* ---------- the tenant board ---------- */
 async function openUnit(id){
-  UID = id; TAB = "prof"; document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "p-prof"));
-  $("#p-prof").innerHTML = `<div class="empty">Loading…</div>`; scrollTo(0, 0);
-  try { U = await api(`ops/t360/unit?site=${site}&id=${id}`); } catch (e){ $("#p-prof").innerHTML = `<div class="box">${esc(e.message)}</div>`; return; }
-  history.replaceState(null, "", `?site=${site}&unit=${id}`); tabsBar(); drawProfile();
+  $("#app").innerHTML = `<div class="empty">Loading…</div>`; scrollTo(0, 0);
+  try { U = await api(`ops/t360/unit?site=${site}&id=${id}`); } catch (e){ $("#app").innerHTML = `<div class="box">${esc(e.message)}</div>`; return; }
+  history.replaceState(null, "", `?site=${site}&unit=${id}`); $("#q").value = ""; drawU();
 }
-function drawProfile(){
-  if (!U) return; const u = U.unit, S = salesOf(u.brand), c = U.compliance, ini = initials(u.brand || u.code);
-  const tr = U.trend || [], last = tr.length ? tr[tr.length - 1].score : null, prevS = tr.length > 1 ? tr[tr.length - 2].score : null;
-  const emails = [...new Set(U.contacts.map(x => x.email).filter(Boolean))];
-  const viol = U.feedback.filter(f => f.category !== "Customer Feedback"), neg = U.feedback.filter(f => f.category === "Customer Feedback" && f.description !== "Positive");
-  const act = [...U.feedback.map(f => ({ d: f.day, t: `${f.category === "Customer Feedback" ? "Feedback" : "Violation"} · ${f.description || f.category}`, s: f.by || "" })),
-    ...U.contractors.map(x => ({ d: x.from, t: `Contractor · ${x.company}${x.work ? " — " + x.work : ""}`, s: x.req || "" })),
-    ...U.gate.map(g => ({ d: g.day, t: `Loading gate · ${g.decision === "in" || /approv/i.test(g.decision) ? "✓ in" : g.decision}${g.contractor ? " — " + g.contractor : ""}`, s: g.req || "" })),
-    ...U.works.map(w => ({ d: String(w.received || "").slice(0, 10), t: `Works form · ${w.subject || w.type}`, s: w.status })),
-    ...U.announcements.map(a => ({ d: a.date, t: `Announcement · ${a.type}`, s: a.by || "" }))].filter(x => x.d).sort((a, b) => String(b.d).localeCompare(String(a.d))).slice(0, 10);
-  const cEnd = U.contract ? (U.contract.departure || U.contract.end) : "";
-  $("#p-prof").innerHTML = `<div class="noprint" style="margin-bottom:10px"><button class="btn ghost small" id="bk">‹ Tenants</button></div>
-    <div class="ph"><div class="lgo">${esc(ini)}</div><div style="min-width:0"><h2>${esc(u.brand || u.code)}</h2>
-      <p>${esc([u.code, u.level, u.dept, u.area ? Math.round(u.area) + " m²" : "", U.group ? "Group " + U.group : "", U.sku ? "SKU " + U.sku : ""].filter(Boolean).join(" · "))}</p>
-      <div class="pills"><span>${esc(u.status || "")}</span>${cEnd ? `<span>Contract ends ${esc(dd(cEnd))} ${new Date(cEnd).getFullYear()}${U.contract.daysLeft != null && U.contract.daysLeft >= 0 ? ` · ${U.contract.daysLeft} d` : ""}</span>` : ""}
-        ${U.evacuation ? `<span>Evacuation: ${esc(U.evacuation.corridor || U.evacuation.assembly)}</span>` : ""}</div></div>
-      <div class="act noprint">${S ? `<button id="scb">⇣ Score card</button>` : ""}<button id="prt" class="gh">🖨 Print</button>${emails.length ? `<a href="mailto:${esc(emails.join(","))}">✉ Email tenant</a>` : ""}</div></div>
-    <div class="g3">
-      <div class="box"><h3>Compliance <span class="chip" style="background:color-mix(in srgb,${scol(last)} 16%,transparent);color:${scol(last)}">${last ?? "—"} · ${MN[new Date().getMonth()]}</span></h3>
-        <div class="big" style="color:${scol(last)}">${last ?? "—"}</div>
-        <div class="sub">${prevS != null ? `Was ${prevS} last month · ` : ""}${c ? `${c.violations} violation${c.violations === 1 ? "" : "s"} this month${c.repeats.length ? ` · repeat: ${esc(c.repeats.map(r => r.what + " ×" + r.n).join(", "))}` : ""}` : "No violation this month"}</div>
-        <div class="spark">${tr.map(t => `<div title="${esc(t.month)} · ${t.score ?? "—"}"><i style="height:${Math.max(4, t.score || 0)}%;background:${scol(t.score)}"></i></div>`).join("")}</div>
-        <div class="sl"><span>${tr.length ? MN[Number(tr[0].month.slice(5)) - 1] : ""}</span><span>${tr.length ? MN[Number(tr[tr.length - 1].month.slice(5)) - 1] : ""}</span></div>
-        <div class="sub" style="margin-top:6px">12 months: ${viol.length} violation${viol.length === 1 ? "" : "s"} · ${neg.length} negative feedback</div></div>
-      <div class="box"><h3>Sales ${S ? `<span class="chip ${S.dp >= 0 ? "c-ok" : "c-al"}">${pc(S.dp)} YTD</span>` : ""}</h3>
-        ${!O || !O.canSales ? `<div class="none">Sales are shown to managers and leadership.</div>`
-          : S ? `<div class="big">${k$(S.c)}</div><div class="sub">YTD ${SALES.year} vs ${k$(S.p)} in ${SALES.prevYear} · sales / m² $${f0(S.sqm)} · rank ${S.rank} of ${S.of} in ${esc(S.cat)}</div>
-            <div class="spark">${(() => { const mx = Math.max(1, ...S.cur); return S.cur.map((v, i) => `<div title="${MN[i]} · ${f0(v)}"><i style="height:${Math.max(3, v / mx * 100)}%;background:var(--cy)"></i></div>`).join(""); })()}</div><div class="sl"><span>Jan</span><span>${MN[SALES.M - 1]} ${SALES.year}</span></div>`
-          : SALES ? `<div class="none">Not found in ${esc(SALES.file)}.</div>` : `<div class="salesup">Not saved in the hub.<br><button class="btn small" id="upS2" style="margin-top:8px">⇡ Upload the sales file</button></div>`}</div>
-      <div class="box"><h3>Contacts <span class="chip c-info">Directory</span></h3>
-        ${U.contacts.map(x => `<div class="ct"><span class="av">${esc(initials(x.name || "?"))}</span><div class="m"><b>${esc(x.name || "—")}</b><small>${esc(x.position || "")}</small></div>
-          ${x.mobile ? `<a href="tel:${esc(String(x.mobile).replace(/[^+\d]/g, ""))}" title="${esc(x.mobile)}">📞</a>` : ""}${x.email ? `<a href="mailto:${esc(x.email)}" title="${esc(x.email)}">✉</a>` : ""}</div>`).join("") || `<div class="none">No contact in the Tenants Directory.</div>`}</div></div>
-    <div class="g3">
-      <div class="box"><h3>Portal (ABC Connect)</h3>${U.portal.slice(0, 6).map(p => `<div class="row"><div class="m"><b>${p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener" style="color:inherit">${esc(p.name)}</a>` : esc(p.name)} · ${esc(p.subject || p.type || p.kindLabel)}</b><small>${esc(p.kindLabel)} · ${esc(p.status)}${p.day ? " · " + esc(dd(p.day)) : ""}</small></div>
-        <span class="chip ${p.followUp ? "c-al" : /closed|resolved|approved/i.test(p.status) ? "c-ok" : "c-mut"}">${p.followUp ? "Waiting" : esc(p.status.split(" ")[0])}</span></div>`).join("") || `<div class="none">Nothing open in the portal.</div>`}</div>
-      <div class="box"><h3>Operations</h3>
-        ${U.pm.map(r => `<div class="row"><div class="m"><b>Preventive Maintenance · ${esc(r.month)}</b><small>${esc(r.certs.map(x => x.cert + (x.status === "approved" ? " ✓" : x.status === "pending" ? " …" : " ✗")).join(" · ").slice(0, 160))}</small></div><span class="chip ${r.ok === r.n ? "c-ok" : "c-warn"}">${r.ok} / ${r.n}</span></div>`).join("")}
-        ${U.marketing.map(m => `<div class="row"><div class="m"><b>Marketing · ${esc(m.title)}</b><small>${m.answer === "yes" ? "Participating" + (m.offer ? " · " + esc(m.offer) : "") : m.answer === "no" ? "Not participating" + (m.reason ? " · " + esc(m.reason) : "") : "Waiting for the answer"}</small></div><span class="chip ${m.answer === "yes" ? "c-ok" : m.answer === "no" ? "c-mut" : "c-warn"}">${m.answer === "yes" ? "Yes" : m.answer === "no" ? "No" : "Waiting"}</span></div>`).join("")}
-        ${U.handhelds.map(h => `<div class="row"><div class="m"><b>CRM handheld${h.model ? " · " + esc(h.model) : ""}</b><small>${esc([h.serial && "S/N " + h.serial, h.connection, h.status].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
-        ${U.fitout ? `<div class="row"><div class="m"><b>Fit-out</b><div class="ms">${U.fitout.milestones.map(m => `<i class="${m.done ? "d" : ""}" title="${esc(m.label)}"></i>`).join("")}</div><small>${U.fitout.milestones.filter(m => m.done).length} / ${U.fitout.milestones.length} milestones${U.fitout.target ? " · target " + esc(U.fitout.target) : ""}</small></div></div>` : ""}
-        ${!U.pm.length && !U.marketing.length && !U.handhelds.length && !U.fitout ? `<div class="none">No PM, marketing or handheld record yet.</div>` : ""}</div>
-      <div class="box"><h3>Recent activity</h3>${act.length ? `<div class="tl">${act.map(a => `<div>${esc(a.t)}<small>${esc(dd(a.d))}${a.s ? " · " + esc(a.s) : ""}</small></div>`).join("")}</div>` : `<div class="none">Nothing in the last months.</div>`}</div></div>
-    ${U.history && U.history.length ? `<div class="box" style="margin-top:14px"><h3>GLA history</h3>${U.history.slice(0, 6).map(h => `<div class="row"><div class="m"><b>${esc(h.kind)} · ${esc(dd(h.date))} ${esc(String(h.date || "").slice(0, 4))}</b><small>${esc(h.note || "")}${h.by ? " · " + esc(h.by) : ""}</small></div></div>`).join("")}</div>` : ""}`;
-  $("#bk").onclick = () => tab("list"); $("#prt").onclick = () => print();
-  const sb = $("#scb"); if (sb) sb.onclick = () => { const f = frame("sales", "sales"); tab("sales"); try { f.contentWindow.openCard(S.name); } catch {} };
-  const up = $("#upS2"); if (up) up.onclick = uploadSales;
+function drawU(){
+  const u = U.unit, tr = U.trend || [], now = tr.length ? tr[tr.length - 1].score : null, last = tr.length > 1 ? tr[tr.length - 2].score : null;
+  const viol = U.feedback.filter(f => f.category !== "Customer Feedback"), fb = U.feedback.filter(f => f.category === "Customer Feedback");
+  const pos = fb.filter(f => f.description === "Positive").length, monthViol = (U.complianceEntries || []).filter(e => e.category !== "Customer Feedback").length;
+  const P = U.portal12 || { vr: { open: 0, total: 0 }, bp: { open: 0, total: 0 }, nr: { open: 0, total: 0 } };
+  const S = U.canSales ? salesFor(u.brand) : null, emails = [...new Set(U.contacts.map(x => x.email).filter(Boolean))], cEnd = U.contract ? (U.contract.departure || U.contract.end) : "";
+  const pRow = (k, label) => `<tr class="go" data-d="${k}"><td>${label}</td><td>${pill(P[k].open + " open", P[k].open ? (k === "bp" ? "r" : "a") : "g", 0, `of ${P[k].total} ${k === "nr" ? "sent" : "posted"}`)}</td><td><small>last 12 months</small></td><td class="more">›</td></tr>`;
+  let sales = "";
+  if (U.canSales){
+    if (!SD) sales = `<tr><td colspan="4"><div class="salesup">Sales are not saved in the hub — <button class="btn small" id="up2">⇡ Upload the Leasing Sales Performance file</button> to see them for this tenant.</div></td></tr>`;
+    else if (S.missing) sales = `<tr><td colspan="4"><small>${esc(u.brand)} is not in ${esc(SD.file)} (${esc(SBU)}), or is under ${MIN_SQM} m².</small></td></tr>`;
+    else sales = `<tr class="go" data-d="sales"><td>Sales YTD growth</td><td>${pill(pc(S.dp), S.dp >= 0 ? "g" : "r")}</td><td><small>Category ${esc(S.cat)} <b class="${S.catGrowth >= 0 ? "up" : "dn"}">${pc(S.catGrowth)}</b></small></td><td class="more">By month ›</td></tr>
+      <tr><td>YTD ${S.year} sales</td><td>${pill(money(S.c))}</td><td><small>YTD ${S.prevYear} ${money(S.p)}</small></td><td></td></tr>
+      <tr><td>Change</td><td>${pill(money(S.c - S.p), S.c >= S.p ? "g" : "r")}</td><td><small>${pc(S.dp)}</small></td><td></td></tr>
+      <tr><td>Space</td><td>${pill(f0(S.space) + " m²")}</td><td></td><td></td></tr>
+      <tr><td>Sales / m²</td><td>${pill("$" + f0(S.sqm), S.sqm >= S.catSqm ? "g" : "a", Math.round(S.sqm - S.sqmP))}</td><td><small>Category $${f0(S.catSqm)} · LY $${f0(S.sqmP)}</small></td><td></td></tr>
+      <tr><td>Rank in category</td><td>${pill(S.rank + " / " + S.of, S.rank <= Math.ceil(S.of / 3) ? "g" : S.rank <= Math.ceil(S.of * 2 / 3) ? "a" : "r")}</td><td><small>by sales / m² in ${esc(S.cat)}</small></td><td></td></tr>`;
+  }
+  $("#app").innerHTML = `<div class="ph"><div class="lgo">${esc(initials(u.brand || u.code))}</div><div style="min-width:0"><h2>${esc(u.brand || u.code)}</h2>
+      <p>${esc([u.code, u.dept, u.area ? Math.round(u.area) + " m²" : "", U.group ? "Group " + U.group : "", U.sku ? "SKU " + U.sku : "", cEnd ? "contract ends " + dd(cEnd) : "", u.status].filter(Boolean).join(" · "))}</p></div>
+      <div class="x noprint">${emails.length ? `<a href="mailto:${esc(emails.join(","))}">✉ Email</a>` : ""}<button id="prt">🖨 Print</button><button id="cls">✕ Close</button></div></div>
+    <div class="box"><h3><span>Tenant KPIs</span>${U.canSales && SD && !S.missing ? `<span class="per">YTD to <select id="ytm">${MNL.slice(0, SD.D.upTo || 12).map((m, i) => `<option value="${i + 1}" ${i + 1 === SM ? "selected" : ""}>${m}</option>`).join("")}</select></span>` : `<span>tap a row for the details</span>`}</h3>
+      <table class="k"><thead><tr><th>KPI</th><th>Value</th><th>Compared with</th><th></th></tr></thead><tbody>
+        <tr class="sec"><td colspan="4">Compliance · hub</td></tr>
+        <tr class="go" data-d="comp"><td>Compliance score (${MNL[new Date().getMonth()]})</td><td>${pill(now ?? "—", tone(now, 90, 75), now != null && last != null ? now - last : 0, last != null ? `${MNL[(new Date().getMonth() + 11) % 12]} ${last}` : "")}</td><td><small>Flagship average ${O && O.kpi.compliance != null ? O.kpi.compliance : "—"}</small></td><td class="more">Details ›</td></tr>
+        <tr class="go" data-d="viol"><td>Tenant compliance violations</td><td>${pill(monthViol, monthViol ? (monthViol >= 3 ? "r" : "a") : "g", 0, "this month")}</td><td><small>12 months: ${viol.length}</small></td><td class="more">›</td></tr>
+        <tr class="go" data-d="fb"><td>Tenant feedback</td><td>${pill(fb.length, fb.length - pos > pos ? "a" : fb.length ? "g" : "", 0, `${pos} positive · ${fb.length - pos} negative`)}</td><td><small>last 12 months</small></td><td class="more">›</td></tr>
+        ${U.canSales ? `<tr class="sec"><td colspan="4">Sales & score card · ${SD ? esc(SD.file) + " · not saved" : "Sales Performance file"}</td></tr>${sales}` : ""}
+        <tr class="sec"><td colspan="4">ABC Connect · portal</td></tr>
+        ${pRow("vr", "Violations")}${pRow("bp", "Penalties")}${pRow("nr", "ABC Requests")}
+        <tr class="sec"><td colspan="4">People · Tenants Directory</td></tr>
+        <tr class="go" data-d="emp"><td>Employees</td><td>${pill(U.contacts.length, U.contacts.length ? "" : "a", 0, esc([...new Set(U.contacts.map(x => x.position).filter(Boolean))].slice(0, 3).join(" · ")))}</td><td></td><td class="more">See them ›</td></tr>
+      </tbody></table></div>`;
+  $("#cls").onclick = () => drawO(); $("#prt").onclick = () => print();
+  const up = $("#up2"); if (up) up.onclick = () => $("#sfile").click();
+  const ym = $("#ytm"); if (ym) ym.onchange = e => { SM = Number(e.target.value); drawU(); };
+  $("#app").querySelectorAll("[data-d]").forEach(r => r.onclick = () => detail(r.dataset.d, S));
 }
-window.hubRefresh = () => loadOverview();
-boot().catch(e => $("#p-ov").innerHTML = `<div class="box">${esc(e.message)}</div>`);
+
+/* ---------- details ---------- */
+function dlg(title, sub, body){
+  const d = $("#dl"); d.innerHTML = `<div class="h"><div><b>${title}</b><small>${sub || ""}</small></div><button class="btn ghost small" id="dx">✕</button></div><div class="b">${body}</div>`;
+  $("#dx").onclick = () => d.close(); d.onclick = e => { if (e.target === d) d.close(); }; if (!d.open) d.showModal(); return d;
+}
+function detail(k, S){
+  const u = U.unit, B = esc(u.brand || u.code);
+  if (k === "comp"){ const tr = U.trend || [];
+    return dlg(`${B} · Compliance`, "Score per month (100 = nothing recorded) and this month's entries",
+      `<div class="spark">${tr.map(t => `<div><small><b>${t.score ?? "—"}</b></small><i style="height:${Math.max(4, t.score || 0)}%;background:${t.score >= 90 ? "var(--ok)" : t.score >= 75 ? "#C8A24A" : t.score >= 60 ? "#E07A3A" : "var(--alert)"}"></i><small>${MN[Number(t.month.slice(5)) - 1]}</small></div>`).join("")}</div>
+      ${(U.compliance && U.compliance.repeats.length) ? `<p class="dn" style="font-size:.8rem;font-weight:700;margin:6px 0">Repeats: ${esc(U.compliance.repeats.map(r => `${r.what} ×${r.n} → ${r.suggest}`).join(" · "))}</p>` : ""}
+      ${(U.complianceEntries || []).map(e => `<div class="row"><div class="m"><b>${esc(e.description || e.category)}</b><small>${esc(e.category)} · ${esc(dd(e.day))}${e.action ? " · " + esc(e.action) : ""}${e.by ? " · " + esc(e.by) : ""}</small></div></div>`).join("") || `<p class="muted" style="font-size:.82rem">Nothing recorded this month.</p>`}`); }
+  if (k === "viol" || k === "fb"){ const L = U.feedback.filter(f => k === "viol" ? f.category !== "Customer Feedback" : f.category === "Customer Feedback");
+    return dlg(`${B} · ${k === "viol" ? "Compliance violations" : "Tenant feedback"}`, "Last 12 months · from the hub",
+      L.map(f => `<div class="row"><div class="m"><b>${esc(f.description || f.category)}</b><small>${esc(dd(f.day))}${f.time ? " " + esc(f.time) : ""}${f.action ? " · " + esc(f.action) : ""}${f.by ? " · " + esc(f.by) : ""}</small>${f.actionDesc ? `<small>${esc(f.actionDesc)}</small>` : ""}</div></div>`).join("") || `<p class="muted">Nothing recorded.</p>`); }
+  if (k === "vr" || k === "bp" || k === "nr"){ const X = U.portal12[k];
+    return dlg(`${B} · ${{ vr: "Violations", bp: "Penalties", nr: "ABC Requests" }[k]}`, `ABC Connect · last 12 months · ${X.open} open of ${X.total}`,
+      X.items.map(x => `<div class="row"><div class="m"><b>${x.link ? `<a href="${esc(x.link)}" target="_blank" rel="noopener" style="color:inherit">${esc(x.name)}</a>` : esc(x.name)} · ${esc(x.subject || "")}</b><small>${esc(dd(x.day))} · ${esc(x.status)}</small></div>
+        <span class="chip" style="${x.open ? "background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)" : "background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)"}">${x.open ? "Open" : "Closed"}</span></div>`).join("") || `<p class="muted">Nothing in the last 12 months.</p>`); }
+  if (k === "emp") return dlg(`${B} · Employees`, "From the Tenants Directory",
+    U.contacts.map(x => `<div class="row"><div class="m"><b>${esc(x.name || "—")}</b><small>${esc([x.position, x.mobile, x.email].filter(Boolean).join(" · "))}</small></div>
+      ${x.mobile ? `<a class="btn ghost small" href="tel:${esc(String(x.mobile).replace(/[^+\d]/g, ""))}">📞</a>` : ""}${x.email ? `<a class="btn ghost small" href="mailto:${esc(x.email)}">✉</a>` : ""}</div>`).join("") || `<p class="muted">No contact in the Tenants Directory yet.</p>`);
+  if (k === "sales"){
+    const draw = () => { const T = salesFor(u.brand); if (!T || T.missing) return;
+      const rows = MN.slice(0, SM).map((m, i) => { const c = T.cur[i], p = T.prev[i], g = p ? (c / p - 1) * 100 : NaN;
+        return `<tr><td>${MNL[i]}</td><td>${money(c)}</td><td>${money(p)}</td><td>${pill(pc(g), isFinite(g) ? (g >= 0 ? "g" : "r") : "")}<span class="d ${g >= 0 ? "up" : "dn"}">${isFinite(g) ? (g >= 0 ? "▲" : "▼") : ""}</span></td></tr>`; }).join("");
+      dlg(`${B} · Sales by month`, `${T.year} vs ${T.prevYear} · ${esc(SD.file)} · not saved`,
+        `<div class="mo">${MN.slice(0, SD.D.upTo || 12).map((m, i) => `<button data-m="${i + 1}" class="${i + 1 === SM ? "on" : ""}">YTD ${m}</button>`).join("")}</div>
+        <table class="k"><thead><tr><th>Month</th><th>${T.year}</th><th>${T.prevYear}</th><th>Change</th></tr></thead><tbody>${rows}
+        <tr><td><b>YTD</b></td><td><b>${money(T.c)}</b></td><td><b>${money(T.p)}</b></td><td>${pill(pc(T.dp), T.dp >= 0 ? "g" : "r")}</td></tr></tbody></table>
+        <p class="muted" style="font-size:.76rem;margin-top:8px">Category ${esc(T.cat)}: ${pc(T.catGrowth)} YTD.</p>`);
+      $("#dl").querySelectorAll("[data-m]").forEach(b => b.onclick = () => { SM = Number(b.dataset.m); draw(); drawU(); }); };
+    return draw();
+  }
+}
+window.hubRefresh = async () => { await loadO(); if (U) openUnit(U.unit.id); else drawO(); };
+boot().catch(e => $("#app").innerHTML = `<div class="box">${esc(e.message)}</div>`);
 </script>
 </body>
 </html>
