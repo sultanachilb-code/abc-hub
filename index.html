@@ -400,6 +400,7 @@ body.hl-docked main{padding-bottom:110px}
 /* ---------- brief by role ---------- */
 .rb-admin{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 14px;padding:8px 10px;border-radius:12px;background:var(--paper);font-size:.76rem;font-weight:700;color:var(--muted)}
 .rb-admin button{border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-weight:800;font-size:.76rem;background:var(--surface);color:var(--text)}.rb-admin button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.rb-admin .rb-fold{width:30px;height:30px;padding:0;border-radius:50%;font-size:.9rem;display:grid;place-items:center}.rb-folded{padding:10px 12px!important}
 .rb-need{display:inline-flex;align-items:center;line-height:1;font-size:.72rem;font-weight:800;padding:5px 10px;border-radius:99px;background:#FDECEA;color:#C0392B;white-space:nowrap}.rb-need.ok{background:#E6F4EC;color:#2E8B57}
 .rb-site{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface);color:var(--text);font:inherit;font-size:.8rem}
 .rb-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
@@ -2540,18 +2541,21 @@ const RB = { data: null, busy: false, as: store.get("hub.briefAs", "advisor"), p
 const RB_APP = { incidents: "incidents", checklists: "forms", handover: "handover", malfunctions: "malfunctions", snaglist: "snaglist", restroom: "restroom", feedback: "feedback", marketing: "calendar", cleaning: "cleanctl", contractors: "contractor-access", contracts: "contracts",
   portal: "portal", vrres: "portal", mk7: "portal", pir: "incidents", amcheck: "forms", pmcheck: "forms", cleaningk: "cleanctl", mf48: "malfunctions", snags: "snaglist", gla: "gla" };
 async function loadRoleBrief(){
-  if (RB.busy) return; RB.busy = true; RB.err = ""; renderRoleBrief();
+  if (RB.busy) return; if (ME && ME.user.role === "ADMIN" && store.get("hub.briefFold", false)) return renderRoleBrief();   // folded: nothing to load RB.busy = true; RB.err = ""; renderRoleBrief();
   try { RB.data = await api(`brief/role?as=${encodeURIComponent(RB.as)}&period=${RB.period}&site=${encodeURIComponent(RB.site)}`); }
   catch (e){ RB.err = e.message; }
   RB.busy = false; renderRoleBrief();
 }
 function renderRoleBrief(){
   const box = $("#brief"); if (!box) return;
+  const admin = ME.user.role === "ADMIN", folded = admin && store.get("hub.briefFold", false);   // Admin: fold the brief away (▾ on the Preview-as bar)
+  const fold = admin ? `<button data-rbfold class="rb-fold" title="${folded ? "Show the brief" : "Hide the brief"}" aria-label="${folded ? "Show the brief" : "Hide the brief"}" aria-expanded="${!folded}">${folded ? "▾" : "▴"}</button>` : "";
+  if (folded){ box.innerHTML = `<section class="brief rb rb-folded"><div class="rb-admin" style="margin:0"><span>Preview as</span><b style="color:var(--text)">${esc({ manager: "Manager", advisor: "Advisor", director: "Director", cdso: "CDSO" }[RB.as] || RB.as)}</b><span style="flex:1"></span><span>Brief hidden</span>${fold}</div></section>`; return; }
   if (!RB.data && !RB.busy && !RB.err){ loadRoleBrief(); return; }
-  const D = RB.data || {}, admin = ME.user.role === "ADMIN", hr = new Date().getHours(), part = hr < 12 ? "Morning" : hr < 18 ? "Afternoon" : "Evening";
+  const D = RB.data || {}, hr = new Date().getHours(), part = hr < 12 ? "Morning" : hr < 18 ? "Afternoon" : "Evening";
   if (D.kind === "none" && !admin){ box.innerHTML = ""; return; }
   const first = esc((ME.user.name || "").split(" ")[0]);
-  const adminBar = admin ? `<div class="rb-admin"><span>Preview as</span>${Object.entries({ manager: "Manager", advisor: "Advisor", director: "Director", cdso: "CDSO" }).map(([k, n]) => `<button data-rbas="${k}" class="${RB.as === k ? "on" : ""}">${n}</button>`).join("")}<span style="flex:1"></span><button data-rbset class="gh">⚙ Brief settings</button></div>` : "";
+  const adminBar = admin ? `<div class="rb-admin"><span>Preview as</span>${Object.entries({ manager: "Manager", advisor: "Advisor", director: "Director", cdso: "CDSO" }).map(([k, n]) => `<button data-rbas="${k}" class="${RB.as === k ? "on" : ""}">${n}</button>`).join("")}<span style="flex:1"></span><button data-rbset class="gh">⚙ Brief settings</button>${fold}</div>` : "";
   const refresh = `<button class="refresh ${RB.busy ? "spin" : ""}" data-rbref aria-label="Refresh" title="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>`;
   let body = "";
   if (!RB.data) body = RB.err ? `<p class="brief-empty">${esc(RB.err)}</p>` : `<div class="sk"></div><div class="sk"></div>`;
@@ -2578,6 +2582,7 @@ $("#brief").addEventListener("click", async e => {
   const as = t.closest("[data-rbas]"); if (as){ RB.as = as.dataset.rbas; store.set("hub.briefAs", RB.as); RB.data = null; return loadRoleBrief(); }
   const pr = t.closest("[data-rbper]"); if (pr){ RB.period = pr.dataset.rbper; store.set("hub.briefPeriod", RB.period); return loadRoleBrief(); }
   if (t.closest("[data-rbref]")) return loadRoleBrief();
+  if (t.closest("[data-rbfold]")){ store.set("hub.briefFold", !store.get("hub.briefFold", false)); return renderRoleBrief(); }
   if (t.closest("[data-rbset]")) return briefSettings();
   const ap = t.closest("[data-rbapp]"); if (ap){ const a = byId(ap.dataset.rbapp); if (a) launch(a, ap.dataset.rbsite2 || undefined); }
 });
