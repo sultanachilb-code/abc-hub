@@ -42,3 +42,6 @@
 - A web page cannot set the zoom of the iPhone camera app (it always opens at 1×). The zoom used in the ghost camera is remembered when the shutter is pressed and applied afterwards:
   the alignment tries 1×, the ghost zoom and steps between (so it also works when the zoom was set in the iPhone camera itself) and keeps the best match.
 - **Save the after photo**: *Framed like the before* (default — cut from the full-resolution photo at the same zoom and angle) or *Full photo as taken*; remembered on the device.
+- (26 Oct, later) A zoom other than 1× is used only when it matches clearly better (repeated shapes such as pipes or tiles can fool the edge matching).
+  **✥ Adjust the framing by hand** on the result: the after under a see-through before (slider), pinch / drag / ＋ − / Auto → "Use this framing" re-cuts the side-by-side, the deck copy and the framed after file. Highlighted when the match is below 60 %.
+  The comparison is sized to the screen so the buttons are never covered.

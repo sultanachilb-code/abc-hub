@@ -360,7 +360,9 @@ function alignOf(beforeImg, afterSrc, aw, ah, zooms = [1]){
     const crop = { x: (aw - cw) / 2, y: (ah - ch) / 2, w: cw, h: ch }, B = edgeMap(afterSrc, crop.x, crop.y, crop.w, crop.h, W, H);
     const coarse = bestFit(A, B, W, H, 12, [0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15], 0, 0, 2);   // wide and quick…
     const f0 = bestFit(A, B, W, H, 2, [-.03, -.015, 0, .015, .03].map(d => +(coarse.s + d).toFixed(3)), coarse.dx, coarse.dy);   // …then fine around it
-    if (!best || f0.c > best.f.c) best = { f: f0, crop, z };
+    const cand = { f: f0, crop, z };
+    if (!best) best = cand;
+    else if (f0.c > best.f.c + (z === 1 || best.z === 1 ? .06 : 0)) best = cand;   // a different zoom must match clearly better (repeated shapes — pipes, tiles — fool the edges)
   }
   const f = best.f, crop = best.crop;
   /* the matching region of the after, in its own pixels (kept inside the photo) */
@@ -379,19 +381,24 @@ async function finishAfter(src, file, how){
         or the full photo exactly as the camera took it — the person chooses on the result screen */
   let fullBlob = file;
   if (!fullBlob){ const full = document.createElement("canvas"); full.width = aw; full.height = ah; full.getContext("2d", CS).drawImage(src, 0, 0); fullBlob = await toBlob(full, .97); }
-  let framedBlob = null;
-  const fr = al.c > .25 ? al.rect : al.crop, framedUseful = fr.w < aw * .93 || fr.h < ah * .93;
-  if (framedUseful) { const fc = document.createElement("canvas"); fc.width = Math.round(fr.w); fc.height = Math.round(fr.h); const fx = fc.getContext("2d", CS); fx.imageSmoothingQuality = "high"; fx.drawImage(src, fr.x, fr.y, fr.w, fr.h, 0, 0, fc.width, fc.height); framedBlob = await toBlob(fc, .95); }
-  /* 2) the after lined up on the before, at the before's size (up to 3200 px) — for the side by side and the deck */
   const raw = document.createElement("canvas"), bw = S.before.w, bh = S.before.h, out = Math.min(1, 3200 / Math.max(bw, bh));
   raw.width = Math.round(bw * out); raw.height = Math.round(bh * out);
-  const r = al.c > .25 ? al.rect : al.crop, rx = raw.getContext("2d", CS); rx.imageSmoothingQuality = "high"; rx.fillStyle = "#000"; rx.fillRect(0, 0, raw.width, raw.height);
-  rx.drawImage(src, r.x, r.y, r.w, r.h, 0, 0, raw.width, raw.height);
+  let framedBlob = null, fr = null;
+  /* the after cut to a rectangle of the photo: (a) the copy for the side-by-side / deck, (b) the "framed like the before" file */
+  const cut = async rect => {
+    fr = rect;
+    const rx = raw.getContext("2d", CS); rx.imageSmoothingQuality = "high"; rx.fillStyle = "#000"; rx.fillRect(0, 0, raw.width, raw.height);
+    rx.drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, raw.width, raw.height);
+    framedBlob = null;
+    if (rect.w < aw * .93 || rect.h < ah * .93) { const fc = document.createElement("canvas"); fc.width = Math.round(rect.w); fc.height = Math.round(rect.h); const fx = fc.getContext("2d", CS); fx.imageSmoothingQuality = "high"; fx.drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, fc.width, fc.height); framedBlob = await toBlob(fc, .95); }
+  };
+  await cut(al.c > .3 ? al.rect : al.crop);
   const wbGain = whiteBalanceGain(bimg, raw);
   const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
   const shot = { id: uid(), kind: "after", site, place: S.place, at, how };
   const pair = { id: uid(), beforeId: S.before.id, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at, match: Math.round(al.c * 100) };
-  const R = { pair, beforeUrl: S.before.url, w: aw, h: ah, match: pair.match, fullBlob, framedBlob, fw: Math.round(fr.w), fh: Math.round(fr.h), zoomUsed: al.zoom, base, wbGain, wbUseful: wbGain.some(g => Math.abs(g - 1) > .03) };
+  const R = { pair, beforeUrl: S.before.url, w: aw, h: ah, match: pair.match, fullBlob, framedBlob, fw: Math.round(fr.w), fh: Math.round(fr.h), zoomUsed: al.zoom, base, wbGain, wbUseful: wbGain.some(g => Math.abs(g - 1) > .03),
+    src, rect: fr, bimg, recut: async rect => { await cut(rect); Object.assign(R, { framedBlob, fw: Math.round(fr.w), fh: Math.round(fr.h), rect: fr, manual: true }); await R.build(); } };
   /* builds the copy used for the comparison (white balance matched to the before when switched on) + the side-by-side */
   R.build = async () => {
     const c = document.createElement("canvas"); c.width = raw.width; c.height = raw.height; c.getContext("2d", CS).drawImage(raw, 0, 0);
@@ -432,19 +439,58 @@ function applyGain(c, g){
   for (let i = 0; i < d.length; i += 4){ d[i] = L[0][d[i]]; d[i + 1] = L[1][d[i + 1]]; d[i + 2] = L[2][d[i + 2]]; }
   x.putImageData(im, 0, 0);
 }
+/* manual framing: the after under a see-through before — pinch / drag until they match */
+function adjustFraming(R){
+  const el = CAM.el, ar = S.before.w / S.before.h, aw = R.w, ah = R.h;
+  const SW = Math.min(innerWidth - 20, 620, (innerHeight * .62) * ar), SH = SW / ar;
+  let k = SW / R.rect.w, ox = -R.rect.x * k, oy = -R.rect.y * k, ghost = 45;
+  const url = URL.createObjectURL(R.fullBlob);
+  el.innerHTML = `<div class="fres"><div class="ftop"><button class="fp" id="ax">✕</button><span class="fp">Pinch and drag the after under the before</span></div>
+    <div id="stg" style="position:relative;width:${SW}px;height:${SH}px;border-radius:14px;overflow:hidden;background:#000;touch-action:none">
+      <img id="aimg" src="${url}" alt="" style="position:absolute;left:0;top:0;max-width:none;user-select:none;-webkit-user-drag:none">
+      <img src="${R.beforeUrl}" alt="" id="gimg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:${ghost / 100};pointer-events:none"></div>
+    <div class="fnote" style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap">Before <input type="range" min="0" max="90" value="${ghost}" id="go"> <button class="btn ghost" id="zm">−</button><button class="btn ghost" id="zp">＋</button><button class="btn ghost" id="zr">Auto</button></div>
+    <div class="fact"><button class="btn ghost" id="ac">Cancel</button><button class="btn gold" id="ok2">✓ Use this framing</button></div></div>`;
+  const img = $("#aimg"), stg = $("#stg");
+  const clamp = () => { k = Math.max(SW / aw, SH / ah, Math.min(k, SW / 200)); ox = Math.min(0, Math.max(SW - aw * k, ox)); oy = Math.min(0, Math.max(SH - ah * k, oy)); };
+  const paint = () => { clamp(); Object.assign(img.style, { width: aw * k + "px", height: ah * k + "px", left: ox + "px", top: oy + "px" }); };
+  const zoomAt = (f, cx, cy) => { const nk = k * f; ox = cx - (cx - ox) * (nk / k); oy = cy - (cy - oy) * (nk / k); k = nk; paint(); };
+  paint();
+  const P = new Map(); let last = null;
+  stg.addEventListener("pointerdown", e => { stg.setPointerCapture(e.pointerId); P.set(e.pointerId, { x: e.clientX, y: e.clientY }); last = null; });
+  stg.addEventListener("pointermove", e => { if (!P.has(e.pointerId)) return; const prev = P.get(e.pointerId); P.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const r = stg.getBoundingClientRect();
+    if (P.size === 1) { ox += e.clientX - prev.x; oy += e.clientY - prev.y; paint(); }
+    else if (P.size === 2) { const [p1, p2] = [...P.values()], d = Math.hypot(p1.x - p2.x, p1.y - p2.y), cx = (p1.x + p2.x) / 2 - r.left, cy = (p1.y + p2.y) / 2 - r.top;
+      if (last) zoomAt(d / last, cx, cy); last = d; } });
+  const up = e => { P.delete(e.pointerId); last = null; }; stg.addEventListener("pointerup", up); stg.addEventListener("pointercancel", up);
+  stg.addEventListener("wheel", e => { e.preventDefault(); const r = stg.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.06 : 1 / 1.06, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  $("#go").oninput = e => { $("#gimg").style.opacity = e.target.value / 100; };
+  $("#zp").onclick = () => zoomAt(1.1, SW / 2, SH / 2); $("#zm").onclick = () => zoomAt(1 / 1.1, SW / 2, SH / 2);
+  $("#zr").onclick = () => { k = SW / R.rect.w; ox = -R.rect.x * k; oy = -R.rect.y * k; paint(); };
+  const back = () => { URL.revokeObjectURL(url); showResult(R); };
+  $("#ax").onclick = $("#ac").onclick = back;
+  $("#ok2").onclick = async () => { $("#ok2").disabled = true; toast("Applying the framing…");
+    await R.recut({ x: -ox / k, y: -oy / k, w: SW / k, h: SH / k }); URL.revokeObjectURL(url); showResult(R); toast("Framing saved"); };
+}
 /* result: drag the line to compare, save to Photos */
 function showResult(R){
   stopCam(); if (CAM){ clearInterval(CAM.timer); }
   const el = CAM ? CAM.el : (() => { const d = document.createElement("div"); d.className = "fcam"; document.body.append(d); document.documentElement.classList.add("noscroll"); CAM = { el: d }; return d; })();
   el.innerHTML = `<div class="fres"><div class="ftop"><button class="fp" id="cx">✕</button><span class="fp ${R.match >= 70 ? "ok" : R.match >= 45 ? "mid" : "low"}">Match ${R.match}%</span><span class="fp">${R.w} × ${R.h}${R.w * R.h >= 8e6 ? " · " + Math.round(R.w * R.h / 1e6) + " MP" : ""}</span></div>
-    <div class="cmp" id="cmp" style="aspect-ratio:${S.before.w}/${S.before.h}"><img src="${R.alignedUrl}" alt=""><div class="cb" id="cb"><img src="${R.beforeUrl}" alt=""></div><i id="cl"></i><em class="b">BEFORE</em><em class="a">AFTER</em></div>
-    <p class="fnote">Drag across the photo to compare. The after is lined up on the before automatically${R.zoomUsed > 1.05 ? ` (zoom ${R.zoomUsed.toFixed(1)}× applied — the iPhone camera opens at 1×)` : ""}.</p>
+    <div class="cmp" id="cmp"><img src="${R.alignedUrl}" alt=""><div class="cb" id="cb"><img src="${R.beforeUrl}" alt=""></div><i id="cl"></i><em class="b">BEFORE</em><em class="a">AFTER</em></div>
+    <p class="fnote">${R.manual ? "Framing adjusted by hand." : `Drag across the photo to compare. The after is lined up on the before automatically${R.zoomUsed > 1.05 ? ` (zoom ${R.zoomUsed.toFixed(1)}× applied — the iPhone camera opens at 1×)` : ""}.`}</p>
+    ${R.src ? `<button class="btn ${R.match < 60 && !R.manual ? "gold" : "ghost"}" id="adj">✥ Adjust the framing by hand</button>` : ""}
     ${R.framedBlob ? `<div class="fnote" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"><span>Save the after photo:</span>
       <label><input type="radio" name="fr" value="1" ${S.framed !== false ? "checked" : ""}> Framed like the before (${R.fw} × ${R.fh})</label>
       <label><input type="radio" name="fr" value="0" ${S.framed === false ? "checked" : ""}> Full photo as taken (${R.w} × ${R.h})</label></div>` : ""}
     ${R.build && R.wbUseful ? `<label class="fnote" style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="checkbox" id="wb" ${S.wb ? "checked" : ""}> Match the colours (white balance) to the before photo — side-by-side &amp; deck</label>` : ""}
     <div class="fact"><button class="btn gold" id="sv">⤓ Save to Photos (2)</button><button class="btn" id="dk">+ Deck</button><button class="btn ghost" id="re">Retake</button><button class="btn ghost" id="ok">Done</button></div></div>`;
-  const cmp = $("#cmp"), set = px => { const r = cmp.getBoundingClientRect(), p = Math.max(0, Math.min(1, (px - r.left) / r.width)); $("#cb").style.width = p * 100 + "%"; $("#cl").style.left = p * 100 + "%"; };
+  const cmp = $("#cmp");
+  { const ar = S.before.w / S.before.h, w = Math.min(innerWidth - 28, 560, (innerHeight * .52) * ar), h = w / ar;   // fits above the buttons on any phone
+    Object.assign(cmp.style, { width: w + "px", height: h + "px" }); cmp.querySelector(".cb img").style.width = w + "px"; }
+  const adj = $("#adj"); if (adj) adj.onclick = () => adjustFraming(R);
+  const set = px => { const r = cmp.getBoundingClientRect(), p = Math.max(0, Math.min(1, (px - r.left) / r.width)); $("#cb").style.width = p * 100 + "%"; $("#cl").style.left = p * 100 + "%"; };
   cmp.addEventListener("pointerdown", e => { set(e.clientX); cmp.setPointerCapture(e.pointerId); }); cmp.addEventListener("pointermove", e => { if (e.buttons || e.pressure) set(e.clientX); });
   $("#sv").onclick = async () => { if (await saveFiles(R.files)) toast(isIOS ? "Saved — check Photos" : "Saved"); };
   document.querySelectorAll('input[name="fr"]').forEach(x => x.onchange = async () => { S.framed = x.value === "1"; try { localStorage.setItem("ba.framed", S.framed ? "1" : "0"); } catch {} await R.build(); toast(S.framed ? "The after is saved framed like the before" : "The after is saved as taken"); });
