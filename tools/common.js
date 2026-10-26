@@ -7,6 +7,10 @@
   addEventListener("storage", e => { if (e.key === "hub.theme") apply(read(e.newValue)); });
 })();
 const $ = s => document.querySelector(s);
+/* Tenant 360 (Oct 2026): a tool opened inside another page (?embed=1&site=XXX) hides its own title and flagship picker and follows that flagship */
+const EMBED = (() => { try { const q = new URLSearchParams(location.search); return q.get("embed") === "1" ? { site: (q.get("site") || "").toUpperCase() } : null; } catch { return null; } })();
+if (EMBED) { document.documentElement.classList.add("embed"); const st = document.createElement("style");
+  st.textContent = ".embed .top{position:static;border:0;background:transparent;padding:6px 16px 0;min-height:0}.embed .top h1,.embed #siteBox,.embed #sitePick,.embed #siteSel{display:none!important}.embed .wrap{padding-top:8px}"; document.head.append(st); }
 /* Downloads feature: every file a tool gives you is also listed in Downloads (tools/hubdl.js) */
 (() => { if (window.HubDL) return; const sc = document.createElement("script"); sc.src = "/tools/hubdl.js"; document.head.append(sc); })();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -23,6 +27,7 @@ function offRead(){ try { return JSON.parse(localStorage.getItem(OFF.key) || "[]
 function offWrite(q){ try { localStorage.setItem(OFF.key, JSON.stringify(q)); } catch {} offBadge(); }
 function offKey(path, b){ return path + "|" + (b.site || "") + "|" + (b.clientId || b.id || `${b.form || ""}|${b.day || ""}|${(b.header && b.header.tenant) || ""}`); }
 async function apiRaw(path, body){
+  if (EMBED && EMBED.site && path === "ops/context") path += "?site=" + EMBED.site;
   const r = await fetch("/api/" + path, body === undefined ? { credentials: "same-origin" }
     : { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   let j = null; try { j = await r.json(); } catch {}

@@ -6,166 +6,238 @@
 <title>Tenant 360 · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
-<!-- Tenant 360: one page per unit with everything the hub knows about its tenant — see docs/FEATURE-tenant-360.md -->
+<!-- Tenant 360 (v2, Oct 2026): one app for Tenant 360 + Tenants Directory + Tenant Compliance + Tenant Sales & Score Card.
+     Overview dashboard · Tenants list · Tenant profile are built here; Compliance, Sales and Directory are the existing pages inside (embed mode).
+     Sales are never saved: the Sales tab reads the file in memory and shares the figures with this page. See docs/FEATURE-tenant-360.md -->
 <style>
-.t3{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
-.t3-l{position:sticky;top:12px;max-height:calc(100vh - 90px);display:flex;flex-direction:column;padding:12px}
-.t3-q{display:flex;gap:8px;margin-bottom:8px}
-.t3-q input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit}
-.t3-f{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.t3-f button{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:999px;padding:5px 11px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
-.t3-f button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.t3-list{overflow:auto;flex:1;margin:0 -4px;padding:0 4px}
-.u{display:block;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;padding:10px;border-radius:12px;cursor:pointer;border-bottom:1px solid var(--line)}
-.u:hover{background:var(--paper)}.u.on{background:color-mix(in srgb,var(--brand) 10%,transparent)}
-.u b{display:block;font-size:.9rem}.u small{color:var(--muted);font-size:.74rem}
-.fl{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
-.fl i{font-style:normal;font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--paper);color:var(--muted)}
-.fl i.al{background:color-mix(in srgb,var(--alert) 14%,transparent);color:var(--alert)}
-.fl i.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
-.fl i.info{background:color-mix(in srgb,var(--brand-2) 14%,transparent);color:var(--brand-2)}
-.hd{padding:18px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.hd .logo{width:58px;height:58px;border-radius:16px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:1.2rem;flex:none}
-.hd h2{font-size:1.35rem}.hd p{color:var(--muted);font-size:.84rem;margin-top:2px}
-.kp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
-.kp .card{padding:12px 14px}.kp b{display:block;font-size:1.5rem;line-height:1.1}.kp small{color:var(--muted);font-size:.74rem;font-weight:700}
-.kp .al b{color:var(--alert)}.kp .warn b{color:var(--warn)}.kp .ok b{color:var(--ok)}
-.sec{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.box{padding:14px 16px}.box h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center}
-.box h3 a{font-size:.74rem;text-transform:none;letter-spacing:0;color:var(--brand-2);font-weight:700;text-decoration:none}
-.row{padding:8px 0;border-top:1px solid var(--line);font-size:.84rem;line-height:1.4}.row:first-of-type{border-top:0}
-.row small{color:var(--muted);display:block;font-size:.74rem}
-.st{font-size:.7rem;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--paper);white-space:nowrap}
-.st.al{color:var(--alert)}.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}
-.row a{color:var(--brand-2);font-weight:700}
+:root{--cy:#7B4BB0;--ly:#A88426}
+:root[data-theme="dark"]{--cy:#A27BD6;--ly:#B08A2E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cy:#A27BD6;--ly:#B08A2E}}
+.top .q{width:260px;max-width:100%}
+.tabs{display:flex;gap:4px;width:100%;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tabs button{padding:9px 14px;border-radius:10px;font-weight:800;font-size:.86rem;color:var(--muted);white-space:nowrap}
+.tabs button.on{background:var(--brand);color:#fff}
+.k5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.kp{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.kp b{display:block;font-size:1.7rem;line-height:1.15}.kp span{font-size:.76rem;color:var(--muted)}.kp em{display:block;font-style:normal;font-size:.74rem;font-weight:800;margin-top:2px}
+.up{color:var(--ok)}.dn{color:var(--alert)}.wn{color:var(--warn)}
+.g2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-top:14px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.box h3{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}.row:first-of-type{border-top:0}
+.row .m{flex:1;min-width:0}.row b{font-size:.9rem}.row small{display:block;color:var(--muted);font-size:.74rem;line-height:1.35}
+.row.go{cursor:pointer}.row.go:hover b{color:var(--brand-2)}
+.chip{font-size:.68rem;font-weight:800;border-radius:99px;padding:3px 8px;white-space:nowrap}
+.c-al{background:color-mix(in srgb,var(--alert) 14%,transparent);color:var(--alert)}.c-warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.c-ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}.c-info{background:color-mix(in srgb,var(--brand-2) 14%,transparent);color:var(--brand-2)}
+.c-mut{background:var(--paper);color:var(--muted)}
+.sc{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.88rem;color:#fff;flex:none;background:var(--muted)}
+.hb{display:flex;align-items:flex-end;gap:8px;height:160px}.hb div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.hb i{display:block;width:100%;border-radius:6px 6px 0 0;min-height:3px}.hb small{font-size:.68rem;color:var(--muted)}
+.cat{display:grid;grid-template-columns:130px 1fr 54px;gap:8px;align-items:center;font-size:.8rem;margin:7px 0}.cat .bars{display:grid;gap:3px}.cat .bars i{display:block;height:8px;border-radius:4px}
+.lg{display:flex;gap:14px;font-size:.72rem;color:var(--muted);margin-top:6px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .none{color:var(--muted);font-size:.82rem;padding:4px 0}
+.salesup{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:.84rem}
+/* tenants list */
+.fl{display:flex;gap:6px;flex-wrap:wrap}.fl button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:.78rem;font-weight:800}
+.fl button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ul{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:12px}
+.ul .row{padding:10px 14px;cursor:pointer}.ul .row:hover{background:var(--paper)}
+.fls{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+/* profile */
+.ph{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:linear-gradient(120deg,#2A0F45,#4A1F73);color:#fff;border-radius:18px;padding:18px 20px}
+.ph .lgo{width:62px;height:62px;border-radius:16px;background:#fff;color:#4A1F73;display:grid;place-items:center;font-weight:900;font-size:1.25rem;flex:none}
+.ph h2{font-size:1.4rem}.ph p{opacity:.88;font-size:.84rem;margin-top:3px}.ph .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ph .pills span{background:rgba(255,255,255,.14);border-radius:99px;padding:4px 10px;font-size:.74rem;font-weight:700}
+.ph .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.ph .act button,.ph .act a{background:#E9CF8A;color:#2A0F45;border-radius:10px;padding:9px 13px;font-weight:800;font-size:.82rem;text-decoration:none}
+.ph .act .gh{background:rgba(255,255,255,.14);color:#fff}
+.big{font-size:2rem;font-weight:900;line-height:1.1}.sub{font-size:.76rem;color:var(--muted);line-height:1.4}
+.spark{display:flex;align-items:flex-end;gap:4px;height:50px;margin-top:10px}.spark div{flex:1;height:100%;display:flex;align-items:flex-end}.spark i{display:block;width:100%;border-radius:4px 4px 0 0;min-height:3px}
+.sl{display:flex;justify-content:space-between;font-size:.66rem;color:var(--muted);margin-top:3px}
+.ct{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.ct:first-of-type{border-top:0}
+.ct .av{width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:.76rem;flex:none}
+.ct .m{flex:1;min-width:0}.ct b{font-size:.86rem}.ct small{display:block;color:var(--muted);font-size:.72rem}
+.ct a{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);display:grid;place-items:center;text-decoration:none;flex:none}
+.tl{border-left:2px solid var(--line);margin-left:6px;padding-left:14px}.tl div{position:relative;padding:6px 0;font-size:.82rem}
+.tl div:before{content:"";position:absolute;left:-20px;top:11px;width:10px;height:10px;border-radius:50%;background:var(--brand-2)}
+.tl small{color:var(--muted);display:block;font-size:.72rem}
 .ms{display:flex;gap:4px;margin:6px 0}.ms i{flex:1;height:8px;border-radius:4px;background:var(--line)}.ms i.d{background:var(--ok)}
-.back{display:none}
-.wide{grid-column:1/-1}
-@media (max-width:900px){
-  .t3{grid-template-columns:1fr}.t3-l{position:static;max-height:none}
-  .t3.det .t3-l{display:none}.t3:not(.det) .t3-r{display:none}
-  .back{display:inline-flex;margin-bottom:10px}
-  .sec{grid-template-columns:1fr}.kp{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media print{.top,.t3-l,.back{display:none!important}.t3{display:block}}
+.frame{width:100%;border:0;display:block;min-height:calc(100vh - 140px);background:transparent}
+.pane{display:none}.pane.on{display:block}
+@media (max-width:900px){.k5{grid-template-columns:repeat(2,minmax(0,1fr))}.g2,.g3{grid-template-columns:1fr}.ph .act{margin-left:0}.top .q{width:100%}}
+@media print{.top,.noprint{display:none!important}body{background:#fff}.ph{-webkit-print-color-adjust:exact;print-color-adjust:exact}.pane:not(#p-prof){display:none!important}}
 </style>
 </head>
 <body>
-<div class="top"><h1>🏬 Tenant 360 <small id="sub"></small></h1><span id="sitePick"></span></div>
-<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<div class="top"><h1>🏬 Tenant 360 <small id="sub"></small></h1><span id="sitePick"></span><input class="inp q" id="q" type="search" placeholder="Search tenant, unit, group…">
+  <div class="tabs" id="tabs"></div></div>
+<div class="wrap">
+  <div class="pane on" id="p-ov"><div class="empty">Loading…</div></div>
+  <div class="pane" id="p-list"></div>
+  <div class="pane" id="p-prof"></div>
+  <div class="pane" id="p-comp"></div>
+  <div class="pane" id="p-sales"></div>
+  <div class="pane" id="p-dir"></div>
+</div>
+<input type="file" id="sfile" accept=".xlsx,.xlsm" hidden>
 <script src="common.js"></script>
 <script>
 const UP = new URLSearchParams(location.search);
-let ctx = null, site = UP.get("site") || "", L = null, cur = Number(UP.get("unit")) || 0, U = null, q = UP.get("q") || "", flt = "attn";
-const fmtD = d => d ? D.fmt(d) : "";
-async function boot(){
-  try {
-    ctx = await api("ops/context" + (site ? `?site=${site}` : ""));
-    if (!site || site === "ALL") site = ctx.site;
-    const S = Object.entries(ctx.sites || {});
-    $("#sitePick").innerHTML = S.length > 1 ? `<select class="sel" id="siteSel" aria-label="Flagship">${S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
-    const sel = $("#siteSel"); if (sel) sel.onchange = () => { site = sel.value; cur = 0; U = null; load(); };
-    load();
-  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+let CTX = null, site = (UP.get("site") || "").toUpperCase(), O = null, TAB = "ov", FLT = "attn", Q = UP.get("q") || "", U = null, UID = Number(UP.get("unit")) || 0, SALES = null;
+const f0 = v => Math.round(v || 0).toLocaleString("en-US"), pc = v => isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(1) + " %" : "—";
+const k$ = v => v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + " M" : v >= 1e3 ? "$" + Math.round(v / 1e3) + " k" : "$" + f0(v);
+const scol = s => s == null ? "var(--muted)" : s >= 90 ? "var(--ok)" : s >= 75 ? "#C8A24A" : s >= 60 ? "#E07A3A" : "var(--alert)";
+const nk = s => String(s || "").toLowerCase().replace(/&/g, "and").replace(/\b(s\.?a\.?r?\.?l|sarl|sal|co|ltd|llc|the)\b/g, "").replace(/[^a-z0-9]+/g, "");
+const dd = d => d ? new Date(String(d).length <= 10 ? d + "T12:00:00" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+async function boot(s){
+  CTX = await api("ops/context" + (s || site ? "?site=" + (s || site) : "")); site = CTX.site;
+  $("#sub").textContent = CTX.siteName; $("#sitePick").innerHTML = siteSelect(CTX, x => { location.search = "?site=" + x; });
+  await loadOverview();
+  if (UID) openUnit(UID); else tab(UP.get("tab") || "ov");
 }
-async function load(){
-  try { L = await api(`ops/t360/list?site=${site}`); $("#sub").textContent = L.siteName; shell(); if (cur) openUnit(cur); else if (window.innerWidth > 900) { const f = sorted()[0]; if (f) openUnit(f.id); } }
-  catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+async function loadOverview(){
+  try { O = await api(`ops/t360/overview?site=${site}`); } catch (e){ $("#p-ov").innerHTML = `<div class="box">${esc(e.message)}</div>`; return; }
+  tabsBar();
+  if (TAB === "ov") drawOverview(); if (TAB === "list") drawList();
 }
-const tenanted = u => u.brand && !/^(vacant|available)$/i.test(u.brand);
-function sorted(){
-  const s = q.trim().toLowerCase();
-  let A = L.units.filter(u => !s || [u.brand, u.code, u.level, u.dept].join(" ").toLowerCase().includes(s));
-  if (!s && flt === "attn") A = A.filter(u => u.flags.length);
-  if (!s && flt === "open") A = A.filter(u => u.status === "Open" && tenanted(u));
-  if (!s && flt === "fit") A = A.filter(u => /reserved|fit/i.test(u.status));
-  return A.sort((a, b) => (b.attention - a.attention) || String(a.brand || "~").localeCompare(String(b.brand || "~")));
+function tabsBar(){
+  const T = [["ov", "📊 Overview"], ["list", "🏬 Tenants"], ...(U ? [["prof", "👤 " + (U.unit.brand || U.unit.code)]] : []), ["comp", "🛡 Compliance"], ...(O && O.canSales ? [["sales", "💳 Sales & Score Card"]] : []), ["dir", "📇 Directory"]];
+  $("#tabs").innerHTML = T.map(([k, t]) => `<button data-t="${k}" class="${TAB === k ? "on" : ""}">${esc(t)}</button>`).join("");
 }
-function shell(){
-  const n = { attn: L.units.filter(u => u.flags.length).length, open: L.units.filter(u => u.status === "Open" && tenanted(u)).length, fit: L.units.filter(u => /reserved|fit/i.test(u.status)).length, all: L.units.length };
-  $("#app").innerHTML = `<div class="t3 ${cur && window.innerWidth <= 900 ? "det" : ""}" id="t3">
-    <div class="card t3-l">
-      <div class="t3-q"><input id="q" type="search" placeholder="Search a tenant, unit or level" value="${esc(q)}" autocomplete="off"></div>
-      <div class="t3-f" id="flt">${[["attn", "Needs attention"], ["open", "Open"], ["fit", "Fit-out"], ["all", "All units"]].map(([k, t]) => `<button data-f="${k}" class="${flt === k ? "on" : ""}">${t} · ${n[k]}</button>`).join("")}</div>
-      <div class="t3-list" id="list"></div>
-    </div>
-    <div class="t3-r" id="det"><div class="card empty">Pick a unit on the left.</div></div></div>`;
-  $("#q").oninput = e => { q = e.target.value; list(); };
-  $("#flt").onclick = e => { const b = e.target.closest("[data-f]"); if (!b) return; flt = b.dataset.f; $("#flt").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); list(); };
-  $("#list").onclick = e => { const b = e.target.closest("[data-u]"); if (b) openUnit(Number(b.dataset.u)); };
-  list();
+$("#tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b) tab(b.dataset.t); };
+function tab(t){
+  if (t === "sales" && !(O && O.canSales)) t = "ov";
+  if (t === "prof" && !U) t = "list";
+  TAB = t; tabsBar(); document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "p-" + t)); scrollTo(0, 0);
+  if (t === "ov") drawOverview(); else if (t === "list") drawList(); else if (t === "prof") drawProfile();
+  else if (t === "comp") frame("comp", "compliance"); else if (t === "sales") frame("sales", "sales"); else if (t === "dir") frame("dir", "directory");
 }
-function list(){
-  const A = sorted();
-  $("#list").innerHTML = A.length ? A.map(u => `<button class="u ${u.id === cur ? "on" : ""}" data-u="${u.id}"><b>${esc(u.brand || "Vacant")}</b>
-    <small>${esc([u.code, u.level, u.status, u.area ? Math.round(u.area) + " m²" : ""].filter(Boolean).join(" · "))}</small>
-    ${u.flags.length ? `<span class="fl">${u.flags.map(f => `<i class="${f.tone}">${esc(f.t)}</i>`).join("")}</span>` : ""}</button>`).join("")
-    : `<div class="none" style="padding:12px">${flt === "attn" && !q ? "Nothing needs attention at this flagship." : "No unit matches."}</div>`;
+/* the existing tools, inside (kept loaded: the Sales figures stay while the page is open) */
+function frame(k, page){
+  const p = $("#p-" + k); if (p.querySelector("iframe")) return p.querySelector("iframe");
+  p.innerHTML = `<iframe class="frame" src="/tools/${page}?embed=1&site=${site}" title="${esc(page)}"></iframe>`;
+  const f = p.querySelector("iframe");
+  const fit = () => { try { const h = f.contentDocument.documentElement.scrollHeight; if (h > 200) f.style.height = h + 20 + "px"; } catch {} };
+  f.onload = () => { fit(); try { new ResizeObserver(fit).observe(f.contentDocument.body); } catch {} };
+  return f;
 }
+window.onSales = s => { SALES = s && s.T && s.T.length ? s : null; if (TAB === "ov") drawOverview(); if (TAB === "prof") drawProfile(); };
+function salesOf(brand){ if (!SALES || !brand) return null; const b = nk(brand); return SALES.T.find(x => nk(x.name) === b) || SALES.T.find(x => { const n = nk(x.name); return b.length >= 4 && (n.startsWith(b) || b.startsWith(n)); }) || null; }
+/* the sales file: read by the Sales tab (in memory) */
+function uploadSales(){ $("#sfile").click(); }
+$("#sfile").onchange = async e => { const file = e.target.files[0]; e.target.value = ""; if (!file) return;
+  const f = frame("sales", "sales"); toast("Reading the sales file…");
+  for (let i = 0; i < 60; i++){ try { if (f.contentWindow.salesReady && f.contentWindow.salesReady()) break; } catch {} await new Promise(r => setTimeout(r, 150)); }
+  try { const W = f.contentWindow; await W.load(new W.File([await file.arrayBuffer()], file.name)); } catch (er){ toast(er.message, true); } };   // a File of the inner page (Excel reader checks its own ArrayBuffer type)
+
+/* ---------- Overview ---------- */
+function drawOverview(){
+  if (!O) return; const K = O.kpi, q = Q.toLowerCase();
+  const cmpD = K.compliance != null && K.compliancePrev != null ? K.compliance - K.compliancePrev : null;
+  const sT = SALES ? (SALES.tp ? (SALES.tc / SALES.tp - 1) * 100 : NaN) : null;
+  const att = O.attention.filter(u => !q || (u.brand + " " + u.code + " " + u.group).toLowerCase().includes(q)).slice(0, 12);
+  const bmax = Math.max(1, ...O.bands);
+  const salesKp = !O.canSales ? `<div class="kp"><b>${O.units.filter(u => u.group).length ? new Set(O.units.map(u => u.group).filter(Boolean)).size : "—"}</b><span>Parent groups at the flagship</span></div>`
+    : SALES ? `<div class="kp"><b class="${sT >= 0 ? "up" : "dn"}">${pc(sT)}</b><span>Sales YTD vs last year · to ${MN[SALES.M - 1]}</span><em class="up">Sales / m² $${f0(SALES.sp ? SALES.tc / SALES.sp : 0)}</em></div>`
+    : `<div class="kp" style="cursor:pointer" id="kSales"><b style="font-size:1.1rem;padding:6px 0">⇡ Sales file</b><span>Upload the Leasing Sales Performance file to see sales here (not saved)</span></div>`;
+  $("#p-ov").innerHTML = `<div class="k5">
+      <div class="kp"><b>${K.open}</b><span>Open tenants${K.fit ? ` · ${K.fit} in fit-out` : ""}${K.vacant ? ` · ${K.vacant} vacant units` : ""}</span></div>
+      <div class="kp"><b class="${K.attention ? "dn" : "up"}">${K.attention}</b><span>Need attention</span>${K.repeat ? `<em class="dn">${K.repeat} repeat offender${K.repeat === 1 ? "" : "s"}</em>` : ""}</div>
+      <div class="kp"><b style="color:${scol(K.compliance)}">${K.compliance ?? "—"}</b><span>Compliance score (${esc(MN[Number(O.month.slice(5)) - 1])})</span>${cmpD != null ? `<em class="${cmpD >= 0 ? "up" : "dn"}">${cmpD >= 0 ? "▲" : "▼"} ${Math.abs(cmpD)} vs last month</em>` : ""}</div>
+      ${salesKp}
+      <div class="kp"><b class="${K.ending30 ? "dn" : ""}">${K.ending}</b><span>Contracts ending ≤ 120 days</span>${K.ending30 ? `<em class="dn">${K.ending30} in the next 30 days</em>` : ""}</div></div>
+    <div class="g2"><div class="box"><h3>Needs attention <span class="chip c-info">tap → profile</span></h3>
+      ${att.map(u => `<div class="row go" data-u="${u.id}"><span class="sc" style="background:${scol(u.score)}">${u.score ?? "—"}</span><div class="m"><b>${esc(u.brand || u.code)}</b>
+        <small>${esc([u.code, u.dept, u.group].filter(Boolean).join(" · "))}</small><div class="fls">${u.flags.slice(0, 4).map(f => `<span class="chip c-${f.tone}">${esc(f.t)}</span>`).join("")}</div></div></div>`).join("") || `<div class="none">Nothing needs attention 👍</div>`}</div>
+      <div class="box"><h3>Compliance this month <span>${K.compliance != null ? "average " + K.compliance : ""}</span></h3>
+        <div class="hb">${[["< 60", "var(--alert)"], ["60–74", "#E07A3A"], ["75–89", "#C8A24A"], ["90–100", "var(--ok)"]].map(([l, c], i) => `<div><small><b>${O.bands[i]}</b></small><i style="height:${Math.max(2, O.bands[i] / bmax * 100)}%;background:${c}"></i><small>${l}</small></div>`).join("")}</div>
+        <div class="sub" style="margin-top:10px">${O.issues.length ? "Top issues: " + O.issues.map(x => `${esc(x.what)} (${x.n})`).join(" · ") : "No violation recorded this month."}</div></div></div>
+    <div class="g2">${O.canSales ? `<div class="box"><h3>Sales by category · YTD vs last year <span>${SALES ? esc(SALES.file) + " · not saved" : ""}</span></h3>
+        ${SALES ? (() => { const C = SALES.cats.slice().sort((a, b) => b.c - a.c).slice(0, 7), mx = Math.max(1, ...C.map(c => Math.max(c.c, c.p)));
+          return C.map(c => `<div class="cat"><span>${esc(c.cat)}</span><div class="bars"><i style="width:${c.c / mx * 100}%;background:var(--cy)"></i><i style="width:${c.p / mx * 100}%;background:var(--ly)"></i></div><b class="${c.dp >= 0 ? "up" : "dn"}">${isFinite(c.dp) ? (c.dp > 0 ? "+" : "") + Math.round(c.dp) + " %" : "—"}</b></div>`).join("")
+            + `<div class="lg"><span><i style="background:var(--cy)"></i>${SALES.year}</span><span><i style="background:var(--ly)"></i>${SALES.prevYear}</span></div>`; })()
+          : `<div class="salesup">Sales are never saved in the hub.<br><button class="btn small" id="upS" style="margin-top:10px">⇡ Upload the Leasing Sales Performance file</button></div>`}</div>` : ""}
+      <div class="box" ${O.canSales ? "" : 'style="grid-column:1/-1"'}><h3>Contracts ending</h3>${O.ending.map(c => `<div class="row go" data-u="${c.id}"><div class="m"><b>${esc(c.brand || c.code)}</b><small>${esc(c.code)} · ${esc(dd(c.end))} ${new Date(c.end).getFullYear()}</small></div>
+        <span class="chip ${c.days <= 30 ? "c-al" : c.days <= 90 ? "c-warn" : "c-ok"}">${c.days < 0 ? "ended" : c.days + " days"}</span></div>`).join("") || `<div class="none">No contract ends in the next 120 days.</div>`}</div></div>`;
+  $("#p-ov").querySelectorAll("[data-u]").forEach(r => r.onclick = () => openUnit(Number(r.dataset.u)));
+  const a = $("#upS"), b = $("#kSales"); if (a) a.onclick = uploadSales; if (b) b.onclick = uploadSales;
+}
+/* ---------- Tenants list ---------- */
+function drawList(){
+  if (!O) return; const q = Q.toLowerCase();
+  const isOpen = u => /^open/i.test(u.status || ""), isFit = u => u.flags.some(f => /^Fit-out/.test(f.t));
+  const F = { attn: u => u.attention > 0 || u.flags.length, open: isOpen, fit: isFit, all: () => true };
+  const L = O.units.filter(u => u.brand || u.code).filter(F[FLT]).filter(u => !q || (u.brand + " " + u.code + " " + u.dept + " " + u.group).toLowerCase().includes(q))
+    .sort((a, b) => FLT === "attn" ? b.attention - a.attention : String(a.brand || a.code).localeCompare(String(b.brand || b.code)));
+  const n = k => O.units.filter(F[k]).length;
+  $("#p-list").innerHTML = `<div class="fl">${[["attn", "Needs attention"], ["open", "Open"], ["fit", "Fit-out"], ["all", "All units"]].map(([k, t]) => `<button data-f="${k}" class="${FLT === k ? "on" : ""}">${t} · ${n(k)}</button>`).join("")}</div>
+    <div class="ul">${L.map(u => `<div class="row" data-u="${u.id}"><span class="sc" style="background:${scol(u.score)}">${u.score ?? "—"}</span><div class="m"><b>${esc(u.brand || "— " + u.code)}</b>
+      <small>${esc([u.code, u.level, u.dept, u.area ? Math.round(u.area) + " m²" : "", u.group, u.status].filter(Boolean).join(" · "))}</small>
+      ${u.flags.length ? `<div class="fls">${u.flags.map(f => `<span class="chip c-${f.tone}">${esc(f.t)}</span>`).join("")}</div>` : ""}</div></div>`).join("") || `<div class="row"><div class="m none">Nothing here.</div></div>`}</div>`;
+  $("#p-list").querySelectorAll("[data-f]").forEach(b => b.onclick = () => { FLT = b.dataset.f; drawList(); });
+  $("#p-list").querySelectorAll("[data-u]").forEach(r => r.onclick = () => openUnit(Number(r.dataset.u)));
+}
+$("#q").value = Q; $("#q").oninput = e => { Q = e.target.value; if (TAB === "prof") tab("list"); else if (TAB === "ov") drawOverview(); else if (TAB === "list") drawList(); };
+
+/* ---------- Tenant profile ---------- */
 async function openUnit(id){
-  cur = id; history.replaceState(null, "", `?site=${site}&unit=${id}`);
-  document.querySelectorAll(".u").forEach(b => b.classList.toggle("on", Number(b.dataset.u) === id));
-  $("#t3").classList.add("det");
-  $("#det").innerHTML = `<div class="card empty">Loading…</div>`;
-  try { U = await api(`ops/t360/unit?site=${site}&id=${id}`); draw(); }
-  catch (e){ $("#det").innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+  UID = id; TAB = "prof"; document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "p-prof"));
+  $("#p-prof").innerHTML = `<div class="empty">Loading…</div>`; scrollTo(0, 0);
+  try { U = await api(`ops/t360/unit?site=${site}&id=${id}`); } catch (e){ $("#p-prof").innerHTML = `<div class="box">${esc(e.message)}</div>`; return; }
+  history.replaceState(null, "", `?site=${site}&unit=${id}`); tabsBar(); drawProfile();
 }
-const box = (title, body, link, wide) => `<div class="card box ${wide ? "wide" : ""}"><h3><span>${title}</span>${link ? `<a href="${link[0]}">${esc(link[1])} →</a>` : ""}</h3>${body}</div>`;
-const none = t => `<div class="none">${t}</div>`;
-function draw(){
-  const u = U.unit, P = U.portal, FU = P.filter(x => x.followUp), C = U.contract, cm = U.compliance;
-  const viol = U.feedback.filter(f => f.category !== "Customer Feedback");
-  const kp = [
-    [FU.length, "Portal follow-ups", FU.length ? "al" : "ok"],
-    [cm ? cm.score : "—", "Compliance this month", !cm ? "" : cm.score < 70 ? "al" : cm.score < 90 ? "warn" : "ok"],
-    [viol.length, "Violations · 12 months", viol.length >= 5 ? "al" : viol.length ? "warn" : "ok"],
-    [C && C.daysLeft != null ? (C.daysLeft < 0 ? "Ended" : C.daysLeft + " d") : "—", "Contract left", C && C.daysLeft != null && C.daysLeft <= 30 ? "al" : C && C.daysLeft != null && C.daysLeft <= 120 ? "warn" : ""]
-  ];
-  const portalB = P.length ? P.slice(0, 12).map(x => `<div class="row"><span class="st ${x.followUp ? "al" : /resolved|closed|ack/i.test(x.status) ? "ok" : "warn"}">${esc(x.status || "—")}</span>
-      <b> ${x.link ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)}</b> · ${esc(x.kindLabel)}${x.type ? " · " + esc(x.type) : ""}
-      <small>${esc(fmtD(x.day))}${x.subject ? " · " + esc(x.subject) : ""}</small></div>`).join("") + (P.length > 12 ? none(`+ ${P.length - 12} more on the Portal Dashboard`) : "") : none("No open portal items.");
-  const fbB = U.feedback.length ? U.feedback.slice(0, 10).map(f => `<div class="row"><span class="st ${f.category === "Customer Feedback" ? (f.description === "Positive" ? "ok" : "warn") : "al"}">${esc(f.category)}</span>
-      ${esc(f.description || "")}${f.action ? ` → <b>${esc(f.action)}</b>` : ""}<small>${esc(fmtD(f.day))} ${esc(f.time || "")} · ${esc(f.by || "")}</small></div>`).join("")
-      + (cm && cm.repeats.length ? `<div class="row"><b style="color:var(--alert)">Repeat this month:</b> ${cm.repeats.map(r => `${esc(r.what)} ×${r.n}${r.suggest ? ` (${esc(r.suggest)})` : ""}`).join(" · ")}</div>` : "")
-    : none("No feedback or violations in the last 12 months.");
-  const conB = C ? `<div class="row"><b>${esc(C.no)}</b> <span class="st">${esc(C.status || (C.active ? "Active" : "Left the report"))}</span>
-      <small>${esc([C.start && "Start " + fmtD(C.start), C.end && "End " + fmtD(C.end), C.departure && "Departure " + fmtD(C.departure), C.type].filter(Boolean).join(" · "))}</small>${C.note ? `<small>Note: ${esc(C.note)}</small>` : ""}</div>`
-    : none(u.contractStart ? `Contract start ${esc(fmtD(u.contractStart))}. Not in the Contracts Near Ending report.` : "Not in the Contracts Near Ending report.");
-  const F = U.fitout, fitB = F ? `<div class="ms">${F.milestones.map(m => `<i class="${m.done ? "d" : ""}" title="${esc(m.label)}${m.date ? " · " + esc(m.date) : ""}"></i>`).join("")}</div>
-      <div class="row">${F.milestones.filter(m => m.done).length}/${F.milestones.length} milestones${F.target ? ` · target opening <b>${esc(fmtD(F.target))}</b>` : ""}
-      <small>Next: ${esc((F.milestones.find(m => !m.done) || { label: "Open" }).label)}</small></div>` : none("No fit-out tracked for this unit.");
-  const ctB = U.contacts.length ? U.contacts.map(x => { const tel = String(x.mobile || x.landline || "").replace(/[^\d+]/g, "");
-      return `<div class="row"><b>${esc(x.name || "—")}</b>${x.position ? " · " + esc(x.position) : ""}<small>${tel ? `<a href="tel:${esc(tel)}">${esc(x.mobile || x.landline)}</a>` : ""}${x.email ? ` · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ""}</small></div>`; }).join("")
-    : none("No contacts in the Tenants Directory.");
-  const crB = (U.contractors.length ? U.contractors.slice(0, 8).map(v => `<div class="row"><b>${esc(v.company)}</b> · ${esc(v.work || "")}${v.req ? " · " + esc(v.req) : ""}<small>${esc(fmtD(v.from))}${v.to !== v.from ? " – " + esc(fmtD(v.to)) : ""} ${esc(v.time)}</small></div>`).join("") : none("No contractor bookings in the last 30 days."))
-    + (U.gate.length ? `<div class="row"><b>Loading gate · 30 days:</b> ${U.gate.filter(g => g.decision === "in").length} let in · <span style="color:var(--alert)">${U.gate.filter(g => g.decision === "out").length} refused</span>
-      ${U.gate.filter(g => g.decision === "out").slice(0, 3).map(g => `<small>${esc(fmtD(g.day))} · ${esc(g.contractor || g.req)} — ${esc(g.reason)}</small>`).join("")}</div>` : "");
-  const wkB = U.works.length ? U.works.slice(0, 6).map(w => `<div class="row"><span class="st ${w.completed ? "ok" : "warn"}">${esc(w.completed ? "Completed" : w.status)}</span> ${esc(w.type || "Works form")}<small>${esc(w.subject || "")} · ${esc(fmtD(String(w.received || "").slice(0, 10)))}</small></div>`).join("") : none("No works forms.");
-  const anB = U.announcements.length ? U.announcements.slice(0, 5).map(a => `<div class="row"><b>${esc(a.type)}</b> · ${esc(fmtD(a.date))}<small>${esc(a.subject || "")}</small></div>`).join("") : none("No announcements.");
-  const hiB = U.history.length ? U.history.slice(0, 6).map(h => `<div class="row"><b>${esc(h.kind)}</b> · ${esc(fmtD(h.date))}<small>${esc([h.after && h.after.brand && "Brand " + h.after.brand, h.after && h.after.status && "Status " + h.after.status, h.note].filter(Boolean).join(" · "))}${h.by ? " · " + esc(h.by) : ""}</small></div>`).join("") : none("No changes recorded.");
-  const E = U.evacuation;
-  $("#det").innerHTML = `<button class="btn back" id="back">‹ All units</button>
-    <div class="card hd"><div class="logo">${esc(initials(u.brand || "—"))}</div>
-      <div style="flex:1;min-width:200px"><h2>${esc(u.brand || "Vacant unit")}</h2><p>${esc([u.code, u.level, u.status, u.section, u.dept, u.area ? Math.round(u.area) + " m²" : ""].filter(Boolean).join(" · "))}</p>
-      ${E ? `<p>🚪 ${esc([E.corridor && "Corridor " + E.corridor, E.assembly && "Assembly " + E.assembly].filter(Boolean).join(" · "))}</p>` : ""}</div>
-      <button class="btn ghost" onclick="print()">Print</button></div>
-    <div class="kp">${kp.map(([v, t, c]) => `<div class="card ${c}"><b>${esc(v)}</b><small>${esc(t)}</small></div>`).join("")}</div>
-    <div class="sec">
-      ${box("Portal — breaches, violations, requests", portalB, ["portal?site=" + site, "Portal Dashboard"], true)}
-      ${box("Feedback & violations", fbB, ["feedback?site=" + site, "Tenant Feedback"])}
-      ${box("Contract", conB, ["contracts?site=" + site, "Contracts"])}
-      ${box("Contacts", ctB, ["directory?site=" + site, "Directory"])}
-      ${box("Fit-out", fitB, ["fitout?site=" + site, "Fit-out Tracker"])}
-      ${box("Contractors & loading gate", crB, ["contractors?site=" + site, "Contractors"])}
-      ${box("Works forms", wkB, ["works?site=" + site, "Works Forms"])}
-      ${box("Announcements", anB, ["tenants?site=" + site, "Announcements"])}
-      ${box("Unit history (GLA)", hiB, ["gla?unit=" + u.id, "GLA & Occupancy"])}
-    </div>`;
-  const bk = $("#back"); if (bk) bk.onclick = () => { $("#t3").classList.remove("det"); cur = 0; history.replaceState(null, "", `?site=${site}`); };
+function drawProfile(){
+  if (!U) return; const u = U.unit, S = salesOf(u.brand), c = U.compliance, ini = initials(u.brand || u.code);
+  const tr = U.trend || [], last = tr.length ? tr[tr.length - 1].score : null, prevS = tr.length > 1 ? tr[tr.length - 2].score : null;
+  const emails = [...new Set(U.contacts.map(x => x.email).filter(Boolean))];
+  const viol = U.feedback.filter(f => f.category !== "Customer Feedback"), neg = U.feedback.filter(f => f.category === "Customer Feedback" && f.description !== "Positive");
+  const act = [...U.feedback.map(f => ({ d: f.day, t: `${f.category === "Customer Feedback" ? "Feedback" : "Violation"} · ${f.description || f.category}`, s: f.by || "" })),
+    ...U.contractors.map(x => ({ d: x.from, t: `Contractor · ${x.company}${x.work ? " — " + x.work : ""}`, s: x.req || "" })),
+    ...U.gate.map(g => ({ d: g.day, t: `Loading gate · ${g.decision === "in" || /approv/i.test(g.decision) ? "✓ in" : g.decision}${g.contractor ? " — " + g.contractor : ""}`, s: g.req || "" })),
+    ...U.works.map(w => ({ d: String(w.received || "").slice(0, 10), t: `Works form · ${w.subject || w.type}`, s: w.status })),
+    ...U.announcements.map(a => ({ d: a.date, t: `Announcement · ${a.type}`, s: a.by || "" }))].filter(x => x.d).sort((a, b) => String(b.d).localeCompare(String(a.d))).slice(0, 10);
+  const cEnd = U.contract ? (U.contract.departure || U.contract.end) : "";
+  $("#p-prof").innerHTML = `<div class="noprint" style="margin-bottom:10px"><button class="btn ghost small" id="bk">‹ Tenants</button></div>
+    <div class="ph"><div class="lgo">${esc(ini)}</div><div style="min-width:0"><h2>${esc(u.brand || u.code)}</h2>
+      <p>${esc([u.code, u.level, u.dept, u.area ? Math.round(u.area) + " m²" : "", U.group ? "Group " + U.group : "", U.sku ? "SKU " + U.sku : ""].filter(Boolean).join(" · "))}</p>
+      <div class="pills"><span>${esc(u.status || "")}</span>${cEnd ? `<span>Contract ends ${esc(dd(cEnd))} ${new Date(cEnd).getFullYear()}${U.contract.daysLeft != null && U.contract.daysLeft >= 0 ? ` · ${U.contract.daysLeft} d` : ""}</span>` : ""}
+        ${U.evacuation ? `<span>Evacuation: ${esc(U.evacuation.corridor || U.evacuation.assembly)}</span>` : ""}</div></div>
+      <div class="act noprint">${S ? `<button id="scb">⇣ Score card</button>` : ""}<button id="prt" class="gh">🖨 Print</button>${emails.length ? `<a href="mailto:${esc(emails.join(","))}">✉ Email tenant</a>` : ""}</div></div>
+    <div class="g3">
+      <div class="box"><h3>Compliance <span class="chip" style="background:color-mix(in srgb,${scol(last)} 16%,transparent);color:${scol(last)}">${last ?? "—"} · ${MN[new Date().getMonth()]}</span></h3>
+        <div class="big" style="color:${scol(last)}">${last ?? "—"}</div>
+        <div class="sub">${prevS != null ? `Was ${prevS} last month · ` : ""}${c ? `${c.violations} violation${c.violations === 1 ? "" : "s"} this month${c.repeats.length ? ` · repeat: ${esc(c.repeats.map(r => r.what + " ×" + r.n).join(", "))}` : ""}` : "No violation this month"}</div>
+        <div class="spark">${tr.map(t => `<div title="${esc(t.month)} · ${t.score ?? "—"}"><i style="height:${Math.max(4, t.score || 0)}%;background:${scol(t.score)}"></i></div>`).join("")}</div>
+        <div class="sl"><span>${tr.length ? MN[Number(tr[0].month.slice(5)) - 1] : ""}</span><span>${tr.length ? MN[Number(tr[tr.length - 1].month.slice(5)) - 1] : ""}</span></div>
+        <div class="sub" style="margin-top:6px">12 months: ${viol.length} violation${viol.length === 1 ? "" : "s"} · ${neg.length} negative feedback</div></div>
+      <div class="box"><h3>Sales ${S ? `<span class="chip ${S.dp >= 0 ? "c-ok" : "c-al"}">${pc(S.dp)} YTD</span>` : ""}</h3>
+        ${!O || !O.canSales ? `<div class="none">Sales are shown to managers and leadership.</div>`
+          : S ? `<div class="big">${k$(S.c)}</div><div class="sub">YTD ${SALES.year} vs ${k$(S.p)} in ${SALES.prevYear} · sales / m² $${f0(S.sqm)} · rank ${S.rank} of ${S.of} in ${esc(S.cat)}</div>
+            <div class="spark">${(() => { const mx = Math.max(1, ...S.cur); return S.cur.map((v, i) => `<div title="${MN[i]} · ${f0(v)}"><i style="height:${Math.max(3, v / mx * 100)}%;background:var(--cy)"></i></div>`).join(""); })()}</div><div class="sl"><span>Jan</span><span>${MN[SALES.M - 1]} ${SALES.year}</span></div>`
+          : SALES ? `<div class="none">Not found in ${esc(SALES.file)}.</div>` : `<div class="salesup">Not saved in the hub.<br><button class="btn small" id="upS2" style="margin-top:8px">⇡ Upload the sales file</button></div>`}</div>
+      <div class="box"><h3>Contacts <span class="chip c-info">Directory</span></h3>
+        ${U.contacts.map(x => `<div class="ct"><span class="av">${esc(initials(x.name || "?"))}</span><div class="m"><b>${esc(x.name || "—")}</b><small>${esc(x.position || "")}</small></div>
+          ${x.mobile ? `<a href="tel:${esc(String(x.mobile).replace(/[^+\d]/g, ""))}" title="${esc(x.mobile)}">📞</a>` : ""}${x.email ? `<a href="mailto:${esc(x.email)}" title="${esc(x.email)}">✉</a>` : ""}</div>`).join("") || `<div class="none">No contact in the Tenants Directory.</div>`}</div></div>
+    <div class="g3">
+      <div class="box"><h3>Portal (ABC Connect)</h3>${U.portal.slice(0, 6).map(p => `<div class="row"><div class="m"><b>${p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener" style="color:inherit">${esc(p.name)}</a>` : esc(p.name)} · ${esc(p.subject || p.type || p.kindLabel)}</b><small>${esc(p.kindLabel)} · ${esc(p.status)}${p.day ? " · " + esc(dd(p.day)) : ""}</small></div>
+        <span class="chip ${p.followUp ? "c-al" : /closed|resolved|approved/i.test(p.status) ? "c-ok" : "c-mut"}">${p.followUp ? "Waiting" : esc(p.status.split(" ")[0])}</span></div>`).join("") || `<div class="none">Nothing open in the portal.</div>`}</div>
+      <div class="box"><h3>Operations</h3>
+        ${U.pm.map(r => `<div class="row"><div class="m"><b>Preventive Maintenance · ${esc(r.month)}</b><small>${esc(r.certs.map(x => x.cert + (x.status === "approved" ? " ✓" : x.status === "pending" ? " …" : " ✗")).join(" · ").slice(0, 160))}</small></div><span class="chip ${r.ok === r.n ? "c-ok" : "c-warn"}">${r.ok} / ${r.n}</span></div>`).join("")}
+        ${U.marketing.map(m => `<div class="row"><div class="m"><b>Marketing · ${esc(m.title)}</b><small>${m.answer === "yes" ? "Participating" + (m.offer ? " · " + esc(m.offer) : "") : m.answer === "no" ? "Not participating" + (m.reason ? " · " + esc(m.reason) : "") : "Waiting for the answer"}</small></div><span class="chip ${m.answer === "yes" ? "c-ok" : m.answer === "no" ? "c-mut" : "c-warn"}">${m.answer === "yes" ? "Yes" : m.answer === "no" ? "No" : "Waiting"}</span></div>`).join("")}
+        ${U.handhelds.map(h => `<div class="row"><div class="m"><b>CRM handheld${h.model ? " · " + esc(h.model) : ""}</b><small>${esc([h.serial && "S/N " + h.serial, h.connection, h.status].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
+        ${U.fitout ? `<div class="row"><div class="m"><b>Fit-out</b><div class="ms">${U.fitout.milestones.map(m => `<i class="${m.done ? "d" : ""}" title="${esc(m.label)}"></i>`).join("")}</div><small>${U.fitout.milestones.filter(m => m.done).length} / ${U.fitout.milestones.length} milestones${U.fitout.target ? " · target " + esc(U.fitout.target) : ""}</small></div></div>` : ""}
+        ${!U.pm.length && !U.marketing.length && !U.handhelds.length && !U.fitout ? `<div class="none">No PM, marketing or handheld record yet.</div>` : ""}</div>
+      <div class="box"><h3>Recent activity</h3>${act.length ? `<div class="tl">${act.map(a => `<div>${esc(a.t)}<small>${esc(dd(a.d))}${a.s ? " · " + esc(a.s) : ""}</small></div>`).join("")}</div>` : `<div class="none">Nothing in the last months.</div>`}</div></div>
+    ${U.history && U.history.length ? `<div class="box" style="margin-top:14px"><h3>GLA history</h3>${U.history.slice(0, 6).map(h => `<div class="row"><div class="m"><b>${esc(h.kind)} · ${esc(dd(h.date))} ${esc(String(h.date || "").slice(0, 4))}</b><small>${esc(h.note || "")}${h.by ? " · " + esc(h.by) : ""}</small></div></div>`).join("")}</div>` : ""}`;
+  $("#bk").onclick = () => tab("list"); $("#prt").onclick = () => print();
+  const sb = $("#scb"); if (sb) sb.onclick = () => { const f = frame("sales", "sales"); tab("sales"); try { f.contentWindow.openCard(S.name); } catch {} };
+  const up = $("#upS2"); if (up) up.onclick = uploadSales;
 }
-boot();
-window.hubRefresh = () => load();   // refresh on return (common.js)
+window.hubRefresh = () => loadOverview();
+boot().catch(e => $("#p-ov").innerHTML = `<div class="box">${esc(e.message)}</div>`);
 </script>
 </body>
 </html>
