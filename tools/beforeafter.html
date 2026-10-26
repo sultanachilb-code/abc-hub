@@ -121,17 +121,19 @@ const all = store => tx(store, "readonly", s => s.getAll());
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 let CTX = null, TAB = "cam";
-const S = { zoom: 1, zMin: 1, zMax: 4, native: false, site: "", place: "", stamp: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
+const S = { zoom: 1, zMin: 1, zMax: 4, native: false, site: "", place: "", stamp: true, hq: (() => { try { return localStorage.getItem("ba.hq") !== "0"; } catch { return true; } })(), wb: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
 const fmtD = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const fmtDT = iso => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const slug = t => String(t || "").trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 40) || "area";
 const stamp = d => { const z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };   // the phone's own time
 const blobToImg = b => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(b); });
+/* iPhone photos are Display P3 (wide colour). Drawing them on a normal (sRGB) canvas clips the colours, so every canvas here is P3 when the browser allows it. */
+const CS = (() => { try { const x = document.createElement("canvas").getContext("2d", { colorSpace: "display-p3" }); return x && x.getContextAttributes && x.getContextAttributes().colorSpace === "display-p3" ? { colorSpace: "display-p3" } : {}; } catch { return {}; } })();
 const toBlob = (c, q = .9) => new Promise(r => c.toBlob(r, "image/jpeg", q));
 const blobToData = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
 async function shrink(src, max, q = .82){   // canvas / image / blob → smaller jpeg blob
   const img = src instanceof Blob ? await blobToImg(src) : src, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, k = Math.min(1, max / Math.max(w, h));
-  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); return toBlob(c, q);
+  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext("2d", CS).drawImage(img, 0, 0, c.width, c.height); return toBlob(c, q);
 }
 const touch = matchMedia("(pointer:coarse)").matches;
 /* to the phone's gallery: the share sheet on phones (iPhone: "Save Image"), a download on a computer */
@@ -159,6 +161,8 @@ const render = () => TAB === "cam" ? camView() : deckView();
    Nothing is sent to the hub: photos are kept on this device (IndexedDB) for the list and the deck. ================= */
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 async function fitBlob(src, max, q = .9){ return shrink(src, max, q); }
+/* the before photo exactly as it is in Photos (no re-compression); very large or non-JPEG/PNG files are converted once at high quality */
+async function keepOriginal(f){ return /^image\/(jpeg|png)$/.test(f.type) && f.size <= 15e6 ? f : shrink(f, 4800, .95); }
 async function camView(){
   const shots = await all("shots"), pairs = (await all("pairs")).sort((a, b) => (b.afterAt || "").localeCompare(a.afterAt || ""));
   const paired = new Set(pairs.map(p => p.beforeId)), byId = new Map(shots.map(s2 => [s2.id, s2]));
@@ -170,7 +174,8 @@ async function camView(){
       <div class="row"><select class="sel" id="site">${Object.entries(CTX.sites).map(([c, n]) => `<option value="${c}" ${c === S.site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
         <input class="inp" id="place" placeholder="Area, e.g. L2 corridor near Zara" value="${esc(S.place)}"></div>
       <label class="addb">＋ Add before photos from Photos<input type="file" accept="image/*" id="pickB" multiple hidden></label>
-      <label class="chk"><input type="checkbox" id="stamp" ${S.stamp ? "checked" : ""}> Print date, time and place on the after photo</label>
+      <label class="chk"><input type="checkbox" id="hq" ${S.hq ? "checked" : ""}> ${isIOS ? "Best quality: the shutter opens the iPhone camera (line up with the ghost first)" : "Best quality: take a full-resolution photo"}</label>
+      <label class="chk"><input type="checkbox" id="stamp" ${S.stamp ? "checked" : ""}> Print date, time and place on the side-by-side</label>
     </div>
     <div class="lbl" style="margin-top:4px">Waiting for the after photo · ${waiting.length}</div>
     <div class="bgrid">${waiting.map(s2 => card(s2.thumb, `BEFORE · ${fmtD(s2.at)}`, s2.place || "Area", CTX.sites[s2.site] || "",
@@ -182,9 +187,10 @@ async function camView(){
   $("#site").onchange = e => S.site = e.target.value;
   $("#place").oninput = e => S.place = e.target.value;
   $("#stamp").onchange = e => S.stamp = e.target.checked;
+  $("#hq").onchange = e => { S.hq = e.target.checked; try { localStorage.setItem("ba.hq", S.hq ? "1" : "0"); } catch {} };
   $("#pickB").onchange = async e => { const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
     toast(`Adding ${fs.length} photo${fs.length > 1 ? "s" : ""}…`);
-    for (const f of fs){ const blob = await fitBlob(f, 2400, .9); await put("shots", { id: "b" + uid(), kind: "before", site: CTX.sites[S.site] ? S.site : CTX.site, place: S.place, at: new Date(f.lastModified || Date.now()).toISOString(), blob, thumb: await blobToData(await shrink(blob, 360, .72)) }); }
+    for (const f of fs){ const blob = await keepOriginal(f); await put("shots", { id: "b" + uid(), kind: "before", site: CTX.sites[S.site] ? S.site : CTX.site, place: S.place, at: new Date(f.lastModified || Date.now()).toISOString(), blob, thumb: await blobToData(await shrink(blob, 360, .72)) }); }
     camView(); };
   document.querySelectorAll("[data-take]").forEach(b => b.onclick = async () => { const s2 = byId.get(b.dataset.take); S.before = { ...s2, url: URL.createObjectURL(s2.blob) }; if (s2.place) S.place = s2.place; if (s2.site) S.site = s2.site; openCam(); });
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (!(await confirmBox("Remove this before photo?", "It is removed from this list only — your Photos are not touched.", "Remove"))) return; await del("shots", b.dataset.del); camView(); });
@@ -220,7 +226,9 @@ async function openCam(){
   pk.addEventListener("pointerdown", on); pk.addEventListener("pointerup", off); pk.addEventListener("pointerleave", off); pk.addEventListener("pointercancel", off);
   $("#flip").onclick = async () => { S.facing = S.facing === "environment" ? "user" : "environment"; stopCam(); await startCam(); };
   $("#snap").onclick = snap;
-  $("#nat").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; await finishAfter(await blobToImg(f), f, "iphone"); };
+  $("#nat").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) { if (CAM && !S.stream) startCam(); return; } await finishAfter(await blobToImg(f), f, "iphone"); };
+  $("#nat").addEventListener("cancel", () => { if (CAM && !S.stream) startCam(); });
+  $("#nat").parentElement.addEventListener("click", () => stopCam());   // free the camera for the iPhone camera app
   pinch($("#fv"));
   await startCam();
 }
@@ -277,7 +285,7 @@ function frameRect(vw, vh){
 }
 /* ---------- matching: small grey edge maps, the best shift / zoom between the before and the camera ---------- */
 function edgeMap(src, sx, sy, sw, sh, W, H){
-  const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d", { willReadFrequently: true });
+  const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d", { ...CS, willReadFrequently: true });
   x.drawImage(src, sx, sy, sw, sh, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, g = new Float32Array(W * H), e = new Float32Array(W * H);
   for (let i = 0; i < W * H; i++) g[i] = d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11;
   for (let y = 1; y < H - 1; y++) for (let k = 1; k < W - 1; k++){ const i = y * W + k; e[i] = Math.abs(g[i + 1] - g[i - 1]) + Math.abs(g[i + W] - g[i - W]); }
@@ -320,9 +328,21 @@ function liveMatch(){
 
 /* ---------- take the after photo ---------- */
 async function snap(){
+  /* iPhone: Safari's live camera is a video picture (no Smart HDR / Deep Fusion, different colours). For iPhone quality the shutter
+     opens the iPhone camera app at the same spot; small movements are corrected by the automatic alignment afterwards. */
+  if (S.hq && isIOS){ stopCam(); $("#nat").click(); return; }
   const v = $("#vid"); if (!v || !v.videoWidth) return toast("The camera is still starting", true);
+  /* Android / Chrome: a real full-resolution still photo from the camera, with the phone's own processing */
+  if (S.hq && typeof ImageCapture === "function" && S.stream){
+    try { const tr = S.stream.getVideoTracks()[0], ic = new ImageCapture(tr);
+      let opt = {}; try { const pc = await ic.getPhotoCapabilities(); if (pc.imageWidth && pc.imageWidth.max) opt = { imageWidth: pc.imageWidth.max }; } catch {}
+      $("#fv").classList.add("flash"); setTimeout(() => { const f = $("#fv"); if (f) f.classList.remove("flash"); }, 180);
+      const blob = await ic.takePhoto(opt), f = new File([blob], "after.jpg", { type: blob.type || "image/jpeg" });
+      return finishAfter(await blobToImg(f), f, "still");
+    } catch (e){ console.warn("takePhoto", e); }
+  }
   const r = frameRect(v.videoWidth, v.videoHeight), c = document.createElement("canvas"); c.width = Math.round(r.w); c.height = Math.round(r.h);
-  const x = c.getContext("2d"); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); }
+  const x = c.getContext("2d", CS); if (S.facing === "user"){ x.translate(c.width, 0); x.scale(-1, 1); }
   x.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height); x.setTransform(1, 0, 0, 1, 0, 0);
   $("#fv").classList.add("flash"); setTimeout(() => { const f = $("#fv"); if (f) f.classList.remove("flash"); }, 180);
   await finishAfter(c, null, "ghost");
@@ -345,41 +365,75 @@ function alignOf(beforeImg, afterSrc, aw, ah){
 async function finishAfter(src, file, how){
   const aw = src.naturalWidth || src.width, ah = src.naturalHeight || src.height, at = new Date().toISOString();
   toast("Lining up with the before photo…");
-  const al = alignOf(CAM ? CAM.before : await blobToImg(S.before.blob), src, aw, ah);
-  /* 1) the after photo as taken — full resolution, quality 95 % (from iPhone Camera: the photo itself) */
-  const full = document.createElement("canvas"); full.width = aw; full.height = ah; full.getContext("2d").drawImage(src, 0, 0);
-  if (S.stamp) drawStamp(full, "AFTER", at);
-  const fullBlob = file && !S.stamp ? file : await toBlob(full, .95);
-  /* 2) the after lined up on the before (for the side by side and the deck) */
-  const al2 = document.createElement("canvas"), bw = S.before.w, bh = S.before.h, out = Math.min(1, 2400 / Math.max(bw, bh));
-  al2.width = Math.round(bw * out); al2.height = Math.round(bh * out);
-  const r = al.c > .25 ? al.rect : al.crop, ax = al2.getContext("2d"); ax.fillStyle = "#000"; ax.fillRect(0, 0, al2.width, al2.height);
-  ax.drawImage(src, r.x, r.y, r.w, r.h, 0, 0, al2.width, al2.height);
-  if (S.stamp) drawStamp(al2, "AFTER", at);
-  const small = await shrink(al2, 1600, .86), thumb = await blobToData(await shrink(al2, 360, .72));
+  const bimg = CAM && CAM.before ? CAM.before : await blobToImg(S.before.blob);
+  const al = alignOf(bimg, src, aw, ah);
+  /* 1) the after photo itself: the camera's own file untouched (full resolution, Apple / Android processing, colours, details);
+        a live-camera picture is saved at JPEG 97 % */
+  let fullBlob = file;
+  if (!fullBlob){ const full = document.createElement("canvas"); full.width = aw; full.height = ah; full.getContext("2d", CS).drawImage(src, 0, 0); fullBlob = await toBlob(full, .97); }
+  /* 2) the after lined up on the before, at the before's size (up to 3200 px) — for the side by side and the deck */
+  const raw = document.createElement("canvas"), bw = S.before.w, bh = S.before.h, out = Math.min(1, 3200 / Math.max(bw, bh));
+  raw.width = Math.round(bw * out); raw.height = Math.round(bh * out);
+  const r = al.c > .25 ? al.rect : al.crop, rx = raw.getContext("2d", CS); rx.imageSmoothingQuality = "high"; rx.fillStyle = "#000"; rx.fillRect(0, 0, raw.width, raw.height);
+  rx.drawImage(src, r.x, r.y, r.w, r.h, 0, 0, raw.width, raw.height);
+  const wbGain = whiteBalanceGain(bimg, raw);
   const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
-  const shot = { id: uid(), kind: "after", site, place: S.place, at, blob: small, thumb, how };
-  await put("shots", shot);
+  const shot = { id: uid(), kind: "after", site, place: S.place, at, how };
   const pair = { id: uid(), beforeId: S.before.id, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at, match: Math.round(al.c * 100) };
+  const R = { pair, beforeUrl: S.before.url, w: aw, h: ah, match: pair.match, fullBlob, base, wbGain, wbUseful: wbGain.some(g => Math.abs(g - 1) > .03) };
+  /* builds the copy used for the comparison (white balance matched to the before when switched on) + the side-by-side */
+  R.build = async () => {
+    const c = document.createElement("canvas"); c.width = raw.width; c.height = raw.height; c.getContext("2d", CS).drawImage(raw, 0, 0);
+    if (S.wb && R.wbUseful) applyGain(c, wbGain);
+    const deckCopy = await toBlob(c, .93);
+    if (S.stamp) drawStamp(c, "AFTER", at);
+    const sbs = await sideBySide(S.before.blob, c, S.before.at, at);
+    Object.assign(shot, { blob: deckCopy, thumb: await blobToData(await shrink(c, 360, .72)) });
+    await put("shots", shot);
+    if (R.alignedUrl) URL.revokeObjectURL(R.alignedUrl); if (R.sbsUrl) URL.revokeObjectURL(R.sbsUrl);
+    R.alignedUrl = URL.createObjectURL(deckCopy); R.sbsUrl = URL.createObjectURL(sbs);
+    R.files = [new File([R.fullBlob], `${base}_after.jpg`, { type: R.fullBlob.type || "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
+  };
+  await R.build();
   await put("pairs", pair);
-  const sbs = await sideBySide(S.before.blob, al2, S.before.at, at);
-  const files = [new File([fullBlob], `${base}_after.jpg`, { type: "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
   const shots = (await all("shots")).sort((a, b) => b.at.localeCompare(a.at)); const keep = new Set(); for (const d of await all("decks")) for (const s2 of d.slides || []) { keep.add(s2.beforeId); keep.add(s2.afterId); }
   for (const p of await all("pairs")) { keep.add(p.beforeId); }
   for (const old of shots.slice(60)) if (!keep.has(old.id)) await del("shots", old.id);
-  showResult({ files, pair, beforeUrl: S.before.url, alignedUrl: URL.createObjectURL(small), sbsUrl: URL.createObjectURL(sbs), w: aw, h: ah, match: pair.match });
+  showResult(R);
+}
+/* white balance: the after's colour cast brought to the before's (grey-world on the matching area). Brightness is kept,
+   so a cleaner / brighter result still shows — only a different colour temperature (warmer / bluer light) is corrected. */
+function whiteBalanceGain(beforeImg, afterCanvas){
+  const m = (src, sw, sh) => { const W = 96, H = Math.max(24, Math.round(W * sh / sw)), c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d", { ...CS, willReadFrequently: true }); x.drawImage(src, 0, 0, sw, sh, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data;
+    let r = 0, g = 0, b = 0, n = 0; for (let i = 0; i < d.length; i += 4){ const l = d[i] + d[i + 1] + d[i + 2]; if (l < 30 || l > 735) continue; r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+    return n ? [r / n, g / n, b / n] : [1, 1, 1]; };
+  const B = m(beforeImg, S.before.w, S.before.h), A = m(afterCanvas, afterCanvas.width, afterCanvas.height);
+  const cb = B.map(v => v / ((B[0] + B[1] + B[2]) / 3)), ca = A.map(v => v / ((A[0] + A[1] + A[2]) / 3));
+  let g = cb.map((v, i) => Math.max(.8, Math.min(1.25, 1 + (v / ca[i] - 1) * .85)));
+  const lum = (A[0] * g[0] + A[1] * g[1] + A[2] * g[2]) / (A[0] + A[1] + A[2]); g = g.map(v => v / lum);   // same brightness
+  return g;
+}
+function applyGain(c, g){
+  const x = c.getContext("2d", CS), im = x.getImageData(0, 0, c.width, c.height), d = im.data;
+  const L = g.map(k => { const t = new Uint8ClampedArray(256); for (let v = 0; v < 256; v++) t[v] = Math.round(v * k); return t; });
+  for (let i = 0; i < d.length; i += 4){ d[i] = L[0][d[i]]; d[i + 1] = L[1][d[i + 1]]; d[i + 2] = L[2][d[i + 2]]; }
+  x.putImageData(im, 0, 0);
 }
 /* result: drag the line to compare, save to Photos */
 function showResult(R){
   stopCam(); if (CAM){ clearInterval(CAM.timer); }
   const el = CAM ? CAM.el : (() => { const d = document.createElement("div"); d.className = "fcam"; document.body.append(d); document.documentElement.classList.add("noscroll"); CAM = { el: d }; return d; })();
-  el.innerHTML = `<div class="fres"><div class="ftop"><button class="fp" id="cx">✕</button><span class="fp ${R.match >= 70 ? "ok" : R.match >= 45 ? "mid" : "low"}">Match ${R.match}%</span><span class="fp">${R.w} × ${R.h}</span></div>
+  el.innerHTML = `<div class="fres"><div class="ftop"><button class="fp" id="cx">✕</button><span class="fp ${R.match >= 70 ? "ok" : R.match >= 45 ? "mid" : "low"}">Match ${R.match}%</span><span class="fp">${R.w} × ${R.h}${R.w * R.h >= 8e6 ? " · " + Math.round(R.w * R.h / 1e6) + " MP" : ""}</span></div>
     <div class="cmp" id="cmp" style="aspect-ratio:${S.before.w}/${S.before.h}"><img src="${R.alignedUrl}" alt=""><div class="cb" id="cb"><img src="${R.beforeUrl}" alt=""></div><i id="cl"></i><em class="b">BEFORE</em><em class="a">AFTER</em></div>
-    <p class="fnote">Drag across the photo to compare. The after is lined up on the before automatically for the side-by-side.</p>
+    <p class="fnote">Drag across the photo to compare. The after is lined up on the before automatically for the side-by-side.${R.build ? " The after photo itself is saved exactly as the camera took it." : ""}</p>
+    ${R.build && R.wbUseful ? `<label class="fnote" style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="checkbox" id="wb" ${S.wb ? "checked" : ""}> Match the colours (white balance) to the before photo — side-by-side &amp; deck</label>` : ""}
     <div class="fact"><button class="btn gold" id="sv">⤓ Save to Photos (2)</button><button class="btn" id="dk">+ Deck</button><button class="btn ghost" id="re">Retake</button><button class="btn ghost" id="ok">Done</button></div></div>`;
   const cmp = $("#cmp"), set = px => { const r = cmp.getBoundingClientRect(), p = Math.max(0, Math.min(1, (px - r.left) / r.width)); $("#cb").style.width = p * 100 + "%"; $("#cl").style.left = p * 100 + "%"; };
   cmp.addEventListener("pointerdown", e => { set(e.clientX); cmp.setPointerCapture(e.pointerId); }); cmp.addEventListener("pointermove", e => { if (e.buttons || e.pressure) set(e.clientX); });
   $("#sv").onclick = async () => { if (await saveFiles(R.files)) toast(isIOS ? "Saved — check Photos" : "Saved"); };
+  const wb = $("#wb"); if (wb) wb.onchange = async () => { S.wb = wb.checked; wb.disabled = true; await R.build(); wb.disabled = false;
+    cmp.querySelector(":scope > img").src = R.alignedUrl; toast(S.wb ? "Colours matched to the before" : "Colours as taken"); };
   $("#dk").onclick = () => pickDeckFor(R.pair);
   $("#re").onclick = async () => { await del("pairs", R.pair.id); await del("shots", R.pair.afterId); CAM.el.remove(); CAM = null; openCam(); };
   $("#ok").onclick = $("#cx").onclick = closeCam;
@@ -387,7 +441,7 @@ function showResult(R){
 async function reopenPair(p, byId){
   const b = byId.get(p.beforeId), a = byId.get(p.afterId); if (!b || !a) return;
   S.before = { ...b, url: URL.createObjectURL(b.blob) }; const bi = await blobToImg(b.blob); S.before.w = bi.naturalWidth; S.before.h = bi.naturalHeight; S.place = p.place || S.place;
-  const ai = await blobToImg(a.blob), c = document.createElement("canvas"); c.width = ai.naturalWidth; c.height = ai.naturalHeight; c.getContext("2d").drawImage(ai, 0, 0);
+  const ai = await blobToImg(a.blob), c = document.createElement("canvas"); c.width = ai.naturalWidth; c.height = ai.naturalHeight; c.getContext("2d", CS).drawImage(ai, 0, 0);
   const sbs = await sideBySide(b.blob, c, p.beforeAt, p.afterAt), base = `${p.site}_${slug(p.place)}_${stamp(new Date(p.afterAt))}`;
   showResult({ files: [new File([a.blob], `${base}_after.jpg`, { type: "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })], pair: p, beforeUrl: S.before.url, alignedUrl: URL.createObjectURL(a.blob), sbsUrl: URL.createObjectURL(sbs), w: c.width, h: c.height, match: p.match ?? 0 });
 }
@@ -395,7 +449,7 @@ async function reopenPair(p, byId){
 async function edgesOf(url){
   const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = url; });
   const w = 640, h = Math.round(img.height * w / img.width), c = document.createElement("canvas"); c.width = w; c.height = h;
-  const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, h); const d = x.getImageData(0, 0, w, h), g = new Float32Array(w * h), o = x.createImageData(w, h);
+  const x = c.getContext("2d", CS); x.drawImage(img, 0, 0, w, h); const d = x.getImageData(0, 0, w, h), g = new Float32Array(w * h), o = x.createImageData(w, h);
   for (let i = 0; i < w * h; i++) g[i] = d.data[i * 4] * .3 + d.data[i * 4 + 1] * .59 + d.data[i * 4 + 2] * .11;
   for (let y = 1; y < h - 1; y++) for (let k = 1; k < w - 1; k++){ const i = y * w + k;
     const gx = -g[i - w - 1] - 2 * g[i - 1] - g[i + w - 1] + g[i - w + 1] + 2 * g[i + 1] + g[i + w + 1], gy = -g[i - w - 1] - 2 * g[i - w] - g[i - w + 1] + g[i + w - 1] + 2 * g[i + w] + g[i + w + 1];
@@ -403,22 +457,24 @@ async function edgesOf(url){
   x.putImageData(o, 0, 0); return c.toDataURL("image/png");
 }
 function drawStamp(c, label, at){
-  const x = c.getContext("2d"), u = c.width / 1000, txt = `${label} · ${fmtDT(at)} · ${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}`;
+  const x = c.getContext("2d", CS), u = c.width / 1000, txt = `${label} · ${fmtDT(at)} · ${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}`;
   x.font = `700 ${Math.round(22 * u)}px system-ui, sans-serif`; const tw = x.measureText(txt).width, pad = 12 * u, hh = 40 * u;
   x.fillStyle = "rgba(0,0,0,.55)"; x.fillRect(16 * u, c.height - hh - 16 * u, tw + pad * 2, hh);
   x.fillStyle = label === "BEFORE" ? "#FF8A7A" : "#7BE0A6"; x.fillText(label, 16 * u + pad, c.height - 16 * u - hh / 2 + 8 * u);
   x.fillStyle = "#fff"; x.fillText(txt.slice(label.length), 16 * u + pad + x.measureText(label).width, c.height - 16 * u - hh / 2 + 8 * u);
 }
 async function sideBySide(beforeBlob, afterCanvas, bAt, aAt){
-  const b = await blobToImg(beforeBlob), H = 1600, wb = Math.round(b.width * H / b.height), wa = Math.round(afterCanvas.width * H / afterCanvas.height), gap = 24, top = 84, bot = 70;
-  const c = document.createElement("canvas"); c.width = wb + wa + gap * 3; c.height = H + top + bot; const x = c.getContext("2d");
+  const b = await blobToImg(beforeBlob), rb = b.width / b.height, ra = afterCanvas.width / afterCanvas.height;
+  let H = Math.min(2400, b.height, Math.max(1600, afterCanvas.height)); while ((rb + ra) * H * (H + 154) > 15.5e6) H -= 100;
+  const wb = Math.round(rb * H), wa = Math.round(ra * H), gap = 24, top = 84, bot = 70;
+  const c = document.createElement("canvas"); c.width = wb + wa + gap * 3; c.height = H + top + bot; const x = c.getContext("2d", CS);
   x.fillStyle = "#2A1146"; x.fillRect(0, 0, c.width, c.height); x.imageSmoothingQuality = "high";
   x.drawImage(b, gap, top, wb, H); x.drawImage(afterCanvas, gap * 2 + wb, top, wa, H);
   x.font = "800 40px system-ui, sans-serif";
   const lab = (t, col, px) => { const w = x.measureText(t).width + 40; x.fillStyle = col; x.beginPath(); x.roundRect(px, 16, w, 52, 26); x.fill(); x.fillStyle = "#fff"; x.fillText(t, px + 20, 56); };
   lab(`BEFORE · ${bAt ? fmtD(bAt) : ""}`, "#C0392B", gap); lab(`AFTER · ${fmtD(aAt)}`, "#2E8B57", gap * 2 + wb);
   x.font = "600 32px system-ui, sans-serif"; x.fillStyle = "#E9CF8A"; x.fillText(`${CTX.sites[S.site] || ""}${S.place ? " · " + S.place : ""}  ·  ABC Operations`, gap, c.height - 24);
-  return toBlob(c, .92);
+  return toBlob(c, .94);
 }
 
 /* ================= DECK ================= */
@@ -498,7 +554,9 @@ async function addPair(){
 /* ---------- the PowerPoint file (16:9, ABC purple) ---------- */
 let pptxLib = null;
 const loadPptx = () => pptxLib || (pptxLib = new Promise((res, rej) => { const s2 = document.createElement("script"); s2.src = "pptx/pptxgen.bundle.js"; s2.onload = () => res(window.PptxGenJS); s2.onerror = () => rej(new Error("Could not load the PowerPoint maker")); document.head.append(s2); }));
-async function imgInfo(id){ const r = await get("shots", id); if (!r) return null; const img = await blobToImg(r.blob); return { data: (await blobToData(r.blob)).replace(/^data:/, ""), w: img.naturalWidth, h: img.naturalHeight }; }
+async function imgInfo(id){ const r = await get("shots", id); if (!r || !r.blob) return null; const img = await blobToImg(r.blob);
+  const blob = Math.max(img.naturalWidth, img.naturalHeight) > 2000 || r.blob.size > 1.5e6 ? await shrink(img, 2000, .88) : r.blob, im2 = blob === r.blob ? img : await blobToImg(blob);
+  return { data: (await blobToData(blob)).replace(/^data:/, ""), w: im2.naturalWidth, h: im2.naturalHeight }; }
 const fitIn = (im, bx, by, bw, bh) => { const k = Math.min(bw / im.w, bh / im.h), w = im.w * k, h = im.h * k; return { x: bx + (bw - w) / 2, y: by + (bh - h) / 2, w, h }; };
 async function makePptx(){
   const btn = $("#dl"); btn.disabled = true; btn.textContent = "Making the PowerPoint…";

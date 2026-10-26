@@ -28,3 +28,12 @@
   so both look taken from the same place. The after file itself is saved as taken (full resolution).
 - **Result**: drag across the photo to compare; **Save to Photos** shares 2 files (after full resolution + side-by-side) → "Save Image" on iPhone.
 - Nothing is sent to the hub; before photos are kept on the device at up to 2400 px for the ghost and the deck.
+
+## Version 3 (26 Oct 2026) — iPhone quality and true colours
+- **Best quality** (on by default, Camera tab tick box): line up with the ghost, press the shutter → on iPhone the **iPhone camera app opens at the same spot** (Smart HDR, Deep Fusion, Apple colours, full 12/24/48 MP). Safari's live camera is only a video picture, which is why the old after photos were softer and had different colours. Small movements are fixed by the automatic alignment. On Android the shutter takes a full-resolution still photo (ImageCapture) instead of a video frame.
+- **The after photo is saved exactly as the camera took it** — no re-compression, no stamp. The date / time / place stamp now goes on the side-by-side only.
+- **Before photos are kept as the original file** (no shrinking / re-compression) so the colours stay exactly as in Photos.
+- **Wide colour (Display P3)**: every picture is processed on a P3 canvas, so iPhone colours are not clipped to sRGB.
+- **Match the colours to the before** (result screen, on by default): the after's white balance (warmer / bluer light) is matched to the before for the side-by-side and the deck — brightness is kept, so a cleaner result still shows. The saved after photo is never changed.
+- Side-by-side up to 2400 px high (about 6000 px wide), JPEG 94 %, P3 colour profile; the deck copy is 3200 px; the PowerPoint uses 2000 px per picture to stay light.
+- Everything stays on the phone (Photos + the device's own storage) — nothing is uploaded to the hub. A web page cannot write to Photos by itself: **Save to Photos** opens the share sheet → **Save 2 Images**.
