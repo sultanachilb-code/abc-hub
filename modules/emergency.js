@@ -87,7 +87,7 @@ export async function onShiftNow(env, site, withManagers) {
   const t = beirutNow();
   const [cells, users] = await Promise.all([
     env.DB.prepare("SELECT day, email, val FROM sched_cells WHERE site = ? AND day IN (?, ?)").bind(site, t.day, t.yesterday).all(),
-    env.DB.prepare("SELECT email, full_name, role, site_code FROM users WHERE active = 1 AND (site_code = ? OR role = 'ADMIN')").bind(site).all()
+    env.DB.prepare("SELECT email, full_name, role, site_code FROM users WHERE active = 1 AND (site_code = ? OR role = 'ADMIN' OR is_admin = 1)").bind(site).all()
   ]);
   const U = new Map((users.results || []).map(u => [u.email, u]));
   const today = new Map(), out = new Map();

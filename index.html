@@ -1384,19 +1384,19 @@ function accessKey(u){
   return r;
 }
 /* Admin Control Center: the ABC logo (administrators) asks for the admin password, then opens /admin */
-function adminGate(){
+function adminGate(target){
   let d = document.getElementById("admGate"); if (!d){ d = document.createElement("dialog"); d.id = "admGate"; document.body.append(d); }
   d.style.cssText = "border:0;border-radius:20px;padding:0;width:min(360px,calc(100% - 24px));background:var(--card,#fff);color:var(--text,#221A2E)";
   d.innerHTML = `<form method="dialog" id="agF" style="padding:22px;display:grid;gap:12px;text-align:center">
     <div style="width:58px;height:58px;border-radius:16px;background:#2A0F45;display:grid;place-items:center;margin:0 auto"><img src="icons/abc-logo-white.png" alt="" style="height:34px"></div>
-    <b style="font-size:1.05rem">Admin Control Center</b><small style="color:var(--muted,#6D6479)">Enter your password to open it</small>
+    <b style="font-size:1.05rem">Administrator</b><small style="color:var(--muted,#6D6479)">Enter your password — the hub opens as administrator</small>
     <input type="password" id="agP" autocomplete="current-password" placeholder="Your hub password" style="border:1px solid var(--line,#E6E0EE);border-radius:12px;padding:12px;font:inherit;background:transparent;color:inherit">
     <div id="agE" style="color:#C2283C;font-size:.84rem;font-weight:700;min-height:1px"></div>
     <div style="display:flex;gap:8px"><button type="button" id="agX" class="btn ghost" style="flex:1">Cancel</button><button id="agGo" class="btn" style="flex:1">Open</button></div></form>`;
   d.showModal(); setTimeout(() => $("#agP").focus(), 50);
   $("#agX").onclick = () => d.close();
   $("#agF").onsubmit = async e => { e.preventDefault(); $("#agGo").disabled = true; $("#agE").textContent = "";
-    try { await api("admin/unlock", { password: $("#agP").value }); location.href = "/admin"; } catch (er){ $("#agE").textContent = er.message; $("#agGo").disabled = false; $("#agP").select(); } };
+    try { await api("admin/unlock", { password: $("#agP").value }); if (target) location.href = target; else location.reload(); } catch (er){ $("#agE").textContent = er.message; $("#agGo").disabled = false; $("#agP").select(); } };
 }
 function startHub(){
   const role = ME.user.role;
@@ -1421,7 +1421,16 @@ function startHub(){
     document.body.append(v);
   }
   $("#hubTitle").textContent = H.title;
-  if (role === "ADMIN" && !ME.viewAs) { const lg = $("#hubLogo"); if (lg && !lg.dataset.adm){ lg.dataset.adm = "1"; lg.style.cursor = "pointer"; lg.title = "Admin Control Center"; lg.onclick = adminGate; } }
+  if (ME.admin && !ME.viewAs) {   // the ABC logo: administrators open the hub as administrator (password), then the Control Center
+    const lg = $("#hubLogo"); if (lg){ lg.style.cursor = "pointer"; lg.title = ME.admin.mode ? "Admin Control Center" : "Administrator"; lg.onclick = () => ME.admin.mode ? (location.href = "/admin") : adminGate(); }
+    if (ME.admin.mode && !document.getElementById("admBar")) {
+      const v = document.createElement("div"); v.id = "admBar";
+      v.style.cssText = "position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9998;background:linear-gradient(135deg,#4A1F73,#2A0F45);color:#fff;border-radius:14px;padding:7px 8px 7px 14px;display:flex;gap:8px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.3);font-size:.8rem;max-width:calc(100% - 24px);flex-wrap:wrap;justify-content:center";
+      v.innerHTML = `<span>🛡 <b>Administrator mode</b></span><a href="/admin" style="border-radius:9px;padding:6px 10px;font-weight:800;background:#E9CF8A;color:#2A0F45;text-decoration:none">Admin Control Center</a>${ME.admin.split ? `<button style="border:1px solid rgba(255,255,255,.35);border-radius:9px;padding:6px 10px;font:inherit;font-weight:700;background:transparent;color:#fff;cursor:pointer">Exit · back to ${esc(ME.admin.real ? ME.admin.real.roleLabel : "my role")}</button>` : ""}`;
+      const x = v.querySelector("button"); if (x) x.onclick = async () => { await api("admin/lock", {}).catch(() => {}); location.reload(); };
+      document.body.append(v);
+    }
+  }
   const hr = new Date().getHours();
   const first = ME.user.name.split(" ")[0];
   $("#greet").innerHTML = `${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(first)}` +
@@ -1543,7 +1552,7 @@ function buildMenu(){
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>Designs and dates · Ramadan, Eid, Christmas, Independence Day…</small></span></button>` : ""}
     <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · ${HL_KINDS.length} layouts to choose from</small></span></button>
-    ${ME.user.role === "ADMIN" ? `<button data-a="cc" class="pm-i">${pmIcon("admin")}<span>Admin Control Center<small>Users, allowances, systems, tools</small></span></button><button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
+    ${ME.admin ? `<button data-a="cc" class="pm-i">${pmIcon("admin")}<span>Admin Control Center<small>${ME.admin.mode ? "Users, settings, systems, tools" : "Asks for your admin password"}</small></span></button>${ME.admin.mode && ME.admin.split ? `<button data-a="admout" class="pm-i">${pmIcon("out")}<span>Exit administrator mode<small>Back to the hub as ${esc(ME.admin.real ? ME.admin.real.roleLabel : "yourself")}</small></span></button>` : ""}` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
   paint(); m._paint = paint;
   $("#avatar").onclick = e => { e.stopPropagation(); $("#aiMenu").classList.add("hidden"); $("#npanel").classList.add("hidden"); placePops($("#avatar")); m.classList.toggle("hidden"); };
@@ -1556,8 +1565,8 @@ function buildMenu(){
   m.onclick = async e => {
     const a = e.target.closest("button")?.dataset.a; if (!a) return;
     m.classList.add("hidden");
-    if (a === "admin") location.hash = "#/admin";
-    if (a === "cc") adminGate();
+    if (a === "cc") { if (ME.admin && ME.admin.unlocked) location.href = "/admin"; else adminGate("/admin"); }
+    if (a === "admout") { await api("admin/lock", {}).catch(() => {}); location.reload(); }
     if (a === "profile") profileSheet();
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));
@@ -4056,7 +4065,7 @@ function route(){
   if (ap){ goHome(); return approveSheet(ap[1]); }   // Two-step login feature: approve a sign-in from the phone
   const m = h.match(/^#\/app\/(.+)$/);
   if (m) return showApp(decodeURIComponent(m[1]));
-  if (h === "#/admin") return renderAdmin();
+  if (h === "#/admin") { location.href = "/admin"; return; }   // Hub administration moved to the Admin Control Center
   goHome();
 }
 addEventListener("hashchange", route);

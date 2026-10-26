@@ -129,7 +129,7 @@ export async function automationRun(env, deps, now = new Date()) {
   if (t.weekday === "Sun" && t.hour >= 3 && t.hour < 5 && env.MAIL_RELAY_URL && (await claim(env, `backup:${t.day}`))) {
     const data = await backupData(env);
     const z = await gzipBase64(JSON.stringify(data));
-    const { results } = await env.DB.prepare("SELECT email FROM users WHERE active = 1 AND role = 'ADMIN'").all();
+    const { results } = await env.DB.prepare("SELECT email FROM users WHERE active = 1 AND (role = 'ADMIN' OR is_admin = 1)").all();
     const to = (results || []).map(u => u.email);
     const sum = Object.entries(data.tables).map(([k, v]) => `${k}: ${v.length}`).join(" · ");
     if (to.length) {

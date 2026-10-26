@@ -39,3 +39,11 @@ Hourly (07:00–22:00) health check; each red problem is pushed to the administr
   **Storage & database** (D1 reads/writes/size, 7 days, per database, top queries, R2 buckets), **Projects & GitHub** (control sheet: Live · GitHub · Cloudflare, add / edit / delete),
   **Flagship covers** (upload / replace / remove), **Seasons** and **Message of the moment** (their pages shown inside the Control Center).
 - "Announcements & more" keeps links to Announcements, People & roles and Backup in Hub administration.
+
+## Administrator access is now separate from the role (26 Oct 2026)
+- `users.is_admin` = administrator access. A person keeps their **real role** (e.g. Sultan: Mall Supervisor · ABC Verdun Mall) and signs in to the hub with it.
+- **ABC logo → password** (`/api/admin/unlock`, 2 hours) = **administrator mode**: the hub opens as administrator (all tools, admin rights), a purple bar offers **Admin Control Center** and **Exit · back to <real role>**.
+- Every `/api/admin/*` route needs administrator mode. The old Hub administration screen is gone (`#/admin` opens `/admin`).
+- Moved into the Control Center: **People & roles** (per flagship, slots, operations team, security, leadership, administrators, add / edit with a **Hub administrator** tick, two-step policy, ABC Operations Group email, weekly schedule Cc, morning / End of Day tests), **Announcements**, **Outlook settings** (Allowances → Outlook → Settings).
+- Notifications "to the administrators" go to everyone with administrator access.
+- One-time migration (`meta mig:admin-split`): every Admin account gets `is_admin = 1`; salaachi@abc.com.lb becomes Mall Supervisor · ABC Verdun Mall + administrator.
