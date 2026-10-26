@@ -31,3 +31,11 @@ Hourly (07:00–22:00) health check; each red problem is pushed to the administr
 - Systems are checked with the same small requests the hub already uses (hub stats / sign-in probe, 10 s), not their home pages.
 - A system is red only after **2 failed checks in a row**; one slow answer is amber.
 - Alerts go to the administrators' bell and phone (push) only — **no email**.
+
+## Update (26 Oct 2026, afternoon)
+- **Light by default**, **Dark** switch in the side menu (Display), remembered on the device (`adm.theme`); embedded pages follow it.
+- **Users grouped by flagship** (hub order), then "Leadership, administrators & several flagships", with a gap and a count (people · online) per group.
+- New sections moved from Hub administration: **Usage report** (7/30/90 days, tools, flagship matrix, people per flagship, CSV), **Change history** (filters, CSV),
+  **Storage & database** (D1 reads/writes/size, 7 days, per database, top queries, R2 buckets), **Projects & GitHub** (control sheet: Live · GitHub · Cloudflare, add / edit / delete),
+  **Flagship covers** (upload / replace / remove), **Seasons** and **Message of the moment** (their pages shown inside the Control Center).
+- "Announcements & more" keeps links to Announcements, People & roles and Backup in Hub administration.

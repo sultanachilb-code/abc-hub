@@ -10,18 +10,34 @@
 <link rel="stylesheet" href="/tools/tools.css">
 <!-- Admin Control Center (administrators only) — docs/FEATURE-admin-cc.md -->
 <style>
-:root{--cbg:#F4F1F8;--ccard:#fff;--ctext:#221A2E;--cmut:#6D6479;--cline:#E6E0EE;--cok:#1E8A4C;--cwarn:#B8740F;--cbad:#C2283C;--cpaper:#FAF8FC}
-@media (prefers-color-scheme:dark){:root{--cbg:#120B1B;--ccard:#1C1429;--ctext:#EFEAF5;--cmut:#A99EB8;--cline:#2E2440;--cpaper:#231A33}}
+:root{--cbg:#F5F3F8;--ccard:#fff;--ctext:#221A2E;--cmut:#6D6479;--cline:#E6E0EE;--cok:#1E8A4C;--cwarn:#B8740F;--cbad:#C2283C;--cpaper:#FAF8FC;
+  --nbg:#FFFFFF;--ntext:#3B2A52;--nmut:#8A7FA0;--nhov:#F3EEF9;--non:#EDE4F8;--nonT:#4A1F73;--nline:#ECE6F3;color-scheme:light}
+:root[data-adm="dark"]{--cbg:#120B1B;--ccard:#1C1429;--ctext:#EFEAF5;--cmut:#A99EB8;--cline:#2E2440;--cpaper:#231A33;
+  --nbg:linear-gradient(180deg,#2A0F45,#3A1660);--ntext:#E4DAF0;--nmut:rgba(255,255,255,.5);--nhov:rgba(255,255,255,.08);--non:rgba(233,207,138,.18);--nonT:#fff;--nline:rgba(255,255,255,.12);color-scheme:dark}
+:root[data-adm="dark"] .p-ok{background:rgba(95,208,138,.15);color:#7FDCA0}:root[data-adm="dark"] .p-warn{background:rgba(240,180,76,.15);color:#F0C070}:root[data-adm="dark"] .p-bad{background:rgba(255,122,107,.15);color:#FF9488}:root[data-adm="dark"] .p-mut{background:rgba(255,255,255,.08);color:#C9BEDA}
 *{box-sizing:border-box}
 body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--cbg);color:var(--ctext)}
 .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-nav{background:linear-gradient(180deg,#2A0F45,#3A1660);color:#fff;padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto}
-nav .lg{display:flex;gap:10px;align-items:center;padding:0 6px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px}
-nav .lg img{height:30px}nav .lg b{display:block;font-size:.98rem}nav .lg small{opacity:.7;font-size:.72rem}
-nav button,nav a{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;color:#E4DAF0;font:inherit;font-size:.87rem;font-weight:600;padding:10px;border-radius:10px;cursor:pointer;text-align:left;text-decoration:none}
-nav button:hover,nav a:hover{background:rgba(255,255,255,.08)}nav button.on{background:rgba(233,207,138,.18);color:#fff}
+nav{background:var(--nbg);color:var(--ntext);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--nline)}
+nav .lg{display:flex;gap:10px;align-items:center;padding:0 6px 14px;border-bottom:1px solid var(--nline);margin-bottom:8px}
+nav .lg .lgm{width:38px;height:38px;border-radius:11px;background:#2A0F45;display:grid;place-items:center;flex:none}nav .lg img{height:24px}nav .lg b{display:block;font-size:.98rem}nav .lg small{color:var(--nmut);font-size:.72rem}
+nav button,nav a{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;color:var(--ntext);font:inherit;font-size:.86rem;font-weight:600;padding:9px 10px;border-radius:10px;cursor:pointer;text-align:left;text-decoration:none}
+nav button:hover,nav a:hover{background:var(--nhov)}nav button.on{background:var(--non);color:var(--nonT);font-weight:800}
 nav .dt{margin-left:auto;width:8px;height:8px;border-radius:50%;display:none}nav .dt.on{display:block}
-nav .sep{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;padding:12px 10px 4px}
+nav .sep{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--nmut);padding:12px 10px 4px}
+.thm{display:flex;gap:4px;background:var(--cpaper);border:1px solid var(--nline);border-radius:10px;padding:3px;margin:4px 0}.thm button{justify-content:center;padding:6px;font-size:.78rem}.thm button.on{background:var(--ccard);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.fg{margin:0 0 18px}.fg h4{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#6B3FA0}.fg h4 small{color:var(--cmut);font-weight:700;letter-spacing:0;text-transform:none}
+.fg h4::after{content:"";flex:1;height:1px;background:var(--cline)}
+.cs-g{margin-bottom:16px}.cs-r{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--ccard);border:1px solid var(--cline);border-radius:12px;padding:10px 12px;margin-bottom:6px;flex-wrap:wrap}
+.cs-r b{font-size:.86rem}.cs-r small{display:block;color:var(--cmut);font-size:.74rem;word-break:break-all}.lks{display:flex;gap:6px;flex-wrap:wrap}
+.lk{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--cline);border-radius:9px;padding:6px 10px;font-size:.76rem;font-weight:700;color:var(--ctext);text-decoration:none;background:var(--ccard)}.lk:hover{border-color:#8A5CC0}.lk.off{border-style:dashed;color:var(--cmut)}
+.ub{display:grid;grid-template-columns:minmax(110px,180px) 1fr 50px;gap:8px;align-items:center;font-size:.8rem;margin-bottom:6px}.ub .tr{height:10px;border-radius:5px;background:var(--cpaper);overflow:hidden;border:1px solid var(--cline)}.ub .tr i{display:block;height:100%;background:#8A5CC0}
+.trend{display:flex;gap:2px;align-items:flex-end;height:90px}.trend i{flex:1;background:#8A5CC0;border-radius:2px 2px 0 0;min-height:2px}
+.hx td.h{font-weight:700}.frm{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:12px}
+.frm input,.frm select{border:1px solid var(--cline);border-radius:9px;padding:8px;font:inherit;font-size:.82rem;background:var(--ccard);color:var(--ctext)}
+.hc{font-size:.76rem;margin-top:4px;display:grid;gap:2px}.hc s{color:var(--cmut)}
+.cov{width:150px;height:50px;border-radius:10px;background:#2A0F45 center/cover no-repeat;flex:none;display:grid;place-items:center}
+.emb{width:100%;height:calc(100vh - 150px);min-height:520px;border:1px solid var(--cline);border-radius:14px;background:var(--ccard)}
 main{padding:20px 22px 70px;min-width:0}
 .hd{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
 .hd h1{font-size:1.3rem;margin:0}.hd small{display:block;color:var(--cmut);font-size:.8rem;margin-top:3px}
@@ -78,9 +94,16 @@ dialog.cc label{font-size:.76rem;font-weight:700;color:var(--cmut)}dialog.cc inp
 <script src="/tools/common.js"></script>
 <script>
 "use strict";
+/* Light by default; Dark when the admin chooses it (kept on this device) */
+let THEME = (() => { try { return localStorage.getItem("adm.theme") === "dark" ? "dark" : "light"; } catch { return "light"; } })();
+function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm", t); document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("adm.theme", t); } catch {} document.querySelectorAll("#thm [data-th]").forEach(b => b.classList.toggle("on", b.dataset.th === t));
+  document.querySelectorAll("iframe.emb").forEach(f => { try { f.contentDocument.documentElement.setAttribute("data-theme", t); } catch {} }); }
+setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#ov").slice(1), UF = "all", UQ = "", USERS = null;
-const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["us", "👥", "Users & access"], ["sec", "🔐", "Security & sign-ins"], ["sep", "Platform"], ["al", "📊", "Allowances & usage"],
-  ["sy", "🔌", "Systems & jobs"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"], ["sep", "Content"], ["ct", "📣", "Announcements & more"]];
+const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"],
+  ["sep", "Content"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"], ["ct", "📣", "Announcements & more"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
 const ago = iso => { if (!iso) return "—"; const t = Date.parse(iso.length <= 10 ? iso + "T12:00:00Z" : iso); if (!t) return iso; const m = Math.round((Date.now() - t) / 60000);
@@ -99,18 +122,20 @@ async function boot(){
   if (ME.viewAs) { $("#root").innerHTML = `<div class="deny card"><h2>You are viewing the hub as ${esc(ME.user.name)}</h2><p class="mut">Go back to your own account to use the Admin Control Center.</p><button class="b" id="vb">Back to my admin</button></div>`;
     $("#vb").onclick = async () => { await fetch("/api/viewas-stop", { method: "POST" }); location.reload(); }; return; }
   if (ME.user.role !== "ADMIN") { $("#root").innerHTML = `<div class="deny card"><h2>Administrators only</h2><p class="mut">This page is for hub administrators.</p><a class="b" href="/">Back to the hub</a></div>`; return; }
-  $("#root").innerHTML = `<div class="app"><nav id="nav"><div class="lg"><img src="/icons/abc-logo-white.png" alt="ABC"><div><b>Admin Control</b><small>${esc(ME.user.name)}</small></div></div>
+  $("#root").innerHTML = `<div class="app"><nav id="nav"><div class="lg"><span class="lgm"><img src="/icons/abc-logo-white.png" alt="ABC"></span><div><b>Admin Control</b><small>${esc(ME.user.name)}</small></div></div>
     ${NAV.map(n => n[0] === "sep" ? `<div class="sep">${n[1]}</div>` : `<button data-p="${n[0]}">${n[1]} ${n[2]}<span class="dt" id="dt-${n[0]}"></span></button>`).join("")}
+    <div class="sep">Display</div><div class="thm" id="thm"><button data-th="light">☀️ Light</button><button data-th="dark">🌙 Dark</button></div>
     <div class="sep">Hub</div><button id="lockB">🔒 Lock the Control Center</button><a href="/">← Back to the hub</a></nav><main id="main"></main></div>`;
   $("#nav").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
   $("#lockB").onclick = async () => { await api("admin/lock", {}).catch(() => {}); lockScreen(); };
+  $("#thm").onclick = e => { const b = e.target.closest("[data-th]"); if (b) setTheme(b.dataset.th); }; setTheme(THEME);
   go(PAGE);
 }
 function go(p){
   PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ ov, us, sec, al, sy, tl, bk, ct })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ ov, us, ur, sec, hi, al, db, sy, pc, tl, bk, fc, se, mm, ct })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -167,20 +192,28 @@ async function ov(){
 async function us(){
   USERS = await api("admin/cc/users"); drawUsers();
 }
+/* people by flagship (in the hub's order), then everyone who covers several flagships */
+function groupBySite(rows){
+  const S = USERS.sites || {}, out = [];
+  for (const [code, name] of Object.entries(S)) { const G = rows.filter(u => u.site === code && !["ADVISOR", "DIRECTOR", "CDSO", "ADMIN"].includes(u.role)); if (G.length) out.push([code, name, G]); }
+  const rest = rows.filter(u => !out.some(g => g[2].includes(u)));
+  if (rest.length) out.push(["LEAD", "Leadership, administrators & several flagships", rest]);
+  return out;
+}
 function drawUsers(){
   const L = USERS.users, F = { all: L, online: L.filter(u => u.online), locked: L.filter(u => u.locked || u.fails), nofa: L.filter(u => u.active && u.twofaRequired && !u.twofa.length), off: L.filter(u => !u.active), never: L.filter(u => u.active && !u.lastLoginAt) };
   const q = UQ.toLowerCase(), rows = F[UF].filter(u => !q || [u.name, u.email, u.positionLabel, u.roleLabel, u.siteName, u.sitesLabel].join(" ").toLowerCase().includes(q));
   V(head("Users &amp; access", `${L.length} accounts · role, flagships, two-step, last activity`, `<a class="b g" href="/#/admin" onclick="try{sessionStorage.setItem('adm.tab','users')}catch{}">Add / edit in People &amp; roles</a>`) +
     `<div class="flt"><input id="uq" placeholder="Search name, email, position, flagship…" value="${esc(UQ)}">
       ${[["all", "All"], ["online", "Online now"], ["locked", "Locked / wrong passwords"], ["nofa", "No two-step"], ["never", "Never signed in"], ["off", "Switched off"]].map(([k, n]) => `<span data-f="${k}" class="${UF === k ? "on" : ""}">${n} · ${F[k].length}</span>`).join("")}</div>
+    ${groupBySite(rows).map(([gk, gn, G]) => `<div class="fg"><h4>${esc(gn)} <small>${G.length} ${G.length === 1 ? "person" : "people"} · ${G.filter(u => u.online).length} online</small></h4>
     <div class="tw"><table><thead><tr><th>Person</th><th>Position · flagships</th><th>Two-step</th><th>Last active</th><th>Status</th><th></th></tr></thead><tbody>
-    ${rows.map(u => `<tr><td><div class="who"><span class="av">${esc(ini(u.name))}</span><div><b>${esc(u.name)}</b><span class="mut">${esc(u.email)}</span></div></div></td>
+    ${G.map(u => `<tr><td><div class="who"><span class="av">${esc(ini(u.name))}</span><div><b>${esc(u.name)}</b><span class="mut">${esc(u.email)}</span></div></div></td>
       <td>${esc(u.positionLabel || u.roleLabel)}<br><span class="mut">${esc(u.sitesLabel || u.siteName || "")}</span></td>
       <td>${u.twofa.length ? u.twofa.map(w => pill("ok", esc(w))).join(" ") : u.twofaRequired ? pill("warn", "Required · not set") : pill("mut", "Not required")}</td>
       <td>${u.online ? `<b class="t-ok"><span class="dot bg-ok"></span>online</b>` : esc(ago(u.lastSeen || u.lastLoginAt))}${u.outlook ? `<br><span class="mut">Outlook connected</span>` : ""}</td>
       <td>${!u.active ? pill("mut", "Switched off") : u.locked ? pill("bad", "Locked") : u.fails ? pill("warn", u.fails + " wrong passwords") : pill("ok", "Active")}</td>
-      <td style="white-space:nowrap">${u.email !== USERS.me && u.active ? `<button class="b g" data-va="${esc(u.email)}">👁 View as</button> ` : ""}${u.locked ? `<button class="b g" data-ul="${esc(u.email)}">Unlock</button> ` : ""}<button class="b g" data-mo="${esc(u.email)}">⋯</button></td></tr>`).join("")
-      || `<tr><td colspan="6" class="mut" style="padding:16px">No one here.</td></tr>`}</tbody></table></div>`);
+      <td style="white-space:nowrap">${u.email !== USERS.me && u.active ? `<button class="b g" data-va="${esc(u.email)}">👁 View as</button> ` : ""}${u.locked ? `<button class="b g" data-ul="${esc(u.email)}">Unlock</button> ` : ""}<button class="b g" data-mo="${esc(u.email)}">⋯</button></td></tr>`).join("")}</tbody></table></div></div>`).join("") || `<div class="card mut">No one here.</div>`}`);
   const qi = $("#uq"); qi.oninput = () => { UQ = qi.value; const p = qi.selectionStart; drawUsers(); const n = $("#uq"); n.focus(); n.setSelectionRange(p, p); };
   $("#main").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { UF = x.dataset.f; drawUsers(); });
   $("#main").querySelectorAll("[data-va]").forEach(x => x.onclick = () => viewAs(x.dataset.va));
@@ -330,15 +363,139 @@ async function bk(fresh){
     const r = await api("admin/cc/clean", { what: x.dataset.cl }); toast(`${r.removed} rows removed`); bk(); });
 }
 
+/* ---------- usage report (who uses what) ---------- */
+const appName = id => { const a = ((window.HUB && window.HUB.APPS) || []).find(x => x.id === id); return a ? a.name : id === "signin" ? "Sign-in" : id; };
+let UDAYS = 30, USITE = "";
+async function ur(){
+  const d = await api("admin/usage?days=" + UDAYS), sites = Object.keys(d.sites || {});
+  const people = d.people.filter(p => !USITE || p.site === USITE), maxS = Math.max(1, ...d.bySystem.map(r => r.n)), maxD = Math.max(1, ...d.byDay.map(r => r.n));
+  const cell = {}; d.bySite.forEach(r => { cell[r.site + "|" + r.app] = r.n; }); const mx = Math.max(1, ...d.bySite.map(r => r.n));
+  const lastTxt = iso => { if (!iso) return "never"; const n = Math.floor((Date.now() - Date.parse(iso)) / 864e5); return n <= 0 ? "today" : n === 1 ? "yesterday" : n + " days ago"; };
+  const byDay = Object.fromEntries(d.byDay.map(r => [r.d, r])), bars = [];
+  for (let i = UDAYS - 1; i >= 0; i--) { const k = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10), r = byDay[k] || { n: 0, people: 0 }; bars.push(`<i style="height:${r.n ? Math.max(4, r.n / maxD * 100) : 2}%;${r.n ? "" : "opacity:.25"}" title="${k} · ${r.n} opens · ${r.people} people"></i>`); }
+  V(head("Usage report", `What employees use in the hub — the last ${UDAYS} days`, `${[7, 30, 90].map(n => `<button class="b ${n === UDAYS ? "" : "g"}" data-days="${n}">${n} days</button>`).join("")}<button class="b g" id="ucsv">⇣ Excel (CSV)</button>`) +
+    `<div class="grid"><div class="card"><h3>System opens</h3><div class="big">${fmtN(d.totals.opens)}</div></div><div class="card"><h3>People active</h3><div class="big">${d.totals.activeUsers} <small>of ${d.totals.accounts}</small></div><div class="sub">${d.totals.activeWeek} this week</div></div>
+      <div class="card"><h3>Accounts active</h3><div class="big">${d.totals.accounts ? Math.round(d.totals.activeUsers / d.totals.accounts * 100) : 0} %</div></div><div class="card"><h3>Never used the hub</h3><div class="big ${d.totals.neverUsed ? "t-bad" : "t-ok"}">${d.totals.neverUsed}</div></div></div>
+    <div class="sec">Daily activity</div><div class="card"><div class="trend">${bars.join("")}</div><div class="mut" style="display:flex;justify-content:space-between;margin-top:4px"><span>${UDAYS} days ago</span><span>Today</span></div></div>
+    <div class="grid" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+      <div class="card"><h3>Most used tools</h3>${d.bySystem.slice(0, 20).map(r => `<div class="ub"><span>${esc(appName(r.app))}</span><span class="tr"><i style="width:${r.n / maxS * 100}%"></i></span><b>${r.n}</b></div>`).join("") || `<p class="mut">No data yet.</p>`}</div>
+      <div class="card" style="overflow-x:auto"><h3>By flagship</h3><table class="hx" style="min-width:0"><tr><th></th>${sites.map(s => `<th title="${esc(d.sites[s])}">${esc(s)}</th>`).join("")}</tr>
+        ${d.bySystem.slice(0, 20).map(r => `<tr><td>${esc(appName(r.app))}</td>${sites.map(s => { const n = cell[s + "|" + r.app] || 0; return `<td class="${n ? "h" : ""}" style="${n ? `background:rgba(138,92,192,${Math.min(.7, .1 + n / mx * .6)})` : ""}">${n || ""}</td>`; }).join("")}</tr>`).join("")}</table></div></div>
+    <div class="sec">People</div><div class="flt"><span data-us="" class="${!USITE ? "on" : ""}">All</span>${sites.map(s => `<span data-us="${s}" class="${USITE === s ? "on" : ""}">${esc(d.sites[s])}</span>`).join("")}</div>
+    <div class="tw"><table><thead><tr><th>Person</th><th>Flagship</th><th>Opens</th><th>Sign-ins</th><th>Most used</th><th>Last active</th></tr></thead><tbody>
+      ${people.map(p => `<tr style="${p.active ? "" : "opacity:.5"}"><td><b>${esc(p.name)}</b><br><span class="mut">${esc(p.position || p.role)}</span></td><td>${esc(p.siteName)}</td><td><b>${p.opens}</b></td><td>${p.signins}</td><td>${esc(p.top ? appName(p.top) : "—")}</td>
+        <td class="${p.last ? "" : "t-bad"}">${esc(lastTxt(p.last))}</td></tr>`).join("")}</tbody></table></div>`);
+  $("#main").querySelectorAll("[data-days]").forEach(b => b.onclick = () => { UDAYS = +b.dataset.days; ur(); });
+  $("#main").querySelectorAll("[data-us]").forEach(b => b.onclick = () => { USITE = b.dataset.us; ur(); });
+  $("#ucsv").onclick = () => csv(`hub-usage-${UDAYS}days.csv`, [["Name", "Email", "Flagship", "Role", "Position", "Opens", "Sign-ins", "Most used", "Last active"], ...people.map(p => [p.name, p.email, p.siteName, p.role, p.position, p.opens, p.signins, p.top ? appName(p.top) : "", p.last])]);
+}
+function csv(name, rows){ const t = rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n"); const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + t], { type: "text/csv" })); a.download = name; a.click(); }
+
+/* ---------- change history ---------- */
+const HIST = { gla: "GLA", directory: "Tenants Directory", budget: "Budget", property: "Property details", handover: "Shift handover", reminders: "Reminders", people: "People & roles", admin: "Admin Control",
+  calendar: "Operations Calendar", evacuation: "Evacuation plan", contractors: "Contractors", contracts: "Contracts near ending", projects: "Projects", mom: "MOM", feedback: "Tenant feedback", layouts: "Mall layouts",
+  tenants: "Tenant announcements", fitout: "Fit-out", forms: "Checklists", works: "Tenant Works Forms", exec: "Executive Report" };
+let HF = { tool: "", site: "", who: "", from: "", to: "", q: "" };
+async function hi(){
+  const qs = Object.entries(HF).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&"), d = await api("admin/history" + (qs ? "?" + qs : ""));
+  const act = { add: ["Added", "ok"], edit: ["Changed", "mut"], delete: ["Deleted", "bad"], import: ["Imported", "mut"], submit: ["Submitted", "ok"], sign: ["Signed", "ok"] };
+  const tools = { ...HIST }; d.tools.forEach(t => { if (!tools[t.tool]) tools[t.tool] = t.tool; });
+  V(head("Change history", "Every change made in the hub — last 300 matching, kept 12 months", `<button class="b g" id="hcsv">⇣ Excel (CSV)</button>`) +
+    `<div class="frm"><select id="hT"><option value="">All tools</option>${Object.entries(tools).map(([k, v]) => { const n = (d.tools.find(t => t.tool === k) || {}).n; return `<option value="${k}" ${HF.tool === k ? "selected" : ""}>${esc(v)}${n ? ` (${n})` : ""}</option>`; }).join("")}</select>
+      <select id="hS"><option value="">All flagships</option>${Object.entries(ME.sites || {}).map(([c, n]) => `<option value="${c}" ${HF.site === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+      <input id="hW" placeholder="Person" value="${esc(HF.who)}"><input id="hQ" placeholder="Search text" value="${esc(HF.q)}"><input id="hF" type="date" value="${esc(HF.from)}"><input id="hU" type="date" value="${esc(HF.to)}">
+      <div style="display:flex;gap:6px"><button class="b" id="hGo">Filter</button><button class="b g" id="hClr">Clear</button></div></div>
+    <div class="tw"><table><thead><tr><th>When</th><th>What</th><th>Tool · flagship</th><th>By</th></tr></thead><tbody>
+      ${d.rows.map(r => { const A = act[r.action] || [r.action, "mut"]; return `<tr><td style="white-space:nowrap">${esc(dt(r.at))}</td><td>${pill(A[1], esc(A[0]))} <b>${esc(r.label || r.ref || "—")}</b>
+        ${r.changes.length ? `<div class="hc">${r.changes.map(c => `<div><span class="mut">${esc(c.field.replace(/_/g, " "))}:</span> ${c.from !== "" ? `<s>${esc(c.from)}</s> → ` : ""}<b>${esc(c.to === "" ? "(empty)" : c.to)}</b></div>`).join("")}</div>` : ""}</td>
+        <td>${esc(tools[r.tool] || r.tool)}${r.site ? `<br><span class="mut">${esc((ME.sites || {})[r.site] || r.site)}</span>` : ""}</td><td>${esc(r.byName || r.byEmail || "system")}</td></tr>`; }).join("") || `<tr><td colspan="4" class="mut" style="padding:16px">No change recorded${qs ? " for this filter" : " yet"}.</td></tr>`}</tbody></table></div>`);
+  const v = id => $("#" + id).value.trim();
+  $("#hGo").onclick = () => { HF = { tool: v("hT"), site: v("hS"), who: v("hW"), q: v("hQ"), from: v("hF"), to: v("hU") }; hi(); };
+  $("#hClr").onclick = () => { HF = { tool: "", site: "", who: "", from: "", to: "", q: "" }; hi(); };
+  $("#hcsv").onclick = () => csv("hub-change-history.csv", [["When", "Action", "What", "Tool", "Flagship", "By", "Changes"], ...d.rows.map(r => [r.at, r.action, r.label || r.ref, tools[r.tool] || r.tool, r.site, r.byName || r.byEmail, r.changes.map(c => `${c.field}: ${c.from} → ${c.to}`).join(" | ")])]);
+}
+
+/* ---------- storage & database ---------- */
+let D1P = "1d";
+async function db(fresh){
+  const [st, u, t] = await Promise.all([api("admin/storage" + (fresh ? "?fresh=1" : "")), api("admin/d1use" + (fresh ? "?fresh=1" : "")).catch(e => ({ error: e.message })), api("admin/d1top?period=" + D1P).catch(e => ({ error: e.message }))]);
+  const r2 = st.r2 || {}, L = st.limits, B = r2.buckets || [], top = Math.max(1, ...B.map(b => b.bytes || 0));
+  const UL = u.limits || {}, maxD = Math.max(UL.reads || 1, ...((u.days || []).map(x => x.rowsRead)));
+  V(head("Storage &amp; database", `Cloudflare free allowance · checked ${dt(st.at)}`, `<button class="b g" id="rf">↻ Read again now</button>`) +
+    `<div class="sec">Database usage today (all databases share one allowance · resets 03:00)</div>
+    ${u.error ? `<div class="al bad"><div class="m"><b>${esc(u.error)}</b></div></div>` : `<div class="grid">
+      <div class="card"><h3>Rows read ${pill(tone(u.pct.reads), u.pct.reads + " %")}</h3><div class="big">${fmtN(u.reads)} <small>/ ${fmtN(UL.reads)}</small></div>${meter(u.pct.reads)}</div>
+      <div class="card"><h3>Rows written ${pill(tone(u.pct.writes), u.pct.writes + " %")}</h3><div class="big">${fmtN(u.writes)} <small>/ ${fmtN(UL.writes)}</small></div>${meter(u.pct.writes)}</div>
+      <div class="card"><h3>Hub database size ${pill(tone(st.pct.d1, 80, 95), (st.pct.d1 ?? "—") + " %")}</h3><div class="big">${fmtB(st.d1.bytes)} <small>/ ${fmtB(L.d1Bytes)}</small></div>${meter(st.pct.d1, tone(st.pct.d1, 80, 95))}</div></div>
+    <div class="grid" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+      <div class="card"><h3>Rows read · last 7 days</h3><div class="trend" style="height:110px">${u.days.map(x => `<i style="height:${Math.max(2, x.rowsRead / maxD * 100)}%;background:var(--c${x.rowsRead / UL.reads >= .9 ? "bad" : x.rowsRead / UL.reads >= .7 ? "warn" : "ok"})" title="${x.date}: ${fmtN(x.rowsRead)} read · ${fmtN(x.rowsWritten)} written"></i>`).join("")}</div>
+        <div class="mut" style="display:flex;justify-content:space-between;margin-top:4px">${u.days.map(x => `<span>${esc(new Date(x.date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" }))}</span>`).join("")}</div></div>
+      <div class="card" style="overflow-x:auto"><h3>Per database · today</h3><table style="min-width:0"><tr><th>Database</th><th>Rows read</th><th>Written</th><th>Queries</th></tr>${u.databases.map(b => `<tr><td><b>${esc(b.name)}</b></td><td>${fmtN(b.rowsRead)}</td><td>${fmtN(b.rowsWritten)}</td><td>${fmtN(b.queries)}</td></tr>`).join("") || `<tr><td colspan="4" class="mut">Nothing yet today.</td></tr>`}</table></div></div>`}
+    <div class="sec">Queries reading the most <span style="text-transform:none;letter-spacing:0">${[["1d", "Today"], ["7d", "7 days"]].map(([k, n]) => `<button class="b ${D1P === k ? "" : "g"}" data-p1="${k}" style="margin-left:6px">${n}</button>`).join("")}</span></div>
+    ${t.error ? `<div class="al bad"><div class="m"><b>${esc(t.error)}</b></div></div>` : `<div class="tw"><table><thead><tr><th>Database</th><th>Query</th><th>Rows read</th><th>Runs</th><th>Per run</th></tr></thead><tbody>
+      ${t.queries.map(q => `<tr><td><b>${esc(q.db)}</b></td><td><code style="font-size:.7rem;white-space:normal;word-break:break-word">${esc(q.query)}</code></td><td>${fmtN(q.rowsRead)}</td><td>${fmtN(q.runs)}</td><td>${fmtN(Math.round(q.rowsRead / Math.max(1, q.runs)))}</td></tr>`).join("") || `<tr><td colspan="5" class="mut">No queries yet.</td></tr>`}</tbody></table></div>`}
+    <div class="sec">File storage (R2)</div>
+    ${!r2.setup ? `<div class="card sub">To read R2 the hub needs the <code>CF_API_TOKEN</code> secret (Account Analytics: Read).</div>` : r2.error ? `<div class="al bad"><div class="m"><b>${esc(r2.error)}</b></div></div>` :
+      `<div class="grid"><div class="card"><h3>Stored ${pill(tone(st.pct.r2, 80, 95), st.pct.r2 + " %")}</h3><div class="big">${fmtB(r2.bytes)} <small>/ ${fmtB(L.r2Bytes)}</small></div>${meter(st.pct.r2, tone(st.pct.r2, 80, 95))}<div class="sub">${fmtN(r2.objects)} files</div></div>
+        <div class="card"><h3>Writes this month (A)</h3><div class="big">${fmtN(r2.classA)} <small>/ ${fmtN(L.classA)}</small></div>${meter(st.pct.classA, tone(st.pct.classA, 80, 95))}</div>
+        <div class="card"><h3>Reads this month (B)</h3><div class="big">${fmtN(r2.classB)} <small>/ ${fmtN(L.classB)}</small></div>${meter(st.pct.classB, tone(st.pct.classB, 80, 95))}</div></div>
+      <div class="tw" style="margin-top:12px"><table><thead><tr><th>Bucket</th><th style="width:30%">Share</th><th>Stored</th><th>Files</th><th>Writes (A)</th><th>Reads (B)</th></tr></thead><tbody>
+        ${B.map(b => `<tr><td><b>${esc(b.name)}</b></td><td><div class="meter" style="margin:0"><i class="bg-mut" style="width:${Math.max(1, (b.bytes || 0) / top * 100)}%;background:#8A5CC0"></i></div></td><td>${fmtB(b.bytes)}</td><td>${fmtN(b.objects)}</td><td>${fmtN(b.classA)}</td><td>${fmtN(b.classB)}</td></tr>`).join("")}</tbody></table></div>`}`);
+  $("#rf").onclick = () => { V(`<p class="mut">Reading Cloudflare…</p>`); db(true).catch(e => toast(e.message, true)); };
+  $("#main").querySelectorAll("[data-p1]").forEach(b => b.onclick = () => { D1P = b.dataset.p1; db(); });
+}
+
+/* ---------- projects & GitHub (control sheet) ---------- */
+async function pc(){
+  const d = await api("admin/control"), groups = [...new Set(d.rows.map(r => r.category || "Other"))];
+  const lk = (url, ic, n) => url ? `<a class="lk" href="${esc(url)}" target="_blank" rel="noopener">${ic} ${n}</a>` : `<span class="lk off">${ic} ${n}</span>`;
+  V(head("Projects &amp; GitHub", "Every system with its live site, GitHub repository and Cloudflare Worker", `<button class="b" id="cadd">＋ Add a system</button>`) +
+    (groups.map(g => `<div class="fg"><h4>${esc(g)} <small>${d.rows.filter(r => (r.category || "Other") === g).length}</small></h4>${d.rows.filter(r => (r.category || "Other") === g).map(r => `<div class="cs-r"><div style="min-width:0;flex:1"><b>${esc(r.name)}</b><small>${esc(r.notes || r.liveUrl || "")}</small></div>
+      <div class="lks">${lk(r.liveUrl, "🌐", "Live")}${lk(r.githubUrl, "🐙", "GitHub")}${lk(r.cloudflareUrl, "☁️", "Cloudflare")}<button class="b g" data-ed="${r.id}">Edit</button></div></div>`).join("")}</div>`).join("") || `<div class="card mut">Nothing yet — press “Add a system”.</div>`));
+  const edit = r => { r = r || {}; const dl = $("#dlg");
+    dl.innerHTML = `<form class="bd" id="cf"><b>${r.id ? "Edit " + esc(r.name) : "Add a system"}</b>
+      <label>Name</label><input id="cN" value="${esc(r.name || "")}" required><label>Group</label><input id="cC" value="${esc(r.category || "Systems")}" list="cgl"><datalist id="cgl">${groups.map(g => `<option value="${esc(g)}">`).join("")}</datalist>
+      <label>Live address</label><input id="cL" value="${esc(r.liveUrl || "")}" placeholder="https://…"><label>GitHub repository</label><input id="cG" value="${esc(r.githubUrl || "")}" placeholder="https://github.com/…">
+      <label>Cloudflare Worker</label><input id="cW" value="${esc(r.cloudflareUrl || "")}" placeholder="https://dash.cloudflare.com/…"><label>Hub tile id (optional)</label><input id="cA" value="${esc(r.appId || "")}" placeholder="e.g. incidents">
+      <label>Notes</label><input id="cO" value="${esc(r.notes || "")}">
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px">${r.id ? `<button type="button" class="b r" id="cDel">Delete</button>` : ""}<button type="button" class="b g" id="cX">Cancel</button><button class="b">Save</button></div></form>`;
+    dl.showModal(); $("#cX").onclick = () => dl.close();
+    $("#cf").onsubmit = async e => { e.preventDefault(); try { await api("admin/control", { id: r.id, name: $("#cN").value, category: $("#cC").value, liveUrl: $("#cL").value, githubUrl: $("#cG").value, cloudflareUrl: $("#cW").value, appId: $("#cA").value, notes: $("#cO").value }); dl.close(); toast("Saved"); pc(); } catch (er){ toast(er.message, true); } };
+    const del = $("#cDel"); if (del) del.onclick = async () => { if (!confirm("Delete this system from the list?")) return; await api("admin/control/delete", { id: r.id }); dl.close(); pc(); }; };
+  $("#cadd").onclick = () => edit();
+  $("#main").querySelectorAll("[data-ed]").forEach(b => b.onclick = () => edit(d.rows.find(r => r.id === +b.dataset.ed)));
+}
+
+/* ---------- flagship covers ---------- */
+async function fc(res){
+  const d = res || await api("admin/covers");
+  V(head("Flagship covers", "One wide picture per flagship (about 1600 × 500) — shown at the top of everyone's profile at that flagship") +
+    d.covers.map(c => `<div class="cs-r"><span class="cov" style="${c.updatedAt ? `background-image:url('/api/profile/cover?site=${c.code}&v=${encodeURIComponent(c.updatedAt)}')` : ""}">${c.updatedAt ? "" : `<img src="/icons/abc-logo-white.png" alt="" style="height:22px">`}</span>
+      <div style="flex:1;min-width:160px"><b>${esc(c.name)}</b><small>${c.updatedAt ? `Updated ${esc(dt(c.updatedAt))} by ${esc(c.updatedBy)}` : "No picture — the drawn ABC cover with the flagship name is shown"}</small></div>
+      <div class="lks"><label class="b g" style="cursor:pointer">${c.updatedAt ? "Replace" : "Upload"}<input type="file" accept="image/*" hidden data-cov="${c.code}"></label>${c.updatedAt ? `<button class="b g" data-rm="${c.code}">Remove</button>` : ""}</div></div>`).join(""));
+  $("#main").querySelectorAll("[data-cov]").forEach(i => i.onchange = async () => { const f = i.files[0]; if (!f) return; toast("Uploading…");
+    try { fc(await api("admin/covers", { site: i.dataset.cov, data: await wideJpeg(f, 1600) })); toast("Cover saved"); } catch (e){ toast(e.message, true); } });
+  $("#main").querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { if (!confirm("Remove this cover?")) return; fc(await api("admin/covers", { site: b.dataset.rm, data: "" })); });
+}
+async function wideJpeg(file, maxW){
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const w = Math.min(maxW, img.naturalWidth), h = Math.round(img.naturalHeight * w / img.naturalWidth), c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+  let q = .85, d = c.toDataURL("image/jpeg", q); while (d.length > 1150000 && q > .45){ q -= .1; d = c.toDataURL("image/jpeg", q); } return d;
+}
+
+/* ---------- seasons · message of the moment (their own pages, shown here) ---------- */
+function embed(title, sub, src){
+  V(head(title, sub, `<a class="b g" href="${src}" target="_blank">Open full screen ↗</a>`) + `<iframe class="emb" src="${src}" title="${esc(title)}"></iframe>`);
+  const f = $("#main iframe.emb"); f.onload = () => { try { f.contentDocument.documentElement.setAttribute("data-theme", THEME); } catch {} };
+}
+async function se(){ embed("Seasons", "Seasonal decorations on the hub (Halloween, Christmas, Ramadan…)", "/tools/seasons"); }
+async function mm(){ embed("Message of the moment", "Friendly lines above Day to Day — with their time", "/tools/moments"); }
+
 /* ---------- content (existing admin tabs) ---------- */
 async function ct(){
-  const L = [["announcements", "📣 Announcements", "Messages on everyone's home screen"], ["users", "👥 People & roles", "Add people, roles, flagships, ops groups, two-step policy"], ["usage", "📈 Usage", "Which tools are used, by whom"],
-    ["control", "🗂 Control sheet", "Links to every system, GitHub and Cloudflare"], ["backup", "💾 Backup", "Backup status and test emails"], ["covers", "🖼 Flagship covers", "Cover pictures per flagship"],
-    ["history", "🕘 Change history", "Every change made in the hub"], ["storage", "☁️ Storage", "Cloudflare storage details"]];
-  V(head("Announcements &amp; more", "The other admin screens — they open in Hub administration") +
-    `<div class="grid">${L.map(([k, n, s]) => `<a class="card click" style="text-decoration:none;color:inherit" href="/#/admin" data-t="${k}"><h3>${n}</h3><div class="sub">${s}</div></a>`).join("")}
-      <a class="card click" style="text-decoration:none;color:inherit" href="/#/app/seasons"><h3>🎃 Seasons</h3><div class="sub">Seasonal decorations</div></a>
-      <a class="card click" style="text-decoration:none;color:inherit" href="/#/app/moments"><h3>💬 Message of the moment</h3><div class="sub">Friendly lines above Day to Day</div></a></div>`);
+  V(head("Announcements &amp; more", "These screens stay in Hub administration") +
+    `<div class="grid">${[["announcements", "📣 Announcements", "Messages on everyone's home screen"], ["users", "👥 People & roles", "Add people, roles, flagships, operations groups, two-step policy"], ["backup", "💾 Backup", "Backup status and test emails"]]
+      .map(([k, n, s]) => `<a class="card click" style="text-decoration:none;color:inherit" href="/#/admin" data-t="${k}"><h3>${n}</h3><div class="sub">${s}</div></a>`).join("")}</div>`);
   $("#main").querySelectorAll("[data-t]").forEach(a => a.onclick = () => { try { sessionStorage.setItem("adm.tab", a.dataset.t); } catch {} });
 }
 boot();
