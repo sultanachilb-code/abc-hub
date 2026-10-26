@@ -91,6 +91,8 @@ async function newForm(){
     </div><div id="aud"></div>`);
   const keep = () => Object.assign(F, { title: $("#fT").value, message: $("#fM").value, actFrom: $("#fA1").value, actTo: $("#fA2").value, start: $("#fS").value, end: $("#fE").value });
   $("#back").onclick = () => { keep(); list(); };
+  /* keep every field as it is typed — a title or date typed after "Show the tenants" was not seen when sending */
+  ["#fT", "#fM", "#fA1", "#fA2", "#fS", "#fE"].forEach(s => { const el = $(s); if (el) el.addEventListener("input", keep), el.addEventListener("change", keep); });
   const tog = (id, key, reload) => $(id).onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; const v = s.dataset.v, a = F[key];
     a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); s.classList.toggle("on"); F.aud = null; $("#aud").innerHTML = ""; if (reload) { keep(); newForm(); } };
   tog("#kS", "sites", true); tog("#kD", "depts"); tog("#kP", "positions");
@@ -113,7 +115,10 @@ function audience(){
   $("#all").onchange = e => { F.off = e.target.checked ? new Set() : new Set(A.map(key)); audience(); };
   $("#aud").querySelectorAll("[data-m]").forEach(c => c.onchange = () => { F.mails[key(A[+c.dataset.m])] = c.value; audience(); });
   $("#go").onclick = async () => {
-    if (!F.title.trim()) return toast("Give the activation a title", true); if (!F.end) return toast("Set the reply-by date", true);
+    const v = s => { const el = $(s); return el ? el.value : null; };   // read the form again at the moment of sending
+    if (v("#fT") !== null) Object.assign(F, { title: v("#fT"), message: v("#fM"), actFrom: v("#fA1"), actTo: v("#fA2"), start: v("#fS") || F.start, end: v("#fE") });
+    if (!F.title.trim()) { toast("Give the activation a title", true); const t = $("#fT"); if (t){ t.focus(); t.scrollIntoView({ behavior: "smooth", block: "center" }); } return; }
+    if (!F.end) { toast("Set the reply-by date", true); const t = $("#fE"); if (t){ t.focus(); t.scrollIntoView({ behavior: "smooth", block: "center" }); } return; }
     if (!(await confirmBox("Send the activation", `<b>${esc(F.title)}</b> to ${on.length} tenants${F.start > todayISO() ? ` on ${esc(fd(F.start))}` : " now"}, with a daily reminder until ${esc(fd(F.end))}?`, "Send"))) return;
     $("#go").disabled = true;
     try { const r = await api("ops/mk/create", { title: F.title, message: F.message, actFrom: F.actFrom, actTo: F.actTo, start: F.start, end: F.end, sites: F.sites, depts: F.depts, positions: F.positions,
