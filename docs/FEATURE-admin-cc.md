@@ -22,3 +22,12 @@ then opens it from the account menu → **Admin Control Center** (Hub administra
 
 ## Alerts
 Hourly (07:00–22:00) health check; each red problem is pushed to the administrators once a day. Heartbeat `cron:beat` shows whether the 2-minute scheduler runs.
+
+## Admin password (26 Oct 2026)
+- Tapping the **ABC logo** on the hub (administrators) or opening **/admin** asks for the admin's own password again; it stays open on that device for **2 hours** (cookie `hub_adm`, SameSite=Strict). **🔒 Lock the Control Center** closes it at once.
+- Wrong passwords count towards the same 5-tries lock and appear in the sign-in log.
+
+## Health check (26 Oct 2026)
+- Systems are checked with the same small requests the hub already uses (hub stats / sign-in probe, 10 s), not their home pages.
+- A system is red only after **2 failed checks in a row**; one slow answer is amber.
+- Alerts go to the administrators' bell and phone (push) only — **no email**.

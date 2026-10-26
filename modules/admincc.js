@@ -13,7 +13,7 @@
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
 const LOCK_AFTER = 5, LOCK_MIN = 15, ONLINE_MIN = 10;
-export const VIEWAS_MIN = 30;
+export const VIEWAS_MIN = 30, ADMIN_UNLOCK_H = 2;
 
 export async function admSchema(env) {
   await env.DB.batch([
@@ -90,13 +90,18 @@ async function workerRequests(env, gql) {
 /* connected systems: does each one answer? (kept 20 minutes; "Test all" asks again) */
 async function systems(env, d, fresh) {
   if (!fresh) { const c = await metaJson(env, "cc:sys"); if (c && Date.now() - Date.parse(c.at) < 20 * 60000) return c; }
+  /* the same small requests the hub already uses every day (hub stats / sign-in probe), not the system's home page */
+  const prev = new Map(((await metaJson(env, "cc:sys")) || { list: [] }).list.map(s => [s.id, s]));
   const ping = async (id, name, c) => {
-    const t0 = Date.now();
+    const t0 = Date.now(), path = c.ping || (c.stats ? c.stats.replace("{site}", "VRM") : "/api/sso?probe=1");
+    let res;
     try {
-      const url = c.base + (c.ping || "/"), init = { signal: AbortSignal.timeout(6000), redirect: "manual" };
-      const r = c.binding && env[c.binding] ? await env[c.binding].fetch(url, init) : await fetch(url, init);
-      return { id, name, ok: r.status < 500, ms: Date.now() - t0, status: r.status, note: r.status < 500 ? "" : `HTTP ${r.status}` };
-    } catch (e) { return { id, name, ok: false, ms: Date.now() - t0, note: e.name === "TimeoutError" ? "No answer in 6 s" : "Not answering" }; }
+      const init = { headers: env.HUB_KEY ? { "x-hub-key": env.HUB_KEY } : {}, signal: AbortSignal.timeout(10000) };
+      const r = c.binding && env[c.binding] ? await env[c.binding].fetch(c.base + path, init) : await fetch(c.base + path, init);
+      res = { id, name, ok: r.status < 500, ms: Date.now() - t0, note: r.status < 500 ? "" : `HTTP ${r.status}` };
+    } catch (e) { res = { id, name, ok: false, ms: Date.now() - t0, note: e.name === "TimeoutError" ? "No answer in 10 s" : "Not answering" }; }
+    const p = prev.get(id); res.streak = res.ok ? 0 : ((p && !p.ok ? Number(p.streak) || 1 : 0) + 1);   // failed checks in a row
+    return res;
   };
   const C = d.CONNECTORS, names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", "cleaner-qr": "Cleaning app", footfall: "Footfall" };
   const list = await Promise.all([
@@ -160,7 +165,7 @@ async function overview(env, d) {
   const missing = SECRETS.filter(s => s[2] && !env[s[0]]);
   const sysDown = sys.list.filter(s => !s.ok), jobsBad = J.filter(j => !j.ok);
   const A = [];
-  for (const s of sysDown) A.push({ tone: "bad", title: `${s.name} — ${s.note || "not answering"}`, where: "sys", key: "sys:" + s.id });
+  for (const s of sysDown) A.push({ tone: s.streak >= 2 || s.streak == null ? "bad" : "warn", title: `${s.name} — ${s.note || "not answering"}`, sub: s.streak >= 2 ? `${s.streak} checks in a row` : "One check failed — checked again next hour", where: "sys", key: "sys:" + s.id });
   for (const j of jobsBad) A.push({ tone: j.id === "cron" ? "bad" : "warn", title: `${j.name} — ${j.note || "did not run on time"}`, where: "sys", key: "job:" + j.id });
   for (const m of missing) A.push({ tone: "bad", title: `Setting ${m[0]} is missing — ${m[1]}`, where: "sys", key: "sec:" + m[0] });
   if (d1 && d1.pct) { const p = Math.max(d1.pct.reads || 0, d1.pct.writes || 0); if (p >= 70) A.push({ tone: p >= 90 ? "bad" : "warn", title: `Database at ${Math.round(p)} % of today's free allowance`, sub: `${fmtN(d1.reads)} of ${fmtN(d1.limits.reads)} rows read · resets 03:00`, where: "al", key: "d1" }); }
@@ -312,11 +317,11 @@ export async function admRun(env, d) {
   const hour = d.hour(); if (hour < 7 || hour > 22) return;   // no alerts at night
   await systems(env, d, true);
   const o = await overview(env, d);
-  const day = d.today();
+  const day = d.today(), admins = ((await env.DB.prepare("SELECT email FROM users WHERE role = 'ADMIN' AND active = 1").all()).results || []).map(r => r.email);
   for (const a of o.alerts.filter(x => x.tone === "bad")) {
     const k = `cc:alerted:${day}:${a.key}`;
     const r = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(k, "1").run().catch(() => null);
-    if (r && r.meta && r.meta.changes === 1) await d.notifyAdmins(env, `⚠ ${a.title}`, (a.sub ? a.sub + " · " : "") + "Admin Control Center", "warn").catch(() => {});
+    if (r && r.meta && r.meta.changes === 1) for (const ad of admins) await d.raiseEvent(env, { app: "admin", email: ad, tone: "warn", title: `⚠ ${a.title}`, body: (a.sub ? a.sub + " · " : "") + "Admin Control Center" }).catch(() => {});
   }
   if (!(await metaGet(env, "cc:clean:" + day))) {
     await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, '1')").bind("cc:clean:" + day).run().catch(() => {});
