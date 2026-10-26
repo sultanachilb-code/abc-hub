@@ -43,6 +43,7 @@ import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
 import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
+import { tlSchema, tlRoute } from "./modules/tlist.js";   // Tenant List (YES / NO per tenant, SKU from the CRM sheet) — docs/FEATURE-tenant-list.md
 import { mkSchema, mkRoute, mkPublic, mkRun, extCfg, mailPreview, EMAIL_STYLES } from "./modules/mkt.js";
 import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN, ADMIN_UNLOCK_H } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
@@ -381,6 +382,7 @@ async function ensureSchema(env) {
   await keyboxSchema(env);   // Key Box
   await pmSchema(env);   // Preventive Maintenance
   await mkSchema(env);   // Marketing Participation
+  await tlSchema(env);   // Tenant List
   await admSchema(env);   // Admin Control Center
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
@@ -1383,7 +1385,7 @@ async function notificationsFor(env, me) {
   return { events, readAt: me.notif_read_at || "" };
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
-const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt"]);
+const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt", "tlist"]);
 const roleAllows = (u, app) => { if (u.role === "ADMIN" || u.is_admin) return true;   // administrators see every tool, also with their real role (to test) — the rights inside follow the role
   const c = toolsCfgNow()[app];   // Admin Control → Tools control (switched off / who sees it)
   if (c && c.off) return false;
@@ -1827,6 +1829,8 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("mk/")) return mkRoute(env, p, method, b, url, { ...PM_DEPS, me, canSite, raiseEvent, isOps: u => u.role==="ADMIN"||isFull(u)||(u.role==="SUPERVISOR"&&u.position!=="WH") });   // Marketing Participation (modules/mkt.js)
   if (p.startsWith("pm/")) return pmRoute(env, p, method, b, url, { ...PM_DEPS, site, me, canSite, raiseEvent,   // Preventive Maintenance (modules/pm.js)
     isOps: u => u.role === "ADMIN" || isFull(u) || (u.role === "SUPERVISOR" && u.position !== "WH"), isBoss: u => u.role === "ADMIN" || isFull(u) });
+  if (p.startsWith("tl/")) return tlRoute(env, p, method, b, url, { site, me, canSite, siteName, now: nowIso,   // Tenant List (modules/tlist.js)
+    isOps: u => u.role === "ADMIN" || isFull(u) || (u.role === "SUPERVISOR" && u.position !== "WH") });
   if (p.startsWith("kb/")) return keyboxRoute(env, p, method, b, url, { site, me, canSite, siteName, audit: auditMe,   // Key Box (modules/keybox.js)
     isOps: u => u.role === "ADMIN" || isFull(u) || u.role === "SECURITY" || (u.role === "SUPERVISOR" && u.position !== "WH") });
   if (p.startsWith("ind/")) {   // Operations Induction (modules/induction.js)

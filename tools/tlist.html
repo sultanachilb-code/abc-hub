@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant List · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Tenant List (Upcoming - Testing) — docs/FEATURE-tenant-list.md */
+.wrap2{max-width:1100px;margin:0 auto;display:grid;gap:12px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.box h3{margin:0 0 10px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:99px;padding:6px 11px;font-size:.8rem;font-weight:700;cursor:pointer;background:var(--surface);user-select:none;color:var(--text)}
+.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}.chip small{opacity:.7;margin-left:4px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.k{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}.k b{display:block;font-size:1.6rem;line-height:1.2}.k span{font-size:.76rem;color:var(--muted)}
+.bar{height:12px;border-radius:6px;background:var(--paper);overflow:hidden;display:flex;margin-top:10px;border:1px solid var(--line)}.bar i{display:block}
+.fl{display:flex;gap:6px;flex-wrap:wrap}.fl span{border:1px solid var(--line);border-radius:99px;padding:6px 11px;font-size:.78rem;font-weight:700;cursor:pointer;background:var(--surface)}.fl span.on{background:#2A0F45;color:#fff;border-color:#2A0F45}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.it{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}.it:first-child{border-top:0}
+.it .m{flex:1;min-width:0}.it b{display:block;font-size:.92rem}.it small{color:var(--muted);font-size:.76rem}
+.sku{font-family:ui-monospace,Consolas,monospace;font-size:.76rem;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--brand);font-weight:700;white-space:nowrap}
+.sku.none{color:var(--muted);font-family:inherit;font-weight:600}
+.yn{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}.yn button{border:0;background:var(--surface);padding:9px 15px;font:inherit;font-weight:800;font-size:.82rem;cursor:pointer;color:var(--muted)}
+.yn button+button{border-left:1px solid var(--line)}.yn .y.on{background:#1E8A4C;color:#fff}.yn .n.on{background:#C2283C;color:#fff}.yn button:disabled{cursor:default}
+.who{font-size:.68rem;color:var(--muted);text-align:right;min-width:70px}
+.sw{display:flex;gap:8px;align-items:center;font-size:.86rem;font-weight:700}
+@media(max-width:600px){.it{flex-wrap:wrap}.it .yn{margin-left:auto}.it .m{flex-basis:100%}.who{display:none}}
+</style>
+</head>
+<body>
+<div class="top"><h1>Tenant List <small id="sub"></small></h1><span id="siteBox"></span></div>
+<div class="wrap"><div class="wrap2" id="view"><p class="muted">Loading…</p></div></div>
+<script src="common.js"></script>
+<script>
+let CTX = null, L = null, F = "all", Q = "", EDIT_SETUP = false, timer = null;
+async function boot(site){
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  $("#siteBox").innerHTML = siteSelect(CTX, s => { EDIT_SETUP = false; boot(s); });
+  await load();
+  clearInterval(timer); timer = setInterval(() => { if (document.visibilityState === "visible" && !EDIT_SETUP) load(true); }, 15000);   // the team fills it together
+}
+async function load(quiet){
+  try { L = await api(`ops/tl/get?site=${CTX.site}`); } catch (e){ if (!quiet) $("#view").innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+  $("#sub").textContent = L.siteName; draw();
+}
+function setupBox(){
+  const c = L.cfg, sel = new Set(c.depts), open = c.openOnly;
+  const count = () => { const o = $("#suOpen").checked, S = [...document.querySelectorAll("#suCats .chip.on")].map(x => x.dataset.c);
+    $("#suN").textContent = `${L.depts.filter(x => !S.length || S.includes(x.name)).reduce((s, x) => s + (o ? x.open : x.all), 0)} tenants will be in the list${S.length ? "" : " (all categories)"}`; };
+  setTimeout(() => {
+    $("#suCats").onclick = e => { const s = e.target.closest(".chip"); if (!s) return; s.classList.toggle("on"); count(); };
+    $("#suOpen").onchange = () => { document.querySelectorAll("#suCats .chip small").forEach(sm => { const d = L.depts.find(x => x.name === sm.parentNode.dataset.c); sm.textContent = $("#suOpen").checked ? d.open : d.all; }); count(); };
+    $("#suAll").onclick = () => { const on = document.querySelectorAll("#suCats .chip.on").length !== L.depts.length; document.querySelectorAll("#suCats .chip").forEach(x => x.classList.toggle("on", on)); count(); };
+    const x = $("#suX"); if (x) x.onclick = () => { EDIT_SETUP = false; draw(); };
+    $("#suGo").onclick = async () => { const S = [...document.querySelectorAll("#suCats .chip.on")].map(x => x.dataset.c); if (!S.length) return toast("Choose at least one category", true);
+      try { await api("ops/tl/setup", { site: CTX.site, name: $("#suName").value, openOnly: $("#suOpen").checked, depts: S }); EDIT_SETUP = false; toast("List ready"); load(); } catch (e){ toast(e.message, true); } };
+    count(); }, 0);
+  return `<div class="box"><h3>${c.set ? "Change the list" : "Set the list before using it"}${c.set ? `<button class="btn ghost small" id="suX">Cancel</button>` : ""}</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><input class="inp" id="suName" value="${esc(c.name)}" placeholder="Name of the list (e.g. Christmas decoration check)" style="flex:1;min-width:220px">
+      <label class="sw"><input type="checkbox" id="suOpen" ${open ? "checked" : ""}> Only opened tenants</label></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b style="font-size:.82rem">Category</b><button class="btn ghost small" id="suAll">Select all / none</button></div>
+    <div class="chips" id="suCats">${L.depts.map(d => `<span class="chip ${sel.has(d.name) ? "on" : ""}" data-c="${esc(d.name)}">${esc(d.name)}<small>${open ? d.open : d.all}</small></span>`).join("")}</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px"><span class="muted" id="suN"></span><span style="flex:1"></span><button class="btn" id="suGo">${c.set ? "Update the list" : "Start the list"}</button></div>
+    ${c.set ? `<p class="muted" style="font-size:.78rem;margin-top:8px">Answers already given stay for the tenants still in the list.</p>` : ""}</div>`;
+}
+function draw(){
+  const c = L.cfg, s = L.stats;
+  if (!c.set || EDIT_SETUP) { $("#view").innerHTML = (L.edit ? setupBox() : `<div class="box">The list is not set yet — the operations team sets it.</div>`); return; }
+  const q = Q.toLowerCase(), rows = L.rows.filter(r => (F === "all" || (F === "w" ? !r.answer : r.answer === F)) && (!q || (r.brand + " " + r.sku + " " + r.units).toLowerCase().includes(q)));
+  const keepFocus = document.activeElement && document.activeElement.id === "q", pos = keepFocus ? document.activeElement.selectionStart : 0;
+  $("#view").innerHTML = `<div class="box" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:200px"><b style="font-size:1.05rem">${esc(c.name || "Tenant list")}</b>
+      <div class="muted" style="font-size:.8rem">${c.openOnly ? "Opened tenants" : "All tenants"} · ${c.depts.length === L.depts.length ? "all categories" : esc(c.depts.join(", "))}${c.startedAt ? ` · started ${esc(new Date(c.startedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} by ${esc(c.startedBy)}` : ""}</div></div>
+      ${L.edit ? `<button class="btn ghost small" id="chg">Change the list</button><button class="btn ghost small" id="rst">New list</button>` : ""}<button class="btn ghost small" id="xl">⇣ Excel</button></div>
+    <div class="kpi"><div class="k"><b>${s.total}</b><span>tenants selected</span></div><div class="k"><b style="color:#1E8A4C">${s.yes}</b><span>YES</span></div>
+      <div class="k"><b style="color:#C2283C">${s.no}</b><span>NO</span></div>
+      <div class="k"><b>${s.pct} %</b><span>YES of the ${s.total} tenants selected · ${s.wait} not checked</span><div class="bar"><i style="width:${s.total ? s.yes / s.total * 100 : 0}%;background:#1E8A4C"></i><i style="width:${s.total ? s.no / s.total * 100 : 0}%;background:#C2283C"></i></div></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="inp" id="q" placeholder="Search tenant, SKU or unit…" value="${esc(Q)}" style="max-width:300px;flex:1;min-width:180px">
+      <div class="fl">${[["all", "All", s.total], ["y", "YES", s.yes], ["n", "NO", s.no], ["w", "Not checked", s.wait]].map(([k, n, v]) => `<span data-f="${k}" class="${F === k ? "on" : ""}">${n} · ${v}</span>`).join("")}</div></div>
+    <div class="list">${rows.map(r => `<div class="it"><div class="m"><b>${esc(r.brand)}</b><small>${esc(r.units)}${r.dept ? " · " + esc(r.dept) : ""}${r.open ? "" : " · not opened"}</small></div>
+      ${r.sku ? `<span class="sku">SKU ${esc(r.sku)}</span>` : `<span class="sku none">no SKU</span>`}
+      <span class="who">${r.by ? esc(r.by.split(" ")[0]) + "<br>" + esc(new Date(r.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })) : ""}</span>
+      <div class="yn"><button class="y ${r.answer === "y" ? "on" : ""}" data-b="${esc(r.brand)}" data-v="y" ${L.edit ? "" : "disabled"}>YES</button><button class="n ${r.answer === "n" ? "on" : ""}" data-b="${esc(r.brand)}" data-v="n" ${L.edit ? "" : "disabled"}>NO</button></div></div>`).join("")
+      || `<div class="it muted">Nothing here.</div>`}</div>`;
+  const qi = $("#q"); qi.oninput = () => { Q = qi.value; draw(); }; if (keepFocus){ qi.focus(); qi.setSelectionRange(pos, pos); }
+  $("#view").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { F = x.dataset.f; draw(); });
+  $("#view").querySelectorAll("[data-v]").forEach(btn => btn.onclick = async () => {
+    const r = L.rows.find(x => x.brand === btn.dataset.b), v = r.answer === btn.dataset.v ? "" : btn.dataset.v;   // tap again to clear
+    r.answer = v; r.by = v ? (CTX.me && CTX.me.name) || "" : ""; r.at = new Date().toISOString(); recount(); draw();
+    try { await api("ops/tl/answer", { site: CTX.site, brand: r.brand, answer: v }); } catch (e){ toast(e.message, true); load(); } });
+  const cg = $("#chg"); if (cg) cg.onclick = () => { EDIT_SETUP = true; draw(); };
+  const rs = $("#rst"); if (rs) rs.onclick = async () => {
+    if (!(await confirmBox("Start a new list", `All YES / NO answers of <b>${esc(c.name || "the list")}</b> are cleared for everyone at ${esc(L.siteName)}. Download the Excel first if you need it.`, "Clear and start again"))) return;
+    try { await api("ops/tl/reset", { site: CTX.site, name: c.name }); F = "all"; EDIT_SETUP = true; await load(); } catch (e){ toast(e.message, true); } };
+  $("#xl").onclick = async () => { try { await xlsxReady(); } catch (e){ return toast(e.message, true); }
+    const aoa = [[c.name || "Tenant list"], [`${L.siteName} · ${new Date().toLocaleString("en-GB")} · YES ${s.yes} · NO ${s.no} · not checked ${s.wait} · YES ${s.pct} % of ${s.total}`], [],
+      ["Tenant", "Unit(s)", "Category", "SKU", "Answer", "By", "At"], ...L.rows.map(r => [r.brand, r.units, r.dept, r.sku, r.answer === "y" ? "YES" : r.answer === "n" ? "NO" : "", r.by, r.at ? new Date(r.at).toLocaleString("en-GB") : ""])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = [{ wch: 30 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 18 }];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tenant list"); XLSX.writeFile(wb, `${(c.name || "Tenant list").replace(/[\\/:*?"<>|]+/g, "-")} - ${L.siteName}.xlsx`); };
+}
+function recount(){ const R = L.rows, y = R.filter(r => r.answer === "y").length, n = R.filter(r => r.answer === "n").length; L.stats = { total: R.length, yes: y, no: n, wait: R.length - y - n, pct: R.length ? Math.round(y / R.length * 1000) / 10 : 0 }; }
+window.hubRefresh = () => load();
+boot().catch(e => $("#view").innerHTML = `<p class="muted">${esc(e.message)}</p>`);
+</script>
+</body>
+</html>
