@@ -38,6 +38,11 @@ table.t{width:100%;border-collapse:collapse;font-size:.82rem;min-width:640px}
 .warnbox{background:rgba(224,168,46,.12);border:1px solid rgba(224,168,46,.4);border-radius:12px;padding:10px 12px;font-size:.84rem;margin-bottom:12px}
 .muted2{color:var(--muted);font-size:.82rem}
 .risk{font-size:.7rem;font-weight:800;border-radius:6px;padding:2px 6px}.r-High{background:#FDECEC;color:#B0283C}.r-Medium{background:#FFF1E2;color:#B85C00}.r-Low{background:#FFF9D9;color:#8A6E00}
+.sx th{white-space:normal;vertical-align:middle;text-align:center}.sx td{vertical-align:middle}
+.sx .sn{text-align:center;color:var(--muted);white-space:nowrap;width:54px;cursor:grab}.sx .sf{text-align:center;font-weight:700;color:var(--brand);background:var(--paper);width:120px}
+.sx .sm{text-align:center;width:64px;font-weight:800;color:var(--brand)}.sx .sm.x{background:rgba(123,75,176,.14)}.sx .sm.ed{cursor:pointer}.sx .sm.ed:hover{outline:2px solid rgba(123,75,176,.35);outline-offset:-2px}
+.sx .sck{white-space:pre-line;font-size:.76rem;line-height:1.45;min-width:300px;color:var(--text)}.sx .sap{min-width:120px}.sx .sa{white-space:nowrap}.sx .sa button{border:0;background:none;cursor:pointer;font-size:.95rem;padding:3px}
+.sx tr.snote td{background:rgba(224,168,46,.07)}
 </style>
 </head>
 <body>
@@ -53,7 +58,7 @@ table.t{width:100%;border-collapse:collapse;font-size:.82rem;min-width:640px}
 <script src="common.js"></script>
 <script>
 let CTX = null, H = null, TAB = "home", CY = null;
-const CATS = { charcoal: "F&B with charcoal", nocharcoal: "F&B without charcoal", retail: "Retail" };
+let CATS = { restaurant: "Restaurants", shop: "Shops" };   // replaced by the server's category sheets
 const ST = { missing: "Missing", pending: "Pending review", approved: "Approved", rejected: "Rejected" };
 const MN = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fd = d => d ? new Date(d.length > 10 ? d : d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: d.length > 10 ? "Asia/Beirut" : "UTC" }) : "";
@@ -64,7 +69,7 @@ async function boot(site){
   await load();
 }
 async function load(){
-  H = await api(`ops/pm/home?site=${CTX.site}`);
+  H = await api(`ops/pm/home?site=${CTX.site}`); if (H.cats) CATS = H.cats;
   $("#sub").textContent = H.siteName;
   tabs(); show();
 }
@@ -137,9 +142,9 @@ async function review(){
   V(`<p class="muted">Loading…</p>`);
   const Q = await api(`ops/pm/queue?site=${CTX.site}`);
   if (!Q.list.length) return V(`<div class="card empty" style="padding:22px">Nothing waiting for review. ✓</div>`);
-  V(Q.list.map(c => `<div class="q" id="q${c.id}"><div class="m"><b>${esc(c.brand)} · ${esc(c.cert)}</b><small>${esc(c.month)} · <span class="risk r-${c.risk}">${c.risk}</span> · uploaded ${esc(fd(c.at))} · ${esc(c.file)}</small></div>
-      <a class="btn ghost small" target="_blank" href="/api/ops/pm/file?site=${CTX.site}&id=${c.id}">👁 View</a>
-      ${H.ops ? `<button class="btn small" data-ok="${c.id}">✓ Approve</button><button class="btn ghost small danger" data-no="${c.id}">✗ Reject</button>
+  V(Q.list.map(c => `<div class="q" id="q${c.id}"><div class="m"><b>${esc(c.brand)} · ${esc(c.cert)}</b><small>${esc(c.month)} · <span class="risk r-${c.risk}">${c.risk}</span> · ${c.na ? `<b style="color:#8A6200">says “not applicable to our unit”</b>${c.comment ? " — " + esc(c.comment) : ""}` : `uploaded ${esc(fd(c.at))} · ${esc(c.file)}`}</small></div>
+      ${c.na ? `<span class="ch c-pending">Not applicable?</span>` : `<a class="btn ghost small" target="_blank" href="/api/ops/pm/file?site=${CTX.site}&id=${c.id}">👁 View</a>`}
+      ${H.ops ? `<button class="btn small" data-ok="${c.id}">${c.na ? "✓ Agree — not applicable" : "✓ Approve"}</button><button class="btn ghost small danger" data-no="${c.id}">✗ Reject</button>
       <div class="rj hidden" id="rj${c.id}"><select class="sel" style="width:auto" id="rr${c.id}"><option value="">Reason…</option>${Q.reasons.map(r => `<option>${esc(r)}</option>`).join("")}</select>
         <input class="inp" id="rc${c.id}" placeholder="Comment for the tenant (optional)" style="flex:1;min-width:160px"><button class="btn small danger" data-rjgo="${c.id}">Reject and tell the tenant</button></div>` : ""}</div>`).join(""));
   const go = async (id, body) => { try { await api("ops/pm/review", { site: CTX.site, id, ...body }); $("#q" + id).remove(); H.pendingReview--; tabs(); toast(body.decision === "approve" ? "Approved" : "Rejected — the tenant was emailed"); } catch (e){ toast(e.message, true); } };
@@ -176,23 +181,106 @@ function pickSheet(path, done){
   f.click();
 }
 
-/* ---------- setup ---------- */
+/* ---------- setup: the yearly schedule, one sheet per category — same layout as the Technical team's Excel ---------- */
+const MFULL = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const PMYEAR = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3], DEF6 = [4, 6, 8, 10, 12, 2];
+const freqOf = n => n >= 12 ? "Monthly" : n === 6 ? "Every two months" : n === 4 ? "Every three months" : n === 3 ? "3 times a year" : n === 2 ? "2 times a year" : n === 1 ? "Once per year" : n ? n + " times a year" : "—";
+let SC = null, SALL = false, SDATA = null;
 async function setup(){
   V(`<p class="muted">Loading…</p>`);
-  const S = await api(`ops/pm/setup?site=${CTX.site}`);
-  V(`${H.ops ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="btn small" id="imp">Import the Technical team's Excel</button><button class="btn ghost small" id="tpl">⇣ Template</button>
-      <span class="muted2">Columns: Certificate Name · Risk (High / Medium / Low) · Category · Branch · one column per month (✓ / x / yes). Importing replaces the setup.</span></div>` : ""}
-    ${S.list.length ? `<div class="tw"><table class="t"><thead><tr><th>Certificate</th><th>Risk</th><th>Categories</th><th>Flagships</th><th>Months</th></tr></thead><tbody>
-      ${S.list.map(r => `<tr><td><b>${esc(r.cert)}</b></td><td><span class="risk r-${r.risk}">${r.risk}</span></td><td>${r.cats.map(c => esc(CATS[c] || c)).join("<br>")}</td>
-        <td>${r.sites.map(s => esc((CTX.sites && CTX.sites[s]) || s)).join("<br>")}</td><td>${r.months.map(m => MN[m]).join(" · ")}</td></tr>`).join("")}</tbody></table></div>`
-      : `<div class="card empty" style="padding:22px">No setup yet. Import the Technical team's Excel (the certificate matrix).</div>`}`);
-  const im = $("#imp"); if (im) im.onclick = () => pickSheet("ops/pm/setup", r => { toast(`${r.imported} certificates imported`); setup(); });
-  const tp = $("#tpl"); if (tp) tp.onclick = () => {
-    const rows = [["Certificate Name", "Risk", "Category", "Branch", "February", "April", "June", "August", "October", "December"],
-      ["Fire Alarm", "High", "Retail, F&B with Charcoal, F&B without Charcoal", "Verdun Mall, Achrafieh Mall, Dbayeh Department Store", "x", "", "x", "", "x", ""],
-      ["Hood Grease and Odor filters cleaning", "High", "F&B with Charcoal, F&B without Charcoal", "Verdun Mall", "x", "x", "x", "x", "x", "x"]];
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })); a.download = "PM setup template.csv"; a.click(); };
+  SDATA = await api(`ops/pm/setup?site=${CTX.site}`); H.cats = SDATA.cats;
+  const S = SDATA, cats = Object.keys(S.cats); if (!SC || !S.cats[SC]) SC = cats[0];
+  const rows = S.rows.filter(r => r.cat === SC).sort((a, b) => a.seq - b.seq || a.id - b.id);
+  const used = new Set(rows.flatMap(r => r.months)), cols = SALL ? PMYEAR : PMYEAR.filter(m => DEF6.includes(m) || used.has(m));
+  const sites = Object.keys(S.sites || CTX.sites || {});   // every flagship, not only the ones this person works at
+  const info = S.info ? `Last updated ${esc(fd(S.info.at.slice(0, 10)))} by ${esc(S.info.by)}${S.info.version ? " · version " + S.info.version : ""}` : "";
+  V(`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <div class="tabs2" style="margin:0">${cats.map(c => `<button data-sc="${c}" class="${c === SC ? "on" : ""}">${esc(S.cats[c])}</button>`).join("")}${H.ops ? `<button data-addcat>＋ Category</button>` : ""}</div>
+      <span style="flex:1"></span><label class="muted2" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sAll" ${SALL ? "checked" : ""}> Show all 12 months</label>
+      <button class="btn ghost small" id="sExp">⇣ Export Excel</button>${H.ops ? `<button class="btn ghost small" id="sImp">⇡ Import Excel</button>` : ""}</div>
+    <div class="tw"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)"><b>Preventive Maintenance Schedules For ${esc(S.cats[SC])}</b><span class="muted2">${info} · PM year April → March</span></div>
+    <table class="t sx"><thead><tr><th rowspan="2">Item</th><th rowspan="2">Equipment / Systems</th><th rowspan="2">Preventive maintenance frequency</th><th colspan="${cols.length}" style="text-align:center">Inspection report issuance / certificates</th>
+      <th rowspan="2">Risk</th><th rowspan="2">Applies to</th><th rowspan="2">Checklist (required measures and actions)</th>${H.ops ? "<th rowspan=\"2\"></th>" : ""}</tr>
+      <tr>${cols.map(m => `<th style="text-align:center">${MFULL[m]}</th>`).join("")}</tr></thead><tbody id="sBody">
+    ${rows.map((r, i) => r.kind === "note"
+      ? `<tr data-id="${r.id}" class="snote" ${H.ops ? 'draggable="true"' : ""}><td class="sn">${H.ops ? "⋮⋮ " : ""}${i + 1}</td><td><b>${esc(r.name)}</b>${r.sub ? `<br><span class="muted2">(${esc(r.sub)})</span>` : ""}</td><td class="sf">${esc(r.freq || "—")}</td>
+          <td colspan="${cols.length + 2}" class="sck" style="font-style:italic">${esc(r.checklist)}</td><td class="sck"></td>${H.ops ? `<td class="sa"><button data-ed="${r.id}">✎</button><button data-del="${r.id}">🗑</button></td>` : ""}</tr>`
+      : `<tr data-id="${r.id}" ${H.ops ? 'draggable="true"' : ""}><td class="sn">${H.ops ? "⋮⋮ " : ""}${i + 1}</td><td><b>${esc(r.name)}</b>${r.sub && !/^where applicable$/i.test(r.sub) ? `<br><span class="muted2">(${esc(r.sub)})</span>` : ""}${r.applicable ? `<br><span class="ch c-pending">where applicable</span>` : ""}</td>
+          <td class="sf">${freqOf(r.months.length)}</td>${cols.map(m => `<td class="sm ${r.months.includes(m) ? "x" : ""} ${H.ops ? "ed" : ""}" data-m="${m}">${r.months.includes(m) ? "X" : ""}</td>`).join("")}
+          <td><span class="risk r-${r.risk}">${esc(r.risk)}</span></td><td class="sap">${r.sites.length === sites.length ? `<span class="ch c-approved">All flagships</span>` : r.sites.map(s => `<span class="ch c-missing" title="${esc((S.sites || {})[s] || s)}">${esc(s)}</span>`).join(" ")}</td>
+          <td class="sck">${esc(r.checklist)}</td>${H.ops ? `<td class="sa"><button data-ed="${r.id}" title="Edit">✎</button><button data-del="${r.id}" title="Remove">🗑</button></td>` : ""}</tr>`).join("")
+      || `<tr><td colspan="${cols.length + 7}" class="muted2" style="padding:16px">No equipment in this sheet yet.</td></tr>`}</tbody></table>
+    ${H.ops ? `<div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line)"><button class="btn small" data-new="item">＋ Add equipment / system</button><button class="btn ghost small" data-new="note">＋ Add a note row (e.g. daily task)</button>
+      <span class="muted2" style="align-self:center">Tap a month cell to plan or remove it · drag ⋮⋮ to reorder · the frequency fills itself.</span></div>` : ""}</div>
+    <p class="muted2" style="margin-top:10px">Each PM month opens with the items that have an <b>X</b> in that month, for the tenant's category and flagship. Tenants see each item with its checklist; “where applicable” items can be answered “not applicable” (you confirm in Review). Note rows show on the tenant page as a reminder, with no upload.</p>`);
+  $("#view").querySelectorAll("[data-sc]").forEach(b => b.onclick = () => { SC = b.dataset.sc; setup(); });
+  $("#sAll").onchange = e => { SALL = e.target.checked; setup(); };
+  $("#sExp").onclick = () => exportSchedule().catch(e => toast(e.message, true));
+  if (!H.ops) return;
+  const ac = $("[data-addcat]"); if (ac) ac.onclick = async () => { const n = prompt("Name of the new category sheet (e.g. Kiosks)"); if (!n) return; try { const r = await api("ops/pm/setup/cat", { site: CTX.site, name: n }); SC = Object.keys(r.cats).find(k => r.cats[k] === n.trim()) || SC; setup(); } catch (e){ toast(e.message, true); } };
+  $("#sImp").onclick = () => importSchedule();
+  $("#view").querySelectorAll("td.sm.ed").forEach(td => td.onclick = async () => {
+    const id = +td.closest("tr").dataset.id, r = SDATA.rows.find(x => x.id === id), m = +td.dataset.m;
+    const next = r.months.includes(m) ? r.months.filter(x => x !== m) : [...r.months, m];
+    td.classList.toggle("x"); td.textContent = td.classList.contains("x") ? "X" : ""; r.months = next; td.closest("tr").querySelector(".sf").textContent = freqOf(next.length);
+    try { await api("ops/pm/setup/months", { site: CTX.site, id, months: next }); } catch (e){ toast(e.message, true); setup(); } });
+  $("#view").querySelectorAll("[data-ed]").forEach(b => b.onclick = () => rowEdit(SDATA.rows.find(x => x.id === +b.dataset.ed)));
+  $("#view").querySelectorAll("[data-new]").forEach(b => b.onclick = () => rowEdit({ kind: b.dataset.new, cat: SC, months: [], sites: sites.slice(), risk: "Medium" }));   // new rows: every flagship by default
+  $("#view").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { const r = SDATA.rows.find(x => x.id === +b.dataset.del); if (!confirm(`Remove “${r.name}” from the ${S.cats[SC]} schedule?`)) return; await api("ops/pm/setup/delete", { site: CTX.site, id: r.id }); setup(); });
+  /* drag to reorder */
+  let drag = null; const tb = $("#sBody");
+  tb.querySelectorAll("tr[draggable]").forEach(tr => { tr.ondragstart = () => { drag = tr; tr.style.opacity = .4; }; tr.ondragend = async () => { tr.style.opacity = ""; drag = null;
+      try { await api("ops/pm/setup/order", { site: CTX.site, ids: [...tb.querySelectorAll("tr[data-id]")].map(x => +x.dataset.id) }); setup(); } catch (e){ toast(e.message, true); } };
+    tr.ondragover = e => { e.preventDefault(); if (!drag || drag === tr) return; const r = tr.getBoundingClientRect(); tr.parentNode.insertBefore(drag, e.clientY < r.top + r.height / 2 ? tr : tr.nextSibling); }; });
+}
+function rowEdit(r){
+  const sites = Object.entries(SDATA.sites || CTX.sites || {}), note = r.kind === "note";
+  let d = $("#rowDlg"); if (!d){ d = document.createElement("dialog"); d.id = "rowDlg"; d.style.cssText = "border:0;border-radius:18px;padding:0;width:min(560px,calc(100% - 24px))"; document.body.append(d); }
+  d.innerHTML = `<form method="dialog" id="rF" style="padding:18px;display:grid;gap:8px"><b style="font-size:1.05rem">${r.id ? "Edit" : "Add"} ${note ? "a note row" : "equipment / system"} · ${esc(SDATA.cats[r.cat])}</b>
+    <label class="muted2">Equipment / system</label><input class="inp" id="rN" value="${esc(r.name || "")}" required placeholder="e.g. Fire Alarm">
+    <label class="muted2">Detail in brackets (optional)</label><input class="inp" id="rS" value="${esc(r.sub || "")}" placeholder="e.g. Carbon, Ecology, Enzyme, UVC">
+    ${note ? `<label class="muted2">Frequency</label><input class="inp" id="rQ" value="${esc(r.freq || "")}" placeholder="e.g. Daily">
+      <label class="muted2">Text shown to the tenant</label><textarea class="inp" id="rC" rows="3" style="height:auto;padding:8px">${esc(r.checklist || "")}</textarea>`
+    : `<label class="muted2">Months (certificate due)</label><div style="display:flex;gap:4px;flex-wrap:wrap">${PMYEAR.map(m => `<label class="ch ${r.months.includes(m) ? "c-approved" : "c-missing"}" style="cursor:pointer"><input type="checkbox" class="rM" value="${m}" ${r.months.includes(m) ? "checked" : ""} hidden>${MFULL[m].slice(0, 3)}</label>`).join("")}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label class="muted2">Risk</label><select class="sel" id="rR" style="width:auto">${["High", "Medium", "Low"].map(k => `<option ${r.risk === k ? "selected" : ""}>${k}</option>`).join("")}</select>
+        <label class="muted2" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="rA" ${r.applicable ? "checked" : ""}> Where applicable (tenant may answer “not applicable”)</label></div>
+      <label class="muted2">Checklist (required measures and actions) — one per line</label><textarea class="inp" id="rC" rows="6" style="height:auto;padding:8px">${esc(r.checklist || "")}</textarea>`}
+    <label class="muted2">Applies to</label><div style="display:flex;gap:4px;flex-wrap:wrap">${sites.map(([c, n]) => `<label class="ch ${r.sites.includes(c) ? "c-approved" : "c-missing"}" style="cursor:pointer"><input type="checkbox" class="rP" value="${c}" ${r.sites.includes(c) ? "checked" : ""} hidden>${esc(n)}</label>`).join("")}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button type="button" class="btn ghost" id="rX">Cancel</button><button class="btn">Save</button></div></form>`;
+  d.showModal(); $("#rX").onclick = () => d.close();
+  d.querySelectorAll("label.ch").forEach(l => l.onclick = e => { e.preventDefault(); const i = l.querySelector("input"); i.checked = !i.checked; l.className = "ch " + (i.checked ? "c-approved" : "c-missing"); });
+  $("#rF").onsubmit = async e => { e.preventDefault();
+    try { await api("ops/pm/setup/row", { site: CTX.site, id: r.id, cat: r.cat, kind: r.kind, name: $("#rN").value, sub: $("#rS").value, checklist: $("#rC").value, freq: note ? $("#rQ").value : "",
+        months: note ? [] : [...d.querySelectorAll(".rM:checked")].map(x => +x.value), risk: note ? "Medium" : $("#rR").value, applicable: !note && $("#rA").checked, sites: [...d.querySelectorAll(".rP:checked")].map(x => x.value) });
+      d.close(); toast("Saved"); setup(); } catch (er){ toast(er.message, true); } };
+}
+/* Excel in the Technical team's layout: one sheet per category */
+async function exportSchedule(){
+  await xlsxReady(); const S = SDATA, wb = XLSX.utils.book_new(), sites = Object.keys(S.sites || CTX.sites || {});
+  for (const [cat, cname] of Object.entries(S.cats)) {
+    const rows = S.rows.filter(r => r.cat === cat).sort((a, b) => a.seq - b.seq || a.id - b.id), used = new Set(rows.flatMap(r => r.months)), cols = PMYEAR.filter(m => DEF6.includes(m) || used.has(m));
+    const W = 3 + cols.length + 3, aoa = [[`Preventive Maintenance Schedules For ${cname}`], Array(W - 1).fill("").concat([S.info ? S.info.at.slice(0, 10) : ""]),
+      ["Item", "Equipment/Systems", "Preventive maintenance\nFrequency", "Inspection Report Issuance / Certificates", ...Array(cols.length - 1).fill(""), "Risk", "Applies to", "Checklist\n(Required measures and actions)"],
+      ["", "", "", ...cols.map(m => MFULL[m]), "", "", ""]];
+    const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: W - 1 } }, { s: { r: 2, c: 3 }, e: { r: 2, c: 2 + cols.length } }, ...[0, 1, 2, W - 3, W - 2, W - 1].map(c => ({ s: { r: 2, c }, e: { r: 3, c } }))];
+    rows.forEach((r, i) => { const name = r.name + (r.sub ? `\n(${r.sub})` : "") + (r.applicable && !/applicable/i.test(r.sub) ? "\n(where applicable)" : ""), ap = r.sites.length === sites.length ? "All flagships" : r.sites.map(s => (S.sites || CTX.sites)[s] || s).join(", ");
+      if (r.kind === "note") { aoa.push([i + 1, name, r.freq || "", r.checklist, ...Array(cols.length - 1).fill(""), "", ap, ""]); merges.push({ s: { r: aoa.length - 1, c: 3 }, e: { r: aoa.length - 1, c: 2 + cols.length } }); }
+      else aoa.push([i + 1, name, freqOf(r.months.length), ...cols.map(m => r.months.includes(m) ? "X" : ""), r.risk, ap, r.checklist]); });
+    const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!merges"] = merges;
+    ws["!cols"] = [{ wch: 6 }, { wch: 34 }, { wch: 18 }, ...cols.map(() => ({ wch: 10 })), { wch: 9 }, { wch: 22 }, { wch: 70 }];
+    XLSX.utils.book_append_sheet(wb, ws, cname.slice(0, 31));
+  }
+  XLSX.writeFile(wb, `Tenants preventive Yearly schedule - ${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+function importSchedule(){
+  const f = $("#xl"); f.value = "";
+  f.onchange = async () => { const file = f.files[0]; if (!file) return;
+    try { await xlsxReady(); const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: "" }) }));
+      if (!confirm(`Replace the schedule with “${file.name}”? Each sheet in the file replaces the category sheet with the same name.`)) return;
+      const r = await api("ops/pm/setup/import", { site: CTX.site, sheets, file: file.name }); toast(`${r.imported} rows imported · ${r.cats.join(", ")}`); H = await api(`ops/pm/home?site=${CTX.site}`); tabs(); setup();
+    } catch (e){ toast(e.message, true); } };
+  f.click();
 }
 
 /* ---------- breaches ---------- */

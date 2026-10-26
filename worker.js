@@ -1384,7 +1384,7 @@ async function notificationsFor(env, me) {
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
 const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt"]);
-const roleAllows = (u, app) => { if (u.role === "ADMIN") return true;
+const roleAllows = (u, app) => { if (u.role === "ADMIN" || u.is_admin) return true;   // administrators see every tool, also with their real role (to test) — the rights inside follow the role
   const c = toolsCfgNow()[app];   // Admin Control → Tools control (switched off / who sees it)
   if (c && c.off) return false;
   if (c && Array.isArray(c.access)) return c.access.includes(accessKey(u));

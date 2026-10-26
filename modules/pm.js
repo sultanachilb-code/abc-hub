@@ -13,8 +13,41 @@
    ===================================================================== */
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
-export const PM_CATS = { charcoal: "F&B with charcoal", nocharcoal: "F&B without charcoal", retail: "Retail" };
-export const PM_REASONS = ["Certificate expired", "Wrong certificate / not for this unit", "Not signed or stamped by the contractor",
+export const PM_CATS = { restaurant: "Restaurants", shop: "Shops" };   // Oct 2026: one sheet per category, like the Technical team's Excel
+export async function pmCats(env) {
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:cats'").first().catch(() => null);
+  try { const c = r ? JSON.parse(r.v) : null; if (c && Object.keys(c).length) return c; } catch {}
+  return { ...PM_CATS };
+}
+const ALL5 = ["VRM", "ACM", "DBS", "VRS", "ACS"];
+/* "Tenants preventive Yearly schedule — updated" (Technical team, Jan 2026) — loaded once as the starting setup */
+const CK = { fire: "* Check detectors\n* Check fire alarm panel\n* Check pull station\n* Check break glass", dx: "* Cleaning of filters\n* Cleaning of condensers\n* Check of Freon and control",
+  ahu: "* Check and clean pre-filters and coil dirty & debris if they are dirty\n* Check the pressure & temperature water coil inlet & outlet\n* Check isolations pipes system\n* Clean strainers system\n* Clean evaporating coil of unit\n* Check fans assemblies, vibrations & noises",
+  elec: "* Check overheating signs, corrosions, abnormal noise and broken hardware\n* Check the tightening connections\n* Clean and close entire panel board\n* Visual inspection (lighting, sockets)",
+  ext: "* Submit report from certified supplier", spr: "* Check the presence of leakage\n* Check gate valve\n* Presence of obstacle\n* Check the pressure",
+  drain: "* Clean main drainage network and related outlets\nNote: ABC plumber should be present during this task, with 48 hours prior notice" };
+const SEED = {
+  restaurant: [["Drainage Network cleaning", "for Dbayeh only", [4, 6, 8, 10, 12, 2], "Medium", ["DBS"], 0, CK.drain],
+    ["Charcoal / Wood Gas Hood Cleaning / Cooking Hood Cleaning", "", [4, 8, 12], "High", ALL5, 0, "* Changing fan belts and its wire net\n* Greasing fan bearing after each cleaning\n* Check the fusible links\n* Check the proofing of the seamed duct joints\n* Check the roof fan"],
+    ["Hood Grease & Odor Filters Cleaning", "Carbon, Ecology, Enzyme, UVC · Achrafieh & Verdun", [4, 8, 12], "Medium", ["VRM", "ACM", "VRS", "ACS"], 0, "* Check and clean all available filters: Carbon filter / PRE filter / Bag filter. Replace filters when needed.\n* Clean the unit box.\n* Degreasing and washing the ESP if available.\n* Inspect the UV lamp if available.\n* Inspect all other components of the unit."],
+    ["Fire Alarm", "", [4, 10], "High", ALL5, 0, CK.fire], ["DX Unit", "where applicable", [4, 10], "Medium", ALL5, 1, CK.dx], ["AHU / FCU", "", [4, 10], "Medium", ALL5, 0, CK.ahu],
+    ["Gas system", "", [4, 10], "High", ALL5, 0, "* Solenoid valve\n* Detectors\n* First stage regulator\n* Second stage regulator\n* Status of the piping system (no embedded pipes)\n* Gas panel accessibility and status"],
+    ["Grease Interceptor", "", [4, 10], "Medium", ALL5, 0, "* Clean and repaint the grease interceptor\n* Check the connection to the main drainage network"],
+    ["Fire Suppression system", "", [4, 10], "High", ALL5, 0, "* Check the pressure\n* Link with the gas system\n* Sensors functioning\n* Filling (wet chemicals)"],
+    ["Softener", "", [4], "Low", ALL5, 0, "* Check filter"], ["RO", "where applicable", [4], "Low", ALL5, 1, "* Check filters\n* Clean and change the filters\n* Chemical injection"],
+    ["Electrical Panel Board", "", [4], "Medium", ALL5, 0, CK.elec], ["Portable fire extinguisher", "", [4], "High", ALL5, 0, CK.ext], ["Sprinkler", "", [4], "High", ALL5, 0, CK.spr],
+    ["Grease Interceptor", "", null, "", ALL5, 0, "The grease interceptor should be cleaned on daily basis and waste to be thrown in trash bins", "Daily"]],
+  shop: [["Drainage Network cleaning", "for Dbayeh only", [4, 6, 8, 10, 12, 2], "Medium", ["DBS"], 0, CK.drain], ["Fire Alarm", "", [4, 10], "High", ALL5, 0, CK.fire],
+    ["DX Unit", "where applicable", [4, 10], "Medium", ALL5, 1, CK.dx], ["AHU / FCU", "", [4, 10], "Medium", ALL5, 0, CK.ahu], ["Electrical Panel Board", "", [4], "Medium", ALL5, 0, CK.elec],
+    ["Portable fire extinguisher", "", [4], "High", ALL5, 0, CK.ext], ["Sprinkler", "", [4], "High", ALL5, 0, CK.spr]]
+};
+async function seedSetup(env) {
+  const st = []; let seq = 0;
+  for (const [cat, L] of Object.entries(SEED)) for (const r of L) st.push(env.DB.prepare(`INSERT INTO pm_setup (cert, risk, cats, sites, months, seq, cat, kind, sub, applicable, checklist, freq) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(r[0], r[3] || "Medium", JSON.stringify([cat]), JSON.stringify(r[4]), JSON.stringify(r[2] || []), seq++, cat, r[2] ? "item" : "note", r[1], r[5], r[6], r[7] || ""));
+  await env.DB.batch(st);
+}
+export const PM_REASONS = ["The item applies to this unit (upload the certificate)", "Certificate expired", "Wrong certificate / not for this unit", "Not signed or stamped by the contractor",
   "Unreadable or incomplete", "Wrong period / date", "Contractor not approved", "Other"];
 const RISKS = ["High", "Medium", "Low"];
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -48,16 +81,30 @@ export async function pmSchema(env) {
       note TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'pending', requested_by TEXT NOT NULL DEFAULT '', requested_at TEXT NOT NULL DEFAULT '',
       decided_by TEXT NOT NULL DEFAULT '', decided_at TEXT NOT NULL DEFAULT '')`)
   ]);
+  const add = async (t, cols) => { const have = ((await env.DB.prepare(`PRAGMA table_info(${t})`).all()).results || []).map(c => c.name);
+    for (const [c, ty] of cols) if (!have.includes(c)) await env.DB.prepare(`ALTER TABLE ${t} ADD COLUMN ${c} ${ty}`).run(); };
+  await add("pm_setup", [["cat", "TEXT NOT NULL DEFAULT ''"], ["kind", "TEXT NOT NULL DEFAULT 'item'"], ["sub", "TEXT NOT NULL DEFAULT ''"], ["applicable", "INTEGER NOT NULL DEFAULT 0"], ["checklist", "TEXT NOT NULL DEFAULT ''"], ["freq", "TEXT NOT NULL DEFAULT ''"]]);
+  await add("pm_certs", [["na", "INTEGER NOT NULL DEFAULT 0"], ["checklist", "TEXT NOT NULL DEFAULT ''"], ["applicable", "INTEGER NOT NULL DEFAULT 0"]]);
+  /* Oct 2026: the setup becomes the Technical team's yearly schedule (Restaurants / Shops sheets) */
+  const mig = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('mig:pm-v2', ?)").bind(new Date().toISOString()).run().catch(() => null);
+  if (mig && mig.meta && mig.meta.changes === 1) {
+    await env.DB.prepare("UPDATE pm_tenants SET category = CASE WHEN category = 'retail' THEN 'shop' WHEN category IN ('charcoal','nocharcoal') THEN 'restaurant' ELSE category END").run();
+    await env.DB.prepare("UPDATE pm_records SET category = CASE WHEN category = 'retail' THEN 'shop' WHEN category IN ('charcoal','nocharcoal') THEN 'restaurant' ELSE category END").run();
+    await env.DB.prepare("DELETE FROM pm_setup WHERE cat = ''").run();
+    if (!(await env.DB.prepare("SELECT 1 FROM pm_setup LIMIT 1").first())) await seedSetup(env);
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pm:setup:info', ?)").bind(JSON.stringify({ at: new Date().toISOString(), by: "Technical team (yearly schedule, Jan 2026)", version: 1 })).run();
+  }
 }
 
 /* ---------- reading the Technical team's Excel ---------- */
 export function catOf(v) {
   const s = String(v || "").toLowerCase();
-  if (/retail/.test(s)) return "retail";
-  if (/without|no\s*char|w\/o/.test(s)) return "nocharcoal";
-  if (/charcoal|wood/.test(s)) return "charcoal";
+  if (/restau|f\s*&\s*b|food|cafe|café|charcoal|kitchen|coffee|bakery|resto/.test(s)) return "restaurant";
+  if (/shop|retail|store|boutique/.test(s)) return "shop";
   return "";
 }
+/* the tenant's category from its GLA department (RESTAURANTS / FOOD & BEVERAGE → Restaurants, the rest → Shops) */
+const catOfDept = dept => /restau|food|f\s*&\s*b|cafe|café/i.test(String(dept || "")) ? "restaurant" : dept ? "shop" : "";
 export function siteOf(v, SITES) {
   const s = String(v || "").toLowerCase().replace(/\s+/g, " ").trim();
   if (!s) return "";
@@ -95,6 +142,37 @@ export function parseSetup(rows, SITES) {
   if (!list.length) throw err("No certificate found under the header row");
   return list;
 }
+const MONTHN = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const sitesFromText = t => { t = String(t || "").toLowerCase(); if (/dbayeh/.test(t) && /only/.test(t)) return ["DBS"];
+  const s = []; if (/verdun/.test(t)) s.push("VRM", "VRS"); if (/achrafieh|ashrafieh/.test(t)) s.push("ACM", "ACS"); if (/dbayeh/.test(t)) s.push("DBS"); return s.length ? s : ALL5; };
+export function parseSchedule(sheets, cats) {
+  const out = [];
+  for (const sh of sheets || []) {
+    const rows = (sh.rows || []).map(r => (r || []).map(c => c == null ? "" : String(c).replace(/\r/g, "").trim()));
+    const title = (rows[0] || []).join(" ") + " " + (sh.name || "");
+    let cat = catOf(title); if (!cat) { const k = Object.entries(cats).find(([, n]) => title.toLowerCase().includes(n.toLowerCase())); cat = k ? k[0] : ""; }
+    if (!cat) cat = String(sh.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20) || "other";
+    const H = rows.findIndex(r => r.some(c => /equipment|system/i.test(c))); if (H < 0) continue;
+    const head = rows[H].map(c => c.toLowerCase()), sub = (rows[H + 1] || []).map(c => c.toLowerCase());
+    const cN = head.findIndex(h => /equipment|system/.test(h)), cF = head.findIndex(h => /frequen/.test(h)), cC = head.findIndex(h => /checklist|measure/.test(h)), cR = head.findIndex(h => /^risk/.test(h)), cA = head.findIndex(h => /applies|flagship|branch/.test(h));
+    const mCols = []; [head, sub].forEach(r => r.forEach((h, i) => { const m = MONTHN.findIndex(x => h.startsWith(x.slice(0, 3))); if (m >= 0 && !mCols.some(z => z[1] === i)) mCols.push([m + 1, i]); }));
+    let lastFreq = "";
+    for (const r of rows.slice(H + (mCols.some(([, i]) => sub[i]) ? 2 : 1))) {
+      const raw = r[cN] || ""; if (!raw) continue;
+      if (cF >= 0 && r[cF]) lastFreq = r[cF];
+      const m = /^([\s\S]*?)\s*\(([^)]*)\)\s*$/.exec(raw.replace(/\n/g, " ")), name = clip(m ? m[1] : raw, 120), note = m ? clip(m[2], 120) : "";
+      const months = mCols.filter(([, i]) => yes(r[i])).map(([mo]) => mo);
+      const longText = mCols.length ? r[mCols[0][1]] : "";
+      const isNote = !months.length && longText && longText.length > 12;
+      const appl = /where applicable/i.test(raw) ? 1 : 0;
+      const risk = cR >= 0 ? RISKS.find(x => new RegExp("^" + x, "i").test(r[cR])) || "Medium" : (/fire|gas|sprinkler|extinguish|suppression|hood clean|charcoal/i.test(name) ? "High" : /softener|ro\b/i.test(name) ? "Low" : "Medium");
+      out.push({ cat, kind: isNote ? "note" : "item", name, sub: appl ? note.replace(/where applicable/i, "").trim() || "where applicable" : note, months, risk,
+        sites: cA >= 0 && r[cA] ? sitesFromText(r[cA]) : sitesFromText(note), applicable: appl, checklist: String(isNote ? longText : (cC >= 0 ? r[cC] : "")).split("\n").map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n").slice(0, 2000), freq: isNote ? (r[cF] || lastFreq) : "" });
+    }
+  }
+  if (!out.length) throw err("No equipment found — the sheet needs the \"Equipment/Systems\" header and the month columns");
+  return out;
+}
 export function parseTenants(rows, SITES, site) {
   const H = rows.findIndex(r => r.some(c => /brand|tenant/i.test(String(c))));
   if (H < 0) throw err("The sheet needs a header row with \"Brand\" (or \"Tenant\")");
@@ -117,8 +195,8 @@ const cleanEmails = v => [...new Set(String(v || "").split(/[\s,;]+/).map(x => x
 
 /* ---------- opening a PM month at a flagship ---------- */
 async function setupFor(env, site, month) {
-  const { results } = await env.DB.prepare("SELECT * FROM pm_setup ORDER BY seq, id").all();
-  return (results || []).map(r => ({ ...r, cats: JSON.parse(r.cats || "[]"), sites: JSON.parse(r.sites || "[]"), months: JSON.parse(r.months || "[]") }))
+  const { results } = await env.DB.prepare("SELECT * FROM pm_setup WHERE kind = 'item' ORDER BY seq, id").all();
+  return (results || []).map(r => ({ ...r, cats: r.cat ? [r.cat] : JSON.parse(r.cats || "[]"), sites: JSON.parse(r.sites || "[]"), months: JSON.parse(r.months || "[]") }))
     .filter(r => r.sites.includes(site) && r.months.includes(month));
 }
 export async function pmLaunch(env, site, ym, d, by = "the hub") {
@@ -136,7 +214,7 @@ export async function pmLaunch(env, site, ym, d, by = "the hub") {
     const tk = token();
     const rid = (await env.DB.prepare("INSERT INTO pm_records (cycle_id, site, brand, category, emails, token, deadline, last_mail) VALUES (?,?,?,?,?,?,?,?)")
       .bind(cyc, site, t.brand, t.category, t.emails, tk, deadline, d.today()).run()).meta.last_row_id;
-    await env.DB.batch(need.map(s => env.DB.prepare("INSERT INTO pm_certs (record_id, site, cert, risk) VALUES (?,?,?,?)").bind(rid, site, s.cert, s.risk)));
+    await env.DB.batch(need.map(s => env.DB.prepare("INSERT INTO pm_certs (record_id, site, cert, risk, checklist, applicable) VALUES (?,?,?,?,?,?)").bind(rid, site, s.cert, s.risk, s.checklist || "", s.applicable ? 1 : 0)));
     n++;
     if (t.emails) mails.push(tenantMail(d, { site, brand: t.brand, ym, deadline, tk, certs: need.map(s => ({ cert: s.cert, status: "missing" })), kind: "launch", to: t.emails }));
   }
@@ -172,10 +250,22 @@ export async function pmPublic(env, path, method, b, d) {
   const [tk, act] = path.split("/");
   const r = await recordByToken(env, tk);
   if (!r.opened_at) await env.DB.prepare("UPDATE pm_records SET opened_at = ? WHERE id = ?").bind(d.now(), r.id).run().catch(() => {});
-  const certs = (await env.DB.prepare("SELECT id, cert, status, file_name, uploaded_at, reason, comment FROM pm_certs WHERE record_id = ? ORDER BY id").bind(r.id).all()).results || [];
+  const certs = (await env.DB.prepare("SELECT id, cert, status, file_name, uploaded_at, reason, comment, na, checklist, applicable FROM pm_certs WHERE record_id = ? ORDER BY id").bind(r.id).all()).results || [];
   const closed = d.today() > addDays(r.deadline, 5);
-  if (method === "GET") return { brand: r.brand, site: r.site, siteName: d.siteName(r.site), month: r.month, monthLabel: monthName(r.month), deadline: r.deadline,
-    completed: !!r.completed_at, closed, certs: certs.map(c => ({ id: c.id, cert: c.cert, status: c.status, file: c.file_name, at: c.uploaded_at, reason: c.reason, comment: c.comment })) };
+  if (method === "GET") {
+    const notes = ((await env.DB.prepare("SELECT cert, sub, checklist, freq, sites FROM pm_setup WHERE kind = 'note' AND cat = ? ORDER BY seq, id").bind(r.category).all().catch(() => ({ results: [] }))).results || [])
+      .filter(n => JSON.parse(n.sites || "[]").includes(r.site)).map(n => ({ name: n.cert, freq: n.freq, text: n.checklist }));
+    return { brand: r.brand, site: r.site, siteName: d.siteName(r.site), month: r.month, monthLabel: monthName(r.month), deadline: r.deadline, notes,
+      completed: !!r.completed_at, closed, certs: certs.map(c => ({ id: c.id, cert: c.cert, status: c.status, file: c.file_name, at: c.uploaded_at, reason: c.reason, comment: c.comment, na: !!c.na, checklist: c.checklist, applicable: !!c.applicable })) };
+  }
+  if (act === "na" && method === "POST") {   // "where applicable" items: the tenant says it does not apply to the unit — Operations confirms
+    if (closed) throw err("The upload period has ended — contact the mall operations team");
+    const c = certs.find(x => x.id === Number(b.certId)); if (!c) throw err("Choose the certificate");
+    if (!c.applicable) throw err("This certificate is required for every unit");
+    if (c.status === "approved") throw err("This certificate is already approved");
+    await env.DB.prepare("UPDATE pm_certs SET status = 'pending', na = 1, file_key = '', file_name = '', file_type = '', uploaded_at = ?, reason = '', comment = ? WHERE id = ?").bind(d.now(), clip(b.note, 200), c.id).run();
+    return { status: "pending" };
+  }
   if (act === "upload" && method === "POST") {
     if (closed) throw err("The upload period has ended — contact the mall operations team");
     const c = certs.find(x => x.id === Number(b.certId)); if (!c) throw err("Choose the certificate");
@@ -187,7 +277,7 @@ export async function pmPublic(env, path, method, b, d) {
     if (bin.byteLength > MAX_FILE) throw err("The file is larger than 10 MB");
     const key = `pm/${r.id}/${c.id}-${crypto.randomUUID()}`;
     await env.FILES.put(key, bin, { httpMetadata: { contentType: m[1] } });
-    await env.DB.prepare("UPDATE pm_certs SET status = 'pending', file_key = ?, file_name = ?, file_type = ?, uploaded_at = ?, reason = '', comment = '' WHERE id = ?")
+    await env.DB.prepare("UPDATE pm_certs SET status = 'pending', na = 0, file_key = ?, file_name = ?, file_type = ?, uploaded_at = ?, reason = '', comment = '' WHERE id = ?")
       .bind(key, clip(b.name, 120) || "certificate", m[1], d.now(), c.id).run();
     return { status: "pending" };
   }
@@ -201,7 +291,7 @@ async function recordFull(env, id) {
   const certs = (await env.DB.prepare("SELECT * FROM pm_certs WHERE record_id = ? ORDER BY id").bind(id).all()).results || [];
   return { ...r, certs };
 }
-const certOut = c => ({ id: c.id, cert: c.cert, risk: c.risk, status: c.status, file: c.file_name, type: c.file_type, at: c.uploaded_at, by: c.reviewed_by, reviewedAt: c.reviewed_at, reason: c.reason, comment: c.comment });
+const certOut = c => ({ na: !!c.na, applicable: !!c.applicable, checklist: c.checklist || "", id: c.id, cert: c.cert, risk: c.risk, status: c.status, file: c.file_name, type: c.file_type, at: c.uploaded_at, by: c.reviewed_by, reviewedAt: c.reviewed_at, reason: c.reason, comment: c.comment });
 async function refreshDone(env, recordId, now) {
   const p = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS a FROM pm_certs WHERE record_id = ?").bind(recordId).first();
   const done = Number(p.n) > 0 && Number(p.a) === Number(p.n);
@@ -210,6 +300,7 @@ async function refreshDone(env, recordId, now) {
 }
 export async function pmRoute(env, p, method, b, url, d) {
   const { site, me } = d, q = n => url.searchParams.get(n) || b[n] || "";
+  const CATS = await pmCats(env);
   if (!d.canSite(me, site)) throw err("No access to this flagship", 403);
   const ops = d.isOps(me), boss = d.isBoss(me), today = d.today();
   if (p === "pm/home") {
@@ -219,12 +310,12 @@ export async function pmRoute(env, p, method, b, url, d) {
         COUNT(DISTINCT CASE WHEN r.breach_at != '' THEN r.id END) AS breach
         FROM pm_records r LEFT JOIN pm_certs c ON c.record_id = r.id WHERE r.site = ? GROUP BY r.cycle_id`).bind(site).all()).results || [] : [];
     const S = new Map(stats.map(s => [s.cycle_id, s]));
-    const setupN = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pm_setup").first()).n;
+    const setupN = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pm_setup WHERE kind = 'item'").first()).n;
     const ten = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN category = '' THEN 1 ELSE 0 END) AS nocat, SUM(CASE WHEN emails = '' THEN 1 ELSE 0 END) AS nomail FROM pm_tenants WHERE site = ? AND excluded = 0").bind(site).first();
     const ext = (await env.DB.prepare("SELECT e.*, c.month FROM pm_ext e JOIN pm_cycles c ON c.id = e.cycle_id WHERE c.site = ? AND e.status = 'pending'").bind(site).all()).results || [];
     const pendingReview = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pm_certs WHERE site = ? AND status = 'pending'").bind(site).first()).n;
     const next = await nextMonths(env, site, today);
-    return { site, siteName: d.siteName(site), today, ops, boss, setup: setupN, tenants: ten, pendingReview, ext, next, cats: PM_CATS, reasons: PM_REASONS, penalty: PENALTY,
+    return { site, siteName: d.siteName(site), today, ops, boss, setup: setupN, tenants: ten, pendingReview, ext, next, cats: CATS, reasons: PM_REASONS, penalty: PENALTY,
       cycles: cyc.map(c => ({ id: c.id, month: c.month, label: monthName(c.month), deadline: c.deadline, launchedAt: c.launched_at, by: c.launched_by, ...(S.get(c.id) || { tenants: 0, done: 0, pending: 0, open: 0, breach: 0 }) })) };
   }
   if (p === "pm/cycle") {
@@ -234,7 +325,7 @@ export async function pmRoute(env, p, method, b, url, d) {
     const by = new Map(); for (const x of certs) (by.get(x.record_id) || by.set(x.record_id, []).get(x.record_id)).push(certOut(x));
     const ext = (await env.DB.prepare("SELECT * FROM pm_ext WHERE cycle_id = ? ORDER BY id DESC").bind(c.id).all()).results || [];
     return { cycle: { id: c.id, month: c.month, label: monthName(c.month), deadline: c.deadline, breachDay: addDays(c.deadline, 5) }, ext,
-      records: recs.map(r => ({ id: r.id, brand: r.brand, category: PM_CATS[r.category] || r.category, emails: r.emails, deadline: r.deadline, done: !!r.completed_at, opened: !!r.opened_at,
+      records: recs.map(r => ({ id: r.id, brand: r.brand, category: CATS[r.category] || r.category, emails: r.emails, deadline: r.deadline, done: !!r.completed_at, opened: !!r.opened_at,
         breach: r.breach_at, link: ops ? `${d.hubUrl}/pm/${r.token}` : "", certs: by.get(r.id) || [] })) };
   }
   if (p === "pm/queue") {
@@ -249,22 +340,62 @@ export async function pmRoute(env, p, method, b, url, d) {
     return new Response(o.body, { headers: { "content-type": c.file_type || "application/octet-stream", "content-disposition": `inline; filename="${c.file_name.replace(/"/g, "")}"`, "cache-control": "private, max-age=300" } });
   }
   if (p === "pm/breaches") return { list: await pmBreaches(env, site), penalty: PENALTY };
-  if (p === "pm/setup" && method === "GET") {
+  if (p === "pm/setup" && method === "GET") {   // the yearly schedule, one sheet per category (same layout as the Technical team's Excel)
     const { results } = await env.DB.prepare("SELECT * FROM pm_setup ORDER BY seq, id").all();
-    return { list: (results || []).map(r => ({ cert: r.cert, risk: r.risk, cats: JSON.parse(r.cats), sites: JSON.parse(r.sites), months: JSON.parse(r.months) })), cats: PM_CATS };
+    const info = JSON.parse((await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:setup:info'").first().catch(() => null) || { v: "null" }).v || "null");
+    return { cats: CATS, info, risks: RISKS, sites: d.SITES, rows: (results || []).filter(r => r.cat).map(r => ({ id: r.id, cat: r.cat, kind: r.kind, name: r.cert, sub: r.sub, months: JSON.parse(r.months || "[]"),
+      risk: r.risk, sites: JSON.parse(r.sites || "[]"), applicable: !!r.applicable, checklist: r.checklist, freq: r.freq, seq: r.seq })) };
   }
   if (p === "pm/tenants" && method === "GET") {
     const { results } = await env.DB.prepare("SELECT * FROM pm_tenants WHERE site = ? ORDER BY brand").bind(site).all();
-    return { list: (results || []).map(t => ({ brand: t.brand, category: t.category, emails: t.emails, units: t.units, since: t.since, excluded: !!t.excluded })), cats: PM_CATS };
+    return { list: (results || []).map(t => ({ brand: t.brand, category: t.category, emails: t.emails, units: t.units, since: t.since, excluded: !!t.excluded })), cats: CATS };
   }
   if (method !== "POST") throw err("Unknown request", 404);
   if (!ops) throw err("Only the operations team manages preventive maintenance", 403);
-  if (p === "pm/setup") {   // import the Technical team's Excel (replaces the setup)
-    const L = parseSetup(await d.readSheet(clip(b.name, 120), b.data), d.SITES);
-    await env.DB.prepare("DELETE FROM pm_setup").run();
-    await env.DB.batch(L.map((r, i) => env.DB.prepare("INSERT INTO pm_setup (cert, risk, cats, sites, months, seq) VALUES (?,?,?,?,?,?)")
-      .bind(r.cert, r.risk, JSON.stringify(r.cats), JSON.stringify(r.sites), JSON.stringify(r.months), i)));
-    return { imported: L.length, list: L };
+  /* ---------- the yearly schedule: edit like the Excel ---------- */
+  const stamp = async what => { const old = JSON.parse((await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:setup:info'").first().catch(() => null) || { v: "null" }).v || "null") || { version: 0 };
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pm:setup:info', ?)").bind(JSON.stringify({ at: d.now(), by: me.full_name, version: (old.version || 0) + 1, what })).run(); };
+  const months = v => [...new Set((Array.isArray(v) ? v : []).map(Number).filter(m => m >= 1 && m <= 12))].sort((x, y) => ((x + 8) % 12) - ((y + 8) % 12));   // PM year order: April → March
+  if (p === "pm/setup/row") {
+    const cat = String(b.cat || ""); if (!CATS[cat]) throw err("Choose the category");
+    const kind = b.kind === "note" ? "note" : "item", name = clip(b.name, 120); if (!name) throw err("Name the equipment / system");
+    const S = (Array.isArray(b.sites) ? b.sites : []).filter(s => d.SITES[s]); if (!S.length) throw err("Tick at least one flagship");
+    const M = kind === "item" ? months(b.months) : [];
+    const vals = [name, RISKS.includes(b.risk) ? b.risk : "Medium", JSON.stringify([cat]), JSON.stringify(S), JSON.stringify(M), cat, kind, clip(b.sub, 120), b.applicable ? 1 : 0, String(b.checklist || "").slice(0, 2000), clip(b.freq, 40)];
+    if (b.id) await env.DB.prepare("UPDATE pm_setup SET cert = ?, risk = ?, cats = ?, sites = ?, months = ?, cat = ?, kind = ?, sub = ?, applicable = ?, checklist = ?, freq = ? WHERE id = ?").bind(...vals, Number(b.id)).run();
+    else { const mx = await env.DB.prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM pm_setup WHERE cat = ?").bind(cat).first();
+      await env.DB.prepare("INSERT INTO pm_setup (cert, risk, cats, sites, months, cat, kind, sub, applicable, checklist, freq, seq) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)").bind(...vals, mx.n).run(); }
+    await stamp(`${b.id ? "changed" : "added"} ${name}`); return { saved: true };
+  }
+  if (p === "pm/setup/months") {   // tap an X cell
+    const r = await env.DB.prepare("SELECT * FROM pm_setup WHERE id = ?").bind(Number(b.id)).first(); if (!r) throw err("Not found", 404);
+    await env.DB.prepare("UPDATE pm_setup SET months = ? WHERE id = ?").bind(JSON.stringify(months(b.months)), r.id).run();
+    await stamp(`months of ${r.cert}`); return { saved: true };
+  }
+  if (p === "pm/setup/delete") { const r = await env.DB.prepare("SELECT cert FROM pm_setup WHERE id = ?").bind(Number(b.id)).first(); await env.DB.prepare("DELETE FROM pm_setup WHERE id = ?").bind(Number(b.id)).run(); await stamp(`removed ${r ? r.cert : ""}`); return { deleted: true }; }
+  if (p === "pm/setup/order") {
+    const ids = (Array.isArray(b.ids) ? b.ids : []).map(Number).filter(Boolean);
+    await env.DB.batch(ids.map((id, i) => env.DB.prepare("UPDATE pm_setup SET seq = ? WHERE id = ?").bind(i + 1, id))); await stamp("order"); return { saved: true };
+  }
+  if (p === "pm/setup/cat") {   // add / rename / remove a category sheet
+    const C = { ...CATS }, key = String(b.key || "") || clip(b.name, 30).toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20);
+    if (!key) throw err("Name the category");
+    if (b.remove) {
+      if ((await env.DB.prepare("SELECT 1 FROM pm_setup WHERE cat = ? LIMIT 1").bind(key).first()) || (await env.DB.prepare("SELECT 1 FROM pm_tenants WHERE category = ? LIMIT 1").bind(key).first())) throw err("This category still has equipment or tenants");
+      delete C[key];
+    } else C[key] = clip(b.name, 40) || C[key] || key;
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pm:cats', ?)").bind(JSON.stringify(C)).run(); await stamp(`category ${C[key] || key}`); return { cats: C };
+  }
+  if (p === "pm/setup/import") {   // the Technical team's Excel (rows read in the browser) — replaces the sheets it contains
+    const L = parseSchedule(b.sheets, CATS), C = { ...CATS };
+    for (const r of L) if (!C[r.cat]) C[r.cat] = r.cat.charAt(0).toUpperCase() + r.cat.slice(1);
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pm:cats', ?)").bind(JSON.stringify(C)).run();
+    const cats = [...new Set(L.map(r => r.cat))];
+    await env.DB.batch([...cats.map(c => env.DB.prepare("DELETE FROM pm_setup WHERE cat = ? OR (cat = '' AND cats LIKE ?)").bind(c, `%"${c}"%`)),
+      ...L.map((r, i) => env.DB.prepare("INSERT INTO pm_setup (cert, risk, cats, sites, months, cat, kind, sub, applicable, checklist, freq, seq) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(r.name, r.risk, JSON.stringify([r.cat]), JSON.stringify(r.sites), JSON.stringify(months(r.months)), r.cat, r.kind, r.sub, r.applicable, r.checklist, r.freq, i + 1))]);
+    await stamp(`imported ${clip(b.file, 80) || "Excel"}`);
+    return { imported: L.length, cats: cats.map(c => C[c]) };
   }
   if (p === "pm/tenants/import") {
     const L = parseTenants(await d.readSheet(clip(b.name, 120), b.data), d.SITES, site).filter(t => d.canSite(me, t.site));
@@ -277,18 +408,19 @@ export async function pmRoute(env, p, method, b, url, d) {
     return { imported: L.length };
   }
   if (p === "pm/tenants/fill") {   // from GLA (open tenants) + Tenants Directory emails
-    const g = (await env.DB.prepare("SELECT brand, GROUP_CONCAT(code, ', ') AS units FROM gla_units WHERE site = ? AND active = 1 AND section = 'Leasing' AND brand != '' AND status IN ('Open','Fit-out','Closed') GROUP BY brand").bind(site).all()).results || [];
+    const g = (await env.DB.prepare("SELECT brand, GROUP_CONCAT(code, ', ') AS units, MAX(dept) AS dept FROM gla_units WHERE site = ? AND active = 1 AND section = 'Leasing' AND brand != '' AND status IN ('Open','Fit-out','Closed') GROUP BY brand").bind(site).all()).results || [];
     const dir = (await env.DB.prepare("SELECT tenant, email FROM dir_contacts WHERE site = ? AND email != ''").bind(site).all().catch(() => ({ results: [] }))).results || [];
     const em = new Map(); for (const x of dir) { const k = x.tenant.toLowerCase().trim(); em.set(k, [...(em.get(k) || []), x.email]); }
     const now = d.now();
-    for (let i = 0; i < g.length; i += 80) await env.DB.batch(g.slice(i, i + 80).map(t => env.DB.prepare(`INSERT INTO pm_tenants (site, brand, emails, units, updated_at) VALUES (?,?,?,?,?)
-      ON CONFLICT(site, brand) DO UPDATE SET units = excluded.units, emails = CASE WHEN pm_tenants.emails = '' THEN excluded.emails ELSE pm_tenants.emails END`)
-      .bind(site, clip(t.brand, 100), cleanEmails((em.get(t.brand.toLowerCase().trim()) || []).join(",")), clip(t.units, 80), now)));
+    for (let i = 0; i < g.length; i += 80) await env.DB.batch(g.slice(i, i + 80).map(t => env.DB.prepare(`INSERT INTO pm_tenants (site, brand, emails, units, category, updated_at) VALUES (?,?,?,?,?,?)
+      ON CONFLICT(site, brand) DO UPDATE SET units = excluded.units, emails = CASE WHEN pm_tenants.emails = '' THEN excluded.emails ELSE pm_tenants.emails END,
+        category = CASE WHEN pm_tenants.category = '' THEN excluded.category ELSE pm_tenants.category END`)
+      .bind(site, clip(t.brand, 100), cleanEmails((em.get(t.brand.toLowerCase().trim()) || []).join(",")), clip(t.units, 80), CATS[catOfDept(t.dept)] ? catOfDept(t.dept) : "", now)));
     return { added: g.length };
   }
   if (p === "pm/tenants/save") {
     const brand = clip(b.brand, 100); if (!brand) throw err("Brand missing");
-    const cat = PM_CATS[b.category] ? b.category : "", since = /^\d{4}-\d{2}-\d{2}$/.test(String(b.since || "")) ? b.since : "";
+    const cat = CATS[b.category] ? b.category : "", since = /^\d{4}-\d{2}-\d{2}$/.test(String(b.since || "")) ? b.since : "";
     await env.DB.prepare(`INSERT INTO pm_tenants (site, brand, category, emails, units, since, excluded, updated_at) VALUES (?,?,?,?,?,?,?,?)
       ON CONFLICT(site, brand) DO UPDATE SET category = excluded.category, emails = excluded.emails, units = excluded.units, since = excluded.since, excluded = excluded.excluded, updated_at = excluded.updated_at`)
       .bind(site, brand, cat, cleanEmails(b.emails), clip(b.units, 80), since, b.excluded ? 1 : 0, d.now()).run();
@@ -304,8 +436,8 @@ export async function pmRoute(env, p, method, b, url, d) {
     if (c.status !== "pending") throw err("This certificate is not waiting for review");
     const ok = b.decision === "approve", reason = clip(b.reason, 80), comment = clip(b.comment, 300);
     if (!ok && !PM_REASONS.includes(reason)) throw err("Choose the reason for the rejection");
-    await env.DB.prepare("UPDATE pm_certs SET status = ?, reviewed_by = ?, reviewed_at = ?, reason = ?, comment = ? WHERE id = ?")
-      .bind(ok ? "approved" : "rejected", me.full_name, d.now(), ok ? "" : reason, comment, c.id).run();
+    await env.DB.prepare("UPDATE pm_certs SET status = ?, reviewed_by = ?, reviewed_at = ?, reason = ?, comment = ?, na = CASE WHEN ? THEN na ELSE 0 END WHERE id = ?")
+      .bind(ok ? "approved" : "rejected", me.full_name, d.now(), ok ? "" : reason, comment, ok ? 1 : 0, c.id).run();
     const done = await refreshDone(env, c.record_id, d.now());
     if (!ok && d.sendMany) {   // tell the tenant at once, with the link
       const r = await recordFull(env, c.record_id), cy = await env.DB.prepare("SELECT month FROM pm_cycles WHERE id = ?").bind(r.cycle_id).first();
@@ -356,7 +488,7 @@ async function applyExtensions(env, cycleId) {
 }
 /* the next PM months at a flagship (from the setup) */
 async function nextMonths(env, site, today) {
-  const { results } = await env.DB.prepare("SELECT sites, months FROM pm_setup").all();
+  const { results } = await env.DB.prepare("SELECT sites, months FROM pm_setup WHERE kind = 'item'").all();
   const M = new Set(); for (const r of results || []) if (JSON.parse(r.sites).includes(site)) for (const m of JSON.parse(r.months)) M.add(m);
   const out = []; let [y, m] = today.split("-").map(Number);
   for (let i = 0; i < 13 && out.length < 3; i++) { const ym = `${y}-${String(m).padStart(2, "0")}`; if (M.has(m)) out.push({ month: ym, label: monthName(ym), launch: addDays(ym + "-01", -15), deadline: lastDay(ym) }); m++; if (m > 12) { m = 1; y++; } }

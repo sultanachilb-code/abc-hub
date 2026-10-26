@@ -34,6 +34,9 @@ h1{font-size:1.3rem}.sub{color:var(--muted);font-size:.88rem;margin-top:3px}
 .note{font-size:.8rem;color:var(--muted);line-height:1.55;margin-top:16px}
 .msg{margin-top:12px;border-radius:12px;padding:10px 12px;font-size:.86rem;font-weight:600}
 .msg.ok{background:rgba(30,138,76,.12);color:var(--ok)}.msg.bad{background:rgba(176,58,46,.12);color:var(--bad)}
+.ckl{margin-top:6px}.ckl summary{font-size:.76rem;font-weight:700;color:var(--brand);cursor:pointer}.ckl div{white-space:pre-line;font-size:.76rem;color:var(--muted);line-height:1.5;margin-top:4px;padding:8px 10px;background:var(--bg);border-radius:10px}
+.na{display:inline-block;margin-top:6px;font-size:.74rem;font-weight:700;color:var(--muted)}
+.notes{margin-top:14px;border-radius:14px;background:rgba(224,168,46,.1);padding:12px 14px;font-size:.82rem;line-height:1.5}.notes b{display:block;margin-bottom:6px}.notes div{margin-top:4px}.notes span{display:block;font-weight:700}
 .foot{text-align:center;font-size:.72rem;color:var(--muted);margin-top:18px}
 :root[data-theme="dark"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="dark"] .bar{background:#2E2440}@media (prefers-color-scheme:dark){:root[data-theme="auto"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="auto"] .bar{background:#2E2440}}
 </style>
@@ -66,14 +69,20 @@ function draw(){
       : `<span class="pill ${days <= 5 ? "bad" : ""}">Deadline ${esc(dlTxt)}${days >= 0 ? ` · ${days} day${days === 1 ? "" : "s"} left` : " · passed"}</span>`}<span class="pill">${ok} of ${n} approved</span></div>
     <div class="bar"><i style="width:${n ? Math.round(sent / n * 100) : 0}%"></i></div>
     <div style="margin-top:8px">${D.certs.map(c => `<div class="cert ${c.status}"><span class="dot"></span><div class="m"><b>${esc(c.cert)}</b>
-        <small>${c.status === "missing" ? "Not uploaded yet" : c.status === "pending" ? `Uploaded ${esc(new Date(c.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} · under review` : c.status === "approved" ? "Approved" : `Rejected — ${esc(c.reason)}${c.comment ? ": " + esc(c.comment) : ""}. Upload a corrected certificate.`}</small></div>
-        ${c.status === "approved" ? `<span class="st">✓ Approved</span>` : D.closed ? "" : c.status === "pending" ? `<button class="up" style="background:#EEE9F4;color:#4A1F73" data-up="${c.id}">Replace</button>` : `<button class="up ${c.status === "rejected" ? "again" : ""}" data-up="${c.id}">${c.status === "rejected" ? "Upload again" : "Upload"}</button>`}</div>`).join("")}</div>
+        <small>${c.status === "missing" ? "Not uploaded yet" : c.status === "pending" ? (c.na ? "You said it does not apply to your unit · being checked" : `Uploaded ${esc(new Date(c.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} · under review`) : c.status === "approved" ? (c.na ? "Not applicable — confirmed" : "Approved") : `Rejected — ${esc(c.reason)}${c.comment ? ": " + esc(c.comment) : ""}. Upload a corrected certificate.`}</small>
+        ${c.checklist ? `<details class="ckl"><summary>What the certificate must cover</summary><div>${esc(c.checklist)}</div></details>` : ""}
+        ${c.applicable && !D.closed && c.status !== "approved" && !(c.status === "pending" && c.na) ? `<a href="#" class="na" data-na="${c.id}">Not applicable to our unit</a>` : ""}</div>
+        ${c.status === "approved" ? `<span class="st">✓ ${c.na ? "N/A" : "Approved"}</span>` : D.closed ? "" : c.status === "pending" ? `<button class="up" style="background:#EEE9F4;color:#4A1F73" data-up="${c.id}">${c.na ? "Upload" : "Replace"}</button>` : `<button class="up ${c.status === "rejected" ? "again" : ""}" data-up="${c.id}">${c.status === "rejected" ? "Upload again" : "Upload"}</button>`}</div>`).join("")}</div>
+    ${(D.notes || []).length ? `<div class="notes"><b>Also required (no upload)</b>${D.notes.map(n => `<div><span>${esc(n.name)}${n.freq ? " · " + esc(n.freq) : ""}</span>${esc(n.text)}</div>`).join("")}</div>` : ""}
     ${MSG}
     <p class="note">Upload a PDF or a clear photo of each certificate (max 10 MB), issued and stamped by an approved contractor. The mall's operations team reviews each one.
       Certificates not approved within 5 days after the deadline are treated as a breach (non-performance of preventive maintenance).</p>
     <input type="file" id="file" accept="application/pdf,image/*" hidden>`;
   $("#app").querySelectorAll("[data-up]").forEach(b => b.onclick = () => { const f = $("#file"); f.dataset.id = b.dataset.up; f.value = ""; f.click(); });
   $("#file").onchange = upload;
+  $("#app").querySelectorAll("[data-na]").forEach(x => x.onclick = async e => { e.preventDefault();
+    const note = prompt("Tell the mall team why this does not apply to your unit (optional):", ""); if (note === null) return;
+    try { await call("/na", { certId: +x.dataset.na, note }); MSG = `<div class="msg ok">✓ Sent — the operations team will confirm.</div>`; D = await call(""); } catch (er){ MSG = `<div class="msg bad">${esc(er.message)}</div>`; } draw(); });
 }
 async function shrink(file){
   if (!/^image\//.test(file.type) || file.size < 1.5e6) return new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(file); });

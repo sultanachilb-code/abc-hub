@@ -1411,7 +1411,7 @@ function startHub(){
   const TEST_ADMIN = H.TESTING_ADMIN_ONLY || [];   // Upcoming - Testing is open to everyone (apart from the admin settings pages)
   const TC = ME.tools || {};   // Admin Control → Tools control: switched off · other folder · who sees it · new name
   APPS = ALL_APPS.map(a => TC[a.id] ? Object.assign({}, a, TC[a.id].group ? { group: TC[a.id].group } : {}, TC[a.id].name ? { name: TC[a.id].name } : {}) : a)
-    .filter(a => { const c = TC[a.id]; if (role === "ADMIN") return true; if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
+    .filter(a => { const c = TC[a.id]; if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
       return (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key); });
   if (ME.viewAs && !document.getElementById("vaBar")) {   // Admin Control: View as (read-only)
     const v = document.createElement("div"); v.id = "vaBar";
