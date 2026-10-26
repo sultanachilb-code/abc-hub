@@ -65,7 +65,7 @@ async function d1Usage(env) {
 const D1_NAMES = { "e7ae150f-de70-4376-a15b-65390159f65c": "Hub", "51391d36-fab9-4028-b5ae-26990a1f9c3d": "Restroom inspections", "61054354-17c3-4dfa-8658-be538e364003": "Incidents",
   "74b31408-7910-45ab-845f-720515654155": "Dashboard users", "74112098-468d-492d-8334-c06f3846a18e": "Wedding venue" };
 export const d1Limits = env => ({ reads: Number(env.D1_FREE_READS) || 5_000_000, writes: Number(env.D1_FREE_WRITES) || 100_000 });
-async function gql(env, query, variables) {
+export async function gql(env, query, variables) {
   const token = env.CF_ANALYTICS_TOKEN || env.CF_API_TOKEN, acc = env.CF_ACCOUNT_ID || "61f649b35159d4a26df7dde3c09a91dd";
   if (!token) throw Object.assign(new Error("Add the CF_API_TOKEN secret (Account Analytics: Read)"), { setup: false });
   const r = await fetch("https://api.cloudflare.com/client/v4/graphql", { method: "POST", signal: AbortSignal.timeout(12000),

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Admin Control Center · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="/tools/tools.css">
+<!-- Admin Control Center (administrators only) — docs/FEATURE-admin-cc.md -->
+<style>
+:root{--cbg:#F4F1F8;--ccard:#fff;--ctext:#221A2E;--cmut:#6D6479;--cline:#E6E0EE;--cok:#1E8A4C;--cwarn:#B8740F;--cbad:#C2283C;--cpaper:#FAF8FC}
+@media (prefers-color-scheme:dark){:root{--cbg:#120B1B;--ccard:#1C1429;--ctext:#EFEAF5;--cmut:#A99EB8;--cline:#2E2440;--cpaper:#231A33}}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--cbg);color:var(--ctext)}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+nav{background:linear-gradient(180deg,#2A0F45,#3A1660);color:#fff;padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+nav .lg{display:flex;gap:10px;align-items:center;padding:0 6px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px}
+nav .lg img{height:30px}nav .lg b{display:block;font-size:.98rem}nav .lg small{opacity:.7;font-size:.72rem}
+nav button,nav a{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;color:#E4DAF0;font:inherit;font-size:.87rem;font-weight:600;padding:10px;border-radius:10px;cursor:pointer;text-align:left;text-decoration:none}
+nav button:hover,nav a:hover{background:rgba(255,255,255,.08)}nav button.on{background:rgba(233,207,138,.18);color:#fff}
+nav .dt{margin-left:auto;width:8px;height:8px;border-radius:50%;display:none}nav .dt.on{display:block}
+nav .sep{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5;padding:12px 10px 4px}
+main{padding:20px 22px 70px;min-width:0}
+.hd{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.hd h1{font-size:1.3rem;margin:0}.hd small{display:block;color:var(--cmut);font-size:.8rem;margin-top:3px}
+.b{border:1px solid #4A1F73;background:#4A1F73;color:#fff;border-radius:10px;padding:7px 12px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.b.g{background:var(--ccard);color:#6B3FA0;border-color:var(--cline)}.b.r{background:var(--ccard);color:var(--cbad);border-color:var(--cbad)}.b:disabled{opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--ccard);border:1px solid var(--cline);border-radius:16px;padding:14px 16px}
+.card h3{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--cmut);display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;gap:6px}
+.card.click{cursor:pointer}.card.click:hover{border-color:#8A5CC0}
+.big{font-size:1.65rem;font-weight:800;line-height:1.15}.big small{font-size:.8rem;color:var(--cmut);font-weight:600}
+.sub{font-size:.78rem;color:var(--cmut);margin-top:5px;line-height:1.45}
+.meter{height:8px;border-radius:4px;background:var(--cpaper);overflow:hidden;margin:8px 0 4px;border:1px solid var(--cline)}.meter i{display:block;height:100%}
+.t-ok{color:var(--cok)}.t-warn{color:var(--cwarn)}.t-bad{color:var(--cbad)}.bg-ok{background:var(--cok)}.bg-warn{background:var(--cwarn)}.bg-bad{background:var(--cbad)}.bg-mut{background:#B9AFC7}
+.pill{font-size:.66rem;font-weight:800;border-radius:99px;padding:3px 8px;white-space:nowrap;display:inline-block}
+.p-ok{background:#E3F4EA;color:#1E7A4F}.p-warn{background:#FFF1D6;color:#8A5A00}.p-bad{background:#FDECEC;color:#B0283C}.p-mut{background:#EEE9F4;color:#5B4E70}
+.sec{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cmut);margin:22px 0 10px}
+.al{display:flex;gap:12px;align-items:center;background:var(--ccard);border:1px solid var(--cline);border-left:4px solid var(--cwarn);border-radius:12px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap}
+.al.bad{border-left-color:var(--cbad)}.al .m{flex:1;min-width:200px}.al b{display:block;font-size:.88rem}.al small{color:var(--cmut);font-size:.78rem}
+.allgood{background:var(--ccard);border:1px solid var(--cline);border-left:4px solid var(--cok);border-radius:12px;padding:12px 14px;font-weight:700}
+.tw{overflow-x:auto;background:var(--ccard);border:1px solid var(--cline);border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:.81rem;min-width:720px}
+th{text-align:left;font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--cmut);padding:9px 10px;border-bottom:1px solid var(--cline);background:var(--cpaper)}
+td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
+.mut{color:var(--cmut);font-size:.75rem}
+.av{width:30px;height:30px;border-radius:50%;background:#4A1F73;color:#fff;display:inline-grid;place-items:center;font-size:.68rem;font-weight:800;margin-right:8px;vertical-align:middle;flex:none}
+.who{display:flex;align-items:center}.who b{display:block;font-size:.84rem}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.flt{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.flt span{border:1px solid var(--cline);border-radius:99px;padding:5px 11px;font-size:.78rem;font-weight:700;cursor:pointer;background:var(--ccard)}.flt span.on{background:#2A0F45;color:#fff;border-color:#2A0F45}
+.flt input{flex:1;min-width:180px;border:1px solid var(--cline);border-radius:10px;padding:8px 10px;font:inherit;font-size:.84rem;background:var(--ccard);color:var(--ctext)}
+.sys{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.sy{background:var(--ccard);border:1px solid var(--cline);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center}
+.sy .d{width:10px;height:10px;border-radius:50%;flex:none}.sy b{display:block;font-size:.86rem}.sy small{color:var(--cmut);font-size:.74rem}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.tl{background:var(--ccard);border:1px solid var(--cline);border-radius:14px;padding:12px;display:grid;gap:8px}.tl.off{opacity:.6}
+.tl .t{display:flex;justify-content:space-between;align-items:center;gap:8px}.tl b{font-size:.88rem}
+.sw{width:42px;height:24px;border-radius:12px;background:#CFC6DC;position:relative;cursor:pointer;flex:none;border:0}.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
+.sw.on{background:var(--cok)}.sw.on::after{left:21px}
+.sel2{border:1px solid var(--cline);border-radius:8px;padding:6px 8px;font:inherit;font-size:.78rem;background:var(--ccard);color:var(--ctext);max-width:100%}
+.chips{display:flex;gap:4px;flex-wrap:wrap}.chips span{font-size:.66rem;font-weight:700;border-radius:6px;padding:2px 6px;background:var(--cpaper);color:var(--cmut);border:1px solid var(--cline)}
+.acc{display:flex;gap:4px;flex-wrap:wrap}.acc span{font-size:.7rem;font-weight:700;border-radius:99px;padding:4px 8px;border:1px solid var(--cline);cursor:pointer;background:var(--ccard)}.acc span.on{background:#4A1F73;color:#fff;border-color:#4A1F73}
+.page{display:none}.page.on{display:block}
+.spark{display:flex;gap:4px;align-items:flex-end;height:46px;margin-top:8px}.spark i{flex:1;background:#8A5CC0;border-radius:3px 3px 0 0;min-height:2px}.spark i.t{background:#E0A82E}
+dialog.cc{border:0;border-radius:18px;padding:0;width:min(460px,calc(100% - 24px));background:var(--ccard);color:var(--ctext)}dialog.cc .bd{padding:16px;display:grid;gap:8px}
+dialog.cc label{font-size:.76rem;font-weight:700;color:var(--cmut)}dialog.cc input{border:1px solid var(--cline);border-radius:10px;padding:9px;font:inherit;background:var(--ccard);color:var(--ctext)}
+.deny{max-width:460px;margin:80px auto;text-align:center;padding:24px}
+@media(max-width:860px){.app{grid-template-columns:1fr}nav{position:sticky;top:0;z-index:5;height:auto;display:flex;gap:2px;overflow-x:auto;padding:8px}nav .lg,nav .sep{display:none}nav button,nav a{white-space:nowrap;width:auto;padding:8px 10px}main{padding:14px 14px 70px}}
+</style>
+</head>
+<body>
+<div id="root"><p class="deny mut">Loading…</p></div>
+<dialog class="cc" id="dlg"></dialog>
+<script src="/apps.js"></script>
+<script src="/tools/common.js"></script>
+<script>
+"use strict";
+let ME = null, PAGE = (location.hash || "#ov").slice(1), UF = "all", UQ = "", USERS = null;
+const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["us", "👥", "Users & access"], ["sec", "🔐", "Security & sign-ins"], ["sep", "Platform"], ["al", "📊", "Allowances & usage"],
+  ["sy", "🔌", "Systems & jobs"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"], ["sep", "Content"], ["ct", "📣", "Announcements & more"]];
+const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
+const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
+const ago = iso => { if (!iso) return "—"; const t = Date.parse(iso.length <= 10 ? iso + "T12:00:00Z" : iso); if (!t) return iso; const m = Math.round((Date.now() - t) / 60000);
+  if (iso.length <= 10) return new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : m < 2880 ? "yesterday" : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: m > 400 * 1440 ? "numeric" : undefined }); };
+const dt = iso => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "—";
+const tone = (p, w = 70, b = 90) => p == null ? "mut" : p >= b ? "bad" : p >= w ? "warn" : "ok";
+const meter = (p, t) => `<div class="meter"><i class="bg-${t || tone(p)}" style="width:${Math.max(1, Math.min(100, p || 0))}%"></i></div>`;
+const pill = (t, txt) => `<span class="pill p-${t}">${txt}</span>`;
+const ini = s => String(s || "").split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+const V = h => { $("#main").innerHTML = h; };
+const head = (t, s, r = "") => `<div class="hd"><div><h1>${t}</h1><small>${s}</small></div><div style="display:flex;gap:8px;flex-wrap:wrap">${r}</div></div>`;
+
+async function boot(){
+  try { ME = await api("me"); } catch (e){ return; }
+  if (ME.viewAs) { $("#root").innerHTML = `<div class="deny card"><h2>You are viewing the hub as ${esc(ME.user.name)}</h2><p class="mut">Go back to your own account to use the Admin Control Center.</p><button class="b" id="vb">Back to my admin</button></div>`;
+    $("#vb").onclick = async () => { await fetch("/api/viewas-stop", { method: "POST" }); location.reload(); }; return; }
+  if (ME.user.role !== "ADMIN") { $("#root").innerHTML = `<div class="deny card"><h2>Administrators only</h2><p class="mut">This page is for hub administrators.</p><a class="b" href="/">Back to the hub</a></div>`; return; }
+  $("#root").innerHTML = `<div class="app"><nav id="nav"><div class="lg"><img src="/icons/abc-logo-white.png" alt="ABC"><div><b>Admin Control</b><small>${esc(ME.user.name)}</small></div></div>
+    ${NAV.map(n => n[0] === "sep" ? `<div class="sep">${n[1]}</div>` : `<button data-p="${n[0]}">${n[1]} ${n[2]}<span class="dt" id="dt-${n[0]}"></span></button>`).join("")}
+    <div class="sep">Hub</div><a href="/">← Back to the hub</a></nav><main id="main"></main></div>`;
+  $("#nav").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
+  go(PAGE);
+}
+function go(p){
+  PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
+  document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
+  V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
+  ({ ov, us, sec, al, sy, tl, bk, ct })[PAGE]().catch(e => V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+}
+function dotNav(id, t){ const d = $("#dt-" + id); if (d){ d.className = "dt" + (t ? " on bg-" + t : ""); } }
+
+/* ---------- overview ---------- */
+async function ov(){
+  const O = await api("admin/cc/overview");
+  const u = O.users, e = O.email, d1 = O.cloud.d1 || {}, st = O.cloud.storage || {}, wr = O.cloud.workers || {};
+  const d1p = d1.pct ? Math.max(d1.pct.reads || 0, d1.pct.writes || 0) : null;
+  dotNav("ov", O.alerts.some(a => a.tone === "bad") ? "bad" : O.alerts.length ? "warn" : "");
+  dotNav("sy", O.systems.down.length || O.jobs.bad.length ? "bad" : ""); dotNav("al", d1p >= 70 || (wr.pct || 0) >= 70 || O.ai.pct >= 70 ? "warn" : ""); dotNav("us", u.twofaMissing || u.locked ? "warn" : "");
+  const hr = new Date().getHours();
+  V(head(`${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(ME.user.name.split(" ")[0])}`, `Everything at a glance — green is fine, amber needs a look, red needs action · ${dt(O.at)}`, `<button class="b g" id="rf">↻ Refresh</button>`) +
+    (O.alerts.length ? O.alerts.map(a => `<div class="al ${a.tone === "bad" ? "bad" : ""}"><div class="m"><b>${esc(a.title)}</b>${a.sub ? `<small>${esc(a.sub)}</small>` : ""}</div><button class="b g" data-go="${a.where}">Open</button></div>`).join("")
+      : `<div class="allgood">✓ All good — nothing needs your attention.</div>`) +
+    `<div class="sec">Today</div><div class="grid">
+      <div class="card click" data-go="us"><h3>Users ${pill(u.locked || u.twofaMissing ? "warn" : "ok", u.locked ? u.locked + " locked" : u.twofaMissing ? "Check" : "OK")}</h3><div class="big">${u.active} <small>active accounts</small></div>
+        <div class="sub"><b class="t-ok">● ${u.online} online now</b> · ${u.today} active in 24 h · ${u.off} switched off${u.never ? ` · ${u.never} never signed in` : ""}</div></div>
+      <div class="card click" data-go="al"><h3>Emails today ${pill(e.auto ? "ok" : "warn", e.auto ? "Outlook" : "Relay only")}</h3><div class="big">${e.outlookSent} <small>sent by Outlook queue</small></div>
+        <div class="sub">${e.auto ? `Automatic sender ${esc(e.auto)}` : "No Outlook automatic sender chosen"} · ${e.outlookPeople} people connected${e.relaySet ? ` · relay ${e.relayLeft ?? "?"} of ${e.relayLimit} left` : ""}</div></div>
+      <div class="card click" data-go="al"><h3>Database (D1) ${pill(tone(d1p), d1p == null ? "—" : Math.round(d1p) + " %")}</h3><div class="big">${fmtN(d1.reads)} <small>rows read today</small></div>${d1p != null ? meter(d1p) : ""}
+        <div class="sub">${d1.error ? esc(d1.error) : `of ${fmtN(d1.limits && d1.limits.reads)} free · ${fmtN(d1.writes)} rows written · resets 03:00`}</div></div>
+      <div class="card click" data-go="al"><h3>Requests ${pill(tone(wr.pct), wr.pct == null ? "—" : Math.round(wr.pct) + " %")}</h3><div class="big">${fmtN(wr.total)} <small>today</small></div>${wr.pct != null ? meter(wr.pct) : ""}
+        <div class="sub">${wr.setup === false ? "Needs the CF_API_TOKEN secret" : wr.error ? esc(wr.error) : `of ${fmtN(wr.limit)} free (all workers) · ${fmtN(wr.errors)} errors`}</div></div>
+      <div class="card click" data-go="al"><h3>Files (R2) ${pill(tone(st.pct && st.pct.r2, 80, 95), st.pct && st.pct.r2 != null ? st.pct.r2 + " %" : "—")}</h3><div class="big">${fmtB(st.r2 && st.r2.bytes)} <small>stored</small></div>${st.pct && st.pct.r2 != null ? meter(st.pct.r2, tone(st.pct.r2, 80, 95)) : ""}
+        <div class="sub">Database size ${fmtB(st.d1 && st.d1.bytes)}</div></div>
+      <div class="card click" data-go="al"><h3>ABCON (AI) ${pill(tone(O.ai.pct, 60, 80), O.ai.pct + " %")}</h3><div class="big">${O.ai.pct} % <small>of the free daily AI</small></div>${meter(O.ai.pct, tone(O.ai.pct, 60, 80))}<div class="sub">Closes at 80 % · resets 03:00</div></div>
+      <div class="card click" data-go="sy"><h3>Systems ${pill(O.systems.down.length ? "bad" : "ok", O.systems.down.length ? O.systems.down.length + " down" : "OK")}</h3><div class="big">${O.systems.ok} / ${O.systems.total} <small>answering</small></div>
+        <div class="sub">${O.systems.down.length ? "Not answering: " + O.systems.down.map(esc).join(", ") : "All connected systems answer"} · checked ${ago(O.systems.at)}</div></div>
+      <div class="card click" data-go="sy"><h3>Scheduled jobs ${pill(O.jobs.bad.length ? "warn" : "ok", O.jobs.bad.length ? O.jobs.bad.length + " to check" : "OK")}</h3><div class="big">${O.jobs.ok} / ${O.jobs.total} <small>on time</small></div>
+        <div class="sub">${O.jobs.bad.length ? esc(O.jobs.bad.join(", ")) : "Morning email, PM, marketing, Outlook queue, backup…"}</div></div>
+      <div class="card click" data-go="bk"><h3>Backup ${pill(O.backup && O.backup.ok !== false ? "ok" : "warn", O.backup ? (O.backup.ok === false ? "Failed" : "OK") : "None")}</h3><div class="big">${O.backup ? ago(O.backup.at) : "—"}</div>
+        <div class="sub">${O.backup ? `Last backup ${dt(O.backup.at)}` : "No backup recorded yet"}</div></div>
+      <div class="card click" data-go="sec"><h3>Security ${pill(O.security.failed ? "warn" : "ok", O.security.failed ? O.security.failed + " failed" : "OK")}</h3><div class="big">${O.security.signins} <small>sign-ins in 24 h</small></div>
+        <div class="sub">${O.security.failed} wrong passwords · ${O.security.twofaMissing} without the required two-step${e.secretExp ? ` · Microsoft secret expires ${esc(e.secretExp)}` : ""}</div></div>
+    </div>`);
+  $("#rf").onclick = () => go("ov");
+  $("#main").querySelectorAll("[data-go]").forEach(x => x.onclick = () => go(x.dataset.go));
+}
+
+/* ---------- users ---------- */
+async function us(){
+  USERS = await api("admin/cc/users"); drawUsers();
+}
+function drawUsers(){
+  const L = USERS.users, F = { all: L, online: L.filter(u => u.online), locked: L.filter(u => u.locked || u.fails), nofa: L.filter(u => u.active && u.twofaRequired && !u.twofa.length), off: L.filter(u => !u.active), never: L.filter(u => u.active && !u.lastLoginAt) };
+  const q = UQ.toLowerCase(), rows = F[UF].filter(u => !q || [u.name, u.email, u.positionLabel, u.roleLabel, u.siteName, u.sitesLabel].join(" ").toLowerCase().includes(q));
+  V(head("Users &amp; access", `${L.length} accounts · role, flagships, two-step, last activity`, `<a class="b g" href="/#/admin" onclick="try{sessionStorage.setItem('adm.tab','users')}catch{}">Add / edit in People &amp; roles</a>`) +
+    `<div class="flt"><input id="uq" placeholder="Search name, email, position, flagship…" value="${esc(UQ)}">
+      ${[["all", "All"], ["online", "Online now"], ["locked", "Locked / wrong passwords"], ["nofa", "No two-step"], ["never", "Never signed in"], ["off", "Switched off"]].map(([k, n]) => `<span data-f="${k}" class="${UF === k ? "on" : ""}">${n} · ${F[k].length}</span>`).join("")}</div>
+    <div class="tw"><table><thead><tr><th>Person</th><th>Position · flagships</th><th>Two-step</th><th>Last active</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(u => `<tr><td><div class="who"><span class="av">${esc(ini(u.name))}</span><div><b>${esc(u.name)}</b><span class="mut">${esc(u.email)}</span></div></div></td>
+      <td>${esc(u.positionLabel || u.roleLabel)}<br><span class="mut">${esc(u.sitesLabel || u.siteName || "")}</span></td>
+      <td>${u.twofa.length ? u.twofa.map(w => pill("ok", esc(w))).join(" ") : u.twofaRequired ? pill("warn", "Required · not set") : pill("mut", "Not required")}</td>
+      <td>${u.online ? `<b class="t-ok"><span class="dot bg-ok"></span>online</b>` : esc(ago(u.lastSeen || u.lastLoginAt))}${u.outlook ? `<br><span class="mut">Outlook connected</span>` : ""}</td>
+      <td>${!u.active ? pill("mut", "Switched off") : u.locked ? pill("bad", "Locked") : u.fails ? pill("warn", u.fails + " wrong passwords") : pill("ok", "Active")}</td>
+      <td style="white-space:nowrap">${u.email !== USERS.me && u.active ? `<button class="b g" data-va="${esc(u.email)}">👁 View as</button> ` : ""}${u.locked ? `<button class="b g" data-ul="${esc(u.email)}">Unlock</button> ` : ""}<button class="b g" data-mo="${esc(u.email)}">⋯</button></td></tr>`).join("")
+      || `<tr><td colspan="6" class="mut" style="padding:16px">No one here.</td></tr>`}</tbody></table></div>`);
+  const qi = $("#uq"); qi.oninput = () => { UQ = qi.value; const p = qi.selectionStart; drawUsers(); const n = $("#uq"); n.focus(); n.setSelectionRange(p, p); };
+  $("#main").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { UF = x.dataset.f; drawUsers(); });
+  $("#main").querySelectorAll("[data-va]").forEach(x => x.onclick = () => viewAs(x.dataset.va));
+  $("#main").querySelectorAll("[data-ul]").forEach(x => x.onclick = async () => { await api("admin/cc/unlock", { email: x.dataset.ul }); toast("Unlocked"); us(); });
+  $("#main").querySelectorAll("[data-mo]").forEach(x => x.onclick = () => userMenu(USERS.users.find(u => u.email === x.dataset.mo)));
+}
+async function viewAs(email){
+  const u = USERS.users.find(x => x.email === email);
+  if (!(await confirmBox("View as " + u.name, `The hub opens exactly as <b>${esc(u.name)}</b> sees it (${esc(u.positionLabel || u.roleLabel)}) — read-only, for 30 minutes. It is recorded in the change history.`, "Open the hub as " + u.name.split(" ")[0]))) return;
+  try { await api("admin/cc/viewas", { email }); location.href = "/"; } catch (e){ toast(e.message, true); }
+}
+function userMenu(u){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="bd"><b>${esc(u.name)}</b><span class="mut">${esc(u.email)} · ${esc(u.positionLabel || u.roleLabel)}</span>
+    ${u.email !== USERS.me && u.active ? `<button class="b g" data-x="va">👁 View the hub as ${esc(u.name.split(" ")[0])}</button>` : ""}
+    <button class="b g" data-x="pw">🔑 Set a temporary password</button>
+    <button class="b g" data-x="fa">📱 Reset two-step login (lost / new phone)</button>
+    <button class="b g" data-x="so">⎋ Sign out of every device</button>
+    ${u.locked || u.fails ? `<button class="b g" data-x="ul">🔓 Unlock</button>` : ""}
+    ${u.email !== USERS.me ? `<button class="b ${u.active ? "r" : "g"}" data-x="ac">${u.active ? "Switch the account off" : "Switch the account on"}</button>` : ""}
+    <a class="b g" href="/#/admin" onclick="try{sessionStorage.setItem('adm.tab','users')}catch{}" style="text-align:center;text-decoration:none">Edit role / flagships in People &amp; roles</a>
+    <button class="b g" data-x="close">Close</button></div>`;
+  d.showModal();
+  d.onclick = async e => { const x = e.target.closest("[data-x]"); if (e.target === d) return d.close(); if (!x) return; const k = x.dataset.x;
+    try {
+      if (k === "close") return d.close();
+      if (k === "va") { d.close(); return viewAs(u.email); }
+      if (k === "pw") { const p = prompt(`Temporary password for ${u.name} (at least 8 characters). They will be asked to change it.`); if (!p) return; await api("admin/users/reset", { email: u.email, password: p }); toast("Temporary password set"); }
+      if (k === "fa") { if (!(await confirmBox("Reset two-step login", `${esc(u.name)} will set up two-step login again at the next sign-in.`, "Reset"))) return; await api("admin/2fa/reset", { email: u.email }); toast("Two-step reset"); }
+      if (k === "so") { await api("admin/cc/signout", { email: u.email }); toast(`${u.name} is signed out everywhere`); if (u.email === USERS.me) return location.href = "/"; }
+      if (k === "ul") { await api("admin/cc/unlock", { email: u.email }); toast("Unlocked"); }
+      if (k === "ac") { await api("admin/users/active", { email: u.email, active: !u.active }); toast(u.active ? "Switched off" : "Switched on"); }
+      d.close(); us();
+    } catch (er){ toast(er.message, true); } };
+}
+
+/* ---------- security ---------- */
+async function sec(){
+  const S = await api("admin/cc/security");
+  V(head("Security &amp; sign-ins", "Last 30 days — who signed in, wrong passwords, locks and admin actions", `<button class="b r" id="soa">Sign everyone out</button>`) +
+    `<div class="grid"><div class="card"><h3>Sign-ins · 24 h</h3><div class="big">${S.today.ok}</div></div>
+      <div class="card"><h3>Failed · 24 h</h3><div class="big ${S.today.failed ? "t-warn" : ""}">${S.today.failed}</div><div class="sub">5 wrong passwords in a row lock the account for 15 minutes</div></div>
+      <div class="card"><h3>Locked now</h3><div class="big ${S.locked.length ? "t-bad" : ""}">${S.locked.length}</div><div class="sub">${S.locked.map(l => esc(l.full_name)).join(", ") || "—"}</div></div>
+      <div class="card click" id="nofa"><h3>Two-step missing</h3><div class="big ${S.twofa.n ? "t-warn" : ""}">${S.twofa.n}</div><div class="sub">required for their role, not set up</div></div></div>
+    <div class="sec">Sign-in log</div>
+    <div class="tw"><table><thead><tr><th>Time</th><th>Person</th><th>Result</th><th>Device</th><th>IP</th></tr></thead><tbody>
+      ${S.log.map(r => `<tr><td>${esc(dt(r.at))}</td><td><b>${esc(r.name || r.email)}</b>${r.name ? `<br><span class="mut">${esc(r.email)}</span>` : ""}</td><td>${pill(r.ok ? "ok" : /locked/i.test(r.what) ? "bad" : "warn", esc(r.what || (r.ok ? "OK" : "Failed")))}</td><td>${esc(r.device)}</td><td class="mut">${esc(r.ip)}</td></tr>`).join("")
+        || `<tr><td colspan="5" class="mut" style="padding:16px">No sign-in recorded yet — the log starts with this update.</td></tr>`}</tbody></table></div>
+    <div class="sec">Admin actions</div>
+    <div class="tw"><table><thead><tr><th>Time</th><th>By</th><th>Action</th></tr></thead><tbody>
+      ${S.admin.map(r => `<tr><td>${esc(dt(r.at))}</td><td>${esc(r.by_name || "")}</td><td>${pill("mut", esc(r.action))} ${esc(r.label)}</td></tr>`).join("") || `<tr><td colspan="3" class="mut" style="padding:16px">Nothing yet.</td></tr>`}</tbody></table></div>`);
+  $("#soa").onclick = async () => { if (!(await confirmBox("Sign everyone out", "Everyone except you is signed out on every device and has to sign in again. Use it after a security problem.", "Sign everyone out"))) return; await api("admin/cc/signout-all", {}); toast("Everyone is signed out"); sec(); };
+  $("#nofa").onclick = () => { UF = "nofa"; go("us"); };
+}
+
+/* ---------- allowances ---------- */
+async function al(fresh){
+  const A = await api("admin/cc/allowances" + (fresh ? "?fresh=1" : "")), d1 = A.d1 || {}, st = A.storage || {}, wr = A.workers || {}, m = A.mail, q = m.relay;
+  const spark = (vals, lim) => { const mx = Math.max(lim || 0, ...vals, 1); return `<div class="spark">${vals.map((v, i) => `<i class="${i === vals.length - 1 ? "t" : ""}" style="height:${Math.max(4, v / mx * 100)}%" title="${fmtN(v)}"></i>`).join("")}</div>`; };
+  const L = d1.limits || {}, pc = st.pct || {};
+  V(head("Allowances &amp; usage", "Every free limit the hub depends on — the administrators get an alert at 80 % and 95 %", `<button class="b g" id="rf">↻ Read again now</button>`) +
+    `<div class="sec">Email</div><div class="grid">
+      <div class="card"><h3>Outlook (Microsoft 365)</h3><div class="big">${m.outlookSent} <small>sent today via the queue</small></div>
+        <div class="sub">${m.auto ? `Automatic sender <b>${esc(m.auto)}</b>` : `<b class="t-warn">No automatic sender chosen</b> — bulk emails fall back to the relay`} · ${m.waiting} waiting<br>${m.secretExp ? `Microsoft secret expires ${esc(m.secretExp)}` : `<b class="t-warn">Set the secret expiry date</b> in Hub administration`} · Microsoft allows ~10,000 recipients a day per mailbox</div></div>
+      <div class="card"><h3>Mail relay (Gmail)</h3>${q && q.remaining != null ? `<div class="big">${q.remaining} <small>of ${q.limit || (q.remaining > 100 ? 1500 : 100)} left today</small></div>${meter(100 - q.remaining / (q.limit || (q.remaining > 100 ? 1500 : 100)) * 100, tone(100 - q.remaining / (q.limit || 100) * 100, 60, 80))}` : `<div class="big">—</div>`}
+        <div class="sub">${m.relaySet ? `Fallback when Outlook is not used · ${q && q.account ? "sending as " + esc(q.account) + " · " : ""}checked ${ago(q && q.at)}` : "Not set up"}</div></div>
+      <div class="card"><h3>People sending from Outlook</h3><div class="big">${m.people.length}</div><div class="sub">${m.people.slice(0, 6).map(p => `${esc(p.full_name || p.email)} · ${p.sent} sent${p.last_error ? ` <span class="t-bad">· error</span>` : ""}`).join("<br>") || "Nobody connected yet"}</div></div></div>
+    <div class="sec">Cloudflare (free plan)</div><div class="grid">
+      <div class="card"><h3>Database rows read ${pill(tone(d1.pct && d1.pct.reads), d1.pct ? d1.pct.reads + " %" : "—")}</h3><div class="big">${fmtN(d1.reads)} <small>/ ${fmtN(L.reads)}</small></div>${d1.pct ? meter(d1.pct.reads) : ""}
+        <div class="sub">${d1.error ? esc(d1.error) : (d1.databases || []).slice(0, 3).map(x => `${esc(x.name)} ${fmtN(x.rowsRead)}`).join(" · ") + " · resets 03:00"}</div>${d1.days ? spark(d1.days.map(x => x.rowsRead), L.reads) : ""}</div>
+      <div class="card"><h3>Database rows written ${pill(tone(d1.pct && d1.pct.writes), d1.pct ? d1.pct.writes + " %" : "—")}</h3><div class="big">${fmtN(d1.writes)} <small>/ ${fmtN(L.writes)}</small></div>${d1.pct ? meter(d1.pct.writes) : ""}${d1.days ? spark(d1.days.map(x => x.rowsWritten), L.writes) : ""}</div>
+      <div class="card"><h3>Database size ${pill(tone(pc.d1, 80, 95), pc.d1 != null ? pc.d1 + " %" : "—")}</h3><div class="big">${fmtB(st.d1 && st.d1.bytes)} <small>/ ${fmtB(st.limits && st.limits.d1Bytes)}</small></div>${pc.d1 != null ? meter(pc.d1, tone(pc.d1, 80, 95)) : ""}</div>
+      <div class="card"><h3>Requests (all workers) ${pill(tone(wr.pct), wr.pct != null ? wr.pct + " %" : "—")}</h3><div class="big">${fmtN(wr.total)} <small>/ ${fmtN(wr.limit)} today</small></div>${wr.pct != null ? meter(wr.pct) : ""}
+        <div class="sub">${wr.setup === false ? "Needs the CF_API_TOKEN secret" : wr.error ? esc(wr.error) : (wr.list || []).slice(0, 4).map(x => `${esc(x.name)} ${fmtN(x.requests)}`).join(" · ")}</div></div>
+      <div class="card"><h3>File storage (R2) ${pill(tone(pc.r2, 80, 95), pc.r2 != null ? pc.r2 + " %" : "—")}</h3><div class="big">${fmtB(st.r2 && st.r2.bytes)} <small>/ ${fmtB(st.limits && st.limits.r2Bytes)}</small></div>${pc.r2 != null ? meter(pc.r2, tone(pc.r2, 80, 95)) : ""}
+        <div class="sub">${st.r2 && st.r2.error ? esc(st.r2.error) : `${fmtN(st.r2 && st.r2.objects)} files · this month: ${fmtN(st.r2 && st.r2.classA)} writes (${pc.classA ?? "—"} %) · ${fmtN(st.r2 && st.r2.classB)} reads (${pc.classB ?? "—"} %)`}</div></div></div>
+    <div class="sec">ABCON & other</div><div class="grid">
+      <div class="card"><h3>ABCON (Workers AI) ${pill(tone(A.ai.used / A.ai.free * 100, 60, 80), Math.round(A.ai.used / A.ai.free * 100) + " %")}</h3><div class="big">${fmtN(A.ai.used)} <small>/ ${fmtN(A.ai.free)} neurons</small></div>${meter(A.ai.used / A.ai.free * 100, tone(A.ai.used / A.ai.free * 100, 60, 80))}
+        <div class="sub">Closes at ${fmtN(A.ai.closeAt)} (80 %) so it never costs money · resets 03:00</div>${spark(A.ai.days.map(x => x.used), A.ai.free)}</div>
+      <div class="card"><h3>Emergency SMS / calls</h3><div class="big">${A.sms.set ? "Set up" : "—"}</div><div class="sub">${A.sms.set ? "Twilio — check the balance in the Twilio console" : "Twilio is not set up"}</div></div></div>`);
+  $("#rf").onclick = () => { V(`<p class="mut">Reading Cloudflare and the relay…</p>`); al(true).catch(e => toast(e.message, true)); };
+}
+
+/* ---------- systems & jobs ---------- */
+async function sy(fresh){
+  const S = await api("admin/cc/systems" + (fresh ? "?fresh=1" : ""));
+  V(head("Systems &amp; jobs", `Connected systems, settings and the automatic jobs · checked ${ago(S.at)}`, `<button class="b g" id="ta">↻ Test all now</button>`) +
+    `<div class="sec">Connected systems</div><div class="sys">${S.list.map(s => `<div class="sy"><span class="d bg-${s.ok ? (s.warn ? "warn" : "ok") : "bad"}"></span><div><b>${esc(s.name)}</b><small>${s.ok ? (s.ms != null ? `Answers · ${s.ms} ms` : "OK") : "Not answering"}${s.note ? " · " + esc(s.note) : ""}</small></div></div>`).join("")}</div>
+    <div class="sec">Automatic jobs</div><div class="tw"><table><thead><tr><th>Job</th><th>When</th><th>Last run</th><th>Status</th><th></th></tr></thead><tbody>
+      ${S.jobs.map(j => `<tr><td><b>${esc(j.name)}</b>${j.note ? `<br><span class="mut">${esc(j.note)}</span>` : ""}</td><td class="mut">${esc(j.when)}</td><td>${esc(j.last ? (j.last.length <= 10 ? ago(j.last) : dt(j.last)) : "—")}</td>
+        <td>${pill(j.ok ? "ok" : j.id === "cron" ? "bad" : "warn", j.ok ? "OK" : "Check")}</td><td>${j.run ? `<button class="b g" data-run="${j.run}">${esc(j.runLabel || "Run now")}</button>` : ""}</td></tr>`).join("")}</tbody></table></div>
+    <div class="sec">Settings &amp; secrets <span class="mut" style="text-transform:none;letter-spacing:0">— names only, values are never shown · set them in Cloudflare → Workers → operations-hub → Settings</span></div>
+    <div class="tw"><table><thead><tr><th>Setting</th><th>Used for</th><th>Status</th></tr></thead><tbody>
+      ${S.secrets.map(s => `<tr><td><code>${esc(s.name)}</code></td><td>${esc(s.use)}</td><td>${s.set ? pill("ok", "Set") : pill(s.required ? "bad" : "mut", s.required ? "Missing" : "Not set")}</td></tr>`).join("")}</tbody></table></div>`);
+  $("#ta").onclick = () => { V(`<p class="mut">Testing every system…</p>`); sy(true).catch(e => toast(e.message, true)); };
+  $("#main").querySelectorAll("[data-run]").forEach(b => b.onclick = async () => {
+    const j = b.dataset.run;
+    if (j === "backup") return location.href = "/api/admin/backup";
+    if (j === "morning-test") { b.disabled = true; try { const r = await api("admin/morning-test", {}); toast("Test sent to " + r.to); } catch (e){ toast(e.message, true); } b.disabled = false; return; }
+    if (j === "eod-test") { b.disabled = true; try { const r = await api("admin/eod-test", { site: ME.user.site || "VRM" }); toast("Test sent to " + r.to); } catch (e){ toast(e.message, true); } b.disabled = false; return; }
+    if ((j === "pm" || j === "mk") && !(await confirmBox("Run the job now", "This runs today's job again now — tenants who are due a reminder will get it.", "Run now"))) return;
+    b.disabled = true; try { const r = await api("admin/cc/run", { job: j }); toast(r.done); sy(); } catch (e){ b.disabled = false; toast(e.message, true); } });
+}
+
+/* ---------- tools control ---------- */
+async function tl(){
+  const T = await api("admin/cc/tools"), cfg = T.cfg, APPS = (window.HUB && window.HUB.APPS) || [], ACC = (window.HUB && window.HUB.ACCESS) || {};
+  const groups = [...new Set(APPS.map(a => a.group).concat(Object.values(cfg).map(c => c.group).filter(Boolean)))];
+  let fq = "", fg = "";
+  const draw = () => {
+    const list = APPS.filter(a => (!fq || (a.name + " " + a.id).toLowerCase().includes(fq)) && (!fg || (cfg[a.id] && cfg[a.id].group || a.group) === fg));
+    $("#tlist").innerHTML = list.map(a => { const c = cfg[a.id] || {}, u = T.usage[a.id] || {}, acc = c.access || ACC[a.id] || null, g = c.group || a.group;
+      return `<div class="tl ${c.off ? "off" : ""}" data-id="${a.id}"><div class="t"><b>${esc(c.name || a.name)}</b><button class="sw ${c.off ? "" : "on"}" data-sw title="${c.off ? "Switched off" : "On"}"></button></div>
+        <select class="sel2" data-g>${groups.map(x => `<option ${x === g ? "selected" : ""}>${esc(x)}</option>`).join("")}<option value="__new">＋ New folder…</option></select>
+        <div class="acc" data-acc>${Object.entries(T.keys).map(([k, n]) => `<span data-k="${k}" class="${!acc || acc.includes(k) ? "on" : ""}" title="${esc(n)}">${k}</span>`).join("")}</div>
+        <div class="chips"><span>${c.access ? "custom access" : g === "Upcoming - Testing" ? "testing: open to everyone" : acc ? "default access" : "everyone"}</span><span>${u.n || 0} opens · ${u.people || 0} people · 7 days</span>${c.group ? `<span>moved from ${esc(a.group)}</span>` : ""}
+          ${Object.keys(c).length ? `<span style="cursor:pointer;color:#B0283C" data-reset>↺ default</span>` : ""}</div></div>`; }).join("") || `<p class="mut">No tool matches.</p>`;
+    $("#tlist").querySelectorAll(".tl").forEach(el => { const id = el.dataset.id, a = APPS.find(x => x.id === id);
+      const save = async body => { try { const r = await api("admin/cc/tools", { id, ...body }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg); toast("Saved — people see it at their next refresh"); draw(); } catch (e){ toast(e.message, true); } };
+      el.querySelector("[data-sw]").onclick = () => save({ off: !(cfg[id] && cfg[id].off) });
+      el.querySelector("[data-g]").onchange = e => { let v = e.target.value; if (v === "__new") { v = prompt("Name of the new folder"); if (!v) return draw(); groups.push(v); } save({ group: v === a.group ? "" : v }); };
+      el.querySelector("[data-acc]").onclick = e => { const s = e.target.closest("[data-k]"); if (!s) return; s.classList.toggle("on"); const on = [...el.querySelectorAll("[data-k].on")].map(x => x.dataset.k);
+        save({ access: on.length === Object.keys(T.keys).length ? null : on }); };
+      const rs = el.querySelector("[data-reset]"); if (rs) rs.onclick = () => save({ off: false, group: "", access: null, name: "" }); });
+  };
+  V(head("Tools control", "Switch a tool off, move it to another folder, choose who sees it — no code change. Administrators always see every tool.") +
+    `<div class="flt"><input id="tq" placeholder="Search tools…"><select class="sel2" id="tg"><option value="">All folders</option>${groups.map(g => `<option>${esc(g)}</option>`).join("")}</select></div>
+    <p class="mut" style="margin:0 0 10px">Who sees it: ${Object.entries(T.keys).map(([k, n]) => `<b>${k}</b> ${esc(n)}`).join(" · ")}. All ticked = the tool's default access.</p>
+    <div class="tools" id="tlist"></div>`);
+  $("#tq").oninput = e => { fq = e.target.value.toLowerCase(); draw(); }; $("#tg").onchange = e => { fg = e.target.value; draw(); };
+  draw();
+}
+
+/* ---------- data & backup ---------- */
+async function bk(fresh){
+  const B = await api("admin/cc/data" + (fresh ? "?fresh=1" : "")), t = B.sizes.tables || [], b = B.backup;
+  V(head("Data &amp; backup", "Backups, the biggest tables and clean-up", `<a class="b" href="/api/admin/backup">⇣ Download a full backup now</a>`) +
+    `<div class="grid"><div class="card"><h3>Last automatic backup</h3><div class="big">${b ? ago(b.at) : "—"}</div><div class="sub">${b ? `${dt(b.at)} · ${b.ok === false ? `<b class="t-bad">failed: ${esc(b.error || "")}</b>` : "OK"}${b.bytes ? " · " + fmtB(b.bytes) : ""}` : "None recorded"} · weekly by email + monthly to Google Drive (Hub Backups)</div></div>
+      <div class="card"><h3>Database</h3><div class="big">${fmtB(B.storage && B.storage.d1 && B.storage.d1.bytes)}</div><div class="sub">${t.length} tables · ${fmtN(t.reduce((s, x) => s + (x.rows || 0), 0))} rows · counted ${ago(B.sizes.at)}</div></div></div>
+    <div class="sec">Clean-up</div><div class="grid">
+      ${[["events", "Notifications older than 90 days", B.clean.events], ["usage", "Usage log older than 1 year", B.clean.usage], ["signins", "Sign-in log older than 90 days", B.clean.signins], ["queue", "Sent Outlook emails older than 90 days", B.clean.queue]]
+        .map(([k, n, c]) => `<div class="card"><h3>${n}</h3><div class="big">${fmtN(c)} <small>rows</small></div><button class="b g" style="margin-top:8px" data-cl="${k}" ${c ? "" : "disabled"}>Clean now</button></div>`).join("")}</div>
+    <div class="sec">Tables <button class="b g" id="ct" style="margin-left:8px">↻ Count again</button></div>
+    <div class="tw"><table style="min-width:420px"><thead><tr><th>Table</th><th>Rows</th></tr></thead><tbody>${t.slice(0, 60).map(x => `<tr><td><code>${esc(x.name)}</code></td><td>${fmtN(x.rows)}</td></tr>`).join("")}</tbody></table></div>`);
+  $("#ct").onclick = () => { V(`<p class="mut">Counting…</p>`); bk(true).catch(e => toast(e.message, true)); };
+  $("#main").querySelectorAll("[data-cl]").forEach(x => x.onclick = async () => { if (!(await confirmBox("Clean up", "These old rows are deleted for good (they are still in earlier backups).", "Delete"))) return;
+    const r = await api("admin/cc/clean", { what: x.dataset.cl }); toast(`${r.removed} rows removed`); bk(); });
+}
+
+/* ---------- content (existing admin tabs) ---------- */
+async function ct(){
+  const L = [["announcements", "📣 Announcements", "Messages on everyone's home screen"], ["users", "👥 People & roles", "Add people, roles, flagships, ops groups, two-step policy"], ["usage", "📈 Usage", "Which tools are used, by whom"],
+    ["control", "🗂 Control sheet", "Links to every system, GitHub and Cloudflare"], ["backup", "💾 Backup", "Backup status and test emails"], ["covers", "🖼 Flagship covers", "Cover pictures per flagship"],
+    ["history", "🕘 Change history", "Every change made in the hub"], ["storage", "☁️ Storage", "Cloudflare storage details"]];
+  V(head("Announcements &amp; more", "The other admin screens — they open in Hub administration") +
+    `<div class="grid">${L.map(([k, n, s]) => `<a class="card click" style="text-decoration:none;color:inherit" href="/#/admin" data-t="${k}"><h3>${n}</h3><div class="sub">${s}</div></a>`).join("")}
+      <a class="card click" style="text-decoration:none;color:inherit" href="/#/app/seasons"><h3>🎃 Seasons</h3><div class="sub">Seasonal decorations</div></a>
+      <a class="card click" style="text-decoration:none;color:inherit" href="/#/app/moments"><h3>💬 Message of the moment</h3><div class="sub">Friendly lines above Day to Day</div></a></div>`);
+  $("#main").querySelectorAll("[data-t]").forEach(a => a.onclick = () => { try { sessionStorage.setItem("adm.tab", a.dataset.t); } catch {} });
+}
+boot();
+</script>
+</body>
+</html>
