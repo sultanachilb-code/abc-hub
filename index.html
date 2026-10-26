@@ -1411,7 +1411,7 @@ function startHub(){
   const TEST_ADMIN = H.TESTING_ADMIN_ONLY || [];   // Upcoming - Testing is open to everyone (apart from the admin settings pages)
   const TC = ME.tools || {};   // Admin Control → Tools control: switched off · other folder · who sees it · new name
   APPS = ALL_APPS.map(a => TC[a.id] ? Object.assign({}, a, TC[a.id].group ? { group: TC[a.id].group } : {}, TC[a.id].name ? { name: TC[a.id].name } : {}) : a)
-    .filter(a => !a.hidden).filter(a => { const c = TC[a.id]; if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
+    .filter(a => { const c = TC[a.id]; if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
       return (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key); });
   if (ME.viewAs && !document.getElementById("vaBar")) {   // Admin Control: View as (read-only)
     const v = document.createElement("div"); v.id = "vaBar";
@@ -2667,7 +2667,7 @@ $("#brief").addEventListener("click", e => { const c = e.target.closest(".brow, 
 
 
 /* ---------- iOS-style folders: a section folds into one tile; tap → it zooms open over a blurred home ---------- */
-const FOLDER_GROUPS = ["Property Overview & Info", "Tenant Management", "Policies & Procedures"];   /* Operations Projects and Budget opens from its tile in Property Overview & Info */
+const FOLDER_GROUPS = ["Property Overview & Info", "Tenant Works & Related", "Tenant Management", "Micro Tools"];   /* small folders fold into one tile (Oct 2026) */
 const folderApps = g => APPS.filter(a => inG(a, g) && !a.hidden);
 function folderTile(g){
   const list = folderApps(g); if (!list.length) return "";
@@ -2743,7 +2743,7 @@ document.addEventListener("click", e => { if (e.target.id === "moX" && MOM.m){ s
 /* ---------- Day to Day Operations: today's live timeline above Leadership (see docs/FEATURE-day-to-day.md) ---------- */
 const DAY_GROUP = "Day to Day Operations";
 const D2D = { data: null, err: "", site: store.get("hub.d2dSite", ""), scrolled: false, t: 0 };
-const D2D_ORDER = ["handover", "forms", "contractor-access", "schedule-calendar", "mom"];   // the order of the Day to Day cards (Oct 2026)
+const D2D_ORDER = ["handover", "forms", "form-dbank", "crm", "mom", "malfunctions", "tenants", "feedback"];   // the order of the Day to Day cards (Oct 2026)
 const d2dApps = () => APPS.filter(a => inG(a, DAY_GROUP) && !a.hidden).sort((a, b) => ((D2D_ORDER.indexOf(a.id) + 1) || 99) - ((D2D_ORDER.indexOf(b.id) + 1) || 99));
 const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
@@ -2990,8 +2990,8 @@ const HL_KINDS = [["cards", "Smart cards", '<rect x="3" y="3" width="8" height="
   ["carousel", "3D Carousel", '<rect x="8" y="5" width="8" height="14" rx="2"/><path d="M5 7v10M19 7v10M2 9v6M22 9v6"/>']];
 let HL = (() => { const v = store.get("hub.layout", "cards"); return HL_KINDS.some(k => k[0] === v) ? v : "cards"; })();
 const HLS = { orb: null };
-const HL_SHORT = { "Operations Tools": "Ops Tools", "Incidents, Security & Footfall": "Incidents & Footfall",
-  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day", "Upcoming - Testing": "Testing", "Dashboard and Reports": "Dashboards & Reports", "Operations Communication": "Ops Communication" };
+const HL_SHORT = { "Day to Day Operations": "Day to Day", "Property Overview & Info": "Property", "Tenant Works & Related": "Tenant Works", "Tenant Management": "Tenants",
+  "Access and Security": "Access & Security", "Hub Applications": "Hub Apps", "Upcoming - Testing": "Testing" };
 const hlSvg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const hlCount = L => L.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
 const hlApp = (a, cls = "", st = "") => { const ok = appReady(a);
