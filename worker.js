@@ -1858,7 +1858,7 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
   if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content
-  if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday });   // Tenant 360
+  if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday, canSales: roleAllows(me, "sales") });   // Tenant 360
   if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("patrol/")) return patrolRoute(env, p, method, b, url, { site, me, can, canSite, full: isFull(me), now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Security Patrol

@@ -105,8 +105,9 @@ function draw(){
     $("#app").innerHTML = `<div class="card lock">🔒 <span><b>Nothing is saved.</b> The sales file is read on this device only — closing or refreshing the page removes it, as in the Executive Report.</span></div>
       <div class="card drop" id="drop">📊 <b>Upload the Leasing Sales Performance YTD file</b><br><small>The same workbook as the Executive Report (Sales Data Conso)</small></div>`;
     const dr = $("#drop"); dr.onclick = () => $("#file").click(); dr.ondragover = e => e.preventDefault(); dr.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
-    return;
+    share(); return;
   }
+  share();
   if (card) return drawCard();
   const D = S.D, A = build(), units = D.units.filter(u => /mall$|department store$/i.test(u));
   const tot = A.tp > 0 ? (A.tc / A.tp - 1) * 100 : NaN;
@@ -216,6 +217,14 @@ async function drawCard(){
       <div class="li">Contract: ${U.contract ? `<b>${esc(U.contract.no)}</b> · ends ${esc(U.contract.end || "—")}${U.contract.daysLeft != null ? ` (${U.contract.daysLeft} d)` : ""}` : "not in the Contracts report"}</div>`;
   } catch (e){ $("#hubBox").innerHTML = `<div class="li muted">${esc(e.message)}</div>`; }
 }
+/* Tenant 360: the page that holds this one gets the figures (still only in memory — nothing is saved) */
+function share(){ try { if (parent === window || !parent.onSales) return; if (!S) return parent.onSales(null);
+  const A = build(); parent.onSales({ file: S.file, year: S.D.year, prevYear: S.D.prevYear, M, BU, tc: A.tc, tp: A.tp, sp: A.sp,
+    cats: A.cats.map(c => ({ cat: c.cat, n: c.n, c: c.c, p: c.p, dp: c.dp, sqm: c.sqm })),
+    T: A.T.map(x => ({ name: x.name, cat: x.cat, grp: x.grp, space: x.space, c: x.c, p: x.p, dp: x.dp, sqm: x.sqm, rank: x.rank, of: x.of, cur: x.cur.slice(0, M) })) }); } catch {} }
+function openCard(name){ if (!S) return false; card = { name }; drawCard(); return true; }
+function pickFile(){ $("#file").click(); }
+function salesReady(){ return !!ctx; }
 $("#file").onchange = e => { if (e.target.files[0]) load(e.target.files[0]); e.target.value = ""; };
 boot();
 </script>
