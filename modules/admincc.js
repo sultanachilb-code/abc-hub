@@ -22,8 +22,14 @@ export async function admSchema(env) {
     env.DB.prepare("CREATE INDEX IF NOT EXISTS admin_signins_at ON admin_signins (at)")
   ]);
   const cols = ((await env.DB.prepare("PRAGMA table_info(users)").all()).results || []).map(c => c.name);
-  for (const [c, t] of [["last_seen_at", "TEXT NOT NULL DEFAULT ''"], ["signout_at", "INTEGER NOT NULL DEFAULT 0"], ["fail_count", "INTEGER NOT NULL DEFAULT 0"], ["locked_until", "TEXT NOT NULL DEFAULT ''"]])
+  for (const [c, t] of [["last_seen_at", "TEXT NOT NULL DEFAULT ''"], ["signout_at", "INTEGER NOT NULL DEFAULT 0"], ["fail_count", "INTEGER NOT NULL DEFAULT 0"], ["locked_until", "TEXT NOT NULL DEFAULT ''"], ["is_admin", "INTEGER NOT NULL DEFAULT 0"]])
     if (!cols.includes(c)) await env.DB.prepare(`ALTER TABLE users ADD COLUMN ${c} ${t}`).run();
+  /* Oct 2026: administrator access becomes a flag next to the person's real role (Sultan: Admin + Mall Supervisor at ABC Verdun Mall) */
+  const mig = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('mig:admin-split', ?)").bind(new Date().toISOString()).run().catch(() => null);
+  if (mig && mig.meta && mig.meta.changes === 1) {
+    await env.DB.prepare("UPDATE users SET is_admin = 1 WHERE role = 'ADMIN'").run();
+    await env.DB.prepare("UPDATE users SET role = 'SUPERVISOR', position = 'MS', site_code = 'VRM', sites = '' WHERE email = 'salaachi@abc.com.lb' AND role = 'ADMIN'").run();
+  }
 }
 
 /* ---------- sign-in protection (called from login) ---------- */
@@ -317,7 +323,7 @@ export async function admRun(env, d) {
   const hour = d.hour(); if (hour < 7 || hour > 22) return;   // no alerts at night
   await systems(env, d, true);
   const o = await overview(env, d);
-  const day = d.today(), admins = ((await env.DB.prepare("SELECT email FROM users WHERE role = 'ADMIN' AND active = 1").all()).results || []).map(r => r.email);
+  const day = d.today(), admins = ((await env.DB.prepare("SELECT email FROM users WHERE (role = 'ADMIN' OR is_admin = 1) AND active = 1").all()).results || []).map(r => r.email);
   for (const a of o.alerts.filter(x => x.tone === "bad")) {
     const k = `cc:alerted:${day}:${a.key}`;
     const r = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(k, "1").run().catch(() => null);

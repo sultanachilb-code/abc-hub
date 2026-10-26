@@ -464,8 +464,10 @@ async function readSession(request, env) {
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(p.e).first();
   if (!u || !u.active) return null;
   if (u.signout_at && (Number(p.i) || 0) < Number(u.signout_at)) return null;   // Admin Control: "sign out everywhere"
+  const isAdm = u.role === "ADMIN" || !!u.is_admin;   // Admin Control: an administrator may also have a real role (e.g. Mall Supervisor)
+  if (isAdm) u._admUnlocked = await admUnlocked(request, env, u.email);
   /* Admin Control: "View as" — an administrator sees the hub as another person, read-only */
-  if (u.role === "ADMIN") {
+  if (isAdm) {
     const v = (request.headers.get("cookie") || "").match(/(?:^|;\s*)hub_viewas=([^;]+)/);
     if (v) {
       const [vb, vs] = v[1].split(".");
@@ -479,7 +481,18 @@ async function readSession(request, env) {
     }
   }
   await touchSeen(env, u);
+  /* Administrator mode: an admin with a real role works in the hub with that role; after the ABC logo + password the hub opens as administrator */
+  if (u.is_admin && u.role !== "ADMIN" && u._admUnlocked) {
+    u._real = { role: u.role, position: u.position, site: u.site_code || "", roleLabel: (POSITIONS[u.position] || TITLES[u.position] || {}).label || ROLES[u.role] || u.role };
+    u.role = "ADMIN"; u._adminMode = true;
+  }
   return u;
+}
+const isAdminUser = u => !!u && (u.role === "ADMIN" || !!u.is_admin);
+async function admUnlocked(request, env, email) {
+  const m = (request.headers.get("cookie") || "").match(/(?:^|;\s*)hub_adm=([^;]+)/); if (!m) return false;
+  const [vb, vs] = m[1].split("."); if (!vb || !vs || !same(await hmac(env.SESSION_SECRET, "adm." + vb), vs)) return false;
+  try { const q = JSON.parse(new TextDecoder().decode(unb64url(vb))); return q.e === email && q.exp > Date.now(); } catch { return false; }
 }
 async function viewAsCookie(env, admin, target) {
   const exp = Date.now() + VIEWAS_MIN * 60000, body = b64url(enc.encode(JSON.stringify({ a: admin, t: target, exp })));
@@ -642,8 +655,10 @@ async function route(request, env, ctx, url) {
   if (me._viewAs && (method !== "GET" || path === "sso")) throw fail(`View as ${me.full_name} is read-only — press “Back to my admin” to make changes`, 403);
   if (path === "me") {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
-    return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: !me._viewAs && roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES,
-      tools: toolsCfgNow(), viewAs: me._viewAs || null });
+    const effRole = me._real ? me._real.role : me.role;   // administrator mode: two-step follows the person's real role
+    return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on } }, sites: SITES, roles: ROLES,
+      tools: toolsCfgNow(), viewAs: me._viewAs || null,
+      admin: isAdminUser(me) ? { mode: !!me._adminMode || (me.role === "ADMIN" && !!me._admUnlocked), unlocked: !!me._admUnlocked, real: me._real || null, split: !!me.is_admin && (me._real ? me._real.role : me.role) !== "ADMIN" } : null });
   }
   if (path.startsWith("fu/")) return ok(await followupRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, { today: beirutToday, now: nowIso }));   // Follow-ups
   if (path.startsWith("ms/")) return ok(await outlookRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, HUB_URL));   // Outlook sending
@@ -724,8 +739,10 @@ async function route(request, env, ctx, url) {
 
   /* ----- admin ----- */
   if (path.startsWith("admin/")) {
-    if (me.role !== "ADMIN") throw fail("Administrator access only", 403);
+    if (!isAdminUser(me)) throw fail("Administrator access only", 403);
     const a = path.slice(6);
+    /* everything in administration needs the admin password again (ABC logo) — kept 2 hours on the device */
+    if (a !== "unlock" && a !== "lock" && !me._admUnlocked) throw fail("Enter your admin password to open the Admin Control Center", 428, { needsAdminPassword: true });
     if (a === "unlock" && method === "POST") {   // Admin Control Center: the admin's password again (ABC logo / /admin) — opens it for 2 hours on this device
       const lk = lockedMsg(me); if (lk) throw fail(lk, 423);
       if (!same(await derive(String(body.password || ""), me.salt, me.iterations || ROUNDS), me.hash)) {
@@ -739,9 +756,6 @@ async function route(request, env, ctx, url) {
     }
     if (a === "lock" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": "hub_adm=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict" });
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
-      { const m = (request.headers.get("cookie") || "").match(/(?:^|;\s*)hub_adm=([^;]+)/); let okA = false;
-        if (m) { const [vb, vs] = m[1].split("."); if (vb && vs && same(await hmac(env.SESSION_SECRET, "adm." + vb), vs)) { const q = JSON.parse(new TextDecoder().decode(unb64url(vb))); okA = q.e === me.email && q.exp > Date.now(); } }
-        if (!okA) throw fail("Enter your admin password to open the Admin Control Center", 428, { needsAdminPassword: true }); }
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie,
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
         outlookRun: e => outlookRun(e, { today: beirutToday, notifyAdmins, fallback: relayScript }) });
@@ -836,7 +850,7 @@ const twofaDeps = {
   relay: (env, m) => relay(env, m),   // email sign-in codes
   checkPassword: async (me, p) => !!p && same(await derive(p, me.salt, me.iterations || ROUNDS), me.hash),
   alertAdmins: async (env, title, body) => {
-    const { results } = await env.DB.prepare("SELECT p.* FROM push_subs p JOIN users u ON u.email = p.email WHERE u.role = 'ADMIN' AND u.active = 1").all();
+    const { results } = await env.DB.prepare("SELECT p.* FROM push_subs p JOIN users u ON u.email = p.email WHERE (u.role = 'ADMIN' OR u.is_admin = 1) AND u.active = 1").all();
     await Promise.all((results || []).map(sub => sendPush(env, sub, { title, body, url: "/#/admin", tone: "alert", tag: "twofa-denied" })));
   }
 };
@@ -872,9 +886,9 @@ async function changePassword(env, me, b) {
 }
 async function listUsers(env) {
   const { results } = await env.DB.prepare(
-    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position FROM users ORDER BY role, full_name").all();
+    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position, is_admin FROM users ORDER BY role, full_name").all();
   return {
-    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "",
+    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin,
       morningEmail: !!u.morning_email, morningEligible: isFull(u) })),
     sites: SITES, roles: ROLES,
     positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
@@ -921,16 +935,18 @@ async function saveUser(env, me, b) {
   const morning = b.morningEmail === false ? 0 : 1;
   if (exists) {
     if (b.isNew) throw fail("That email already has an account");
-    if (email === me.email && role !== "ADMIN") throw fail("You cannot remove your own admin role");
-    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=? WHERE email=?")
-      .bind(name, role, site || null, sites, morning, position, email).run();
+    const adminFlag = "isAdmin" in b ? (b.isAdmin || role === "ADMIN" ? 1 : 0) : null;
+    if (email === me.email && role !== "ADMIN" && adminFlag === 0) throw fail("You cannot remove your own administrator access");
+    if (email === me.email && role !== "ADMIN" && adminFlag === null && !(await env.DB.prepare("SELECT is_admin FROM users WHERE email = ?").bind(email).first()).is_admin) throw fail("You cannot remove your own administrator access — tick “Hub administrator”");
+    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=?, is_admin = COALESCE(?, is_admin) WHERE email=?")
+      .bind(name, role, site || null, sites, morning, position, adminFlag, email).run();
     return { email, created: false };
   }
   const password = String(b.password || "");
   if (password.length < 8) throw fail("Set a temporary password of at least 8 characters");
   const h = await hashFor(password);
-  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position)
-    VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position).run();
+  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position, is_admin)
+    VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position, b.isAdmin || role === "ADMIN" ? 1 : 0).run();
   return { email, created: true };
 }
 async function resetUser(env, b) {
@@ -1190,7 +1206,7 @@ async function relay(env, m) {
   return relayScript(env, m);
 }
 async function notifyAdmins(env, title, body, tone = "warn") {
-  const { results } = await env.DB.prepare("SELECT email FROM users WHERE active = 1 AND role = 'ADMIN'").all();
+  const { results } = await env.DB.prepare("SELECT email FROM users WHERE active = 1 AND (role = 'ADMIN' OR is_admin = 1)").all();
   for (const u of results || []) await raiseEvent(env, { app: "admin", email: u.email, tone, title, body }).catch(() => {});
   const to = (results || []).map(u => u.email);
   if (to.length) await relay(env, { to, subject: title, html: `<p style="font-family:Calibri,Arial">${escH(body)}</p>` });

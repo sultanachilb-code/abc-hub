@@ -136,7 +136,7 @@ export async function storageRun(env, d) {
     env.DB.prepare("DELETE FROM meta WHERE k >= 'd1use:check:' AND k < 'd1use:check;' AND k < ?").bind("d1use:check:" + new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 13)).run().catch(() => {});
     const t = await d1Traffic(env, true).catch(() => null);
     if (t && !t.error) {
-      const admins = ((await env.DB.prepare("SELECT email FROM users WHERE role = 'ADMIN' AND active = 1").all()).results || []).map(r => r.email);
+      const admins = ((await env.DB.prepare("SELECT email FROM users WHERE (role = 'ADMIN' OR is_admin = 1) AND active = 1").all()).results || []).map(r => r.email);
       for (const [key, label] of [["reads", "rows read"], ["writes", "rows written"]]) {
         const v = t.pct[key]; if (!(v >= 70)) continue;
         const level = v >= 90 ? 90 : 70, c = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(`d1use:alert:${key}:${t.day}:${level}`, d.now()).run().catch(() => null);
@@ -151,7 +151,7 @@ export async function storageRun(env, d) {
   if (!claim.meta || claim.meta.changes !== 1) return;
   const s = await storageStatus(env, true);
   const names = { r2: "R2 storage", classA: "R2 Class A operations (writes)", classB: "R2 Class B operations (reads)", d1: "Hub database (D1)" };
-  const admins = ((await env.DB.prepare("SELECT email FROM users WHERE role = 'ADMIN' AND active = 1").all()).results || []).map(r => r.email);
+  const admins = ((await env.DB.prepare("SELECT email FROM users WHERE (role = 'ADMIN' OR is_admin = 1) AND active = 1").all()).results || []).map(r => r.email);
   for (const [k, v] of Object.entries(s.pct)) {
     if (v == null || v < 80) continue;
     const level = v >= 95 ? 95 : 80;
