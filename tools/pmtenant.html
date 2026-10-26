@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -35,7 +35,7 @@ h1{font-size:1.3rem}.sub{color:var(--muted);font-size:.88rem;margin-top:3px}
 .msg{margin-top:12px;border-radius:12px;padding:10px 12px;font-size:.86rem;font-weight:600}
 .msg.ok{background:rgba(30,138,76,.12);color:var(--ok)}.msg.bad{background:rgba(176,58,46,.12);color:var(--bad)}
 .foot{text-align:center;font-size:.72rem;color:var(--muted);margin-top:18px}
-@media (prefers-color-scheme:dark){:root{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}.bar{background:#2E2440}}
+:root[data-theme="dark"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="dark"] .bar{background:#2E2440}@media (prefers-color-scheme:dark){:root[data-theme="auto"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="auto"] .bar{background:#2E2440}}
 </style>
 </head>
 <body>
@@ -43,6 +43,7 @@ h1{font-size:1.3rem}.sub{color:var(--muted);font-size:.88rem;margin-top:3px}
 <div class="wrap"><div class="card" id="app"><p class="sub">Loading…</p></div>
 <div class="foot">ABC · Mall Operations · this page is personal to your shop</div></div>
 <script>
+fetch("/api/ext-cfg").then(r => r.json()).then(j => { if (j && j.ok && j.data && j.data.theme) document.documentElement.setAttribute("data-theme", j.data.theme); }).catch(() => {});   // tenant pages: Light / Dark / Auto set by the admin
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TK = (location.pathname.match(/\/pm\/([A-Za-z0-9]{18})/) || [])[1] || new URLSearchParams(location.search).get("t") || "";

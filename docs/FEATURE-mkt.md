@@ -13,3 +13,8 @@ The operations team sends marketing activation memos to tenants on behalf of Mar
 - After the reply-by date: one summary alert per flagship to the operations team ("mkt-ops").
 - Emails: Outlook automatic sender queue when set, otherwise the mail relay.
 - Code: `modules/mkt.js`, `tools/mkt.html`, `tools/mktenant.html`; cron `mkRun` once a day from 09:00.
+
+## Email design & tenant page colours (26 Oct 2026)
+- Admin Control → **Tenant pages & emails**:
+  - Marketing email design: **A Classic memo · B Branded card (default) · C Executive minimal** — live previews of the first email and the daily reminder, optional Arabic line. Buttons are Outlook-safe table cells.
+  - Pages behind tenant / visitor links (marketing answer page, PM upload page, Quick Access Pass): **Light (default) · Dark · Follow the device** (`/api/ext-cfg`, `meta ext:cfg`).

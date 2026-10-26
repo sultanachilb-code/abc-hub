@@ -43,7 +43,7 @@ import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
 import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
-import { mkSchema, mkRoute, mkPublic, mkRun } from "./modules/mkt.js";
+import { mkSchema, mkRoute, mkPublic, mkRun, extCfg, mailPreview, EMAIL_STYLES } from "./modules/mkt.js";
 import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN, ADMIN_UNLOCK_H } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
@@ -632,6 +632,7 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
     { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
   if (path.startsWith("patrol-ext/")) return ok(await patrolPublic(env, path.slice(11), method, body, { siteName, today: beirutToday, raiseEvent }));   // Security Patrol: the guards' shared link
+  if (path === "ext-cfg") { const c = await extCfg(env); return json({ ok: true, data: { theme: c.theme } }, 200, { "cache-control": "no-cache" }); }   // tenant & visitor pages: Light / Dark / Auto (Admin Control)
   if (path.startsWith("mk-ext/")) { const r = await mkPublic(env, path.slice(7), method, body, { siteName, now: nowIso, today: beirutToday }); return r instanceof Response ? r : ok(r); }   // Marketing Participation: the tenant's link
   if (path.startsWith("pm-ext/")) return ok(await pmPublic(env, path.slice(7), method, body, { siteName, now: nowIso, today: beirutToday }));   // Preventive Maintenance: the tenant's link
   if (path.startsWith("qp-pass/") && method === "GET") return ok(await qpPublic(env, path.slice(8), { siteName }));   // Quick Access Pass: the visitor's page (the token is the key)
@@ -755,6 +756,17 @@ async function route(request, env, ctx, url) {
       return json({ ok: true, data: { until: exp } }, 200, { "set-cookie": `hub_adm=${vb}.${await hmac(env.SESSION_SECRET, "adm." + vb)}; Path=/; Max-Age=${ADMIN_UNLOCK_H * 3600}; HttpOnly; Secure; SameSite=Strict` });
     }
     if (a === "lock" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": "hub_adm=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict" });
+    if (a === "cc/ext" && method === "GET") return ok({ ...(await extCfg(env)), styles: EMAIL_STYLES });   // Admin Control: tenant pages & emails
+    if (a === "cc/ext" && method === "POST") {
+      const cur = await extCfg(env), next = { theme: ["light", "dark", "auto"].includes(body.theme) ? body.theme : cur.theme, emailStyle: EMAIL_STYLES[body.emailStyle] ? body.emailStyle : cur.emailStyle, arabic: "arabic" in body ? !!body.arabic : cur.arabic };
+      await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('ext:cfg', ?)").bind(JSON.stringify(next)).run();
+      await audit(env, { me, site: "", tool: "admin", ref: "ext", label: `Tenant pages ${next.theme} · email design ${EMAIL_STYLES[next.emailStyle]}${next.arabic ? " · Arabic line" : ""}`, action: "edit", changes: [] }).catch(() => {});
+      return ok(next);
+    }
+    if (a === "cc/ext/preview" && method === "GET") {
+      const m = mailPreview({ hubUrl: HUB_URL, siteName: s => SITES[s] || s }, url.searchParams.get("style") || "B", url.searchParams.get("kind") === "reminder" ? "reminder" : "launch", url.searchParams.get("arabic") !== "0");
+      return new Response(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#F1EEF4"><div style="font:12px Segoe UI,Arial;color:#6D6479;padding:10px 14px;background:#fff;border-bottom:1px solid #E6E1EC"><b>Subject:</b> ${m.subject.replace(/</g, "&lt;")}</div>${m.html}</body>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+    }
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie,
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
