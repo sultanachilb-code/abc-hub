@@ -30,7 +30,7 @@ import { ccSchema, ccHubRoute, ccHandover, ccDay } from "./modules/cleanctl.js";
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
 import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
 import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
-import { storageStatus, storageRun, d1Traffic, d1Top } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
+import { storageStatus, storageRun, d1Traffic, d1Top, gql } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
@@ -43,7 +43,8 @@ import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
 import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
-import { mkSchema, mkRoute, mkPublic, mkRun } from "./modules/mkt.js";   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
+import { mkSchema, mkRoute, mkPublic, mkRun } from "./modules/mkt.js";
+import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
@@ -380,6 +381,7 @@ async function ensureSchema(env) {
   await keyboxSchema(env);   // Key Box
   await pmSchema(env);   // Preventive Maintenance
   await mkSchema(env);   // Marketing Participation
+  await admSchema(env);   // Admin Control Center
   /* D1 reads (Oct 2026): indexes for the tables read on every check — without them each query read the whole table.
      Created once (meta idx:v1): checking them again on every start also counts as reads. */
   const idx = await env.DB.prepare("SELECT v FROM meta WHERE k = 'idx:v1'").first().catch(() => null);
@@ -448,7 +450,7 @@ async function ensureSchema(env) {
 const cookieFor = t => `hub_session=${t}; Path=/; Max-Age=${SESSION_HOURS * 3600}; HttpOnly; Secure; SameSite=Lax`;
 const CLEAR = "hub_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
 async function makeSession(env, email) {
-  const body = b64url(enc.encode(JSON.stringify({ e: email, exp: Date.now() + SESSION_HOURS * 3600e3 })));
+  const body = b64url(enc.encode(JSON.stringify({ e: email, i: Date.now(), exp: Date.now() + SESSION_HOURS * 3600e3 })));
   return `${body}.${await hmac(env.SESSION_SECRET, body)}`;
 }
 async function readSession(request, env) {
@@ -460,7 +462,28 @@ async function readSession(request, env) {
   if (!p.exp || p.exp < Date.now()) return null;
   /* Always re-read the account so role changes and switch-offs apply at once */
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(p.e).first();
-  return u && u.active ? u : null;
+  if (!u || !u.active) return null;
+  if (u.signout_at && (Number(p.i) || 0) < Number(u.signout_at)) return null;   // Admin Control: "sign out everywhere"
+  /* Admin Control: "View as" — an administrator sees the hub as another person, read-only */
+  if (u.role === "ADMIN") {
+    const v = (request.headers.get("cookie") || "").match(/(?:^|;\s*)hub_viewas=([^;]+)/);
+    if (v) {
+      const [vb, vs] = v[1].split(".");
+      if (vb && vs && same(await hmac(env.SESSION_SECRET, "va." + vb), vs)) {
+        const q = JSON.parse(new TextDecoder().decode(unb64url(vb)));
+        if (q.a === u.email && q.exp > Date.now()) {
+          const t = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(q.t).first();
+          if (t && t.active) return Object.assign(t, { _viewAs: { email: u.email, name: u.full_name, until: q.exp } });
+        }
+      }
+    }
+  }
+  await touchSeen(env, u);
+  return u;
+}
+async function viewAsCookie(env, admin, target) {
+  const exp = Date.now() + VIEWAS_MIN * 60000, body = b64url(enc.encode(JSON.stringify({ a: admin, t: target, exp })));
+  return `hub_viewas=${body}.${await hmac(env.SESSION_SECRET, "va." + body)}; Path=/; Max-Age=${VIEWAS_MIN * 60}; HttpOnly; Secure; SameSite=Lax`;
 }
 const userOut = u => {
   const list = sitesOf(u);
@@ -495,6 +518,8 @@ export default {
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
       return new Response(r.body, { status: r.status, headers: h });
     }
+    /* Admin Control Center */
+    if (url.pathname === "/admin" || url.pathname === "/admin/") return env.ASSETS.fetch(new Request(new URL("/tools/admin", url), request));
     /* Marketing Participation: the tenant's answer page (no hub account) */
     if (/^\/mk\/[A-Za-z0-9]{18}\/?$/.test(url.pathname)) {
       const r = await env.ASSETS.fetch(new Request(new URL("/tools/mktenant", url), request));
@@ -542,6 +567,7 @@ export default {
       await keyboxRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("keybox", e && e.message));   // Key Box: late keys
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await pushRun(env).catch(e => console.error("push", e && e.message));
+      await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
       if (beirutHour() === MAIL_HOUR) await morningRun(env, { force: false }).catch(e => console.error("mail", e && e.message));
@@ -577,6 +603,7 @@ async function route(request, env, ctx, url) {
   if (path === "login" && method === "POST") return login(env, body, request);
   if (path.startsWith("login/2fa/")) { const r = await twofaPublic(env, twofaDeps, path, method, body, request); return r instanceof Response ? r : json(r); }   // Two-step login feature
   if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
+  if (path === "viewas-stop" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": "hub_viewas=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" });   // Admin Control: back to my admin
   if (path === "setup" && method === "POST") return setup(env, body);
   if (path === "inbox/mail" && method === "POST") return ok(await mailInbox(env, request, body, { SITES, canSite, isFull, now: nowIso, today: beirutToday, raiseEvent, audit }));   // Email inbox: MOM · calendar · contracts report
   /* Monthly backup to Google Drive: the Apps Script (same INBOX_KEY as the email inbox) pulls every table and saves an Excel file in Drive */
@@ -611,9 +638,12 @@ async function route(request, env, ctx, url) {
   }
 
   /* ----- signed-in routes ----- */
+  await toolsCfg(env).catch(() => {});   // Admin Control: tools switched off / moved / limited (kept 60 s in memory)
+  if (me._viewAs && (method !== "GET" || path === "sso")) throw fail(`View as ${me.full_name} is read-only — press “Back to my admin” to make changes`, 403);
   if (path === "me") {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
-    return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES });
+    return ok({ user: { ...userOut(me), twofa: { on, required: roles.includes(me.role), setupNeeded: !me._viewAs && roles.includes(me.role) && !on } }, sites: SITES, roles: ROLES,
+      tools: toolsCfgNow(), viewAs: me._viewAs || null });
   }
   if (path.startsWith("fu/")) return ok(await followupRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, { today: beirutToday, now: nowIso }));   // Follow-ups
   if (path.startsWith("ms/")) return ok(await outlookRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, HUB_URL));   // Outlook sending
@@ -696,6 +726,13 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("admin/")) {
     if (me.role !== "ADMIN") throw fail("Administrator access only", 403);
     const a = path.slice(6);
+    if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
+      const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie,
+        CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
+        outlookRun: e => outlookRun(e, { today: beirutToday, notifyAdmins, fallback: relayScript }) });
+      if (r && r.cookie) return json({ ok: true, data: { name: r.name } }, 200, { "set-cookie": r.cookie });
+      return r instanceof Response ? r : ok(r);
+    }
     if (a === "seasons") return ok(await seasonsAdmin(env, method, body, me, nowIso));   // Seasonal decorations
     if (a === "moments") return ok(await momentsAdmin(env, method, body, me, nowIso));   // Message of the moment
     if (a === "ms") return ok(await outlookAdmin(env, method, body, me));   // Outlook sending: settings + connected people
@@ -793,10 +830,17 @@ async function login(env, b, request) {
   const password = String(b.password || "");
   if (!email || !password) throw fail("Enter your email and password");
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+  const lk = lockedMsg(u); if (lk) { await logSignin(env, request, email, false, "Blocked — account locked"); throw fail(lk, 423); }
   const attempt = u ? await derive(password, u.salt, u.iterations || ROUNDS) : "";
-  if (!u || !same(attempt, u.hash)) throw fail("Email or password is incorrect", 401);
-  if (!u.active) throw fail("This account is switched off. Contact your administrator.", 403);
-  if (request) { const gate = await twofaGate(env, twofaDeps, request, u, b); if (gate) return gate; }   // Two-step login feature: second step needed
+  if (!u || !same(attempt, u.hash)) {
+    await logSignin(env, request, email, false, u ? "Wrong password" : "Unknown email");
+    if (u && await passwordFailed(env, u, notifyAdmins)) throw fail(lockedMsg({ locked_until: new Date(Date.now() + 15 * 60000).toISOString() }), 423);
+    throw fail("Email or password is incorrect", 401);
+  }
+  if (!u.active) { await logSignin(env, request, email, false, "Account switched off"); throw fail("This account is switched off. Contact your administrator.", 403); }
+  await passwordOk(env, u);
+  if (request) { const gate = await twofaGate(env, twofaDeps, request, u, b); if (gate) { await logSignin(env, request, email, true, "Password OK → two-step"); return gate; } }   // Two-step login feature: second step needed
+  await logSignin(env, request, email, true, "Signed in");
   await env.DB.prepare("UPDATE users SET last_login_at = ? WHERE email = ?").bind(nowIso(), email).run();
   await logUsage(env, u, "signin").catch(() => {});
   return json({ ok: true, data: { user: userOut(u) } }, 200, { "set-cookie": cookieFor(await makeSession(env, email)) });
@@ -1297,7 +1341,11 @@ async function notificationsFor(env, me) {
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
 const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt"]);
-const roleAllows = (u, app) => u.role === "ADMIN" || TESTING_OPEN.has(app) || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u));
+const roleAllows = (u, app) => { if (u.role === "ADMIN") return true;
+  const c = toolsCfgNow()[app];   // Admin Control → Tools control (switched off / who sees it)
+  if (c && c.off) return false;
+  if (c && Array.isArray(c.access)) return c.access.includes(accessKey(u));
+  return TESTING_OPEN.has(app) || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u)); };
 
 /* ---------- web push (standard VAPID + aes128gcm, no outside service) ---------- */
 async function vapidKeys(env) {

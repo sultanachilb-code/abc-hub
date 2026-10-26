@@ -1394,7 +1394,17 @@ function startHub(){
   /* who sees each tile: the ACCESS list in apps.js, by position (Admin sees everything) */
   const key = accessKey(ME.user), ACC = H.ACCESS || {}; MYKEY = key;
   const TEST_ADMIN = H.TESTING_ADMIN_ONLY || [];   // Upcoming - Testing is open to everyone (apart from the admin settings pages)
-  APPS = ALL_APPS.filter(a => role === "ADMIN" || (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key));
+  const TC = ME.tools || {};   // Admin Control → Tools control: switched off · other folder · who sees it · new name
+  APPS = ALL_APPS.map(a => TC[a.id] ? Object.assign({}, a, TC[a.id].group ? { group: TC[a.id].group } : {}, TC[a.id].name ? { name: TC[a.id].name } : {}) : a)
+    .filter(a => { const c = TC[a.id]; if (role === "ADMIN") return true; if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
+      return (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key); });
+  if (ME.viewAs && !document.getElementById("vaBar")) {   // Admin Control: View as (read-only)
+    const v = document.createElement("div"); v.id = "vaBar";
+    v.style.cssText = "position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9999;background:#2A0F45;color:#fff;border-radius:14px;padding:9px 10px 9px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:.84rem;max-width:calc(100% - 24px)";
+    v.innerHTML = `<span>👁 Viewing as <b>${esc(ME.user.name)}</b> · ${esc(ME.user.positionLabel || ME.user.roleLabel)} — read-only</span><button style="border:0;border-radius:10px;padding:7px 11px;font:inherit;font-weight:800;background:#E9CF8A;color:#2A0F45;cursor:pointer">Back to my admin</button>`;
+    v.querySelector("button").onclick = async () => { await fetch("/api/viewas-stop", { method: "POST" }).catch(() => {}); location.href = "/admin"; };
+    document.body.append(v);
+  }
   $("#hubTitle").textContent = H.title;
   const hr = new Date().getHours();
   const first = ME.user.name.split(" ")[0];
@@ -1517,7 +1527,7 @@ function buildMenu(){
     <button data-a="downloads" class="pm-i">${pmIcon("download")}<span>Downloads<small>Files you downloaded from the hub</small></span></button>
     ${ME.user.role === "ADMIN" ? `<button data-a="season" class="pm-i">${pmIcon("device")}<span>Seasonal decorations<small>Designs and dates · Ramadan, Eid, Christmas, Independence Day…</small></span></button>` : ""}
     <button data-a="layout" class="pm-i">${pmIcon("device")}<span>Home layout<small>${esc((HL_KINDS.find(k => k[0] === HL) || [])[1] || "")} · ${HL_KINDS.length} layouts to choose from</small></span></button>
-    ${ME.user.role === "ADMIN" ? `<button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
+    ${ME.user.role === "ADMIN" ? `<button data-a="cc" class="pm-i">${pmIcon("admin")}<span>Admin Control Center<small>Users, allowances, systems, tools</small></span></button><button data-a="admin" class="pm-i">${pmIcon("admin")}<span>Hub administration<small>People, announcements, backup</small></span></button>` : ""}
     <button data-a="out" class="pm-i out">${pmIcon("out")}<span>Log out</span></button>`; };
   paint(); m._paint = paint;
   $("#avatar").onclick = e => { e.stopPropagation(); $("#aiMenu").classList.add("hidden"); $("#npanel").classList.add("hidden"); placePops($("#avatar")); m.classList.toggle("hidden"); };
@@ -1531,6 +1541,7 @@ function buildMenu(){
     const a = e.target.closest("button")?.dataset.a; if (!a) return;
     m.classList.add("hidden");
     if (a === "admin") location.hash = "#/admin";
+    if (a === "cc") location.href = "/admin";
     if (a === "profile") profileSheet();
     if (a === "welcome") welcomeSheet();
     if (a === "downloads") launch(byId("downloads"));
@@ -3536,6 +3547,7 @@ const siteOptions = (sel, allLabel) => (allLabel ? `<option value="ALL">${esc(al
   Object.entries(SITES).map(([c, n]) => `<option value="${c}" ${sel === c ? "selected" : ""}>${esc(n)}</option>`).join("");
 async function renderAdmin(){
   if (ME.user.role !== "ADMIN") return goHome();
+  try { const t = sessionStorage.getItem("adm.tab"); if (t){ sessionStorage.removeItem("adm.tab"); if (document.querySelector(`.adm-tabs [data-t="${t}"]`)){ admTab = t; document.querySelectorAll(".adm-tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); } } } catch {}   // opened from the Admin Control Center
   show("admin");
   mailQuotaBar(); storageBar(); outlookAdminBar();
   const body = $("#admBody");
