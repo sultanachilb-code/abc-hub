@@ -104,7 +104,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#ov").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
-  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
@@ -132,13 +132,16 @@ async function boot(){
   $("#nav").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
   $("#lockB").onclick = async () => { await api("admin/lock", {}).catch(() => {}); location.href = "/"; };
   $("#thm").onclick = e => { const b = e.target.closest("[data-th]"); if (b) setTheme(b.dataset.th); }; setTheme(THEME);
+  const qm = new URLSearchParams(location.search).get("mailbox");
+  if (qm) { PAGE = "mb"; history.replaceState(null, "", "/admin#mb");
+    setTimeout(() => toast({ connected: "Report mailbox connected", denied: "Microsoft did not allow “Read mail” — it needs IT (admin) approval", error: "Microsoft sign-in failed — see the error below" }[qm] || qm, qm !== "connected"), 300); }
   go(PAGE);
 }
 function go(p){
   PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ ov, pr, us, ur, sec, hi, al, db, sy, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ ov, pr, us, ur, sec, hi, al, db, sy, mb, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -321,6 +324,47 @@ async function sy(fresh){
     if (j === "eod-test") { b.disabled = true; try { const r = await api("admin/eod-test", { site: ME.user.site || "VRM" }); toast("Test sent to " + r.to); } catch (e){ toast(e.message, true); } b.disabled = false; return; }
     if ((j === "pm" || j === "mk") && !(await confirmBox("Run the job now", "This runs today's job again now — tenants who are due a reminder will get it.", "Run now"))) return;
     b.disabled = true; try { const r = await api("admin/cc/run", { job: j }); toast(r.done); sy(); } catch (e){ b.disabled = false; toast(e.message, true); } });
+}
+
+/* ---------- report mailbox (modules/mailbox.js) ---------- */
+async function mb(){
+  const M = await api("admin/cc/mailbox"), c = M.cfg, C = M.conn, inp = "border:1px solid var(--cline);border-radius:10px;padding:9px 10px;font:inherit;background:var(--ccard);color:var(--ctext)";
+  const st = !C.on ? pill("bad", "Microsoft not set up") : !C.connected ? pill("warn", "Not connected") : !c.on ? pill("mut", "Connected · import off") : pill("ok", "Importing " + c.from + "–" + c.to);
+  const shared = C.connected && C.account && C.account !== c.mailbox;
+  V(head("Report mailbox", "Salesforce reports arrive by email in an ABC mailbox — the hub imports them every morning and splits them per flagship", st) +
+    `<div class="grid">
+      <div class="card"><h3>Connection</h3>${C.connected ? `<div class="big" style="font-size:1.05rem">${esc(c.mailbox)}</div>
+        <div class="sub">Signed in as <b>${esc(C.name || C.account)}</b> (${esc(C.account)})${shared ? " — reads the mailbox through Full Access" : ""} · ${ago(C.at)}${C.error ? `<br><span class="t-bad">${esc(C.error)}</span>` : ""}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="b g" id="mbC">Connect again</button><button class="b g" id="mbD">Disconnect</button></div>`
+        : `<p class="mut" style="line-height:1.55;margin:4px 0 10px">Sign in <b>as ${esc(c.mailbox)}</b> (it has its own password), or as yourself if you open it as a shared mailbox in your Outlook (Full Access). Microsoft asks to allow <b>Read mail</b>. Read only — the hub never sends, moves or deletes anything.</p>
+          ${C.error ? `<div class="al bad" style="margin-bottom:10px"><div class="m"><b>${esc(C.error)}</b></div></div>` : ""}
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="mbC" ${C.on ? "" : "disabled"}>Sign in as ${esc(c.mailbox)}</button><button class="b g" id="mbCme" ${C.on ? "" : "disabled"}>Sign in as myself (shared mailbox)</button></div>`}</div>
+      <div class="card"><h3>Settings</h3><div style="display:grid;gap:9px;font-size:.86rem">
+        <label>Mailbox<br><input id="mbM" value="${esc(c.mailbox)}" style="${inp};width:100%"></label>
+        <label>Folder (the Outlook rule moves the reports here)<br><input id="mbF" value="${esc(c.folder)}" style="${inp};width:100%"></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label>Import from<br><input id="mbA" type="time" value="${c.from}" style="${inp}"></label><label>to<br><input id="mbB" type="time" value="${c.to}" style="${inp}"></label>
+          <label>Missing check<br><input id="mbK" type="time" value="${c.check}" style="${inp}"></label></div>
+        <div><b>Reports expected every morning</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${Object.entries(M.kinds).map(([k, l]) => `<label style="border:1px solid var(--cline);border-radius:99px;padding:5px 10px;cursor:pointer"><input type="checkbox" data-ex="${k}" ${c.expect.includes(k) ? "checked" : ""}> ${esc(l)}</label>`).join("")}</div></div>
+        <label style="font-weight:700"><input type="checkbox" id="mbOn" ${c.on ? "checked" : ""} ${C.connected ? "" : "disabled"}> Import automatically every morning</label>
+        <div><button class="b" id="mbS">Save</button></div></div></div>
+      <div class="card"><h3>Today ${M.today.every(x => x.today) ? pill("ok", "All received") : pill("warn", M.today.filter(x => !x.today).length + " not yet")}</h3>
+        ${M.today.map(x => `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--cline)"><span>${esc(x.label)}</span><span class="${x.today ? "t-ok" : "mut"}">${x.today ? "✓ " + dt(x.at) : x.at ? "last " + ago(x.at) : "never"}</span></div>`).join("") || `<p class="mut">No report chosen.</p>`}
+        <div class="sub" style="margin-top:8px">Counts every way in: this mailbox, the Gmail inbox, or an upload on the page.${M.last ? `<br>Last mailbox read: ${dt(M.last.at)} · ${M.last.error ? `<span class="t-bad">${esc(M.last.error)}</span>` : `${M.last.read} emails · ${M.last.imported} imported${M.last.failed ? " · " + M.last.failed + " failed" : ""}`}` : ""}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="b g" id="mbT" ${C.connected ? "" : "disabled"}>🔍 Test read (no import)</button><button class="b" id="mbR" ${C.connected ? "" : "disabled"}>⇣ Import now</button></div></div>
+    </div><div id="mbOut"></div>
+    <div class="sec">Imported emails</div><div class="tw"><table><thead><tr><th>Received</th><th>Email</th><th>Result</th></tr></thead><tbody>
+      ${M.log.map(l => `<tr><td class="mut" style="white-space:nowrap">${dt(l.received)}</td><td><b>${esc(l.subject || "(no subject)")}</b><br><span class="mut">${esc(l.sender)} · ${esc(l.files)}</span></td><td>${pill(l.ok ? "ok" : "bad", l.ok ? "Imported" : "Not imported")}<br><span class="mut" style="font-size:.78rem">${esc(l.result)}</span></td></tr>`).join("") || `<tr><td colspan="3" class="mut">Nothing yet.</td></tr>`}</tbody></table></div>`);
+  const conn = async hint => { try { const r = await api("admin/cc/mailbox/connect", { hint }); location.href = r.url; } catch (e){ toast(e.message, true); } };
+  $("#mbC").onclick = () => conn(c.mailbox); const me2 = $("#mbCme"); if (me2) me2.onclick = () => conn(ME.user.email);
+  const dc = $("#mbD"); if (dc) dc.onclick = async () => { if (!(await confirmBox("Disconnect the report mailbox", "The morning import stops until it is connected again.", "Disconnect"))) return; await api("admin/cc/mailbox/disconnect", {}); mb(); };
+  $("#mbS").onclick = async () => { try { await api("admin/cc/mailbox/save", { mailbox: $("#mbM").value, folder: $("#mbF").value, from: $("#mbA").value, to: $("#mbB").value, check: $("#mbK").value,
+      expect: [...document.querySelectorAll("[data-ex]:checked")].map(x => x.dataset.ex), on: $("#mbOn").checked }); toast("Saved"); mb(); } catch (e){ toast(e.message, true); } };
+  const show = (r, dry) => { $("#mbOut").innerHTML = `<div class="sec">${dry ? "Test read — nothing saved" : "Import now"} · ${esc(r.mailbox)} › ${esc(r.folder)} · ${r.read} email${r.read === 1 ? "" : "s"} (last ${dry ? 2 : 3} days)</div>
+    <div class="tw"><table><thead><tr><th>Email</th><th>${dry ? "What the hub finds" : "Result"}</th></tr></thead><tbody>${r.items.map(x => `<tr><td><b>${esc(x.subject || "(no subject)")}</b><br><span class="mut">${esc(x.from)} · ${dt(x.received)}${dry && x.imported ? " · already imported" : ""}</span></td>
+      <td>${dry ? x.files.map(f => f.error ? `<span class="t-bad">${f.file === "—" ? "" : esc(f.file) + ": "}${esc(f.error)}</span>` : `<b>${esc(f.kind)}</b> · ${f.rows} rows<br><span class="mut">${Object.entries(f.sites || {}).map(([s, n]) => esc(s) + " " + n).join(" · ")}${f.unplaced ? ` · <span class="t-bad">${f.unplaced} without flagship</span>` : ""}</span>`).join("<br>")
+        : `${pill(x.ok ? "ok" : "bad", x.ok ? "Imported" : "Not imported")}<br><span class="mut" style="font-size:.8rem">${esc(x.result)}</span>`}</td></tr>`).join("") || `<tr><td colspan="2" class="mut">${dry ? "No email in the folder." : "Nothing new — every email was imported already."}</td></tr>`}</tbody></table></div>`; };
+  $("#mbT").onclick = async () => { $("#mbT").disabled = true; $("#mbOut").innerHTML = `<p class="mut">Reading the mailbox…</p>`; try { show(await api("admin/cc/mailbox/test", {}), true); } catch (e){ $("#mbOut").innerHTML = `<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`; } $("#mbT").disabled = false; };
+  $("#mbR").onclick = async () => { $("#mbR").disabled = true; $("#mbOut").innerHTML = `<p class="mut">Importing…</p>`; try { const r = await api("admin/cc/mailbox/run", {}); show(r, false); toast(`${r.items.filter(x => x.ok).length} imported`); } catch (e){ $("#mbOut").innerHTML = `<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`; } $("#mbR").disabled = false; };
 }
 
 /* ---------- tools control ---------- */
