@@ -24,6 +24,8 @@
 .sku.none{color:var(--muted);font-family:inherit;font-weight:600}
 .yn{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}.yn button{border:0;background:var(--surface);padding:9px 15px;font:inherit;font-weight:800;font-size:.82rem;cursor:pointer;color:var(--muted)}
 .yn button+button{border-left:1px solid var(--line)}.yn .y.on{background:#1E8A4C;color:#fff}.yn .n.on{background:#C2283C;color:#fff}.yn button:disabled{cursor:default}
+.grp{font-size:.7rem;font-weight:800;letter-spacing:.03em;border-radius:99px;padding:3px 9px;background:color-mix(in srgb,var(--brand) 13%,transparent);color:var(--brand);white-space:nowrap;border:1px dashed transparent}
+.grp.add{background:transparent;color:var(--muted);border-color:var(--line)}.grp.ed{cursor:pointer}.grp.ed:hover{border-color:#4A1F73}
 .who{font-size:.68rem;color:var(--muted);text-align:right;min-width:70px}
 .sw{display:flex;gap:8px;align-items:center;font-size:.86rem;font-weight:700}
 @media(max-width:600px){.it{flex-wrap:wrap}.it .yn{margin-left:auto}.it .m{flex-basis:100%}.who{display:none}}
@@ -34,7 +36,7 @@
 <div class="wrap"><div class="wrap2" id="view"><p class="muted">Loading…</p></div></div>
 <script src="common.js"></script>
 <script>
-let CTX = null, L = null, F = "all", Q = "", EDIT_SETUP = false, timer = null;
+let CTX = null, L = null, F = "all", Q = "", GRP = "", EDIT_SETUP = false, timer = null;
 async function boot(site){
   CTX = await api("ops/context" + (site ? "?site=" + site : ""));
   $("#siteBox").innerHTML = siteSelect(CTX, s => { EDIT_SETUP = false; boot(s); });
@@ -66,40 +68,85 @@ function setupBox(){
     ${c.set ? `<p class="muted" style="font-size:.78rem;margin-top:8px">Answers already given stay for the tenants still in the list.</p>` : ""}</div>`;
 }
 function draw(){
-  const c = L.cfg, s = L.stats;
+  const c = L.cfg;
+  if (GRP && GRP !== "-" && !L.groups.some(g => g.name === GRP)) GRP = "";
+  const inG = r => !GRP || (GRP === "-" ? !r.group : r.group === GRP), G = L.rows.filter(inG), s = statsOf(G);
   if (!c.set || EDIT_SETUP) { $("#view").innerHTML = (L.edit ? setupBox() : `<div class="box">The list is not set yet — the operations team sets it.</div>`); return; }
-  const q = Q.toLowerCase(), rows = L.rows.filter(r => (F === "all" || (F === "w" ? !r.answer : r.answer === F)) && (!q || (r.brand + " " + r.sku + " " + r.units).toLowerCase().includes(q)));
+  const q = Q.toLowerCase(), rows = G.filter(r => (F === "all" || (F === "w" ? !r.answer : r.answer === F)) && (!q || (r.brand + " " + r.sku + " " + r.units + " " + r.group).toLowerCase().includes(q)));
   const keepFocus = document.activeElement && document.activeElement.id === "q", pos = keepFocus ? document.activeElement.selectionStart : 0;
   $("#view").innerHTML = `<div class="box" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:200px"><b style="font-size:1.05rem">${esc(c.name || "Tenant list")}</b>
       <div class="muted" style="font-size:.8rem">${c.openOnly ? "Opened tenants" : "All tenants"} · ${c.depts.length === L.depts.length ? "all categories" : esc(c.depts.join(", "))}${c.startedAt ? ` · started ${esc(new Date(c.startedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} by ${esc(c.startedBy)}` : ""}</div></div>
-      ${L.edit ? `<button class="btn ghost small" id="chg">Change the list</button><button class="btn ghost small" id="rst">New list</button>` : ""}<button class="btn ghost small" id="xl">⇣ Excel</button></div>
-    <div class="kpi"><div class="k"><b>${s.total}</b><span>tenants selected</span></div><div class="k"><b style="color:#1E8A4C">${s.yes}</b><span>YES</span></div>
+      ${L.edit ? `<button class="btn ghost small" id="gim" title="Parent groups from the Leasing Sales Performance file">⇡ Import groups</button><button class="btn ghost small" id="chg">Change the list</button><button class="btn ghost small" id="rst">New list</button>` : ""}<button class="btn ghost small" id="xl">⇣ Excel</button></div>
+    <div class="kpi"><div class="k"><b>${s.total}</b><span>${GRP ? (GRP === "-" ? "tenants with no group" : "tenants of " + esc(GRP)) : "tenants selected"}</span></div><div class="k"><b style="color:#1E8A4C">${s.yes}</b><span>YES</span></div>
       <div class="k"><b style="color:#C2283C">${s.no}</b><span>NO</span></div>
-      <div class="k"><b>${s.pct} %</b><span>YES of the ${s.total} tenants selected · ${s.wait} not checked</span><div class="bar"><i style="width:${s.total ? s.yes / s.total * 100 : 0}%;background:#1E8A4C"></i><i style="width:${s.total ? s.no / s.total * 100 : 0}%;background:#C2283C"></i></div></div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="inp" id="q" placeholder="Search tenant, SKU or unit…" value="${esc(Q)}" style="max-width:300px;flex:1;min-width:180px">
+      <div class="k"><b>${s.pct} %</b><span>YES of the ${s.total} tenants ${GRP ? (GRP === "-" ? "with no group" : "of " + esc(GRP)) : "selected"} · ${s.wait} not checked</span><div class="bar"><i style="width:${s.total ? s.yes / s.total * 100 : 0}%;background:#1E8A4C"></i><i style="width:${s.total ? s.no / s.total * 100 : 0}%;background:#C2283C"></i></div></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="inp" id="q" placeholder="Search tenant, group, SKU or unit…" value="${esc(Q)}" style="max-width:300px;flex:1;min-width:180px">
+      <select class="sel" id="gs" style="max-width:220px"><option value="">All groups</option>${L.groups.map(g => `<option value="${esc(g.name)}" ${GRP === g.name ? "selected" : ""}>${esc(g.name)} · ${g.n}</option>`).join("")}${L.rows.some(r => !r.group) ? `<option value="-" ${GRP === "-" ? "selected" : ""}>No group · ${L.rows.filter(r => !r.group).length}</option>` : ""}</select>
       <div class="fl">${[["all", "All", s.total], ["y", "YES", s.yes], ["n", "NO", s.no], ["w", "Not checked", s.wait]].map(([k, n, v]) => `<span data-f="${k}" class="${F === k ? "on" : ""}">${n} · ${v}</span>`).join("")}</div></div>
     <div class="list">${rows.map(r => `<div class="it"><div class="m"><b>${esc(r.brand)}</b><small>${esc(r.units)}${r.dept ? " · " + esc(r.dept) : ""}${r.open ? "" : " · not opened"}</small></div>
+      ${r.group ? `<span class="grp ${L.edit ? "ed" : ""}" data-g="${esc(r.brand)}">${esc(r.group)}</span>` : L.edit ? `<span class="grp add ed" data-g="${esc(r.brand)}">+ group</span>` : ""}
       ${r.sku ? `<span class="sku">SKU ${esc(r.sku)}</span>` : `<span class="sku none">no SKU</span>`}
       <span class="who">${r.by ? esc(r.by.split(" ")[0]) + "<br>" + esc(new Date(r.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })) : ""}</span>
       <div class="yn"><button class="y ${r.answer === "y" ? "on" : ""}" data-b="${esc(r.brand)}" data-v="y" ${L.edit ? "" : "disabled"}>YES</button><button class="n ${r.answer === "n" ? "on" : ""}" data-b="${esc(r.brand)}" data-v="n" ${L.edit ? "" : "disabled"}>NO</button></div></div>`).join("")
       || `<div class="it muted">Nothing here.</div>`}</div>`;
   const qi = $("#q"); qi.oninput = () => { Q = qi.value; draw(); }; if (keepFocus){ qi.focus(); qi.setSelectionRange(pos, pos); }
+  $("#gs").onchange = e => { GRP = e.target.value; draw(); };
+  if (L.edit) $("#view").querySelectorAll("[data-g]").forEach(x => x.onclick = () => groupEdit(L.rows.find(r => r.brand === x.dataset.g)));
+  const gi = $("#gim"); if (gi) gi.onclick = importGroups;
   $("#view").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { F = x.dataset.f; draw(); });
   $("#view").querySelectorAll("[data-v]").forEach(btn => btn.onclick = async () => {
     const r = L.rows.find(x => x.brand === btn.dataset.b), v = r.answer === btn.dataset.v ? "" : btn.dataset.v;   // tap again to clear
-    r.answer = v; r.by = v ? (CTX.me && CTX.me.name) || "" : ""; r.at = new Date().toISOString(); recount(); draw();
+    r.answer = v; r.by = v ? (CTX.me && CTX.me.name) || "" : ""; r.at = new Date().toISOString(); draw();
     try { await api("ops/tl/answer", { site: CTX.site, brand: r.brand, answer: v }); } catch (e){ toast(e.message, true); load(); } });
   const cg = $("#chg"); if (cg) cg.onclick = () => { EDIT_SETUP = true; draw(); };
   const rs = $("#rst"); if (rs) rs.onclick = async () => {
     if (!(await confirmBox("Start a new list", `All YES / NO answers of <b>${esc(c.name || "the list")}</b> are cleared for everyone at ${esc(L.siteName)}. Download the Excel first if you need it.`, "Clear and start again"))) return;
     try { await api("ops/tl/reset", { site: CTX.site, name: c.name }); F = "all"; EDIT_SETUP = true; await load(); } catch (e){ toast(e.message, true); } };
   $("#xl").onclick = async () => { try { await xlsxReady(); } catch (e){ return toast(e.message, true); }
-    const aoa = [[c.name || "Tenant list"], [`${L.siteName} · ${new Date().toLocaleString("en-GB")} · YES ${s.yes} · NO ${s.no} · not checked ${s.wait} · YES ${s.pct} % of ${s.total}`], [],
-      ["Tenant", "Unit(s)", "Category", "SKU", "Answer", "By", "At"], ...L.rows.map(r => [r.brand, r.units, r.dept, r.sku, r.answer === "y" ? "YES" : r.answer === "n" ? "NO" : "", r.by, r.at ? new Date(r.at).toLocaleString("en-GB") : ""])];
-    const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = [{ wch: 30 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 18 }];
+    const aoa = [[c.name || "Tenant list"], [`${L.siteName}${GRP ? " · " + (GRP === "-" ? "no group" : GRP) : ""} · ${new Date().toLocaleString("en-GB")} · YES ${s.yes} · NO ${s.no} · not checked ${s.wait} · YES ${s.pct} % of ${s.total}`], [],
+      ["Tenant", "Parent group", "Unit(s)", "Category", "SKU", "Answer", "By", "At"], ...G.map(r => [r.brand, r.group, r.units, r.dept, r.sku, r.answer === "y" ? "YES" : r.answer === "n" ? "NO" : "", r.by, r.at ? new Date(r.at).toLocaleString("en-GB") : ""])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = [{ wch: 30 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 18 }];
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Tenant list"); XLSX.writeFile(wb, `${(c.name || "Tenant list").replace(/[\\/:*?"<>|]+/g, "-")} - ${L.siteName}.xlsx`); };
 }
-function recount(){ const R = L.rows, y = R.filter(r => r.answer === "y").length, n = R.filter(r => r.answer === "n").length; L.stats = { total: R.length, yes: y, no: n, wait: R.length - y - n, pct: R.length ? Math.round(y / R.length * 1000) / 10 : 0 }; }
+function statsOf(R){ const y = R.filter(r => r.answer === "y").length, n = R.filter(r => r.answer === "n").length; return { total: R.length, yes: y, no: n, wait: R.length - y - n, pct: R.length ? Math.round(y / R.length * 1000) / 10 : 0 }; }
+/* parent group by hand — a hand edit stays even after the next import */
+function groupEdit(r){
+  let d = $("#gdl"); if (!d){ d = document.createElement("dialog"); d.id = "gdl"; document.body.append(d); }
+  d.innerHTML = `<div class="dlg-h"><b>Parent group · ${esc(r.brand)}</b></div><div class="dlg-b"><input class="inp" id="gIn" list="gList" value="${esc(r.group)}" placeholder="e.g. AZADEA" style="width:100%">
+    <datalist id="gList">${L.allGroups.map(g => `<option value="${esc(g)}">`).join("")}</datalist><p class="muted" style="font-size:.78rem;margin-top:8px">Same tenant in every flagship. Leave empty to remove the group.</p></div>
+    <div class="dlg-f"><button class="btn ghost" id="gX">Cancel</button><button class="btn" id="gOk">Save</button></div>`;
+  d.showModal(); setTimeout(() => $("#gIn").select(), 30);
+  $("#gX").onclick = () => d.close();
+  const save = async () => { const v = $("#gIn").value.trim().toUpperCase(); d.close();
+    try { await api("ops/tl/group", { site: CTX.site, brand: r.brand, group: v }); r.group = v; await load(); toast(v ? `${r.brand} → ${v}` : "Group removed"); } catch (e){ toast(e.message, true); } };
+  $("#gOk").onclick = save; $("#gIn").onkeydown = e => { if (e.key === "Enter") save(); };
+}
+/* the monthly "Leasing Sales Performance YTD" workbook → sheet "Sales Data Conso": Parent Group · Parent Tenant */
+function importGroups(){
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".xlsx,.xlsm,.xls,.csv"; inp.id = "gFile"; inp.style.display = "none"; document.body.append(inp);
+  inp.onchange = async () => { const f = inp.files[0]; inp.remove(); if (!f) return;
+    try { await xlsxReady(); toast("Reading " + f.name + "…");
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array" }), rows = [];
+      const names = [...wb.SheetNames].sort((a, b) => (/sales\s*data\s*conso/i.test(b) ? 1 : 0) - (/sales\s*data\s*conso/i.test(a) ? 1 : 0));
+      for (const n of names) {
+        const g = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: "", raw: false });
+        const hi = g.slice(0, 20).findIndex(r => r.some(c => /parent\s*group/i.test(c)) && r.some(c => /parent\s*tenant|^tenant$|^brand$/i.test(String(c).trim())));
+        if (hi < 0) continue;
+        const H = g[hi].map(c => String(c).trim()), gi = H.findIndex(h => /parent\s*group/i.test(h)), ti = H.findIndex(h => /parent\s*tenant/i.test(h)) >= 0 ? H.findIndex(h => /parent\s*tenant/i.test(h)) : H.findIndex(h => /^(tenant|brand)$/i.test(h));
+        for (const r of g.slice(hi + 1)) { const t = String(r[ti] || "").trim(), gr = String(r[gi] || "").trim(); if (t && gr && !/^total/i.test(t)) rows.push({ tenant: t, group: gr }); }
+        if (rows.length) break;
+      }
+      if (!rows.length) return toast("No “Parent Group” / “Parent Tenant” columns in this file", true);
+      const x = await api("ops/tl/groups/import", { site: CTX.site, rows });
+      await load();
+      let d = $("#gdl"); if (!d){ d = document.createElement("dialog"); d.id = "gdl"; document.body.append(d); }
+      d.innerHTML = `<div class="dlg-h"><b>Parent groups imported</b></div><div class="dlg-b"><p style="line-height:1.6"><b>${x.matched}</b> tenants got their group (${x.groups} groups in the file, ${x.fileTenants} tenants).${x.keptByHand ? `<br>${x.keptByHand} set by hand ${x.keptByHand === 1 ? "was" : "were"} kept.` : ""}</p>
+        ${x.unmatched.length ? `<p class="muted" style="margin-top:8px">Tenants of ${esc(L.siteName)} not found in the file (${x.unmatched.length}) — tap “+ group” on the row to set them:</p><div style="max-height:220px;overflow:auto;font-size:.8rem;line-height:1.7;margin-top:6px">${x.unmatched.map(esc).join(" · ")}</div>` : ""}</div>
+        <div class="dlg-f"><button class="btn" id="gX">OK</button></div>`;
+      d.showModal(); $("#gX").onclick = () => d.close();
+    } catch (e){ toast(e.message, true); } };
+  inp.click();
+}
 window.hubRefresh = () => load();
 boot().catch(e => $("#view").innerHTML = `<p class="muted">${esc(e.message)}</p>`);
 </script>
