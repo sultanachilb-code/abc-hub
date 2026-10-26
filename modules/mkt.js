@@ -71,31 +71,90 @@ async function filters(env, sites) {
 }
 
 /* ---------- the email ---------- */
-function mail(d, c, t, kind) {
-  const link = `${d.hubUrl}/mk/${t.token}`, sn = d.siteName(t.site), F = "font-family:Calibri,Arial,sans-serif;";
-  const title = kind === "reminder" ? `Reminder: ${c.title} — please confirm your participation` : `${c.title} — participation memo`;
-  const facts = [["Activity", escH(c.title)], c.act_from && ["Dates", escH(longDay(c.act_from)) + (c.act_to && c.act_to !== c.act_from ? " – " + escH(longDay(c.act_to)) : "")], ["Reply by", `<b>${escH(longDay(c.end_day))}</b>`]].filter(Boolean)
-    .map(([k, v]) => `<tr><td style="${F}padding:3px 14px 3px 0;color:#6D6479">${k}</td><td style="${F}padding:3px 0">${v}</td></tr>`).join("");
-  const btn = (a, label, bg, fg, bd) => `<a href="${link}?a=${a}" style="${F}display:inline-block;background:${bg};color:${fg};border:2px solid ${bd};text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:bold;font-size:15px;margin:4px">${label}</a>`;
-  const html = `<div style="${F}max-width:620px;color:#22163A"><div style="background:#4A1F73;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><span style="opacity:.8;font-size:12px;letter-spacing:1px">ABC ${escH(sn.toUpperCase())} · MARKETING ACTIVATION</span><br><b style="font-size:18px">${escH(title)}</b></div>
-    <div style="border:1px solid #e4deec;border-top:0;padding:18px 20px;border-radius:0 0 10px 10px">
-    <p>Dear <b>${escH(t.brand)}</b> team,</p>
-    ${kind === "reminder" ? `<p>We have not yet received your answer for <b>${escH(c.title)}</b>. Please confirm below — it takes one tap.</p>` : ""}
-    <div style="white-space:pre-line">${escH(c.message)}</div>
-    <table style="border-collapse:collapse;margin:12px 0">${facts}</table>
-    ${c.memo_key ? `<p><a href="${d.hubUrl}/api/mk-ext/${t.token}/memo" style="color:#4A1F73;font-weight:bold">📄 Open the memo (${escH(c.memo_name || "PDF")})</a></p>` : ""}
-    <div style="background:#F7F4FA;border-radius:12px;padding:16px;text-align:center;margin:14px 0">
-      <p style="margin:0 0 10px;font-weight:bold">Will ${escH(t.brand)} participate?</p>
-      ${btn("yes", "✓ Participating", "#1E8A4C", "#ffffff", "#1E8A4C")} ${btn("no", "✗ Not participating", "#ffffff", "#B03A2E", "#B03A2E")}
-      <p dir="rtl" style="margin:10px 0 0;color:#6D6479;font-size:13px">هل ستشاركون؟ اضغط على أحد الزرين</p></div>
-    <p style="font-size:12px;color:#777">One tap records your answer and you can change it until ${escH(longDay(c.end_day))}. Daily reminders stop as soon as you answer. This link is personal to ${escH(t.brand)}.</p>
-    <p>Kind regards,<br>ABC ${escH(sn)} — Operations Team, on behalf of Marketing</p></div></div>`;
-  return { to: t.emails.split(/,\s*/), subject: `ABC ${sn} · ${title} · ${t.brand}`, html };
+/* the tenant email — three designs, chosen in Admin Control → Tenant pages & emails (meta ext:cfg.emailStyle):
+   A classic memo · B branded card (default) · C executive minimal. Buttons are Outlook-safe (table cells). */
+export const EMAIL_STYLES = { A: "Classic memo", B: "Branded card", C: "Executive minimal" };
+export async function extCfg(env) {
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'ext:cfg'").first().catch(() => null);
+  let c = {}; try { c = r ? JSON.parse(r.v) : {}; } catch {}
+  return { theme: ["light", "dark", "auto"].includes(c.theme) ? c.theme : "light", emailStyle: EMAIL_STYLES[c.emailStyle] ? c.emailStyle : "B", arabic: c.arabic !== false };
+}
+const shortDay = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
+const weekDay = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "";
+export function mail(d, c, t, kind, style = "B", arabic = true) {
+  const link = `${d.hubUrl}/mk/${t.token}`, sn = d.siteName(t.site), F = "font-family:Calibri,Arial,sans-serif;", rem = kind === "reminder";
+  const dates = c.act_from ? escH(longDay(c.act_from)) + (c.act_to && c.act_to !== c.act_from ? " – " + escH(longDay(c.act_to)) : "") : "";
+  const memo = c.memo_key ? `${d.hubUrl}/api/mk-ext/${t.token}/memo` : "";
+  const msg = escH(c.message).replace(/\n/g, "<br>");
+  const remLine = rem ? `<p style="${F}margin:0 0 12px;padding:10px 12px;background:#FFF6E5;border-left:3px solid #C98A12;font-size:13px;color:#5A4300">We have not yet received your reply. Kindly confirm by <b>${escH(weekDay(c.end_day))}</b>.</p>` : "";
+  const ar = arabic ? `<span dir="rtl">يرجى تأكيد المشاركة قبل ${escH(shortDay(c.end_day))}</span>` : "";
+  const btn = (a, label, solid, w) => solid
+    ? `<td bgcolor="#4A1F73" style="border-radius:5px"${w ? ` width="${w}" align="center"` : ""}><a href="${link}?a=${a}" style="${F}display:${w ? "block" : "inline-block"};padding:12px 24px;font-size:14px;font-weight:bold;color:#ffffff;text-decoration:none">${label}</a></td>`
+    : `<td bgcolor="#ffffff" style="border:1px solid #C9C0D6;border-radius:5px"${w ? ` width="${w}" align="center"` : ""}><a href="${link}?a=${a}" style="${F}display:${w ? "block" : "inline-block"};padding:11px 22px;font-size:14px;color:#4A1F73;text-decoration:none">${label}</a></td>`;
+  const sign = `Kind regards,<br><b>Mall Operations</b><br><span style="color:#777">ABC ${escH(sn)} · on behalf of Marketing</span>`;
+  const foot = `One click records your answer; you may change it until ${escH(shortDay(c.end_day))}. Reminders stop once you reply. This link is personal to ${escH(t.brand)}.`;
+  const wrap = inner => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1EEF4"><tr><td align="center" style="padding:18px 10px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;${F}color:#222;border:1px solid #DCD6E4">${inner}</table></td></tr></table>`;
+  let html, subject;
+  if (style === "A") {
+    subject = `ABC ${sn} | Marketing Activation: ${c.title} | ${rem ? "Reminder — " : ""}Participation confirmation required by ${shortDay(c.end_day)}`;
+    html = wrap(`<tr><td style="height:4px;background:#4A1F73;font-size:0;line-height:0">&nbsp;</td></tr>
+      <tr><td style="padding:22px 32px 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="${F}font-size:20px;font-weight:bold;color:#4A1F73">ABC</td>
+        <td align="right" style="${F}font-size:11px;color:#777;letter-spacing:1px;text-transform:uppercase">${escH(sn)} · Mall Operations</td></tr></table></td></tr>
+      <tr><td style="padding:10px 32px 0"><div style="border-top:1px solid #E6E1EC"></div></td></tr>
+      <tr><td style="${F}padding:18px 32px 4px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8A7FA0">${rem ? "Reminder · " : ""}Memo · Marketing Activation</td></tr>
+      <tr><td style="${F}padding:0 32px 14px;font-size:22px;font-weight:bold;color:#1E1530">${escH(c.title)} — Participation</td></tr>
+      <tr><td style="padding:0 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${F}font-size:14px;border:1px solid #E6E1EC">
+        ${[["To", `<b>${escH(t.brand)}</b>${t.units ? " · " + escH(t.units) : ""}`], ["From", "Mall Operations, on behalf of Marketing"], dates && ["Activity dates", dates], ["Reply by", `<b style="color:#B03A2E">${escH(weekDay(c.end_day))}</b>`]].filter(Boolean)
+          .map(([k, v], i, L) => `<tr><td style="padding:9px 12px;background:#F7F5FA;color:#6D6479;width:130px;${i < L.length - 1 ? "border-bottom:1px solid #E6E1EC" : ""}">${k}</td><td style="padding:9px 12px;${i < L.length - 1 ? "border-bottom:1px solid #E6E1EC" : ""}">${v}</td></tr>`).join("")}
+      </table></td></tr>
+      <tr><td style="${F}padding:20px 32px 6px;font-size:14px;line-height:1.6">${remLine}Dear ${escH(t.brand)} Management,<br><br>${msg}</td></tr>
+      ${memo ? `<tr><td style="${F}padding:4px 32px 0;font-size:14px"><a href="${memo}" style="color:#4A1F73;font-weight:bold;text-decoration:none">&#128206; ${escH(c.memo_name || "Memo (PDF)")}</a></td></tr>` : ""}
+      <tr><td style="padding:22px 32px 6px"><table role="presentation" cellpadding="0" cellspacing="0"><tr>${btn("yes", "Confirm participation", true)}<td width="12">&nbsp;</td>${btn("no", "Decline", false)}</tr></table></td></tr>
+      <tr><td style="${F}padding:8px 32px 0;font-size:12px;color:#777;line-height:1.5">${foot} ${ar}</td></tr>
+      <tr><td style="${F}padding:22px 32px 26px;font-size:14px;line-height:1.6">${sign}</td></tr>`);
+  } else if (style === "C") {
+    subject = `${rem ? "Reminder: " : ""}${c.title} — participation · ${t.brand}`;
+    html = wrap(`<tr><td style="${F}padding:30px 34px 0;font-size:15px;line-height:1.65">${remLine}Dear ${escH(t.brand)} Management,<br><br>${msg}
+        ${dates ? `<br><br>Activity dates: <b>${dates}</b>` : ""}<br><br>We would appreciate your confirmation by <b>${escH(weekDay(c.end_day))}</b>.</td></tr>
+      <tr><td style="padding:22px 34px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #4A1F73;background:#FAF8FC"><tr><td style="padding:16px 18px">
+        <div style="${F}font-size:12px;color:#6D6479;margin-bottom:10px">Your response</div>
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>${btn("yes", "Participate", true)}<td width="10">&nbsp;</td>${btn("no", "Not participating", false)}</tr></table>
+        ${memo ? `<div style="${F}font-size:12px;color:#8A7FA0;margin-top:10px">Memo: <a href="${memo}" style="color:#4A1F73">${escH(c.memo_name || "PDF")}</a></div>` : ""}
+        ${ar ? `<div style="${F}font-size:12px;color:#8A7FA0;margin-top:6px">${ar}</div>` : ""}</td></tr></table></td></tr>
+      <tr><td style="${F}padding:26px 34px 30px;font-size:15px;line-height:1.6">${sign}</td></tr>
+      <tr><td style="${F}padding:12px 34px;border-top:1px solid #EEE9F3;font-size:11px;color:#9A90AC">${foot}</td></tr>`);
+  } else {
+    subject = `${rem ? "Reminder: " : ""}${c.title} · Please confirm ${t.brand}'s participation · ABC ${sn}`;
+    html = wrap(`<tr><td bgcolor="#2A0F45" style="background:#2A0F45;padding:20px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="58"><img src="${d.hubUrl}/icons/abc-logo-white.png" width="46" alt="ABC" style="display:block;border:0"></td>
+        <td style="${F}color:#ffffff;font-size:12px;letter-spacing:1.5px;text-transform:uppercase">ABC ${escH(sn)}<br><span style="font-size:18px;letter-spacing:0;text-transform:none;font-weight:bold">Marketing Activation</span></td></tr></table></td></tr>
+      <tr><td style="height:3px;background:#C9A962;font-size:0;line-height:0">&nbsp;</td></tr>
+      <tr><td style="${F}padding:24px 28px 6px;font-size:21px;font-weight:bold;color:#1E1530">${escH(c.title)}</td></tr>
+      <tr><td style="${F}padding:0 28px 16px;font-size:14px;line-height:1.6;color:#444">${remLine}Dear ${escH(t.brand)} team,<br>${msg}</td></tr>
+      <tr><td style="padding:0 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F3FA;${F}font-size:13px"><tr>
+        ${dates ? `<td style="padding:14px 16px"><span style="color:#8A7FA0;font-size:11px;text-transform:uppercase;letter-spacing:1px">Activity</span><br><b>${dates}</b></td>` : ""}
+        <td style="padding:14px 16px;${dates ? "border-left:1px solid #E3DCEC" : ""}"><span style="color:#8A7FA0;font-size:11px;text-transform:uppercase;letter-spacing:1px">Reply by</span><br><b style="color:#B03A2E">${escH(shortDay(c.end_day))}</b></td>
+        ${memo ? `<td style="padding:14px 16px;border-left:1px solid #E3DCEC"><span style="color:#8A7FA0;font-size:11px;text-transform:uppercase;letter-spacing:1px">Memo</span><br><a href="${memo}" style="color:#4A1F73;font-weight:bold;text-decoration:none">View PDF ›</a></td>` : ""}
+      </tr></table></td></tr>
+      <tr><td align="center" style="${F}padding:24px 28px 4px;font-size:14px;font-weight:bold;color:#1E1530">Will ${escH(t.brand)} participate?</td></tr>
+      <tr><td align="center" style="padding:10px 28px 4px"><table role="presentation" cellpadding="0" cellspacing="0"><tr>${btn("yes", "Yes, we participate", true, 200)}<td width="12">&nbsp;</td>${btn("no", "No, not this time", false, 200)}</tr></table></td></tr>
+      ${ar ? `<tr><td align="center" style="${F}padding:10px 28px 0;font-size:12px;color:#8A7FA0">${ar}</td></tr>` : ""}
+      <tr><td style="${F}padding:24px 28px 22px;font-size:13px;line-height:1.6;color:#444">${sign}</td></tr>
+      <tr><td style="${F}padding:14px 28px;background:#F6F3FA;font-size:11px;color:#8A7FA0;line-height:1.5">${foot}</td></tr>`);
+  }
+  return { to: t.emails.split(/,\s*/), subject, html };
+}
+/* a sample for the admin preview */
+export function mailPreview(d, style, kind = "launch", arabic = true) {
+  const c = { title: "Black Friday 2026", message: "ABC will run Black Friday from 27 to 30 November, supported by a mall-wide digital and on-site campaign.\nKindly confirm whether your store will participate. The full terms are in the memo.",
+    act_from: "2026-11-27", act_to: "2026-11-30", end_day: "2026-11-05", memo_key: "x", memo_name: "Black-Friday-2026-Memo.pdf" };
+  return mail(d, c, { token: "SAMPLE", site: "VRM", brand: "CARPISA", units: "L1-014", emails: "store@example.com" }, kind, style, arabic);
 }
 async function sendTo(env, d, c, list, kind) {
   const today = d.today(), go = list.filter(t => t.emails && !t.answer);
   if (!go.length) return 0;
-  const msgs = go.map(t => mail(d, c, t, t.mails ? kind : "launch"));
+  const X = await extCfg(env), msgs = go.map(t => mail(d, c, t, t.mails ? kind : "launch", X.emailStyle, X.arabic));
   for (let i = 0; i < go.length; i += 80) await env.DB.batch(go.slice(i, i + 80).map(t => env.DB.prepare("UPDATE mk_targets SET mails = mails + 1, last_mail = ? WHERE id = ?").bind(today, t.id)));
   if (d.sendMany) await d.sendMany(env, msgs);
   return go.length;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -36,7 +36,7 @@ textarea.in{min-height:70px;resize:vertical}
 .switch{font-size:.82rem;color:var(--muted);margin-top:12px;text-align:center}.switch a{color:var(--brand);font-weight:700}
 .note{margin-top:10px;border-radius:10px;padding:9px 11px;font-size:.84rem;font-weight:600}.note.ok{background:rgba(30,138,76,.1);color:var(--ok)}.note.bad{background:rgba(176,58,46,.1);color:var(--no)}
 .foot{text-align:center;font-size:.72rem;color:var(--muted);margin-top:18px}
-@media (prefers-color-scheme:dark){:root{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}.q{background:#2A2040}.chip,.in,.b.n{background:#1F1730}}
+:root[data-theme="dark"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="dark"] .q{background:#2A2040}:root[data-theme="dark"] .chip,:root[data-theme="dark"] .in,:root[data-theme="dark"] .b.n{background:#1F1730}@media (prefers-color-scheme:dark){:root[data-theme="auto"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="auto"] .q{background:#2A2040}:root[data-theme="auto"] .chip,:root[data-theme="auto"] .in,:root[data-theme="auto"] .b.n{background:#1F1730}}
 </style>
 </head>
 <body>
@@ -44,6 +44,7 @@ textarea.in{min-height:70px;resize:vertical}
 <div class="wrap"><div class="card" id="app"><p class="sub">Loading…</p></div>
 <div class="foot">ABC · Mall Operations · this page is personal to your shop</div></div>
 <script>
+fetch("/api/ext-cfg").then(r => r.json()).then(j => { if (j && j.ok && j.data && j.data.theme) document.documentElement.setAttribute("data-theme", j.data.theme); }).catch(() => {});   // tenant pages: Light / Dark / Auto set by the admin
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TK = (location.pathname.match(/\/mk\/([A-Za-z0-9]{18})/) || [])[1] || "";

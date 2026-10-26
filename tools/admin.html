@@ -105,7 +105,7 @@ setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#ov").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
   ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"],
-  ["sep", "Content"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
+  ["sep", "Content"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
 const ago = iso => { if (!iso) return "—"; const t = Date.parse(iso.length <= 10 ? iso + "T12:00:00Z" : iso); if (!t) return iso; const m = Math.round((Date.now() - t) / 60000);
@@ -138,7 +138,7 @@ function go(p){
   PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ ov, pr, us, ur, sec, hi, al, db, sy, pc, tl, bk, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ ov, pr, us, ur, sec, hi, al, db, sy, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -580,6 +580,28 @@ async function pr(){
       $("#scS").onclick = async () => { try { await api("admin/schedcc", { site, cc: $("#scT").value }); toast("Cc list saved"); } catch (er){ toast(er.message, true); } }; }).catch(er => { sc.querySelector("p").textContent = er.message; }); }
 }
 
+/* ---------- tenant pages & emails (look of everything tenants and visitors see) ---------- */
+let EXK = "launch";
+async function ex(){
+  const c = await api("admin/cc/ext"), TH = [["light", "☀️ Light", "Always light (recommended)"], ["dark", "🌙 Dark", "Always dark"], ["auto", "🌓 Follow the device", "Light or dark, like the visitor's phone"]];
+  const prev = s => `/api/admin/cc/ext/preview?style=${s}&kind=${EXK}&arabic=${c.arabic ? 1 : 0}`;
+  V(head("Tenant pages &amp; emails", "How tenants and visitors see the hub — the pages behind their links and the marketing emails") +
+    `<div class="sec">Pages behind the tenant &amp; visitor links</div>
+    <div class="card"><div class="sub" style="margin:0 0 10px">Marketing participation answer page · Preventive Maintenance upload page · visitor Quick Access Pass</div>
+      <div class="flt" style="margin:0">${TH.map(([k, n, s]) => `<span data-th2="${k}" class="${c.theme === k ? "on" : ""}" title="${esc(s)}">${n}</span>`).join("")}</div></div>
+    <div class="sec">Marketing participation email — design</div>
+    <div class="flt"><span data-k="launch" class="${EXK === "launch" ? "on" : ""}">First email</span><span data-k="reminder" class="${EXK === "reminder" ? "on" : ""}">Daily reminder</span>
+      <label class="mut" style="display:flex;gap:6px;align-items:center;margin-left:8px"><input type="checkbox" id="exAr" ${c.arabic ? "checked" : ""}> Arabic line under the buttons</label></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr))">${Object.entries(c.styles).map(([k, n]) => `<div class="card" style="${c.emailStyle === k ? "border:2px solid #4A1F73" : ""}">
+      <h3>${k} · ${esc(n)} ${c.emailStyle === k ? pill("ok", "In use") : `<button class="b" data-use="${k}" style="padding:5px 10px">Use this design</button>`}</h3>
+      <iframe src="${prev(k)}" style="width:100%;height:560px;border:1px solid var(--cline);border-radius:10px;background:#fff" loading="lazy" title="${esc(n)}"></iframe>
+      <a class="mut" href="${prev(k)}" target="_blank">Open full size ↗</a></div>`).join("")}</div>`);
+  const save = async body => { try { await api("admin/cc/ext", body); toast("Saved — used from the next email / page"); ex(); } catch (e){ toast(e.message, true); } };
+  $("#main").querySelectorAll("[data-th2]").forEach(x => x.onclick = () => save({ theme: x.dataset.th2 }));
+  $("#main").querySelectorAll("[data-use]").forEach(x => x.onclick = () => save({ emailStyle: x.dataset.use }));
+  $("#main").querySelectorAll("[data-k]").forEach(x => x.onclick = () => { EXK = x.dataset.k; ex(); });
+  $("#exAr").onchange = e => save({ arabic: e.target.checked });
+}
 /* ---------- announcements ---------- */
 let AED = null;
 async function an(){

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,7 +10,7 @@
 <!-- Quick Access Pass: the visitor's page, opened from the WhatsApp link /qp/<token> (no hub account). See docs/FEATURE-quick-pass.md -->
 <style>
 :root{--brand:#4A1F73;--deep:#2A0F45;--gold:#B08A2E;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--ok:#1E8A4C;--warn:#B8740F;--bad:#B03A2E}
-@media (prefers-color-scheme:dark){:root{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--ok:#5FD08A;--warn:#F0B44C;--bad:#FF7A6B}}
+:root[data-theme="dark"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--ok:#5FD08A;--warn:#F0B44C;--bad:#FF7A6B}@media (prefers-color-scheme:dark){:root[data-theme="auto"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--ok:#5FD08A;--warn:#F0B44C;--bad:#FF7A6B}}
 *{box-sizing:border-box;margin:0}
 body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:0 0 30px}
 .hd{width:100%;background:linear-gradient(140deg,var(--deep),var(--brand));color:#fff;padding:22px 20px 70px;text-align:center}
@@ -27,7 +27,7 @@ h1{font-size:1.35rem;margin:14px 0 2px}.sub{color:var(--muted);font-size:.9rem}
 .qrw.off svg{filter:grayscale(1) blur(3px);opacity:.25}
 .qrw .ov{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:1.1rem;color:#555;text-align:center;padding:30px}
 .code{font-size:1.5rem;font-weight:900;letter-spacing:.16em;color:var(--brand)}
-@media (prefers-color-scheme:dark){.code{color:#C9A8F0}}
+:root[data-theme="dark"] .code{color:#C9A8F0}@media (prefers-color-scheme:dark){:root[data-theme="auto"] .code{color:#C9A8F0}}
 .cd{margin:14px auto 0;font-size:2.3rem;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ok)}
 .cd small{display:block;font-size:.78rem;font-weight:700;color:var(--muted);letter-spacing:.04em}
 .bar{height:6px;border-radius:3px;background:rgba(127,127,127,.18);overflow:hidden;margin:10px 6px 0}.bar i{display:block;height:100%;background:var(--ok);transition:width 1s linear}
@@ -42,6 +42,7 @@ h1{font-size:1.35rem;margin:14px 0 2px}.sub{color:var(--muted);font-size:.9rem}
 <p class="foot">One entry at the loading area · ABC Operations</p>
 <script src="/tools/qrcode.js"></script>
 <script>
+fetch("/api/ext-cfg").then(r => r.json()).then(j => { if (j && j.ok && j.data && j.data.theme) document.documentElement.setAttribute("data-theme", j.data.theme); }).catch(() => {});   // visitor page: Light / Dark / Auto set by the admin
 const token = (location.pathname.match(/\/qp\/([A-Za-z0-9]{20,40})/) || [])[1] || "";
 let P = null, skew = 0, total = 30 * 60;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
