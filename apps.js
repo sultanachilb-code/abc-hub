@@ -17,6 +17,7 @@
      who sees a tile is set in ACCESS below, by position.
      sso     true = sign in automatically with the hub account
      logo    picture shown on the tile instead of the icon (e.g. "/logos/jde.png", square, 256×256)
+     hidden  true = not on the home screen for anyone (admin pages used from the Admin Control Center)
      also    more folders the same tile appears in, e.g. also: ["Leadership"] (same page, same access)
    Empty groups are hidden automatically.
    ===================================================================== */
@@ -25,7 +26,7 @@ window.HUB = {
   title: "ABC Operations Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Day to Day Operations", "Leadership", "Dashboards", "Operations Tools", "Tenant Management", "Property Overview & Info", "Inspections", "Incidents, Security & Footfall", "Operations", "Enterprise Systems", "Policies & Procedures",
+  GROUPS: ["Day to Day Operations", "Operations Team", "Operations Communication", "Leadership", "Dashboard and Reports", "Operations Tools", "Tenant Management", "Property Overview & Info", "Inspections", "Incidents, Security & Footfall", "Operations", "Enterprise Systems", "Policies & Procedures",
     /* new tools wait here while they are tested; they move to their real folder afterwards (Oct 2026) */
     "Upcoming - Testing",
     /* opened from a tile (orbit ring), not shown as sections */
@@ -114,7 +115,7 @@ window.HUB = {
       id: "schedule",
       name: "Operations Schedule",
       desc: "Weekly shifts by flagship, ranked by position",
-      group: "Schedule & Calendar",
+      group: "Schedule & Calendar", also: ["Operations Team"],
       icon: "calendar",
       color: "#4A1F73",
       url: "/tools/schedule"
@@ -137,7 +138,7 @@ window.HUB = {
       color: "#2F6F73",
       url: "/tools/handover"
     },
-    { id: "calendar", name: "Operations Calendar", desc: "Marketing events, ops activities, MOM, objectives and expiry dates", group: "Schedule & Calendar", icon: "calendar", color: "#C2185B", url: "/tools/calendar" },
+    { id: "calendar", name: "Operations Calendar", desc: "Marketing events, ops activities, MOM, objectives and expiry dates", group: "Schedule & Calendar", also: ["Operations Team"], icon: "calendar", color: "#C2185B", url: "/tools/calendar" },
     /* Schedule & Calendar folder: opens a ring with the Operations Schedule and the Operations Calendar */
     { id: "schedule-calendar", name: "Schedule & Calendar", desc: "Operations Schedule and Operations Calendar", group: "Day to Day Operations", icon: "calendar", color: "#4A1F73", kind: "orbit", orbitGroup: "Schedule & Calendar", url: "#schedule-calendar" },
     /* Contractor Access folder: opens a ring with Contractors (who is in the mall now) and the Loading Gate */
@@ -198,9 +199,9 @@ window.HUB = {
     /* Quick Access Pass — one-entry QR for a contractor or visitor, live 30 minutes, sent by WhatsApp (see docs/FEATURE-quick-pass.md). Everyone can open it. */
     { id: "quickpass", name: "Quick Access Pass", desc: "One-entry QR for a contractor or visitor — 30 minutes, sent by WhatsApp", group: "Upcoming - Testing", icon: "qr", color: "#1E8A4C", url: "/tools/quickpass" },
     /* Message of the moment — the admin writes the friendly lines shown above Day to Day (see docs/FEATURE-moments.md) */
-    { id: "moments", name: "Message of the Moment", desc: "Friendly lines above Day to Day (admin only) — with their time", group: "Upcoming - Testing", icon: "megaphone", color: "#B08A2E", url: "/tools/moments" },
+    { id: "moments", name: "Message of the Moment", desc: "Friendly lines above Day to Day (admin only) — with their time", group: "Upcoming - Testing", hidden: true, icon: "megaphone", color: "#B08A2E", url: "/tools/moments" },
     /* Seasonal decorations — designs and dates of the hanging decorations (admin only, see docs/FEATURE-seasons.md) */
-    { id: "seasons", name: "Seasonal Decorations", desc: "Designs and dates — Ramadan, Eid, Christmas, Independence Day…", group: "Upcoming - Testing", icon: "sun", color: "#C8892A", url: "/tools/seasons" },
+    { id: "seasons", name: "Seasonal Decorations", desc: "Designs and dates — Ramadan, Eid, Christmas, Independence Day…", group: "Upcoming - Testing", hidden: true, icon: "sun", color: "#C8892A", url: "/tools/seasons" },
     /* Contractors feature — see docs/FEATURE-contractors.md */
     { id: "contractors", name: "Contractors", desc: "Who is on site today — check in and out, register and insurance", group: "Contractor Access", icon: "hardhat", color: "#C07A12", url: "/tools/contractors" },
     /* Loading Gate feature — see docs/FEATURE-gate.md */
@@ -213,7 +214,7 @@ window.HUB = {
     { id: "evacuation", name: "Tenant Evacuation Plan", desc: "Service corridor and assembly point for every active tenant", group: "Incidents, Security & Footfall", icon: "exit", color: "#2E7D32", url: "/tools/evacuation" },
     /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */
     /* Tenant 360 — one page per unit with everything the hub knows about the tenant (see docs/FEATURE-tenant-360.md) */
-    { id: "tenant360", name: "Tenant 360", desc: "One page per unit — contract, portal items, violations, fit-out, works, contacts, contractors", group: "Tenant Management", icon: "users", color: "#4A1F73", url: "/tools/tenant360" },
+    { id: "tenant360", name: "Tenant 360", desc: "One page per unit — contract, portal items, violations, fit-out, works, contacts, contractors", group: "Dashboard and Reports", icon: "users", color: "#4A1F73", url: "/tools/tenant360" },
     { id: "tenants", name: "Tenant Announcements", desc: "Opening, closure and relocation emails with photos", group: "Tenant Management", icon: "storeIn", color: "#2F6F73", url: "/tools/tenants" },
     {
       id: "feedback",
@@ -225,16 +226,16 @@ window.HUB = {
       url: "/tools/feedback"
     },
     /* Leadership dashboards feature — see docs/FEATURE-leadership.md */
-    { id: "leadership", name: "Performance Dashboard", desc: "Every flagship's status, soft services and the monthly pack", group: "Leadership", icon: "gauge", color: "#2A0F45", url: "/tools/leadership" },
+    { id: "leadership", name: "Performance Dashboard", desc: "Every flagship's status, soft services and the monthly pack", group: "Dashboard and Reports", icon: "gauge", color: "#2A0F45", url: "/tools/leadership" },
     /* Monthly operations pack feature — see docs/FEATURE-ops-pack.md */
-    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Leadership", icon: "pack", color: "#2A0F45", url: "/tools/pack" },
+    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Dashboard and Reports", icon: "pack", color: "#2A0F45", url: "/tools/pack" },
     /* Tenant Management feature — see docs/FEATURE-tenant-management.md */
     { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", also: ["Leadership"], icon: "shield", color: "#A0442F", url: "/tools/compliance" },
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", also: ["Leadership"], icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
-    { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
+    { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Dashboard and Reports", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
-    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing, contractor permits and portal users", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing, contractor permits and portal users", group: "Dashboard and Reports", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
     /* Malfunction Records — soft services and operations follow the service providers (see docs/FEATURE-malfunctions.md) */
     { id: "malfunctions", name: "Malfunction Records", desc: "Malfunctions handled by service providers — reported, attended, fixed", group: "Operations Tools", icon: "bolt", color: "#B5452B", url: "/tools/malfunctions" },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },
@@ -264,7 +265,7 @@ window.HUB = {
       id: "exec",
       name: "Executive Report",
       desc: "Monthly executive summary — occupancy, leasing, CAPEX, QC",
-      group: "Leadership",
+      group: "Dashboard and Reports",
       icon: "chart",
       color: "#0F5C7A",
       url: "/tools/exec"
@@ -281,12 +282,12 @@ window.HUB = {
     },
     /* Data Accuracy Score feature — see docs/FEATURE-accuracy.md */
     /* Tenant Sales & Score Card — sales file read on the page only, never saved (see docs/FEATURE-tenant-sales.md) */
-    { id: "sales", name: "Tenant Sales & Score Card", desc: "YTD vs last year, sales / m², categories and a score card per tenant — file not saved", group: "Leadership", icon: "chart", color: "#7B4BB0", url: "/tools/sales" },
+    { id: "sales", name: "Tenant Sales & Score Card", desc: "YTD vs last year, sales / m², categories and a score card per tenant — file not saved", group: "Dashboard and Reports", icon: "chart", color: "#7B4BB0", url: "/tools/sales" },
     {
       id: "accuracy",
       name: "Data Accuracy Score",
       desc: "When the GLA, property details, executive report and budget were last updated",
-      group: "Leadership",
+      group: "Dashboard and Reports",
       icon: "gauge",
       color: "#2E6B4F",
       url: "/tools/accuracy"
@@ -315,18 +316,18 @@ window.HUB = {
       sso: true
     },
     /* Snaglist consolidated report — all flagships, from the Snaglist Manager (see docs/FEATURE-snaglist-report.md) */
-    { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Inspections", icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
+    { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Dashboard and Reports", icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
     /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
     /* Cleaning Control — the cleaner app (own link) and the cleaning company's work against the schedule — see docs/FEATURE-cleaning-app.md */
-    { id: "induction", name: "Operations Induction", desc: "Newcomer induction PowerPoint per flagship — the current team with photos, animations", group: "Upcoming - Testing", icon: "users", color: "#4A1F73", url: "/tools/induction" },
+    { id: "induction", name: "Operations Induction", desc: "Newcomer induction PowerPoint per flagship — the current team with photos, animations", group: "Operations Team", icon: "users", color: "#4A1F73", url: "/tools/induction" },
     { id: "beforeafter", name: "Before / After", desc: "Ghost camera for same-angle before / after photos, and a PowerPoint deck — all on your phone, nothing sent to the hub", group: "Upcoming - Testing", icon: "camera", color: "#8B5A2B", url: "/tools/beforeafter" },
     { id: "cleanctl", name: "Cleaning Control", desc: "Cleaning schedule, before / after photos, compliance and the cleaner app phones", group: "Upcoming - Testing", icon: "clipboard", color: "#2F6F73", url: "/tools/cleanctl" },
-    { id: "mkt", name: "Marketing Participation", desc: "Send marketing activation memos — tenants answer Participating / Not participating from the email, daily reminders, live % per flagship", group: "Upcoming - Testing", icon: "megaphone", color: "#B8456B", url: "/tools/mkt" },
-    { id: "pm", name: "Preventive Maintenance", desc: "Tenant PM certificates — setup, monthly launch, tenant upload link, review, reminders, extensions and breaches", group: "Upcoming - Testing", icon: "shield", color: "#2F6F73", url: "/tools/pm" },
-    { id: "tlist", name: "Tenant List", desc: "Tenants with their SKU (CRM sheet) — YES / NO for each, live YES % of the tenants selected; one shared list per flagship", group: "Upcoming - Testing", icon: "clipboard", color: "#1E7A6B", url: "/tools/tlist" },
+    { id: "mkt", name: "Marketing Participation", desc: "Send marketing activation memos — tenants answer Participating / Not participating from the email, daily reminders, live % per flagship", group: "Operations Communication", icon: "megaphone", color: "#B8456B", url: "/tools/mkt" },
+    { id: "pm", name: "Preventive Maintenance", desc: "Tenant PM certificates — setup, monthly launch, tenant upload link, review, reminders, extensions and breaches", group: "Operations Communication", icon: "shield", color: "#2F6F73", url: "/tools/pm" },
+    { id: "tlist", name: "Tenant List", desc: "Tenants with their SKU (CRM sheet) — YES / NO for each, live YES % of the tenants selected; one shared list per flagship", group: "Operations Team", icon: "clipboard", color: "#1E7A6B", url: "/tools/tlist" },
     { id: "keybox", name: "Key Box", desc: "Keys of the vacant units — who has which key, back by when, signed hand-over and late alerts", group: "Upcoming - Testing", icon: "box", color: "#B08A2E", url: "/tools/keybox" },
     { id: "coverage", name: "Supervisor Coverage", desc: "Hour-by-hour timeline of the week — who covers each hour (SMS / MS), management hours and gaps", group: "Upcoming - Testing", icon: "calendar", color: "#2E9E5B", url: "/tools/coverage" },
-    { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Inspections", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
+    { id: "cleaning", name: "Cleaning Headcount", desc: "Provider punching record vs planned headcount — shortages, lates, missing punches", group: "Dashboard and Reports", icon: "users", color: "#2F6F73", url: "/tools/cleaning" },
     {
       id: "restroom",
       logo: "/logos/restroom.png",   /* replace the file in /logos to change the picture */
@@ -432,7 +433,7 @@ window.HUB = {
       logo: "/logos/footfall.png",   /* replace the file in /logos to change the picture */
       name: "Footfall Hub",
       desc: "Daily visitors and vehicles, year on year",
-      group: "Incidents, Security & Footfall",
+      group: "Dashboard and Reports",
       icon: "footfall",
       color: "#8A5A1F",
       url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/",
