@@ -69,6 +69,8 @@ async function seed(env, site, now) {
   for (let i = 0; i < ops.length; i += 50) await env.DB.batch(ops.slice(i, i + 50));
 }
 
+/* the Tenant List reads the SKUs: make sure the sheet is seeded and linked to the GLA first */
+export async function crmReady(env, site, now) { await seed(env, site, now); await autoLink(env, site, await unitsOf(env, site)); }
 export async function crmRoute(env, p, method, b, url, { site, me, now, canEdit, glaSeed }) {
   if (glaSeed) await glaSeed(site).catch(() => {});
   await seed(env, site, now);
