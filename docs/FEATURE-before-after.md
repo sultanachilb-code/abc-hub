@@ -37,3 +37,8 @@
 - **Match the colours to the before** (result screen, on by default): the after's white balance (warmer / bluer light) is matched to the before for the side-by-side and the deck — brightness is kept, so a cleaner result still shows. The saved after photo is never changed.
 - Side-by-side up to 2400 px high (about 6000 px wide), JPEG 94 %, P3 colour profile; the deck copy is 3200 px; the PowerPoint uses 2000 px per picture to stay light.
 - Everything stays on the phone (Photos + the device's own storage) — nothing is uploaded to the hub. A web page cannot write to Photos by itself: **Save to Photos** opens the share sheet → **Save 2 Images**.
+
+## Zoom with the iPhone camera (26 Oct 2026)
+- A web page cannot set the zoom of the iPhone camera app (it always opens at 1×). The zoom used in the ghost camera is remembered when the shutter is pressed and applied afterwards:
+  the alignment tries 1×, the ghost zoom and steps between (so it also works when the zoom was set in the iPhone camera itself) and keeps the best match.
+- **Save the after photo**: *Framed like the before* (default — cut from the full-resolution photo at the same zoom and angle) or *Full photo as taken*; remembered on the device.

@@ -121,7 +121,7 @@ const all = store => tx(store, "readonly", s => s.getAll());
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 let CTX = null, TAB = "cam";
-const S = { zoom: 1, zMin: 1, zMax: 4, native: false, site: "", place: "", stamp: true, hq: (() => { try { return localStorage.getItem("ba.hq") !== "0"; } catch { return true; } })(), wb: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
+const S = { zoom: 1, zMin: 1, zMax: 4, native: false, site: "", place: "", framed: (() => { try { return localStorage.getItem("ba.framed") !== "0"; } catch { return true; } })(), shotZoom: 1, stamp: true, hq: (() => { try { return localStorage.getItem("ba.hq") !== "0"; } catch { return true; } })(), wb: true, grid: true, edges: false, ghostOp: 28, facing: "environment", stream: null, before: null, shot: null };
 const fmtD = iso => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const fmtDT = iso => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const slug = t => String(t || "").trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 40) || "area";
@@ -228,7 +228,7 @@ async function openCam(){
   $("#snap").onclick = snap;
   $("#nat").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) { if (CAM && !S.stream) startCam(); return; } await finishAfter(await blobToImg(f), f, "iphone"); };
   $("#nat").addEventListener("cancel", () => { if (CAM && !S.stream) startCam(); });
-  $("#nat").parentElement.addEventListener("click", () => stopCam());   // free the camera for the iPhone camera app
+  $("#nat").parentElement.addEventListener("click", () => { S.shotZoom = S.zoom; stopCam(); });   // free the camera for the iPhone camera app
   pinch($("#fv"));
   await startCam();
 }
@@ -330,13 +330,14 @@ function liveMatch(){
 async function snap(){
   /* iPhone: Safari's live camera is a video picture (no Smart HDR / Deep Fusion, different colours). For iPhone quality the shutter
      opens the iPhone camera app at the same spot; small movements are corrected by the automatic alignment afterwards. */
-  if (S.hq && isIOS){ stopCam(); $("#nat").click(); return; }
+  if (S.hq && isIOS){ S.shotZoom = S.zoom; stopCam(); $("#nat").click(); return; }
   const v = $("#vid"); if (!v || !v.videoWidth) return toast("The camera is still starting", true);
   /* Android / Chrome: a real full-resolution still photo from the camera, with the phone's own processing */
   if (S.hq && typeof ImageCapture === "function" && S.stream){
     try { const tr = S.stream.getVideoTracks()[0], ic = new ImageCapture(tr);
       let opt = {}; try { const pc = await ic.getPhotoCapabilities(); if (pc.imageWidth && pc.imageWidth.max) opt = { imageWidth: pc.imageWidth.max }; } catch {}
       $("#fv").classList.add("flash"); setTimeout(() => { const f = $("#fv"); if (f) f.classList.remove("flash"); }, 180);
+      S.shotZoom = S.native ? 1 : S.zoom;   // a full-sensor still: the digital zoom is applied afterwards
       const blob = await ic.takePhoto(opt), f = new File([blob], "after.jpg", { type: blob.type || "image/jpeg" });
       return finishAfter(await blobToImg(f), f, "still");
     } catch (e){ console.warn("takePhoto", e); }
@@ -348,29 +349,39 @@ async function snap(){
   await finishAfter(c, null, "ghost");
 }
 /* fine alignment: the after moved / zoomed onto the before (search on 160-px edge maps, then a finer pass) */
-function alignOf(beforeImg, afterSrc, aw, ah){
+function alignOf(beforeImg, afterSrc, aw, ah, zooms = [1]){
   const W = 160, H = Math.max(40, Math.round(W * S.before.h / S.before.w));
-  /* the after reduced to the before's shape first (centre crop) */
-  const ar = S.before.w / S.before.h; let cw = aw, ch = aw / ar; if (ch > ah){ ch = ah; cw = ah * ar; }
-  const crop = { x: (aw - cw) / 2, y: (ah - ch) / 2, w: cw, h: ch };
-  const A = edgeMap(beforeImg, 0, 0, S.before.w, S.before.h, W, H), B = edgeMap(afterSrc, crop.x, crop.y, crop.w, crop.h, W, H);
-  const coarse = bestFit(A, B, W, H, 12, [0.88, 0.94, 1, 1.06, 1.12], 0, 0, 2);   // wide and quick…
-  const f = bestFit(A, B, W, H, 2, [-.03, -.015, 0, .015, .03].map(d => +(coarse.s + d).toFixed(3)), coarse.dx, coarse.dy);   // …then fine around it
+  const A = edgeMap(beforeImg, 0, 0, S.before.w, S.before.h, W, H);
+  /* the after reduced to the before's shape (centre crop) — tried at each zoom: the iPhone camera app always opens at 1×,
+     so the zoom used in the ghost camera is applied here; the best match wins (also when the zoom was set in the iPhone camera itself) */
+  const ar = S.before.w / S.before.h; let best = null;
+  for (const z of [...new Set(zooms.map(x => Math.max(1, +x.toFixed(2))))]) {
+    let cw = aw, ch = aw / ar; if (ch > ah){ ch = ah; cw = ah * ar; } cw /= z; ch /= z;
+    const crop = { x: (aw - cw) / 2, y: (ah - ch) / 2, w: cw, h: ch }, B = edgeMap(afterSrc, crop.x, crop.y, crop.w, crop.h, W, H);
+    const coarse = bestFit(A, B, W, H, 12, [0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15], 0, 0, 2);   // wide and quick…
+    const f0 = bestFit(A, B, W, H, 2, [-.03, -.015, 0, .015, .03].map(d => +(coarse.s + d).toFixed(3)), coarse.dx, coarse.dy);   // …then fine around it
+    if (!best || f0.c > best.f.c) best = { f: f0, crop, z };
+  }
+  const f = best.f, crop = best.crop;
   /* the matching region of the after, in its own pixels (kept inside the photo) */
   const k = crop.w / W; let rw = crop.w * f.s, rh = crop.h * f.s;
   const fit = Math.min(1, aw / rw, ah / rh); rw *= fit; rh *= fit;
   const rx = Math.max(0, Math.min(aw - rw, crop.x + (crop.w - rw) / 2 + f.dx * k)), ry = Math.max(0, Math.min(ah - rh, crop.y + (crop.h - rh) / 2 + f.dy * k));
-  return { ...f, rect: { x: rx, y: ry, w: rw, h: rh }, crop, useful: f.c > .25 && (Math.abs(f.dx) > 0 || Math.abs(f.dy) > 0 || Math.abs(f.s - 1) > .005) };
+  return { ...f, zoom: best.z, rect: { x: rx, y: ry, w: rw, h: rh }, crop, useful: f.c > .25 && (Math.abs(f.dx) > 0 || Math.abs(f.dy) > 0 || Math.abs(f.s - 1) > .005) };
 }
 async function finishAfter(src, file, how){
   const aw = src.naturalWidth || src.width, ah = src.naturalHeight || src.height, at = new Date().toISOString();
   toast("Lining up with the before photo…");
   const bimg = CAM && CAM.before ? CAM.before : await blobToImg(S.before.blob);
-  const al = alignOf(bimg, src, aw, ah);
-  /* 1) the after photo itself: the camera's own file untouched (full resolution, Apple / Android processing, colours, details);
-        a live-camera picture is saved at JPEG 97 % */
+  const z = S.shotZoom || 1, zooms = how === "ghost" ? [1] : [1, z, Math.sqrt(z), z * 1.25];
+  const al = alignOf(bimg, src, aw, ah, zooms);
+  /* 1) the after photo saved to Photos: framed like the before (the zoom + angle of the ghost camera, cut from the full-resolution photo),
+        or the full photo exactly as the camera took it — the person chooses on the result screen */
   let fullBlob = file;
   if (!fullBlob){ const full = document.createElement("canvas"); full.width = aw; full.height = ah; full.getContext("2d", CS).drawImage(src, 0, 0); fullBlob = await toBlob(full, .97); }
+  let framedBlob = null;
+  const fr = al.c > .25 ? al.rect : al.crop, framedUseful = fr.w < aw * .93 || fr.h < ah * .93;
+  if (framedUseful) { const fc = document.createElement("canvas"); fc.width = Math.round(fr.w); fc.height = Math.round(fr.h); const fx = fc.getContext("2d", CS); fx.imageSmoothingQuality = "high"; fx.drawImage(src, fr.x, fr.y, fr.w, fr.h, 0, 0, fc.width, fc.height); framedBlob = await toBlob(fc, .95); }
   /* 2) the after lined up on the before, at the before's size (up to 3200 px) — for the side by side and the deck */
   const raw = document.createElement("canvas"), bw = S.before.w, bh = S.before.h, out = Math.min(1, 3200 / Math.max(bw, bh));
   raw.width = Math.round(bw * out); raw.height = Math.round(bh * out);
@@ -380,7 +391,7 @@ async function finishAfter(src, file, how){
   const site = CTX.sites[S.site] ? S.site : CTX.site, base = `${site}_${slug(S.place)}_${stamp(new Date())}`;
   const shot = { id: uid(), kind: "after", site, place: S.place, at, how };
   const pair = { id: uid(), beforeId: S.before.id, afterId: shot.id, site, place: S.place || S.before.place || "", beforeAt: S.before.at, afterAt: at, match: Math.round(al.c * 100) };
-  const R = { pair, beforeUrl: S.before.url, w: aw, h: ah, match: pair.match, fullBlob, base, wbGain, wbUseful: wbGain.some(g => Math.abs(g - 1) > .03) };
+  const R = { pair, beforeUrl: S.before.url, w: aw, h: ah, match: pair.match, fullBlob, framedBlob, fw: Math.round(fr.w), fh: Math.round(fr.h), zoomUsed: al.zoom, base, wbGain, wbUseful: wbGain.some(g => Math.abs(g - 1) > .03) };
   /* builds the copy used for the comparison (white balance matched to the before when switched on) + the side-by-side */
   R.build = async () => {
     const c = document.createElement("canvas"); c.width = raw.width; c.height = raw.height; c.getContext("2d", CS).drawImage(raw, 0, 0);
@@ -392,7 +403,8 @@ async function finishAfter(src, file, how){
     await put("shots", shot);
     if (R.alignedUrl) URL.revokeObjectURL(R.alignedUrl); if (R.sbsUrl) URL.revokeObjectURL(R.sbsUrl);
     R.alignedUrl = URL.createObjectURL(deckCopy); R.sbsUrl = URL.createObjectURL(sbs);
-    R.files = [new File([R.fullBlob], `${base}_after.jpg`, { type: R.fullBlob.type || "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
+    const afterFile = R.framedBlob && S.framed !== false ? R.framedBlob : R.fullBlob;
+    R.files = [new File([afterFile], `${base}_after.jpg`, { type: afterFile.type || "image/jpeg" }), new File([sbs], `${base}_before-after.jpg`, { type: "image/jpeg" })];
   };
   await R.build();
   await put("pairs", pair);
@@ -426,12 +438,16 @@ function showResult(R){
   const el = CAM ? CAM.el : (() => { const d = document.createElement("div"); d.className = "fcam"; document.body.append(d); document.documentElement.classList.add("noscroll"); CAM = { el: d }; return d; })();
   el.innerHTML = `<div class="fres"><div class="ftop"><button class="fp" id="cx">✕</button><span class="fp ${R.match >= 70 ? "ok" : R.match >= 45 ? "mid" : "low"}">Match ${R.match}%</span><span class="fp">${R.w} × ${R.h}${R.w * R.h >= 8e6 ? " · " + Math.round(R.w * R.h / 1e6) + " MP" : ""}</span></div>
     <div class="cmp" id="cmp" style="aspect-ratio:${S.before.w}/${S.before.h}"><img src="${R.alignedUrl}" alt=""><div class="cb" id="cb"><img src="${R.beforeUrl}" alt=""></div><i id="cl"></i><em class="b">BEFORE</em><em class="a">AFTER</em></div>
-    <p class="fnote">Drag across the photo to compare. The after is lined up on the before automatically for the side-by-side.${R.build ? " The after photo itself is saved exactly as the camera took it." : ""}</p>
+    <p class="fnote">Drag across the photo to compare. The after is lined up on the before automatically${R.zoomUsed > 1.05 ? ` (zoom ${R.zoomUsed.toFixed(1)}× applied — the iPhone camera opens at 1×)` : ""}.</p>
+    ${R.framedBlob ? `<div class="fnote" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"><span>Save the after photo:</span>
+      <label><input type="radio" name="fr" value="1" ${S.framed !== false ? "checked" : ""}> Framed like the before (${R.fw} × ${R.fh})</label>
+      <label><input type="radio" name="fr" value="0" ${S.framed === false ? "checked" : ""}> Full photo as taken (${R.w} × ${R.h})</label></div>` : ""}
     ${R.build && R.wbUseful ? `<label class="fnote" style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="checkbox" id="wb" ${S.wb ? "checked" : ""}> Match the colours (white balance) to the before photo — side-by-side &amp; deck</label>` : ""}
     <div class="fact"><button class="btn gold" id="sv">⤓ Save to Photos (2)</button><button class="btn" id="dk">+ Deck</button><button class="btn ghost" id="re">Retake</button><button class="btn ghost" id="ok">Done</button></div></div>`;
   const cmp = $("#cmp"), set = px => { const r = cmp.getBoundingClientRect(), p = Math.max(0, Math.min(1, (px - r.left) / r.width)); $("#cb").style.width = p * 100 + "%"; $("#cl").style.left = p * 100 + "%"; };
   cmp.addEventListener("pointerdown", e => { set(e.clientX); cmp.setPointerCapture(e.pointerId); }); cmp.addEventListener("pointermove", e => { if (e.buttons || e.pressure) set(e.clientX); });
   $("#sv").onclick = async () => { if (await saveFiles(R.files)) toast(isIOS ? "Saved — check Photos" : "Saved"); };
+  document.querySelectorAll('input[name="fr"]').forEach(x => x.onchange = async () => { S.framed = x.value === "1"; try { localStorage.setItem("ba.framed", S.framed ? "1" : "0"); } catch {} await R.build(); toast(S.framed ? "The after is saved framed like the before" : "The after is saved as taken"); });
   const wb = $("#wb"); if (wb) wb.onchange = async () => { S.wb = wb.checked; wb.disabled = true; await R.build(); wb.disabled = false;
     cmp.querySelector(":scope > img").src = R.alignedUrl; toast(S.wb ? "Colours matched to the before" : "Colours as taken"); };
   $("#dk").onclick = () => pickDeckFor(R.pair);
