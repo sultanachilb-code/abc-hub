@@ -1411,7 +1411,7 @@ function startHub(){
   const TEST_ADMIN = H.TESTING_ADMIN_ONLY || [];   // Upcoming - Testing is open to everyone (apart from the admin settings pages)
   const TC = ME.tools || {};   // Admin Control → Tools control: switched off · other folder · who sees it · new name
   APPS = ALL_APPS.map(a => TC[a.id] ? Object.assign({}, a, TC[a.id].group ? { group: TC[a.id].group } : {}, TC[a.id].name ? { name: TC[a.id].name } : {}) : a)
-    .filter(a => { const c = TC[a.id]; if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
+    .filter(a => !a.hidden).filter(a => { const c = TC[a.id]; if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role if (c && c.off) return false; if (c && Array.isArray(c.access)) return c.access.includes(key);
       return (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key); });
   if (ME.viewAs && !document.getElementById("vaBar")) {   // Admin Control: View as (read-only)
     const v = document.createElement("div"); v.id = "vaBar";
@@ -2991,7 +2991,7 @@ const HL_KINDS = [["cards", "Smart cards", '<rect x="3" y="3" width="8" height="
 let HL = (() => { const v = store.get("hub.layout", "cards"); return HL_KINDS.some(k => k[0] === v) ? v : "cards"; })();
 const HLS = { orb: null };
 const HL_SHORT = { "Operations Tools": "Ops Tools", "Incidents, Security & Footfall": "Incidents & Footfall",
-  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day", "Upcoming - Testing": "Testing" };
+  "Tenant Management": "Tenants", "Property Overview & Info": "Property", "Enterprise Systems": "Systems", "Policies & Procedures": "Policies", "Day to Day Operations": "Day to Day", "Upcoming - Testing": "Testing", "Dashboard and Reports": "Dashboards & Reports", "Operations Communication": "Ops Communication" };
 const hlSvg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const hlCount = L => L.reduce((t, a) => { const b = badgeOf(a); return t + (b && b.count ? Number(b.count) || 0 : 0); }, 0);
 const hlApp = (a, cls = "", st = "") => { const ok = appReady(a);
