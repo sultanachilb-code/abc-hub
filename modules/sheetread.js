@@ -85,7 +85,10 @@ export function readCsv(text) {
 }
 export async function readSheet(name, b64) {
   const bin = Uint8Array.from(atob(String(b64).replace(/^data:[^,]*,/, "").replace(/\s+/g, "")), c => c.charCodeAt(0));
-  if (/\.csv$/i.test(name) || /\.txt$/i.test(name)) return readCsv(new TextDecoder().decode(bin));
+  if (/\.csv$/i.test(name) || /\.txt$/i.test(name)) {   // Salesforce CSV subscriptions are Windows-1252 (Café): UTF-8 when valid, else Windows-1252
+    let t; try { t = new TextDecoder("utf-8", { fatal: true }).decode(bin); } catch { t = new TextDecoder("windows-1252").decode(bin); }
+    return readCsv(t.replace(/^\uFEFF/, ""));
+  }
   if (bin[0] === 0x50 && bin[1] === 0x4b) return readXlsx(bin);
   if (/\.html?$/i.test(name) || /<table/i.test(new TextDecoder().decode(bin.subarray(0, 4000)))) {   // also the report inside an email body   // "Excel" exports that are really HTML tables (Salesforce)
     /* Salesforce exports are ISO-8859-1 (é as one byte, emojis as &#…;): read as UTF-8 when valid, else as Windows-1252 */
