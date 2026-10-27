@@ -2751,7 +2751,7 @@ document.addEventListener("click", e => { if (e.target.id === "moX" && MOM.m){ s
 /* ---------- Day to Day Operations: today's live timeline above Leadership (see docs/FEATURE-day-to-day.md) ---------- */
 const DAY_GROUP = "Day to Day Operations";
 const D2D = { data: null, err: "", site: store.get("hub.d2dSite", ""), scrolled: false, t: 0 };
-const D2D_ORDER = ["handover", "forms", "form-dbank", "schedule", "calendar", "crm", "mom", "reminders", "projects", "malfunctions", "tenants", "feedback"];   // the order of the Day to Day cards (Oct 2026)
+const D2D_ORDER = ["handover", "forms", "form-dbank", "schedule", "calendar", "crm", "mom", "projects", "malfunctions", "tenants", "feedback"];   // the order of the Day to Day cards (Oct 2026)
 const d2dApps = () => APPS.filter(a => inG(a, DAY_GROUP) && !a.hidden).sort((a, b) => ((D2D_ORDER.indexOf(a.id) + 1) || 99) - ((D2D_ORDER.indexOf(b.id) + 1) || 99));
 const hmM = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 const nowHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
