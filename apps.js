@@ -30,6 +30,8 @@ window.HUB = {
     "Hub Applications", "Reports", "Dashboards",
     /* new tools wait here while they are tested; they move to their real folder afterwards (Oct 2026) */
     "Upcoming - Testing",
+    /* the header "Operations tools" button (not a home section) */
+    "Operations Tools",
     /* tools put away: only the administrator sees this folder (Oct 2026) */
     "OFF",
     /* opened from a tile (orbit ring), not shown as sections */
@@ -191,7 +193,7 @@ window.HUB = {
       id: "reminders",
       name: "Reminders",
       desc: "Your team's own reminders — each title has its own list",
-      group: "Day to Day Operations",
+      group: "Operations Tools",
       icon: "alarm",
       color: "#B0562A",
       url: "/tools/reminders"
