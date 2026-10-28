@@ -4,13 +4,14 @@
 
 **Sending again.** Each active person in the list has a **✉ Welcome** button that sends the email again. Each send is recorded in Change history.
 
+**Existing people.** The **✉ Welcoming email to existing people** button opens a list of the active people of the selected flagship tab, or of everyone. People who have not received the email yet are ticked; it shows when the others last received it. Press **Send** (`admin/users/welcome-bulk`).
+
 **What the email contains**
 - the ABC header and "Welcome to the hub, [first name]";
 - the person's sign-in email, position and flagship(s);
 - an **Open the ABC Operations Hub** button;
 - "Your first 5 minutes": sign in, choose your own password, install on the phone, allow notifications / Face ID;
 - the tools of their role and flagship;
-- an Arabic welcome line;
 - a help contact, signed by the admin who sends it.
 
 The temporary password is **never** written in the email. The email says it is "Given to you by [admin]".

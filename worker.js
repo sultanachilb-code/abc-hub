@@ -795,6 +795,14 @@ async function route(request, env, ctx, url) {
       return ok(r);
     }
     if (a === "users/welcome" && method === "POST") { const r = await sendWelcome(env, body.email, me); await audit(env, { me, tool: "people", ref: String(body.email || ""), label: String(body.email || ""), action: "edit", changes: [{ field: "welcoming email", before: "", after: "sent" }] }).catch(() => {}); return ok(r); }
+    if (a === "users/welcome-bulk" && method === "POST") {   // the welcoming email to existing people (chosen in the list)
+      const list = [...new Set((Array.isArray(body.emails) ? body.emails : []).map(x => String(x).trim().toLowerCase()).filter(Boolean))].slice(0, 300);
+      if (!list.length) throw fail("Choose at least one person");
+      const sent = [], failed = [];
+      for (const e of list) { try { await sendWelcome(env, e, me); sent.push(e); } catch (er) { failed.push({ email: e, error: er.message }); } }
+      await audit(env, { me, tool: "people", ref: "welcome", label: "Welcoming email", action: "edit", changes: [{ field: "welcoming email", before: "", after: `sent to ${sent.length}` }] }).catch(() => {});
+      return ok({ sent: sent.length, failed });
+    }
     if (a === "users/welcome-preview" && method === "POST") {   // the email as it will look, from the form (nothing saved)
       const u = { email: String(body.email || "name@abc.com.lb").toLowerCase(), full_name: String(body.name || "New colleague"), role: ROLES[body.role] ? body.role : "SUPERVISOR",
         site_code: body.site || null, sites: (Array.isArray(body.sites) ? body.sites : []).join(","), position: String(body.position || "") };
@@ -914,8 +922,10 @@ async function changePassword(env, me, b) {
 async function listUsers(env) {
   const { results } = await env.DB.prepare(
     "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position, is_admin FROM users ORDER BY role, full_name").all();
+  const W = new Map(((await env.DB.prepare("SELECT k, v FROM meta WHERE k LIKE 'welcome:%'").all().catch(() => ({ results: [] }))).results || [])
+    .map(r => { try { return [r.k.slice(8), JSON.parse(r.v)]; } catch { return [r.k.slice(8), {}]; } }));
   return {
-    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin,
+    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin, welcomed: W.get(u.email) || null,
       morningEmail: !!u.morning_email, morningEligible: isFull(u) })),
     sites: SITES, roles: ROLES,
     positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
@@ -1015,7 +1025,7 @@ function welcomeMail(u, by) {
     ${step(1, "Sign in", "with your email and the first password.")}${step(2, "Choose your own password", "— the hub asks you at the first sign-in.")}
     ${step(3, "Install it on your phone", "— Share › Add to Home Screen (iPhone) or Install app (Android).")}${step(4, "Allow notifications", "and set up Face ID / fingerprint so the next sign-ins take one tap.", true)}</table>
   <p style="margin:20px 0 6px;font-size:14px">You will see ${escH(WELCOME_TOOLS[u.role] || "the tools of your position")}${escH(at)}.</p>
-  <p dir="rtl" style="margin:16px 0 0;font-size:14px;color:#4A1F73">أهلاً وسهلاً بك في منصّة عمليات ABC — بالتوفيق!</p></td></tr>
+</td></tr>
 <tr><td style="${F}padding:18px 30px 24px;font-size:13px;color:#6D6479;border-top:1px solid #EEE9F4">Questions or trouble signing in? Reply to this email or contact <b style="color:#4A1F73">${escH(by.full_name)}</b> · ${escH(by.email)}<br>
   <span style="font-size:12px">Keep your password private — ABC will never ask for it by email.</span></td></tr></table></td></tr></table>`;
   return { to: [u.email], from: by.email, replyTo: by.email, subject: "Welcome to the ABC Operations Hub", html };
