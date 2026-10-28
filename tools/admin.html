@@ -552,7 +552,7 @@ async function pr(){
   const badge2 = u => tf.on[u.email] ? pill("ok", "2-step on") : tf.roles.includes(u.role) ? pill("warn", "2-step not set") : "";
   const row = u => `<div class="cs-r" style="${u.active ? "" : "opacity:.55"}"><div class="who" style="flex:1;min-width:220px"><span class="av">${esc(ini(u.name))}</span><div><b>${esc(u.name)}</b> ${u.active ? pill("mut", esc(u.positionLabel || u.roleLabel)) : pill("bad", "Switched off")} ${u.isAdmin ? pill("warn", "🛡 Admin") : ""} ${badge2(u)}
       <span class="mut" style="display:block">${esc(u.email)}${d.multiRoles.includes(u.role) ? " · " + esc(u.sitesLabel || "no flagship ticked") : ""} · ${u.lastLoginAt ? "last in " + esc(dt(u.lastLoginAt)) : "never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</span></div></div>
-    <div class="lks"><button class="b g" data-ed="${esc(u.email)}">Edit</button><button class="b g" data-pw="${esc(u.email)}">Password</button>${tf.on[u.email] ? `<button class="b g" data-tf="${esc(u.email)}">Reset 2-step</button>` : ""}
+    <div class="lks"><button class="b g" data-ed="${esc(u.email)}">Edit</button><button class="b g" data-pw="${esc(u.email)}">Password</button>${u.active ? `<button class="b g" data-wel="${esc(u.email)}" title="Send the welcoming email again">✉ Welcome</button>` : ""}${tf.on[u.email] ? `<button class="b g" data-tf="${esc(u.email)}">Reset 2-step</button>` : ""}
       ${u.email !== ME.user.email ? `<button class="b g" data-ac="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`;
   const vac = (label, pre) => `<div class="cs-r" style="border-style:dashed"><div style="flex:1"><b class="mut">Vacant</b><small>${esc(label)}</small></div><button class="b" data-new='${esc(JSON.stringify(pre))}'>Assign</button></div>`;
   const grp = (title, list, note, pre) => `<div class="fg"><h4>${title} <small>${list.length}</small>${pre ? `<button class="b g" style="margin-left:auto" data-new='${esc(JSON.stringify(pre))}'>＋ Add</button>` : ""}</h4>${note ? `<p class="mut" style="margin:-2px 0 8px">${note}</p>` : ""}${list.map(row).join("") || `<p class="mut">Nobody yet.</p>`}</div>`;
@@ -594,14 +594,18 @@ async function pr(){
         <label>Full name</label><input id="uN" value="${esc(e ? e.name || "" : "")}" required><label>Email</label><input id="uE" type="email" value="${esc(e ? e.email || "" : "")}" ${e && e.email ? "readonly" : ""} required>
         <label>Role</label><select id="uR">${order.map(c => `<option value="${c}" ${role === c ? "selected" : ""}>${esc(d.roles[c])}</option>`).join("")}</select><p class="mut" id="uNote" style="margin:0">${esc(ACCESS_NOTE[role])}</p>
         <div id="uPB" style="display:grid;gap:6px">${posF(role)}</div><div id="uSB" style="display:grid;gap:6px">${siteF(role)}</div>
-        ${e && e.email ? "" : `<label>Temporary password (8+)</label><input id="uW" autocomplete="off">`}
+        ${e && e.email ? "" : `<label>Temporary password (8+)</label><input id="uW" autocomplete="off">
+        <div style="border:1px solid var(--cline);border-radius:12px;padding:10px 12px;margin-top:4px"><b style="font-size:.84rem">Welcoming email</b>
+          <label class="mut" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="radio" name="uWel" value="1" checked> <span><b style="color:var(--ctext)">Send welcoming email</b><br>To the person's email, signed by you. The password is not in the email.</span></label>
+          <label class="mut" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="radio" name="uWel" value="0"> <span><b style="color:var(--ctext)">Don't send welcoming email</b><br>You tell the person yourself.</span></label>
+          <button type="button" class="b g" id="uWP" style="margin-top:8px">👁 Preview the email</button></div>`}
         <label class="mut" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="uA" ${e && (e.isAdmin || e.role === "ADMIN") ? "checked" : ""}> 🛡 Hub administrator (opens the Admin Control Center with the ABC logo + password)</label>
         <label class="mut" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="uM" ${!e || !e.email || e.morningEmail ? "checked" : ""}> Morning brief &amp; End of Day report (management &amp; leadership)</label>
         <div style="display:flex;gap:8px;justify-content:flex-end">${e ? `<button type="button" class="b g" id="uX">Cancel</button>` : ""}<button class="b">${e && e.email ? "Save changes" : "Add person"}</button></div></form>
       <div class="card"><h3>Two-step login required for</h3><div>${["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER", "SUPERVISOR", "SECURITY"].map(r => `<label class="mut" style="display:flex;gap:6px"><input type="checkbox" class="tfR" value="${r}" ${tf.roles.includes(r) ? "checked" : ""}> ${esc(d.roles[r] || r)}</label>`).join("")}</div><button class="b g" style="margin-top:8px" id="tfS">Save</button></div>
       <div class="card"><h3>Morning email · 08:00</h3><div class="sub">${ms && ms.last ? `Last sent ${esc(dt(ms.last.at))} to ${ms.last.sent} people${ms.last.failed ? ` · <b class="t-bad">${ms.last.failed} failed</b>` : ""}` : "Not sent yet"}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="b g" id="mT">Send me a test</button><button class="b g" id="eT">End of Day test</button></div></div></div></div>`);
-  const R = () => $("#uR").value;
+  const R = () => $("#uR").value; let RES = null;
   $("#uR").onchange = () => { $("#uNote").textContent = ACCESS_NOTE[R()]; $("#uPB").innerHTML = posF(R()); $("#uSB").innerHTML = siteF(R()); if (R() === "ADMIN") $("#uA").checked = true; };
   $("#main").querySelectorAll("[data-pt]").forEach(x => x.onclick = () => { PTAB = x.dataset.pt; PED = null; pr(); });
   $("#main").querySelectorAll("[data-new]").forEach(x => x.onclick = () => { PED = JSON.parse(x.dataset.new); pr().then(() => { $("#uN").focus(); }); });
@@ -610,10 +614,21 @@ async function pr(){
   $("#main").querySelectorAll("[data-tf]").forEach(x => x.onclick = async () => { if (!confirm(`Reset two-step login for ${x.dataset.tf}?`)) return; await api("admin/2fa/reset", { email: x.dataset.tf }); toast("Two-step reset"); pr(); });
   $("#main").querySelectorAll("[data-ac]").forEach(x => x.onclick = async () => { try { await api("admin/users/active", { email: x.dataset.ac, active: x.dataset.on === "1" }); pr(); } catch (er){ toast(er.message, true); } });
   const ux = $("#uX"); if (ux) ux.onclick = () => { PED = null; pr(); };
+  /* Welcoming email: preview from the form, and send again from the list */
+  const wp = $("#uWP"); if (wp) wp.onclick = async () => { try {
+    const x = await api("admin/users/welcome-preview", { name: $("#uN").value, email: $("#uE").value, role: R(), site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(i => i.value), position: $("#uP") ? $("#uP").value : "" });
+    let d2 = $("#welDlg"); if (!d2){ d2 = document.createElement("dialog"); d2.id = "welDlg"; d2.style.cssText = "border:0;border-radius:16px;padding:0;width:min(700px,96vw);max-height:90vh"; document.body.append(d2); }
+    d2.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee;font:600 14px Segoe UI,Arial"><span>Welcoming email · preview</span><button class="b g" id="welX">Close</button></div><iframe id="welF" style="width:100%;height:76vh;border:0"></iframe>`;
+    d2.showModal(); $("#welF").srcdoc = x.html; $("#welX").onclick = () => d2.close(); d2.onclick = ev => { if (ev.target === d2) d2.close(); };
+  } catch (er){ toast(er.message, true); } };
+  $("#main").querySelectorAll("[data-wel]").forEach(x => x.onclick = async () => {
+    if (!(await confirmBox("Send the welcoming email", `Send the welcoming email to <b>${esc(x.dataset.wel)}</b>? The password is not in the email.`, "Send"))) return;
+    x.disabled = true; try { const r = await api("admin/users/welcome", { email: x.dataset.wel }); toast("Welcoming email sent to " + r.to); } catch (er){ toast(er.message, true); } x.disabled = false; });
   $("#uForm").onsubmit = async ev => { ev.preventDefault(); const r = R();
     try { await api("admin/users", { isNew: !(e && e.email), name: $("#uN").value, email: $("#uE").value, role: r, site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(x => x.value),
-        position: $("#uP") ? $("#uP").value : "", password: $("#uW") ? $("#uW").value : "", morningEmail: $("#uM").checked, isAdmin: $("#uA").checked });
-      toast("Saved"); PED = null; const st = $("#uF") ? $("#uF").value : ""; PTAB = ["ADVISOR", "DIRECTOR", "CDSO"].includes(r) || (r === "ADMIN" && !st) ? "LEAD" : (st || PTAB); pr(); } catch (er){ toast(er.message, true); } };
+        position: $("#uP") ? $("#uP").value : "", password: $("#uW") ? $("#uW").value : "", morningEmail: $("#uM").checked, isAdmin: $("#uA").checked,
+        welcome: !document.querySelector('[name="uWel"]') || document.querySelector('[name="uWel"]:checked').value === "1" }).then(x => { RES = x; });
+      const W = RES && RES.welcome; toast(!W ? "Saved" : W.sent ? `Added · welcoming email sent to ${W.to}` : W.skipped ? "Added · no welcoming email" : `Added · welcoming email not sent: ${W.error}`, !!(W && W.error)); PED = null; const st = $("#uF") ? $("#uF").value : ""; PTAB = ["ADVISOR", "DIRECTOR", "CDSO"].includes(r) || (r === "ADMIN" && !st) ? "LEAD" : (st || PTAB); pr(); } catch (er){ toast(er.message, true); } };
   $("#tfS").onclick = async () => { try { await api("admin/2fa/policy", { roles: [...document.querySelectorAll(".tfR:checked")].map(i => i.value) }); toast("Two-step policy saved"); } catch (er){ toast(er.message, true); } };
   $("#mT").onclick = async () => { try { const r = await api("admin/morning-test", {}); toast("Test sent to " + r.to); } catch (er){ toast(er.message, true); } };
   $("#eT").onclick = async () => { try { const r = await api("admin/eod-test", { site: PTAB !== "LEAD" ? PTAB : "" }); toast("End of Day test sent to " + r.to); } catch (er){ toast(er.message, true); } };
