@@ -26,7 +26,8 @@
   /* Hub Assistant (docs/FEATURE-ai.md): Cloudflare Workers AI — free daily allowance, no API key, no card */
   "ai": { "binding": "AI" },
   "triggers": { "crons": ["*/2 * * * *"] },
-  "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" } ] },
-  "migrations": [ { "tag": "v1-emergency-pager", "new_sqlite_classes": ["EmergencyPager"] } ]
+  /* PAGER: Emergency Alert repeats · PHONE: Hub Phone call signalling (docs/FEATURE-hub-phone.md) */
+  "durable_objects": { "bindings": [ { "name": "PAGER", "class_name": "EmergencyPager" }, { "name": "PHONE", "class_name": "PhoneHub" } ] },
+  "migrations": [ { "tag": "v1-emergency-pager", "new_sqlite_classes": ["EmergencyPager"] }, { "tag": "v2-hub-phone", "new_sqlite_classes": ["PhoneHub"] } ]
 }
 

@@ -1,7 +1,7 @@
 /* ABC Operations Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v81";
+const CACHE = "abc-hub-v82";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
   "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png",
   /* works offline: the checklists and the handover open without signal once visited */
@@ -46,6 +46,12 @@ self.addEventListener("push", e => {
     actions: [{ action: "ack", title: "I'm on it" }, { action: "open", title: "Open" }],
     data: { url: d.url || "/", emergency: d.emergency.id }
   });
+  /* Hub Phone: an incoming call rings like a call — Answer opens the hub on the call, Decline tells the caller */
+  if (d.call) Object.assign(opts, {
+    requireInteraction: true, renotify: true, silent: false, vibrate: [900, 300, 900, 300, 900, 300, 900, 300, 900],
+    actions: [{ action: "answer", title: "Answer" }, { action: "decline", title: "Decline" }],
+    data: { url: d.url || "/", call: d.call.id }
+  });
   e.waitUntil((async () => {
     /* emergency repeats: remove the previous alarm notification so only the newest one shows (and sounds) */
     if (d.emergency || d.allClear) {
@@ -72,6 +78,11 @@ self.addEventListener("notificationclick", e => {
           tag: "emg-ack", data: { url: data.url } }))
       .catch(() => {}));
     if (e.action === "ack") return;
+  }
+  if (data.call && e.action === "decline") {
+    e.waitUntil(fetch("/api/phone/decline", { method: "POST", credentials: "include", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ callId: data.call }) }).catch(() => {}));
+    return;
   }
   const target = new URL(data.url || "/", self.location.origin).href;
   e.waitUntil((async () => {
