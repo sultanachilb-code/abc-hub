@@ -5,6 +5,8 @@ import { remindersSchema, remindersRoute, remindersRun, reminderDone } from "./m
 import { formsSchema, formsRoute } from "./modules/forms.js";   // Operations Forms feature — see docs/FEATURE-forms.md
 import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./modules/emergency.js";   // Emergency Alert feature — see docs/FEATURE-emergency.md
 export { EmergencyPager } from "./modules/emergency.js";
+import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules/phone.js";   // Hub Phone — see docs/FEATURE-hub-phone.md
+export { PhoneHub } from "./modules/phone.js";
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
@@ -65,6 +67,7 @@ import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report
    ===================================================================== */
 
 const audit = makeAudit(() => new Date().toISOString());   // Change history feature
+phoneDeps({ sendPush: (...a) => sendPush(...a) });   // Hub Phone: push for incoming and missed calls
 emergencyDeps({ raiseEvent: (...a) => raiseEvent(...a), sendPush: (...a) => sendPush(...a), now: () => new Date().toISOString(), siteName: s => siteName(s) });   // Emergency Alert feature
 
 const SITES = {
@@ -357,6 +360,7 @@ async function ensureSchema(env) {
   await remindersSchema(env); // Reminders feature
   await formsSchema(env);     // Operations Forms feature
   await emergencySchema(env); // Emergency Alert feature
+  await phoneSchema(env);     // Hub Phone (adds users.ext)
   await budgetSchema(env);    // Budget (CAPEX / OPEX) feature
   await execSchema(env);      // Executive Report feature
   await tenantsSchema(env);   // Tenant Management feature
@@ -690,6 +694,13 @@ async function route(request, env, ctx, url) {
     const r = await polRoute(env, path, method, body, url, request, { me, now: nowIso, canEdit: me.role === "ADMIN" || me.role === "MANAGER", embed: t => embedTexts(env, t) });
     return r instanceof Response ? r : ok(r);
   }
+  if (path.startsWith("phone/")) {   // Hub Phone: calls between hub users
+    if (me._viewAs) throw fail("Hub Phone is not available in View as", 403);
+    if (!roleAllows(me, "phone")) throw fail("Not allowed", 403);
+    const r = await phoneRoute(env, path, method, body, url, request, { me, siteName, posLabel, roleLabel: r2 => ROLES[r2] || r2 });
+    if (r instanceof Response) return r;
+    if (r) return ok(r);
+  }
   if (path.startsWith("ai/")) {   // ABCON, the Hub Assistant (free Workers AI): chat over the hub's data, shift summary
     const site = opsSite(me, method === "GET" ? url.searchParams.get("site") : body.site);
     const sub = (p, s2, extra = "") => opsRoute(env, me, p, "GET", {}, new URL(`${url.origin}/api/ops/${p}?site=${s2}${extra}`));
@@ -920,12 +931,13 @@ async function changePassword(env, me, b) {
   return { changed: true };
 }
 async function listUsers(env) {
+  await extEnsure(env).catch(() => {});   // Hub Phone: everyone has an extension
   const { results } = await env.DB.prepare(
-    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position, is_admin FROM users ORDER BY role, full_name").all();
+    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position, is_admin, ext FROM users ORDER BY role, full_name").all();
   const W = new Map(((await env.DB.prepare("SELECT k, v FROM meta WHERE k LIKE 'welcome:%'").all().catch(() => ({ results: [] }))).results || [])
     .map(r => { try { return [r.k.slice(8), JSON.parse(r.v)]; } catch { return [r.k.slice(8), {}]; } }));
   return {
-    users: (results || []).map(u => ({ ...userOut(u), active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin, welcomed: W.get(u.email) || null,
+    users: (results || []).map(u => ({ ...userOut(u), ext: u.ext || "", active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin, welcomed: W.get(u.email) || null,
       morningEmail: !!u.morning_email, morningEligible: isFull(u) })),
     sites: SITES, roles: ROLES,
     positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
@@ -968,6 +980,10 @@ async function saveUser(env, me, b) {
     const taken = (results || []).find(u => TITLES[u.position] && TITLES[u.position].slot === slot);
     if (taken) throw fail(`${SITES[site]} already has a ${SLOTS[slot]}: ${taken.full_name}. Change their position or switch them off first.`);
   }
+  const ext = String(b.ext == null ? "" : b.ext).trim();   // Hub Phone: extension (empty = automatic)
+  if (ext) { if (!/^\d{3,4}$/.test(ext)) throw fail("The extension is 3 or 4 digits, e.g. 104");
+    const t = await env.DB.prepare("SELECT full_name FROM users WHERE ext = ? AND email <> ?").bind(ext, email).first();
+    if (t) throw fail(`Extension ${ext} is already ${t.full_name}'s`); }
   const exists = await env.DB.prepare("SELECT email FROM users WHERE email = ?").bind(email).first();
   const morning = b.morningEmail === false ? 0 : 1;
   if (exists) {
@@ -977,6 +993,7 @@ async function saveUser(env, me, b) {
     if (email === me.email && role !== "ADMIN" && adminFlag === null && !(await env.DB.prepare("SELECT is_admin FROM users WHERE email = ?").bind(email).first()).is_admin) throw fail("You cannot remove your own administrator access — tick “Hub administrator”");
     await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=?, is_admin = COALESCE(?, is_admin) WHERE email=?")
       .bind(name, role, site || null, sites, morning, position, adminFlag, email).run();
+    if (ext) await extSet(env, email, ext);
     return { email, created: false };
   }
   const password = String(b.password || "") || DEFAULT_PASSWORD;
@@ -984,6 +1001,7 @@ async function saveUser(env, me, b) {
   const h = await hashFor(password);
   await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position, is_admin)
     VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position, b.isAdmin || role === "ADMIN" ? 1 : 0).run();
+  if (ext) await extSet(env, email, ext); else await extEnsure(env).catch(() => {});
   if (b.welcome !== false) {   // Welcoming email (default on)
     try { const w = await sendWelcome(env, email, me, password); return { email, created: true, welcome: w }; }
     catch (e) { return { email, created: true, welcome: { sent: false, error: e.message } }; }

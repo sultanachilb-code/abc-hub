@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hub Phone · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Hub Phone — see docs/FEATURE-hub-phone.md. The calls run in the hub (tools/phone-core.js); this page dials. -->
+<style>
+.ph{max-width:560px;margin:0 auto}
+.me{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.me .ext{font-size:.82rem;font-weight:800;color:var(--brand-2);background:rgba(123,75,176,.12);padding:4px 10px;border-radius:999px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;flex:none}
+.dot.on{background:#2EB872;box-shadow:0 0 0 3px rgba(46,184,114,.2)}
+.tabs{width:100%;margin-bottom:14px}.tabs button{flex:1;position:relative}
+.tabs u{position:absolute;top:3px;right:8px;min-width:17px;height:17px;border-radius:9px;background:#E5484D;color:#fff;font-size:.66rem;text-decoration:none;display:grid;place-items:center;padding:0 4px}
+/* keypad */
+.disp{height:64px;display:flex;align-items:center;justify-content:center;font-size:2.3rem;font-weight:800;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+.disp:empty::before{content:"Dial an extension";font-size:1rem;font-weight:600;letter-spacing:0;color:var(--muted)}
+.hit{min-height:62px;margin-bottom:8px}
+.hit .r{cursor:pointer}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:330px;margin:4px auto 16px}
+.pad button{aspect-ratio:1.25;border-radius:22px;background:var(--surface);border:1px solid var(--line);font-size:1.7rem;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.pad button small{font-size:.58rem;letter-spacing:.14em;color:var(--muted);margin-top:4px;font-weight:700;min-height:.7em}
+.pad button:active{background:var(--paper);transform:scale(.97)}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:330px;margin:0 auto;align-items:center;justify-items:center}
+.ca{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;color:#fff;background:#2EB872;box-shadow:0 8px 20px rgba(46,184,114,.32)}
+.ca svg{width:30px;height:30px}
+.ca.v{width:52px;height:52px;background:var(--brand);box-shadow:none}.ca.v svg{width:24px;height:24px}
+.ca[disabled]{opacity:.35}
+.bk{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:var(--muted);font-size:1.4rem}
+/* lists */
+.flt{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin:8px 0 10px}
+.flt span{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:.78rem;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--muted)}
+.flt span.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.grp{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 4px 6px}
+.r{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:6px}
+.r .av{width:42px;height:42px;position:relative;font-size:.85rem;background-size:cover;background-position:center}
+.r .av .dot{position:absolute;right:-1px;bottom:-1px;border:2px solid var(--surface)}
+.r .tx{flex:1;min-width:0}
+.r .tx b{display:block;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r .tx small{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r .xt{font-weight:800;color:var(--brand-2);font-size:.86rem;font-variant-numeric:tabular-nums}
+.ib{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--brand-2);background:var(--paper)}
+.ib.g{color:#fff;background:#2EB872}
+.ib svg{width:18px;height:18px}
+.ib.st{font-size:1.1rem;color:var(--gold)}
+.miss b{color:var(--alert)}
+.note{font-size:.76rem;color:var(--muted);line-height:1.5;margin-top:16px}
+.warnb{background:rgba(192,122,18,.12);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:.82rem;font-weight:600;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="top"><h1>📞 Hub Phone <small id="sub">calls between hub users</small></h1></div>
+<div class="wrap"><div class="ph">
+  <div id="warn"></div>
+  <div class="me"><span class="dot" id="conn"></span><b id="meName">…</b><span class="ext" id="meExt">ext …</span><span class="muted" style="font-size:.78rem" id="connT"></span></div>
+  <div class="tabs" id="tabs"><button data-t="pad" class="on">Keypad</button><button data-t="con">Contacts</button><button data-t="rec">Recent<u id="missN" class="hidden"></u></button><button data-t="fav">Favourites</button></div>
+  <div id="v"></div>
+  <p class="note">Calls go from browser to browser, inside the hub — no phone number, no phone credit. The person you call hears it on every device where the hub is open, and gets a notification when it is closed (allow notifications in Settings). Video: tap the camera button, also during a call.</p>
+</div></div>
+<div class="toast" id="toast"></div>
+<script src="common.js"></script>
+<script>
+const SVG = {
+  call: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>',
+  vid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>'
+};
+const GROUPS = [["VRM", "ABC Verdun Mall"], ["ACM", "ABC Achrafieh Mall"], ["DBS", "Dbayeh Department Store"], ["VRS", "Verdun Department Store"], ["ACS", "Achrafieh Department Store"], ["LEAD", "Leadership & administration"]];
+const P = (() => { try { return window.parent !== window && window.parent.HubPhone ? window.parent.HubPhone : null; } catch { return null; } })();
+let BOOK = null, REC = null, TAB = "pad", DIAL = "", Q = "", GF = "ALL", ONLY = false;
+const store = { get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+let FAV = store.get("hub.phoneFav", []);
+
+function dial(p, video){
+  if (!P) return toast("Open Hub Phone from the hub to call", true);
+  if (p.email === BOOK.me.email) return toast("That is your own extension", true);
+  P.call(p.email, !!video, p.name);
+}
+const av = p => `<span class="av" ${p.photoAt ? `style="background-image:url('/api/profile/photo?u=${encodeURIComponent(p.email)}&v=${encodeURIComponent(p.photoAt)}');color:transparent"` : ""}>${esc(initials(p.name))}<span class="dot ${p.online ? "on" : ""}"></span></span>`;
+const row = (p, extra = "") => `<div class="r" data-e="${esc(p.email)}">${av(p)}<div class="tx"><b>${esc(p.name)}${p.email === BOOK.me.email ? " <span class='muted'>(you)</span>" : ""}</b><small>${esc(p.position || "")}${p.siteName ? " · " + esc(p.siteName) : ""}${p.online ? " · online" : ""}</small></div>
+  ${extra}<span class="xt">${esc(p.ext || "")}</span>${p.email === BOOK.me.email ? "" : `<button class="ib st" data-f="${esc(p.email)}" title="Favourite">${FAV.includes(p.email) ? "★" : "☆"}</button><button class="ib" data-v="${esc(p.email)}" title="Video call">${SVG.vid}</button><button class="ib g" data-c="${esc(p.email)}" title="Call">${SVG.call}</button>`}</div>`;
+const byEmail = e => BOOK.people.find(p => p.email === e);
+function wire(root){
+  root.querySelectorAll("[data-c]").forEach(b => b.onclick = ev => { ev.stopPropagation(); dial(byEmail(b.dataset.c), false); });
+  root.querySelectorAll("[data-v]").forEach(b => b.onclick = ev => { ev.stopPropagation(); dial(byEmail(b.dataset.v), true); });
+  root.querySelectorAll("[data-f]").forEach(b => b.onclick = ev => { ev.stopPropagation(); const e = b.dataset.f;
+    FAV = FAV.includes(e) ? FAV.filter(x => x !== e) : [...FAV, e]; store.set("hub.phoneFav", FAV); paint(); });
+}
+
+function paintPad(){
+  const hits = DIAL ? BOOK.people.filter(p => p.ext && p.ext.startsWith(DIAL)).sort((a, b) => a.ext.localeCompare(b.ext)).slice(0, 3) : [];
+  const exact = BOOK.people.find(p => p.ext === DIAL);
+  $("#v").innerHTML = `<div class="disp" id="disp">${esc(DIAL)}</div>
+    <div class="hit">${hits.map(p => row(p)).join("") || (DIAL ? `<p class="muted" style="text-align:center;font-size:.86rem">No one has extension ${esc(DIAL)}</p>` : "")}</div>
+    <div class="pad">${[["1", ""], ["2", "ABC"], ["3", "DEF"], ["4", "GHI"], ["5", "JKL"], ["6", "MNO"], ["7", "PQRS"], ["8", "TUV"], ["9", "WXYZ"], ["*", ""], ["0", "+"], ["#", ""]]
+      .map(([k, s]) => `<button data-k="${k}">${k}<small>${s}</small></button>`).join("")}</div>
+    <div class="acts"><button class="ca v" id="dV" title="Video call" ${exact ? "" : "disabled"}>${SVG.vid}</button><button class="ca" id="dC" title="Call" ${exact ? "" : "disabled"}>${SVG.call}</button><button class="bk" id="dB" title="Delete" aria-label="Delete">⌫</button></div>`;
+  $("#v").querySelectorAll("[data-k]").forEach(b => b.onclick = () => press(b.dataset.k));
+  $("#dB").onclick = () => { DIAL = DIAL.slice(0, -1); paintPad(); };
+  $("#dB").oncontextmenu = ev => { ev.preventDefault(); DIAL = ""; paintPad(); };
+  $("#dC").onclick = () => exact && dial(exact, false);
+  $("#dV").onclick = () => exact && dial(exact, true);
+  wire($("#v"));
+  $("#v").querySelectorAll(".hit .r").forEach(r => r.onclick = () => { const p = byEmail(r.dataset.e); DIAL = p.ext; paintPad(); });
+}
+function press(k){ if (!/^[0-9]$/.test(k)) return; if (DIAL.length < 4) DIAL += k; paintPad(); }
+
+function paintContacts(list, fav){
+  const site = p => p.lead ? "LEAD" : p.site || "LEAD";
+  let L = list.filter(p => (!ONLY || p.online) && (GF === "ALL" || site(p) === GF)
+    && (!Q || (p.name + " " + p.ext + " " + p.position + " " + p.siteName).toLowerCase().includes(Q.toLowerCase())));
+  const head = fav ? "" : `<input class="inp" id="q" placeholder="Search a name, extension or position" style="width:100%" value="${esc(Q)}">
+    <div class="flt"><span data-g="ALL" class="${GF === "ALL" ? "on" : ""}">All</span>${GROUPS.map(([c, n]) => `<span data-g="${c}" class="${GF === c ? "on" : ""}">${esc(n.replace("ABC ", "").replace(" Department Store", " DS").replace("Leadership & administration", "Leadership"))}</span>`).join("")}
+      <span id="onl" class="${ONLY ? "on" : ""}">● Online now</span></div>`;
+  const body = fav ? (L.map(p => row(p)).join("") || `<div class="empty">No favourites yet — tap ☆ next to a person in Contacts.</div>`)
+    : GROUPS.map(([c, n]) => { const g = L.filter(p => site(p) === c).sort((a, b) => (a.ext || "9999").localeCompare(b.ext || "9999"));
+        return g.length ? `<div class="grp">${esc(n)} · ${g.length}</div>${g.map(p => row(p)).join("")}` : ""; }).join("") || `<div class="empty">No one found.</div>`;
+  $("#v").innerHTML = head + `<div id="lst">${body}</div>`;
+  wire($("#v"));
+  const q = $("#q"); if (q){ q.oninput = () => { Q = q.value; const pos = q.selectionStart; paintContacts(list, fav); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); }; }
+  $("#v").querySelectorAll("[data-g]").forEach(s => s.onclick = () => { GF = s.dataset.g; paintContacts(list, fav); });
+  const o = $("#onl"); if (o) o.onclick = () => { ONLY = !ONLY; paintContacts(list, fav); };
+}
+
+const when = iso => { const d = new Date(iso), t = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" });
+  const day = s => new Date(s).toLocaleDateString("en-CA", { timeZone: "Asia/Beirut" }), today = day(Date.now()), y = day(Date.now() - 864e5);
+  return day(iso) === today ? "Today " + t : day(iso) === y ? "Yesterday " + t : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Beirut" }) + " " + t; };
+const dur = s => s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+function paintRecent(){
+  if (!REC){ $("#v").innerHTML = `<div class="empty">Loading…</div>`; return; }
+  if (!REC.calls.length){ $("#v").innerHTML = `<div class="empty">No calls yet.</div>`; return; }
+  $("#v").innerHTML = REC.calls.map(c => {
+    const p = byEmail(c.peer) || { email: c.peer, name: c.peerName || c.peer, ext: "", position: "" };
+    const missed = !c.out && c.status === "missed";
+    const what = (c.out ? "↗ Outgoing" : "↙ Incoming") + (c.video ? " video" : "") + " · " + when(c.at)
+      + (c.status === "answered" || c.status === "ended" ? (c.secs ? " · " + dur(c.secs) : "") : c.status === "missed" ? (c.out ? " · no answer" : " · missed") : c.status === "declined" ? " · declined" : "");
+    return `<div class="r ${missed ? "miss" : ""}">${av(p)}<div class="tx"><b>${esc(p.name)}</b><small>${esc(what)}</small></div><span class="xt">${esc(p.ext || "")}</span>
+      ${byEmail(c.peer) ? `<button class="ib" data-v="${esc(c.peer)}" title="Video call">${SVG.vid}</button><button class="ib g" data-c="${esc(c.peer)}" title="Call back">${SVG.call}</button>` : ""}</div>`;
+  }).join("");
+  wire($("#v"));
+}
+function paint(){
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === TAB));
+  if (!BOOK) return;
+  if (TAB === "pad") paintPad();
+  else if (TAB === "con") paintContacts(BOOK.people, false);
+  else if (TAB === "fav") paintContacts(BOOK.people.filter(p => FAV.includes(p.email)), true);
+  else paintRecent();
+}
+function paintMissed(){ const n = REC ? REC.missed : 0, u = $("#missN"); u.textContent = n; u.classList.toggle("hidden", !n); }
+async function loadRecent(){ try { REC = await api("phone/recent"); paintMissed(); if (TAB === "rec") paintRecent(); } catch {} }
+async function loadBook(){
+  try { BOOK = await api("phone/book"); } catch (e){ $("#v").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#meName").textContent = BOOK.me.name; $("#meExt").textContent = BOOK.me.ext ? "ext " + BOOK.me.ext : "no extension yet";
+  if (!BOOK.ready) $("#warn").innerHTML = `<div class="warnb">Hub Phone is being set up on the server — calls start working after the next update.</div>`;
+  else if (!P) $("#warn").innerHTML = `<div class="warnb">Open Hub Phone from the hub home screen to make calls.</div>`;
+  const keep = TAB === "con" && $("#q") && document.activeElement === $("#q");
+  if (!keep) paint();
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = async () => { TAB = b.dataset.t; paint();
+  if (TAB === "rec"){ await loadRecent(); if (REC && REC.missed){ api("phone/seen", {}).catch(() => {}); REC.missed = 0; paintMissed(); } } });
+addEventListener("keydown", e => { if (TAB !== "pad" || e.target.tagName === "INPUT") return;
+  if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === "Backspace"){ DIAL = DIAL.slice(0, -1); paintPad(); }
+  else if (e.key === "Enter"){ const x = BOOK && BOOK.people.find(p => p.ext === DIAL); if (x) dial(x, false); } });
+function paintConn(s){ $("#conn").classList.toggle("on", !!(s && s.connected)); $("#connT").textContent = !P ? "" : s && s.connected ? "ready for calls" : "connecting…"; }
+if (P){ paintConn(P.state()); const off = P.on(s => { paintConn(s); if (!s.inCall) setTimeout(loadRecent, 1500); }); addEventListener("pagehide", off); }
+loadBook(); loadRecent();
+setInterval(() => { if (!document.hidden) loadBook(); }, 30000);
+</script>
+</body>
+</html>

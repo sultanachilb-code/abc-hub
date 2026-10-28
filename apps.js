@@ -200,6 +200,8 @@ window.HUB = {
     },
     /* Operations Calendar feature — see docs/FEATURE-calendar.md */
     /* Downloads feature — see docs/FEATURE-downloads.md */
+    /* Hub Phone — voice and video calls between hub users, extensions per flagship (see docs/FEATURE-hub-phone.md). Everyone can use it. */
+    { id: "phone", name: "Hub Phone", desc: "Call any hub user — keypad, extensions, contacts, voice and video", group: "Hub Applications", icon: "phone", color: "#2EB872", url: "/tools/phone" },
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Hub Applications", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
     /* Quick Access Pass — one-entry QR for a contractor or visitor, live 30 minutes, sent by WhatsApp (see docs/FEATURE-quick-pass.md). Everyone can open it. */
     { id: "quickpass", name: "Quick Access Pass", desc: "One-entry QR for a contractor or visitor — 30 minutes, sent by WhatsApp", group: "Access and Security", icon: "qr", color: "#1E8A4C", url: "/tools/quickpass" },
