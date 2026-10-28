@@ -585,7 +585,7 @@ async function pr(){
   const siteF = r => d.multiRoles.includes(r) ? `<label>Flagships</label><div>${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<label class="mut" style="display:flex;gap:6px"><input type="checkbox" class="uS" value="${c}" ${e && (e.sites || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
     : r === "ADVISOR" ? `<p class="mut">All five flagships.</p>` : `<label>Flagship${r === "ADMIN" ? " (optional)" : ""}</label><select id="uF">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${((e && e.site) || (PTAB !== "LEAD" ? PTAB : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
   const order = ["MANAGER", "SUPERVISOR", "SECURITY", "ADVISOR", "DIRECTOR", "CDSO", "ADMIN"];
-  V(head("People &amp; roles", "Add people, roles, flagships, administrator access, two-step and the morning email", `<button class="b" data-new='${esc(JSON.stringify({ role: PTAB === "LEAD" ? "ADVISOR" : "SUPERVISOR", site: PTAB !== "LEAD" ? PTAB : "", position: "MO" }))}'>＋ Add a person</button>`) +
+  V(head("People &amp; roles", "Add people, roles, flagships, administrator access, two-step and the morning email", `<button class="b" data-new='${esc(JSON.stringify({ role: PTAB === "LEAD" ? "ADVISOR" : "SUPERVISOR", site: PTAB !== "LEAD" ? PTAB : "", position: "MO" }))}'>＋ Add a person</button><button class="b g" id="welBulk">✉ Welcoming email to existing people</button>`) +
     `<div class="flt">${FLAGS.map(([c, n]) => { const k = c === "LEAD" ? U.filter(u => u.active && (d.multiRoles.includes(u.role) || d.allSiteRoles.includes(u.role) || u.isAdmin)).length : U.filter(u => u.active && u.site === c && !d.multiRoles.includes(u.role) && !d.allSiteRoles.includes(u.role) && u.role !== "ADMIN").length;
       return `<span data-pt="${c}" class="${PTAB === c ? "on" : ""}">${esc(n)} · ${k}</span>`; }).join("")}</div>
     <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start" class="prg"><div>${main}</div>
@@ -621,6 +621,30 @@ async function pr(){
     d2.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee;font:600 14px Segoe UI,Arial"><span>Welcoming email · preview</span><button class="b g" id="welX">Close</button></div><iframe id="welF" style="width:100%;height:76vh;border:0"></iframe>`;
     d2.showModal(); $("#welF").srcdoc = x.html; $("#welX").onclick = () => d2.close(); d2.onclick = ev => { if (ev.target === d2) d2.close(); };
   } catch (er){ toast(er.message, true); } };
+  /* Welcoming email to existing people: pick them (by flagship tab), not yet welcomed are ticked */
+  $("#welBulk").onclick = () => {
+    const act = U.filter(u => u.active), inTab = u => PTAB === "LEAD" ? (d.multiRoles.includes(u.role) || d.allSiteRoles.includes(u.role) || u.isAdmin) : u.site === PTAB && !d.multiRoles.includes(u.role) && !d.allSiteRoles.includes(u.role);
+    let scope = "tab";
+    let d3 = $("#welB"); if (!d3){ d3 = document.createElement("dialog"); d3.id = "welB"; d3.style.cssText = "border:0;border-radius:16px;padding:0;width:min(560px,96vw);max-height:88vh;background:var(--ccard);color:var(--ctext)"; document.body.append(d3); }
+    const draw = () => { const L = act.filter(u => scope === "all" || inTab(u)), tabName = (FLAGS.find(f => f[0] === PTAB) || [0, PTAB])[1];
+      d3.innerHTML = `<div style="padding:16px 18px 8px"><b style="font-size:1rem">Welcoming email to existing people</b><p class="mut" style="margin:4px 0 10px;font-size:.8rem">Ticked: people who have not received it yet. The password is not in the email.</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="b ${scope === "tab" ? "" : "g"}" data-sc="tab">${esc(tabName)} · ${act.filter(inTab).length}</button><button class="b ${scope === "all" ? "" : "g"}" data-sc="all">Everyone · ${act.length}</button>
+          <span style="flex:1"></span><button class="b g" id="wbAll">Tick all / none</button></div></div>
+        <div style="max-height:52vh;overflow:auto;padding:0 18px">${L.map(u => `<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--cline)"><input type="checkbox" class="wbC" value="${esc(u.email)}" ${u.welcomed ? "" : "checked"}>
+          <span style="flex:1;min-width:0"><b style="font-size:.88rem">${esc(u.name)}</b><br><span class="mut" style="font-size:.76rem">${esc(u.email)} · ${esc(u.positionLabel || u.roleLabel)}</span></span>
+          <span class="mut" style="font-size:.72rem;text-align:right">${u.welcomed ? "sent " + esc(ago(u.welcomed.at)) : "not sent yet"}</span></label>`).join("") || `<p class="mut">Nobody here.</p>`}</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:12px 18px;border-top:1px solid var(--cline)"><span class="mut" id="wbN" style="flex:1;font-size:.8rem"></span><button class="b g" id="wbX">Cancel</button><button class="b" id="wbGo">Send</button></div>`;
+      const n = () => { $("#wbN").textContent = d3.querySelectorAll(".wbC:checked").length + " selected"; }; n();
+      d3.querySelectorAll(".wbC").forEach(c => c.onchange = n);
+      d3.querySelectorAll("[data-sc]").forEach(b => b.onclick = () => { scope = b.dataset.sc; draw(); });
+      $("#wbAll").onclick = () => { const cs = [...d3.querySelectorAll(".wbC")], on = cs.some(c => !c.checked); cs.forEach(c => c.checked = on); n(); };
+      $("#wbX").onclick = () => d3.close();
+      $("#wbGo").onclick = async () => { const emails = [...d3.querySelectorAll(".wbC:checked")].map(c => c.value); if (!emails.length) return toast("Tick at least one person", true);
+        $("#wbGo").disabled = true; $("#wbGo").textContent = `Sending ${emails.length}…`;
+        try { const r = await api("admin/users/welcome-bulk", { emails }); d3.close(); toast(`Welcoming email sent to ${r.sent}${r.failed.length ? ` · ${r.failed.length} failed: ${r.failed.map(f => f.email).join(", ")}` : ""}`, !!r.failed.length); pr(); }
+        catch (er){ toast(er.message, true); $("#wbGo").disabled = false; $("#wbGo").textContent = "Send"; } }; };
+    draw(); d3.showModal();
+  };
   $("#main").querySelectorAll("[data-wel]").forEach(x => x.onclick = async () => {
     if (!(await confirmBox("Send the welcoming email", `Send the welcoming email to <b>${esc(x.dataset.wel)}</b>? The password is not in the email.`, "Send"))) return;
     x.disabled = true; try { const r = await api("admin/users/welcome", { email: x.dataset.wel }); toast("Welcoming email sent to " + r.to); } catch (er){ toast(er.message, true); } x.disabled = false; });
