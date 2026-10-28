@@ -14,7 +14,11 @@
 - the tools of their role and flagship;
 - a help contact, signed by the admin who sends it.
 
-The temporary password is **never** written in the email. The email says it is "Given to you by [admin]".
+**Password in the email (28 Oct 2026, asked by Sultan).** The first password of new accounts is **Abc@2026**. It is pre-filled in the form and can be changed there. The email shows the password only when the hub knows it:
+- a new person: the password typed in the form;
+- an existing person who never signed in: their password is set again to Abc@2026.
+
+People who already chose their own password keep it; the email says "Your current hub password". Everyone must change the first password at their first sign-in.
 
 **How it is sent:** from the sending admin's Outlook when it is connected, otherwise through the mail relay. Replies go to that admin. If the email cannot be sent, the person is still added and the message says why.
 
