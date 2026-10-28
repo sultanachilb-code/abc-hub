@@ -806,7 +806,7 @@ async function route(request, env, ctx, url) {
     if (a === "users/welcome-preview" && method === "POST") {   // the email as it will look, from the form (nothing saved)
       const u = { email: String(body.email || "name@abc.com.lb").toLowerCase(), full_name: String(body.name || "New colleague"), role: ROLES[body.role] ? body.role : "SUPERVISOR",
         site_code: body.site || null, sites: (Array.isArray(body.sites) ? body.sites : []).join(","), position: String(body.position || "") };
-      return ok({ html: welcomeMail(u, me).html });
+      return ok({ html: welcomeMail(u, me, String(body.password || "")).html });
     }
     if (a === "users/reset" && method === "POST") { const r = await resetUser(env, body); await audit(env, { me, tool: "people", ref: String(body.email || ""), label: String(body.email || ""), action: "edit", changes: [{ field: "password", from: "", to: "reset" }] }); return ok(r); }
     if (a === "users/active" && method === "POST") { const r = await setActive(env, me, body); await audit(env, { me, tool: "people", ref: String(body.email || ""), label: String(body.email || ""), action: "edit", changes: [{ field: "active", from: "", to: String(!!body.active) }] }); return ok(r); }
@@ -979,13 +979,13 @@ async function saveUser(env, me, b) {
       .bind(name, role, site || null, sites, morning, position, adminFlag, email).run();
     return { email, created: false };
   }
-  const password = String(b.password || "");
+  const password = String(b.password || "") || DEFAULT_PASSWORD;
   if (password.length < 8) throw fail("Set a temporary password of at least 8 characters");
   const h = await hashFor(password);
   await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position, is_admin)
     VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position, b.isAdmin || role === "ADMIN" ? 1 : 0).run();
   if (b.welcome !== false) {   // Welcoming email (default on)
-    try { const w = await sendWelcome(env, email, me); return { email, created: true, welcome: w }; }
+    try { const w = await sendWelcome(env, email, me, password); return { email, created: true, welcome: w }; }
     catch (e) { return { email, created: true, welcome: { sent: false, error: e.message } }; }
   }
   return { email, created: true, welcome: { sent: false, skipped: true } };
@@ -1001,7 +1001,8 @@ const WELCOME_TOOLS = {
   CDSO: "the dashboards, reports and Tenant 360 of your department stores",
   ADMIN: "every tool of the hub and the Admin Control Center"
 };
-function welcomeMail(u, by) {
+const DEFAULT_PASSWORD = "Abc@2026";   // the first password of new accounts (changed at the first sign-in)
+function welcomeMail(u, by, pw = "") {
   const first = escH(String(u.full_name || "").split(" ")[0] || "there"), F = "font-family:Calibri,Arial,sans-serif;";
   const sites = sitesOf(u), where = u.role === "ADVISOR" || u.role === "ADMIN" && !u.site_code ? "All flagships" : sites.map(c => "ABC " + (SITES[c] || c)).join(", ");
   const pos = posLabel(u.position) || ROLES[u.role] || u.role, at = u.site_code ? " at " + (SITES[u.site_code] || u.site_code) : "";
@@ -1018,26 +1019,34 @@ function welcomeMail(u, by) {
   <p style="margin:0 0 14px">Dear ${first},</p>
   <p style="margin:0 0 14px">Your account on the <b>ABC Operations Hub</b> is ready. The hub brings the daily operations of the five flagships together in one place — shift handover, checklists, tenants, contractors, reports and the ABC platforms — on your phone and on your computer.</p>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F4F9;border-radius:10px;margin:6px 0 18px"><tr><td style="padding:14px 18px"><table role="presentation" width="100%">
-    ${row("Your sign-in email", escH(u.email))}${row("Position", escH(pos))}${row("Flagship", escH(where || "—"))}${row("First password", "Given to you by " + escH(by.full_name))}</table></td></tr></table>
+    ${row("Your sign-in email", escH(u.email))}${row("Position", escH(pos))}${row("Flagship", escH(where || "—"))}${pw ? row("Password", `<span style="font-family:Consolas,Menlo,monospace;background:#fff;border:1px solid #E3DCEC;border-radius:6px;padding:2px 8px">${escH(pw)}</span><br><span style="font-weight:400;color:#6D6479;font-size:12px">You choose your own at the first sign-in</span>`) : row("Password", "Your current hub password")}</table></td></tr></table>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px"><tr><td style="background:#4A1F73;border-radius:10px"><a href="${HUB_URL}" style="${F}display:inline-block;padding:13px 26px;color:#fff;text-decoration:none;font-weight:700;font-size:15px">Open the ABC Operations Hub</a></td></tr></table>
   <div style="${F}font-size:13px;letter-spacing:1.5px;font-weight:700;color:#7B4BB0;margin-bottom:8px">YOUR FIRST 5 MINUTES</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    ${step(1, "Sign in", "with your email and the first password.")}${step(2, "Choose your own password", "— the hub asks you at the first sign-in.")}
+    ${step(1, "Sign in", pw ? "with your email and the password above." : "with your email and your current password.")}${pw ? step(2, "Choose your own password", "— the hub asks you at the first sign-in.") : step(2, "Forgot it?", "— ask " + escH(by.full_name) + " to set a new one.")}
     ${step(3, "Install it on your phone", "— Share › Add to Home Screen (iPhone) or Install app (Android).")}${step(4, "Allow notifications", "and set up Face ID / fingerprint so the next sign-ins take one tap.", true)}</table>
   <p style="margin:20px 0 6px;font-size:14px">You will see ${escH(WELCOME_TOOLS[u.role] || "the tools of your position")}${escH(at)}.</p>
 </td></tr>
 <tr><td style="${F}padding:18px 30px 24px;font-size:13px;color:#6D6479;border-top:1px solid #EEE9F4">Questions or trouble signing in? Reply to this email or contact <b style="color:#4A1F73">${escH(by.full_name)}</b> · ${escH(by.email)}<br>
-  <span style="font-size:12px">Keep your password private — ABC will never ask for it by email.</span></td></tr></table></td></tr></table>`;
+  <span style="font-size:12px">Keep your password private and do not forward this email.</span></td></tr></table></td></tr></table>`;
   return { to: [u.email], from: by.email, replyTo: by.email, subject: "Welcome to the ABC Operations Hub", html };
 }
-async function sendWelcome(env, email, by) {
+async function sendWelcome(env, email, by, password = "") {
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(String(email || "").toLowerCase()).first();
   if (!u) throw fail("No such user", 404);
   if (!u.active) throw fail("This account is switched off");
-  const r = await relay(env, welcomeMail(u, by));
+  /* the password goes in the email only when the hub knows it: just set (new person), or the person never signed in
+     (then it is set to the default first password). People who chose their own keep it and the email says so. */
+  let pw = String(password || "");
+  if (!pw && u.must_change && !u.last_login_at) {
+    const h = await hashFor(DEFAULT_PASSWORD);
+    await env.DB.prepare("UPDATE users SET salt=?, hash=?, iterations=?, must_change=1 WHERE email=?").bind(h.salt, h.hash, h.iterations, u.email).run();
+    pw = DEFAULT_PASSWORD;
+  }
+  const r = await relay(env, welcomeMail(u, by, pw));
   if (r && r.ok === false) throw fail("The welcoming email could not be sent: " + (r.error || "mail relay"));
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("welcome:" + u.email, JSON.stringify({ at: nowIso(), by: by.full_name })).run().catch(() => {});
-  return { sent: true, to: u.email, via: r && r.via || "relay" };
+  return { sent: true, to: u.email, via: r && r.via || "relay", withPassword: !!pw };
 }
 async function resetUser(env, b) {
   const email = String(b.email || "").trim().toLowerCase();

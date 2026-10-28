@@ -594,9 +594,9 @@ async function pr(){
         <label>Full name</label><input id="uN" value="${esc(e ? e.name || "" : "")}" required><label>Email</label><input id="uE" type="email" value="${esc(e ? e.email || "" : "")}" ${e && e.email ? "readonly" : ""} required>
         <label>Role</label><select id="uR">${order.map(c => `<option value="${c}" ${role === c ? "selected" : ""}>${esc(d.roles[c])}</option>`).join("")}</select><p class="mut" id="uNote" style="margin:0">${esc(ACCESS_NOTE[role])}</p>
         <div id="uPB" style="display:grid;gap:6px">${posF(role)}</div><div id="uSB" style="display:grid;gap:6px">${siteF(role)}</div>
-        ${e && e.email ? "" : `<label>Temporary password (8+)</label><input id="uW" autocomplete="off">
+        ${e && e.email ? "" : `<label>First password (8+)</label><input id="uW" autocomplete="off" value="Abc@2026">
         <div style="border:1px solid var(--cline);border-radius:12px;padding:10px 12px;margin-top:4px"><b style="font-size:.84rem">Welcoming email</b>
-          <label class="mut" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="radio" name="uWel" value="1" checked> <span><b style="color:var(--ctext)">Send welcoming email</b><br>To the person's email, signed by you. The password is not in the email.</span></label>
+          <label class="mut" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="radio" name="uWel" value="1" checked> <span><b style="color:var(--ctext)">Send welcoming email</b><br>To the person's email, signed by you, with this first password.</span></label>
           <label class="mut" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="radio" name="uWel" value="0"> <span><b style="color:var(--ctext)">Don't send welcoming email</b><br>You tell the person yourself.</span></label>
           <button type="button" class="b g" id="uWP" style="margin-top:8px">👁 Preview the email</button></div>`}
         <label class="mut" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="uA" ${e && (e.isAdmin || e.role === "ADMIN") ? "checked" : ""}> 🛡 Hub administrator (opens the Admin Control Center with the ABC logo + password)</label>
@@ -616,7 +616,7 @@ async function pr(){
   const ux = $("#uX"); if (ux) ux.onclick = () => { PED = null; pr(); };
   /* Welcoming email: preview from the form, and send again from the list */
   const wp = $("#uWP"); if (wp) wp.onclick = async () => { try {
-    const x = await api("admin/users/welcome-preview", { name: $("#uN").value, email: $("#uE").value, role: R(), site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(i => i.value), position: $("#uP") ? $("#uP").value : "" });
+    const x = await api("admin/users/welcome-preview", { password: $("#uW") ? $("#uW").value : "", name: $("#uN").value, email: $("#uE").value, role: R(), site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(i => i.value), position: $("#uP") ? $("#uP").value : "" });
     let d2 = $("#welDlg"); if (!d2){ d2 = document.createElement("dialog"); d2.id = "welDlg"; d2.style.cssText = "border:0;border-radius:16px;padding:0;width:min(700px,96vw);max-height:90vh"; document.body.append(d2); }
     d2.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee;font:600 14px Segoe UI,Arial"><span>Welcoming email · preview</span><button class="b g" id="welX">Close</button></div><iframe id="welF" style="width:100%;height:76vh;border:0"></iframe>`;
     d2.showModal(); $("#welF").srcdoc = x.html; $("#welX").onclick = () => d2.close(); d2.onclick = ev => { if (ev.target === d2) d2.close(); };
@@ -627,7 +627,7 @@ async function pr(){
     let scope = "tab";
     let d3 = $("#welB"); if (!d3){ d3 = document.createElement("dialog"); d3.id = "welB"; d3.style.cssText = "border:0;border-radius:16px;padding:0;width:min(560px,96vw);max-height:88vh;background:var(--ccard);color:var(--ctext)"; document.body.append(d3); }
     const draw = () => { const L = act.filter(u => scope === "all" || inTab(u)), tabName = (FLAGS.find(f => f[0] === PTAB) || [0, PTAB])[1];
-      d3.innerHTML = `<div style="padding:16px 18px 8px"><b style="font-size:1rem">Welcoming email to existing people</b><p class="mut" style="margin:4px 0 10px;font-size:.8rem">Ticked: people who have not received it yet. The password is not in the email.</p>
+      d3.innerHTML = `<div style="padding:16px 18px 8px"><b style="font-size:1rem">Welcoming email to existing people</b><p class="mut" style="margin:4px 0 10px;font-size:.8rem">Ticked: people who have not received it yet. People who never signed in get the first password <b>Abc@2026</b> (set again); the others keep their own password.</p>
         <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="b ${scope === "tab" ? "" : "g"}" data-sc="tab">${esc(tabName)} · ${act.filter(inTab).length}</button><button class="b ${scope === "all" ? "" : "g"}" data-sc="all">Everyone · ${act.length}</button>
           <span style="flex:1"></span><button class="b g" id="wbAll">Tick all / none</button></div></div>
         <div style="max-height:52vh;overflow:auto;padding:0 18px">${L.map(u => `<label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--cline)"><input type="checkbox" class="wbC" value="${esc(u.email)}" ${u.welcomed ? "" : "checked"}>
@@ -646,7 +646,7 @@ async function pr(){
     draw(); d3.showModal();
   };
   $("#main").querySelectorAll("[data-wel]").forEach(x => x.onclick = async () => {
-    if (!(await confirmBox("Send the welcoming email", `Send the welcoming email to <b>${esc(x.dataset.wel)}</b>? The password is not in the email.`, "Send"))) return;
+    if (!(await confirmBox("Send the welcoming email", `Send the welcoming email to <b>${esc(x.dataset.wel)}</b>? If they never signed in, their password is set to <b>Abc@2026</b> and written in the email; otherwise they keep their own.`, "Send"))) return;
     x.disabled = true; try { const r = await api("admin/users/welcome", { email: x.dataset.wel }); toast("Welcoming email sent to " + r.to); } catch (er){ toast(er.message, true); } x.disabled = false; });
   $("#uForm").onsubmit = async ev => { ev.preventDefault(); const r = R();
     try { await api("admin/users", { isNew: !(e && e.email), name: $("#uN").value, email: $("#uE").value, role: r, site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(x => x.value),
