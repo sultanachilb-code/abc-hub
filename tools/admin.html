@@ -78,6 +78,11 @@ td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
 .tl .t{display:flex;justify-content:space-between;align-items:center;gap:8px}.tl b{font-size:.88rem}
 .sw{width:42px;height:24px;border-radius:12px;background:#CFC6DC;position:relative;cursor:pointer;flex:none;border:0}.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}
 .sw.on{background:var(--cok)}.sw.on::after{left:21px}
+.sw.part{background:#E0B451}.sw.part::after{left:12px}
+.ws-t{width:100%;border-collapse:collapse;font-size:.88rem}.ws-t th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cmut);padding:8px;text-align:center;border-bottom:1px solid var(--cline)}
+.ws-t th:first-child,.ws-t td:first-child{text-align:left}.ws-t td{padding:8px;border-bottom:1px solid var(--cline);text-align:center}.ws-t td .sw{display:inline-block}
+.ws-t tr.fh td{background:var(--cbg2,rgba(123,75,176,.07));font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--cmut)}
+.ws-t td small{display:block;color:var(--cmut);font-size:.72rem}
 .sel2{border:1px solid var(--cline);border-radius:8px;padding:6px 8px;font:inherit;font-size:.78rem;background:var(--ccard);color:var(--ctext);max-width:100%}
 .chips{display:flex;gap:4px;flex-wrap:wrap}.chips span{font-size:.66rem;font-weight:700;border-radius:6px;padding:2px 6px;background:var(--cpaper);color:var(--cmut);border:1px solid var(--cline)}
 .acc{display:flex;gap:4px;flex-wrap:wrap}.acc span{font-size:.7rem;font-weight:700;border-radius:99px;padding:4px 8px;border:1px solid var(--cline);cursor:pointer;background:var(--ccard)}.acc span.on{background:#4A1F73;color:#fff;border-color:#4A1F73}
@@ -104,7 +109,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#ov").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
-  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["bk", "💾", "Data & backup"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["ws", "🎚", "Who sees what"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
@@ -141,7 +146,7 @@ function go(p){
   PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ ov, pr, us, ur, sec, hi, al, db, sy, mb, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -365,6 +370,43 @@ async function mb(){
         : `${pill(x.ok ? "ok" : "bad", x.ok ? "Imported" : "Not imported")}<br><span class="mut" style="font-size:.8rem">${esc(x.result)}</span>`}</td></tr>`).join("") || `<tr><td colspan="2" class="mut">${dry ? "No email in the folder." : "Nothing new — every email was imported already."}</td></tr>`}</tbody></table></div>`; };
   $("#mbT").onclick = async () => { $("#mbT").disabled = true; $("#mbOut").innerHTML = `<p class="mut">Reading the mailbox…</p>`; try { show(await api("admin/cc/mailbox/test", {}), true); } catch (e){ $("#mbOut").innerHTML = `<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`; } $("#mbT").disabled = false; };
   $("#mbR").onclick = async () => { $("#mbR").disabled = true; $("#mbOut").innerHTML = `<p class="mut">Importing…</p>`; try { const r = await api("admin/cc/mailbox/run", {}); show(r, false); toast(`${r.items.filter(x => x.ok).length} imported`); } catch (e){ $("#mbOut").innerHTML = `<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`; } $("#mbR").disabled = false; };
+}
+
+/* ---------- who sees what: 3 switches per tool (Operations team · Management · Leadership), one setting for all flagships ----------
+   Saved as the tool's access list (Tools control); the server applies it too. Administrators always see everything. */
+const WS_GROUPS = [["ops", "Operations team", ["SMS", "MS", "MO", "WH", "SEC"], "Senior Mall Supervisor · Mall Supervisor · Mall Officer · Warehouse · Security"],
+  ["mgmt", "Management", ["MM", "OM"], "Mall Manager / Senior · Operations Manager / Deputy"], ["lead", "Leadership", ["LEAD"], "Property Advisor · Mall Director · CDSO"]];
+async function ws(){
+  const T = await api("admin/cc/tools"), cfg = T.cfg, H = window.HUB || {}, APPS = H.APPS || [], ACC = H.ACCESS || {}, ALL = Object.keys(T.keys);
+  const adminGroups = H.ADMIN_GROUPS || [], testAdmin = H.TESTING_ADMIN_ONLY || [];
+  const list = APPS.filter(a => !a.hidden && !adminGroups.includes(a.group) && !(cfg[a.id] && cfg[a.id].off));
+  const defAcc = a => a.group === "Upcoming - Testing" && !testAdmin.includes(a.id) ? ALL : (ACC[a.id] && ACC[a.id].length ? ACC[a.id] : ALL);
+  const accOf = a => (cfg[a.id] && Array.isArray(cfg[a.id].access)) ? cfg[a.id].access : defAcc(a);
+  const order = H.GROUPS || [], groups = [...new Set(list.map(a => (cfg[a.id] && cfg[a.id].group) || a.group))].sort((x, y) => ((order.indexOf(x) + 1) || 99) - ((order.indexOf(y) + 1) || 99));
+  let q = "";
+  const draw = () => {
+    const L = list.filter(a => !q || ((cfg[a.id] && cfg[a.id].name) || a.name).toLowerCase().includes(q));
+    $("#wsBody").innerHTML = groups.map(g => { const G = L.filter(a => ((cfg[a.id] && cfg[a.id].group) || a.group) === g); if (!G.length) return "";
+      return `<tr class="fh"><td colspan="4">${esc(g)}</td></tr>` + G.map(a => { const acc = accOf(a);
+        return `<tr data-id="${a.id}"><td><b>${esc((cfg[a.id] && cfg[a.id].name) || a.name)}</b>${cfg[a.id] && Array.isArray(cfg[a.id].access) ? `<small>changed here</small>` : ""}</td>${WS_GROUPS.map(([k, , keys]) => {
+          const n = keys.filter(x => acc.includes(x)).length, st = n === keys.length ? "on" : n ? "part" : "";
+          return `<td><button class="sw ${st}" data-g="${k}" title="${st === "on" ? "Sees it" : st ? "Some positions see it — tap to give all" : "Hidden"}" aria-label="${esc(a.name)}"></button></td>`; }).join("")}</tr>`; }).join(""); }).join("") || `<tr><td colspan="4" class="mut">No tool matches.</td></tr>`;
+    $("#wsBody").querySelectorAll("[data-g]").forEach(b => b.onclick = async () => {
+      const id = b.closest("tr").dataset.id, a = APPS.find(x => x.id === id), grp = WS_GROUPS.find(x => x[0] === b.dataset.g)[2];
+      const cur = new Set(accOf(a)), turnOn = !b.classList.contains("on");
+      grp.forEach(k => turnOn ? cur.add(k) : cur.delete(k));
+      const next = ALL.filter(k => cur.has(k)), def = defAcc(a), same = next.length === def.length && next.every(k => def.includes(k));
+      b.disabled = true;
+      try { const r = await api("admin/cc/tools", { id, access: same ? null : next }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg);
+        toast(`${a.name}: ${turnOn ? "shown to" : "hidden from"} ${WS_GROUPS.find(x => x[0] === b.dataset.g)[1]}`); draw(); }
+      catch (e){ toast(e.message, true); b.disabled = false; } });
+  };
+  V(head("Who sees what", "Turn each tool on or off for the operations team, management and leadership — one setting for all five flagships. Administrators always see everything.") +
+    `<div class="flt"><input id="wsQ" placeholder="Search tools…"></div>
+    <p class="mut" style="margin:0 0 10px;line-height:1.6">${WS_GROUPS.map(([, n, , who]) => `<b>${n}</b>: ${esc(who)}`).join("<br>")}<br><span class="sw part" style="display:inline-block;vertical-align:middle;transform:scale(.75)"></span> = some positions of the group see it (set in Tools control) — tap to give it to the whole group.</p>
+    <div class="card" style="padding:4px 8px"><div class="tw"><table class="ws-t"><thead><tr><th>Tool</th>${WS_GROUPS.map(([, n]) => `<th>${n}</th>`).join("")}</tr></thead><tbody id="wsBody"></tbody></table></div></div>`);
+  $("#wsQ").oninput = e => { q = e.target.value.toLowerCase(); draw(); };
+  draw();
 }
 
 /* ---------- tools control ---------- */

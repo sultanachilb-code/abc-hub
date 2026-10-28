@@ -47,3 +47,15 @@ Hourly (07:00–22:00) health check; each red problem is pushed to the administr
 - Moved into the Control Center: **People & roles** (per flagship, slots, operations team, security, leadership, administrators, add / edit with a **Hub administrator** tick, two-step policy, ABC Operations Group email, weekly schedule Cc, morning / End of Day tests), **Announcements**, **Outlook settings** (Allowances → Outlook → Settings).
 - Notifications "to the administrators" go to everyone with administrator access.
 - One-time migration (`meta mig:admin-split`): every Admin account gets `is_admin = 1`; salaachi@abc.com.lb becomes Mall Supervisor · ABC Verdun Mall + administrator.
+
+## Who sees what (Oct 2026)
+Admin Control Center → **Who sees what**. Each tool shown in the hub has three switches, one setting for all five flagships:
+- **Operations team:** SMS, MS, MO, plus Warehouse and Security.
+- **Management:** MM / SMM and OM / DOM.
+- **Leadership:** Advisor, Director and CDSO.
+
+The switches start from today's access: the ACCESS list in apps.js, and every position for tools in Upcoming - Testing. A switch is saved as the tool's access list (`meta tools:cfg`, the same as Tools control). The server enforces it in `roleAllows`, and administrators always see everything.
+
+Turning a switch off removes that group's positions. When the result equals the tool's default access, the custom setting is removed. An amber switch means only some positions of that group have the tool, set per position in Tools control; tapping it gives the tool to the whole group.
+
+Hidden tools, the OFF folder and tools that are switched off are not listed.
