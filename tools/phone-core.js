@@ -124,7 +124,8 @@
 #hpQd .qnt{font-size:.74rem;color:var(--muted,#6D6479);padding:4px 0}
 #hpQd .qop{display:block;width:100%;text-align:center;margin-top:8px;color:var(--brand-2,#7B4BB0);font-weight:800;font-size:.8rem;background:none;border:0;cursor:pointer;padding:6px}
 @media (max-width:1500px){ #hpFab{right:22px} }
-@media (max-width:900px){ #hpFab{top:auto!important;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--hpb,18px));height:56px;min-width:56px} #hpFab > svg{width:26px;height:26px} #hpFab .lb{display:none} #hpFab.call{height:48px} }
+@media (max-width:900px){ #hpFab{top:auto!important;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--hpb,18px));height:56px;min-width:56px} #hpFab > svg{width:26px;height:26px} #hpFab .lb{display:none} #hpFab.call{height:48px}
+  #hpFab.intool:not(.call){bottom:auto;top:58%!important;right:10px;height:46px;min-width:46px;opacity:.92} #hpFab.intool:not(.call) > svg{width:22px;height:22px} #hpFab.intool::after{inset:-4px} }
 @media (prefers-reduced-motion:reduce){ #hpFab.ring{animation:none} }
 @media print{ #hpFab,#hpQd{display:none!important} }`;
   document.head.append(css);
@@ -146,7 +147,7 @@
   function connect(){
     if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
     try { ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/phone/ws?dev=${DEV}`); } catch { return retry(); }
-    ws.onopen = () => { wsOk = true; backoff = 1000; emit(); clearInterval(pingT); pingT = setInterval(() => send({ type: "ping" }), 25000); };
+    ws.onopen = () => { wsOk = true; backoff = 1000; if (VIEW) send({ type: "viewing", c: VIEW }); emit(); clearInterval(pingT); pingT = setInterval(() => send({ type: "ping" }), 25000); };
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch { return; } onMsg(m); };
     ws.onclose = () => { wsOk = false; clearInterval(pingT); emit(); retry(); };
     ws.onerror = () => {};
@@ -164,7 +165,16 @@
   }
 
   /* ---------- messages ---------- */
+  /* Hub Chat: live chat events go to the Hub Phone page (and refresh the unread count on the button) */
+  const chatL = new Set(); let VIEW = "", unreadT = 0, UNREAD = 0;
+  function onChat(m){
+    chatL.forEach(f => { try { f(m); } catch {} });
+    if (m.ev === "msg" || m.ev === "read" || m.ev === "conv"){ clearTimeout(unreadT); unreadT = setTimeout(loadUnread, 1200); }
+  }
+  async function loadUnread(){ if (!allowed || (HUBX.can && !HUBX.can("chat"))) return; try { UNREAD = (await api("chat/unread")).unread; if (fab) fab.dataset.k = ""; paintFab(); } catch {} }
+  function viewing(c){ VIEW = c || ""; send({ type: "viewing", c: VIEW }); }
   function onMsg(m){
+    if (m.type === "chat") return onChat(m);
     if (m.type === "ring") return incoming(m);
     if (ringing && m.callId === ringing.callId && (m.type === "cancel" || m.type === "taken")){
       toneOff(); const who = ringing.fromName; ringing = null; hide();
@@ -395,8 +405,9 @@
     });
     setInterval(() => { place(); if (C && C.min) paintFab(); }, 1000);
     addEventListener("resize", () => { place(); if (qd.classList.contains("on")) placeQd(); });
-    loadRec(); setInterval(() => { if (!document.hidden) loadRec(); }, 60000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadRec(); });
+    addEventListener("hashchange", () => { qdClose(); paintFab(); });
+    loadRec(); loadUnread(); setInterval(() => { if (!document.hidden){ loadRec(); loadUnread(); } }, 60000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden){ loadRec(); loadUnread(); } });
     paintFab();
   }
   const vis = el => !!el && getComputedStyle(el).display !== "none" && el.getBoundingClientRect().width > 0;
@@ -404,12 +415,14 @@
     if (!fab) return;
     const emg = document.getElementById("emgFab"), abx = document.getElementById("sanadFab");
     fab.classList.toggle("solo", !vis(emg));
+    fab.classList.toggle("intool", /^#\/app\//.test(location.hash));   // phones: inside a tool it moves to the side, clear of the tool's bottom buttons
     /* phone screen: stacked bottom right above ABCON and Emergency */
     fab.style.setProperty("--hpb", (vis(abx) ? 166 : vis(emg) ? 92 : 18) + "px");
   }
   function paintFab(){
     if (!fab) return;
-    fab.classList.toggle("on", allowed && !(C && !C.min));
+    const own = /^#\/app\/(phone|chat)(\b|\/|$)/.test(location.hash);   // not over Hub Phone / Hub Chat itself
+    fab.classList.toggle("on", allowed && !(C && !C.min) && !(own && !(C && C.min)));
     fab.classList.toggle("ring", !!ringing);
     if (C && C.min){
       fab.className = "on call";
@@ -419,10 +432,10 @@
       place(); return;
     }
     fab.classList.remove("call"); fab.title = "";
-    const n = REC ? REC.missed : 0, ext = BOOK && BOOK.me.ext ? "ext " + BOOK.me.ext : "Hub Phone";
-    if (!fab.dataset.k || fab.dataset.k !== n + ext){
-      fab.dataset.k = n + ext;
-      fab.innerHTML = `${icoCall}<span class="bd ${n ? "on" : ""}">${n > 9 ? "9+" : n}</span><span class="lb">Hub Phone<small>${esc(ext)}${n ? ` · ${n} missed` : ""}</small></span>`;
+    const mc = REC ? REC.missed : 0, n = mc + UNREAD, ext = BOOK && BOOK.me.ext ? "ext " + BOOK.me.ext : "Hub Phone";
+    if (!fab.dataset.k || fab.dataset.k !== n + ext + UNREAD){
+      fab.dataset.k = n + ext + UNREAD;
+      fab.innerHTML = `${icoCall}<span class="bd ${n ? "on" : ""}">${n > 9 ? "9+" : n}</span><span class="lb">Hub Phone<small>${esc(ext)}${mc ? ` · ${mc} missed` : ""}${UNREAD ? ` · ${UNREAD} unread` : ""}</small></span>`;
     }
     place();
   }
@@ -469,16 +482,18 @@
       <div class="qcl"><button type="button" class="v" data-call="v" title="Video call" ${p ? "" : "disabled"}>${I.cam}</button><button type="button" data-call="a" title="Call" ${p ? "" : "disabled"}>${icoCall}</button></div>
       ${list.length ? `<div class="qsc">${missed.length ? "Missed · " + missed.length : "Recent"}</div>${recRows}` : ""}
       <div class="qsc">Favourites</div>${F.map(x => prow(x, (x.siteName || x.position || "") + (x.online ? " · online" : ""))).join("") || `<div class="qnt">Tap ☆ next to a person in Hub Phone to add favourites.</div>`}
+      ${UNREAD ? `<button type="button" class="qop" data-chats style="margin-top:6px;background:rgba(46,184,114,.12);border-radius:10px;color:#1E9E5E">💬 ${UNREAD} unread message${UNREAD > 1 ? "s" : ""} · Open chats</button>` : ""}
       <button type="button" class="qop" data-open>Open Hub Phone ›</button>`;
     qd.querySelector("[data-x]").onclick = qdClose;
     qd.querySelector("[data-open]").onclick = () => { qdClose(); window.HUBX && HUBX.open("phone"); };
+    const oc = qd.querySelector("[data-chats]"); if (oc) oc.onclick = () => { qdClose(); window.HUBX && HUBX.open(HUBX.can("chat") ? "chat" : "phone"); };
     qd.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k;
       if (k === "⌫") DIAL = DIAL.slice(0, -1); else if (/^[0-9]$/.test(k) && DIAL.length < 4) DIAL += k; paintQd(); });
     qd.querySelectorAll("[data-call]").forEach(b => b.onclick = () => dialP(match(), b.dataset.call === "v"));
     qd.querySelectorAll(".qpr [data-e]").forEach(b => b.onclick = () => dialP(byE(b.dataset.e) || { email: b.dataset.e, name: b.dataset.e }, false));
   }
 
-  window.HubPhone = { call, state, on: f => { listeners.add(f); return () => listeners.delete(f); }, dev: DEV, refresh: () => loadRec() };
+  window.HubPhone = { call, state, on: f => { listeners.add(f); return () => listeners.delete(f); }, dev: DEV, refresh: () => { loadRec(); loadUnread(); }, onChat: f => { chatL.add(f); return () => chatL.delete(f); }, viewing };
 
   /* start once the hub is signed in and Hub Phone is open to this person */
   (function boot(n){
@@ -486,5 +501,9 @@
     if (HUBX.can && !HUBX.can("phone")) return;
     allowed = true; makeFab(); loadBook().then(() => { if (fab) fab.dataset.k = ""; paintFab(); });
     connect();
+    /* opened from a chat notification: /?chat=<id> → Hub Chat on that chat */
+    try { const q = new URLSearchParams(location.search), c = q.get("chat");
+      if (c){ q.delete("chat"); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+        setTimeout(() => HUBX.deep && HUBX.deep(HUBX.can("chat") ? "chat" : "phone", (HUBX.can("chat") ? "" : "&tab=chats") + "&c=" + encodeURIComponent(c)), 600); } } catch {}
   })(0);
 })();

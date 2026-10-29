@@ -15,6 +15,7 @@ Hub users can call each other by voice or video inside the hub. There are no rea
 - To change an extension: Admin Control Center → People & roles → Edit → **Hub Phone extension**. An extension is 3–4 digits and must be unique. Leave the field empty to keep the current extension.
 
 ## The page (`/tools/phone`)
+The page has the tabs **Chats** (see FEATURE-hub-chat.md), Calls, Contacts and Keypad. Favourites became the ★ filter in Contacts.
 - **Keypad:** type an extension. The matching person appears under the number; then press call or video.
 - **Contacts:** everyone, grouped by flagship and Leadership. Search by name, extension or position, or filter to "Online now". The green dot means the hub is open on one of their devices.
 - **Recent:** incoming and outgoing calls with their duration. Missed calls are shown in red, and a badge shows the number not seen yet.
@@ -22,6 +23,7 @@ Hub users can call each other by voice or video inside the hub. There are no rea
 
 ## The floating button (Oct 2026)
 - A round green button sits above the red Emergency button on every screen of the hub, also while a tool is open. When the Emergency button is not shown, the phone button takes its place.
+- The button is hidden while Hub Phone or Hub Chat is open. On phones, inside a tool, it moves to the right edge (smaller) so it stays clear of the tool's bottom buttons.
 - Phones stack the buttons bottom right: Phone, then ABCON, then Emergency.
 - **Tap:** opens **Quick dial**, with a keypad (the matching name shows as you type), voice and video buttons, unseen missed calls (otherwise the last 3 calls), your favourites, and "Open Hub Phone".
 - **States:**
