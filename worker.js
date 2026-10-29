@@ -7,6 +7,7 @@ import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./
 export { EmergencyPager } from "./modules/emergency.js";
 import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules/phone.js";   // Hub Phone — see docs/FEATURE-hub-phone.md
 export { PhoneHub } from "./modules/phone.js";
+import { chatSchema, chatRoute, chatDeps, chatSync, chatRun } from "./modules/chat.js";   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
@@ -67,7 +68,8 @@ import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report
    ===================================================================== */
 
 const audit = makeAudit(() => new Date().toISOString());   // Change history feature
-phoneDeps({ sendPush: (...a) => sendPush(...a) });   // Hub Phone: push for incoming and missed calls
+phoneDeps({ sendPush: (...a) => sendPush(...a) });
+chatDeps({ sendPush: (...a) => sendPush(...a) });   // Hub Chat: a push for every message   // Hub Phone: push for incoming and missed calls
 emergencyDeps({ raiseEvent: (...a) => raiseEvent(...a), sendPush: (...a) => sendPush(...a), now: () => new Date().toISOString(), siteName: s => siteName(s) });   // Emergency Alert feature
 
 const SITES = {
@@ -361,6 +363,7 @@ async function ensureSchema(env) {
   await formsSchema(env);     // Operations Forms feature
   await emergencySchema(env); // Emergency Alert feature
   await phoneSchema(env);     // Hub Phone (adds users.ext)
+  await chatSchema(env);      // Hub Chat
   await budgetSchema(env);    // Budget (CAPEX / OPEX) feature
   await execSchema(env);      // Executive Report feature
   await tenantsSchema(env);   // Tenant Management feature
@@ -592,6 +595,7 @@ export default {
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await mbRun(env, MB_DEPS).catch(e => console.error("mailbox", e && e.message));   // Report mailbox: 07:00–08:00 import + 08:05 missing check
       await pushRun(env).catch(e => console.error("push", e && e.message));
+      await chatRun(env).catch(e => console.error("chat", e && e.message));   // Hub Chat: messages and files kept 1 month
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -698,6 +702,13 @@ async function route(request, env, ctx, url) {
     if (me._viewAs) throw fail("Hub Phone is not available in View as", 403);
     if (!roleAllows(me, "phone")) throw fail("Not allowed", 403);
     const r = await phoneRoute(env, path, method, body, url, request, { me, siteName, posLabel, roleLabel: r2 => ROLES[r2] || r2 });
+    if (r instanceof Response) return r;
+    if (r) return ok(r);
+  }
+  if (path.startsWith("chat/")) {   // Hub Chat: groups and one-to-one chats (inside Hub Phone)
+    if (me._viewAs) throw fail("Hub Chat is not available in View as", 403);
+    if (!roleAllows(me, "chat")) throw fail("Not allowed", 403);
+    const r = await chatRoute(env, path, method, body, url, ctx, { me, SITES, siteName, posLabel, roleLabel: r2 => ROLES[r2] || r2 });
     if (r instanceof Response) return r;
     if (r) return ok(r);
   }
@@ -994,6 +1005,7 @@ async function saveUser(env, me, b) {
     await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=?, is_admin = COALESCE(?, is_admin) WHERE email=?")
       .bind(name, role, site || null, sites, morning, position, adminFlag, email).run();
     if (ext) await extSet(env, email, ext);
+    await chatSync(env, { SITES }, true).catch(() => {});   // Hub Chat: groups follow the new role / flagship
     return { email, created: false };
   }
   const password = String(b.password || "") || DEFAULT_PASSWORD;
@@ -1002,6 +1014,7 @@ async function saveUser(env, me, b) {
   await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position, is_admin)
     VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position, b.isAdmin || role === "ADMIN" ? 1 : 0).run();
   if (ext) await extSet(env, email, ext); else await extEnsure(env).catch(() => {});
+  await chatSync(env, { SITES }, true).catch(() => {});   // Hub Chat: the new person joins their flagship's groups
   if (b.welcome !== false) {   // Welcoming email (default on)
     try { const w = await sendWelcome(env, email, me, password); return { email, created: true, welcome: w }; }
     catch (e) { return { email, created: true, welcome: { sent: false, error: e.message } }; }

@@ -176,6 +176,17 @@ export class PhoneHub {
       const s = new Set(); for (const ws of this.ctx.getWebSockets()) { const a = this.att(ws); if (a.e) s.add(a.e); }
       return Response.json([...s]);
     }
+    /* Hub Chat: send a live event to these people; answer who has this chat open on screen (no push for them) */
+    if (u.pathname === "/chat-fan") {
+      const b = await req.json().catch(() => ({}));
+      const want = new Set(Array.isArray(b.emails) ? b.emails : []), viewing = new Set(), msg = JSON.stringify(b.payload || {});
+      for (const ws of this.ctx.getWebSockets()) {
+        const a = this.att(ws); if (!want.has(a.e)) continue;
+        try { ws.send(msg); } catch {}
+        if (b.conv && a.v === b.conv) viewing.add(a.e);
+      }
+      return Response.json({ viewing: [...viewing] });
+    }
     if (u.pathname === "/decline") {
       const b = await req.json().catch(() => ({}));
       await this.handle({ e: b.e, d: "push" }, null, { type: "decline", callId: b.callId });
@@ -200,6 +211,7 @@ export class PhoneHub {
     if (typeof raw !== "string" || raw.length > 200000) return;
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (m.type === "ping") return this.tell(ws, { type: "pong" });
+    if (m.type === "viewing") { const a = this.att(ws); a.v = m.c ? clip(m.c, 40) : ""; try { ws.serializeAttachment(a); } catch {} return; }   // Hub Chat: the chat open on screen
     await this.handle(this.att(ws), ws, m);
   }
   async webSocketClose(ws, code) { try { ws.close(code === 1005 ? 1000 : code, "bye"); } catch {} }

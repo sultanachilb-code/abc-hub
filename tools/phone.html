@@ -6,15 +6,17 @@
 <title>Hub Phone · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
-<!-- Hub Phone — see docs/FEATURE-hub-phone.md. The calls run in the hub (tools/phone-core.js); this page dials. -->
+<!-- Hub Phone + Hub Chat — see docs/FEATURE-hub-phone.md and docs/FEATURE-hub-chat.md.
+     The calls run in the hub (tools/phone-core.js); this page dials and chats. -->
 <style>
-.ph{max-width:560px;margin:0 auto}
+.ph{max-width:620px;margin:0 auto}
 .me{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .me .ext{font-size:.82rem;font-weight:800;color:var(--brand-2);background:rgba(123,75,176,.12);padding:4px 10px;border-radius:999px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;flex:none}
 .dot.on{background:#2EB872;box-shadow:0 0 0 3px rgba(46,184,114,.2)}
 .tabs{width:100%;margin-bottom:14px}.tabs button{flex:1;position:relative}
-.tabs u{position:absolute;top:3px;right:8px;min-width:17px;height:17px;border-radius:9px;background:#E5484D;color:#fff;font-size:.66rem;text-decoration:none;display:grid;place-items:center;padding:0 4px}
+.tabs u{position:absolute;top:3px;right:6px;min-width:17px;height:17px;border-radius:9px;background:#E5484D;color:#fff;font-size:.66rem;text-decoration:none;display:grid;place-items:center;padding:0 4px}
+.tabs u.g{background:#2EB872}
 /* keypad */
 .disp{height:64px;display:flex;align-items:center;justify-content:center;font-size:2.3rem;font-weight:800;letter-spacing:.12em;font-variant-numeric:tabular-nums}
 .disp:empty::before{content:"Dial an extension";font-size:1rem;font-weight:600;letter-spacing:0;color:var(--muted)}
@@ -36,8 +38,9 @@
 .flt span.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .grp{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 4px 6px}
 .r{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:6px}
-.r .av{width:42px;height:42px;position:relative;font-size:.85rem;background-size:cover;background-position:center}
-.r .av .dot{position:absolute;right:-1px;bottom:-1px;border:2px solid var(--surface)}
+.av{background-size:cover;background-position:center;position:relative}
+.r .av{width:42px;height:42px;font-size:.85rem}
+.av .dot{position:absolute;right:-1px;bottom:-1px;border:2px solid var(--surface)}
 .r .tx{flex:1;min-width:0}
 .r .tx b{display:block;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .r .tx small{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -49,46 +52,167 @@
 .miss b{color:var(--alert)}
 .note{font-size:.76rem;color:var(--muted);line-height:1.5;margin-top:16px}
 .warnb{background:rgba(192,122,18,.12);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:.82rem;font-weight:600;margin-bottom:12px}
+/* chats list */
+.cr{display:flex;gap:12px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer}
+.cr:hover{border-color:var(--brand-2)}
+.cav{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-size:.9rem;flex:none;background-size:cover;background-position:center;position:relative}
+.cr .tx{flex:1;min-width:0}
+.cr .l1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.cr .l1 b{font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr .l1 em{font-style:normal;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.cr .l1 em.u{color:#1E9E5E;font-weight:800}
+.cr .l2{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:2px}
+.cr .l2 span{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb{min-width:20px;height:20px;border-radius:10px;background:#2EB872;color:#fff;font-size:.7rem;font-weight:800;display:grid;place-items:center;padding:0 6px;flex:none}
+.nb.at{background:var(--brand)}
+.mut{font-size:.8rem;opacity:.6}
+.newb{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);width:56px;height:56px;border-radius:18px;background:#2EB872;color:#fff;font-size:1.7rem;display:grid;place-items:center;box-shadow:0 10px 24px rgba(46,184,114,.35);z-index:20}
+/* conversation */
+#cv{position:fixed;inset:0;z-index:40;background:var(--paper);display:none;flex-direction:column}
+#cv.on{display:flex}
+.ch{display:flex;align-items:center;gap:10px;padding:10px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 10px);background:var(--surface);border-bottom:1px solid var(--line)}
+.ch .back{width:36px;height:36px;border-radius:10px;font-size:1.3rem;color:var(--text)}
+.ch .cav{width:40px;height:40px;font-size:.8rem}
+.ch .tt{flex:1;min-width:0;cursor:pointer}
+.ch .tt b{display:block;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch .tt small{display:block;font-size:.74rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ms{flex:1;overflow-y:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:3px;background:linear-gradient(var(--paper),var(--paper))}
+.day{align-self:center;background:var(--surface);color:var(--muted);font-size:.7rem;font-weight:800;padding:3px 10px;border-radius:999px;margin:10px 0 6px;border:1px solid var(--line)}
+.sys{align-self:center;color:var(--muted);font-size:.74rem;text-align:center;max-width:86%;margin:4px 0;background:rgba(123,75,176,.08);padding:4px 10px;border-radius:10px}
+.m{max-width:80%;align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:6px 9px 4px;font-size:.88rem;line-height:1.38;position:relative;cursor:pointer;word-wrap:break-word;overflow-wrap:anywhere}
+.m.me{align-self:flex-end;background:#DCF5E5;border-color:#C2EBD2;border-radius:14px 14px 4px 14px}
+:root[data-theme="dark"] .m.me{background:#1E4A33;border-color:#2A5E42}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .m.me{background:#1E4A33;border-color:#2A5E42} }
+.m.cont{margin-top:-1px}
+.m .w{font-size:.74rem;font-weight:800;margin-bottom:1px}
+.m .tm{font-size:.66rem;color:var(--muted);text-align:right;margin-top:1px;white-space:nowrap}
+.m .tm .ck{font-weight:800;letter-spacing:-.15em;margin-left:3px}
+.m .tm .ck.rd{color:#2F8FD8}
+.m.del{font-style:italic;color:var(--muted)}
+.m .rq{border-left:3px solid var(--brand-2);background:rgba(123,75,176,.08);border-radius:6px;padding:3px 7px;font-size:.76rem;color:var(--muted);margin-bottom:4px;max-height:3.2em;overflow:hidden}
+.m .rq b{display:block;color:var(--brand-2);font-size:.72rem}
+.m img.ph2{display:block;max-width:240px;max-height:280px;width:100%;border-radius:10px;margin:2px 0;object-fit:cover;background:var(--paper);min-height:80px}
+.m audio{width:230px;max-width:100%;height:36px;display:block;margin:2px 0}
+.fc{display:flex;gap:9px;align-items:center;background:var(--paper);border-radius:10px;padding:7px 9px;margin:2px 0;text-decoration:none;color:inherit;min-width:190px}
+.fc i{width:34px;height:40px;border-radius:6px;color:#fff;font-style:normal;font-size:.62rem;font-weight:800;display:grid;place-items:center;flex:none}
+.fc b{display:block;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.fc small{font-size:.7rem;color:var(--muted)}
+.men{color:var(--brand-2);font-weight:800}
+.m a.lk{color:var(--brand-2);text-decoration:underline}
+.rx{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.rx span{background:var(--surface);border:1px solid var(--line);border-radius:999px;font-size:.72rem;padding:0 7px;cursor:pointer}
+.rx span.mine{border-color:#2EB872;background:rgba(46,184,114,.12)}
+.more{align-self:center;font-size:.78rem;font-weight:700;color:var(--brand-2);padding:6px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);margin-bottom:6px}
+.cb{background:var(--surface);border-top:1px solid var(--line);padding:8px 10px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+.rpb{display:flex;align-items:center;gap:8px;background:var(--paper);border-left:3px solid var(--brand-2);border-radius:8px;padding:5px 8px;margin-bottom:6px;font-size:.78rem}
+.rpb div{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.rpb b{color:var(--brand-2)}
+.rpb button{color:var(--muted);font-size:1rem}
+.cl{display:flex;align-items:flex-end;gap:6px}
+.cl textarea{flex:1;resize:none;max-height:120px;min-height:40px;height:40px;border-radius:20px;padding:9px 14px;line-height:1.35;font-size:.92rem}
+.cbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--brand-2);background:var(--paper);font-size:1.1rem}
+.cbtn.go{background:#2EB872;color:#fff}
+.cbtn svg{width:19px;height:19px}
+.rec{display:flex;align-items:center;gap:10px;height:40px}
+.rec .rd{width:10px;height:10px;border-radius:50%;background:#E5484D;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.rec b{flex:1;font-variant-numeric:tabular-nums}
+.ro{text-align:center;font-size:.8rem;color:var(--muted);padding:8px}
+.emo{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;padding:6px 0;max-height:160px;overflow:auto}
+.emo button{font-size:1.35rem;height:38px;border-radius:8px}
+.emo button:hover{background:var(--paper)}
+.sug{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:6px;max-height:180px;overflow:auto}
+.sug div{padding:7px 10px;font-size:.84rem;cursor:pointer;display:flex;gap:8px;align-items:center}
+.sug div:hover,.sug div.on{background:var(--paper)}
+.att{display:flex;gap:8px;padding:6px 0}
+.att button{flex:1;padding:10px;border-radius:12px;background:var(--paper);font-weight:700;font-size:.82rem}
+/* dialogs */
+.sh{width:min(520px,calc(100% - 20px))}
+.sh .dlg-b{max-height:min(62dvh,560px);overflow:auto}
+.pk{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.pk .av{width:34px;height:34px;font-size:.72rem}
+.pk .tx{flex:1;min-width:0}.pk .tx b{display:block;font-size:.88rem}.pk .tx small{font-size:.74rem;color:var(--muted)}
+.pk input{width:20px;height:20px;accent-color:#2EB872}
+.tag{font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(46,184,114,.13);color:#1E9E5E}
+.tgl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.tgl input{width:20px;height:20px;accent-color:#2EB872}
+.mrow{display:flex;gap:6px;justify-content:space-between;padding:6px 0 12px}
+.mrow button{font-size:1.6rem;width:48px;height:48px;border-radius:12px;background:var(--paper)}
+.mact button{display:block;width:100%;text-align:left;padding:12px 4px;border-top:1px solid var(--line);font-weight:600;font-size:.9rem}
+.mact button.bad{color:var(--alert)}
+#iv{background:#000;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;display:none;align-items:center;justify-content:center}
+#iv[open]{display:flex}
+#iv img{max-width:100%;max-height:100%}
+#iv button{position:absolute;top:14px;right:14px;color:#fff;font-size:1.6rem;width:44px;height:44px}
+#iv a{position:absolute;top:18px;left:16px;color:#fff;font-weight:700;font-size:.9rem}
+@media (min-width:900px){ #cv{left:50%;transform:translateX(-50%);max-width:820px;border-left:1px solid var(--line);border-right:1px solid var(--line)} }
 </style>
 </head>
 <body>
-<div class="top"><h1>📞 Hub Phone <small id="sub">calls between hub users</small></h1></div>
+<div class="top"><h1>📞 Hub Phone <small id="sub">calls and chats between hub users</small></h1></div>
 <div class="wrap"><div class="ph">
   <div id="warn"></div>
   <div class="me"><span class="dot" id="conn"></span><b id="meName">…</b><span class="ext" id="meExt">ext …</span><span class="muted" style="font-size:.78rem" id="connT"></span></div>
-  <div class="tabs" id="tabs"><button data-t="pad" class="on">Keypad</button><button data-t="con">Contacts</button><button data-t="rec">Recent<u id="missN" class="hidden"></u></button><button data-t="fav">Favourites</button></div>
+  <div class="tabs" id="tabs"><button data-t="chats">Chats<u id="chatN" class="hidden g"></u></button><button data-t="rec">Calls<u id="missN" class="hidden"></u></button><button data-t="con">Contacts</button><button data-t="pad">Keypad</button></div>
   <div id="v"></div>
-  <p class="note">Calls go from browser to browser, inside the hub — no phone number, no phone credit. The person you call hears it on every device where the hub is open, and gets a notification when it is closed (allow notifications in Settings). Video: tap the camera button, also during a call.</p>
+  <p class="note" id="note"></p>
 </div></div>
+<button class="newb hidden" id="newb" title="New chat" aria-label="New chat">＋</button>
+
+<!-- the conversation (full screen) -->
+<div id="cv" role="dialog" aria-modal="true">
+  <div class="ch"><button class="back" id="cvBack" aria-label="Back">←</button><span class="cav" id="cvAv"></span><div class="tt" id="cvTt"><b id="cvName"></b><small id="cvSub"></small></div><span id="cvActs" style="display:flex;gap:6px"></span></div>
+  <div id="ms"></div>
+  <div class="cb" id="cb"></div>
+</div>
+<dialog id="dlg" class="sh"></dialog>
+<dialog id="iv"><a id="ivDl" href="#" download>⤓ Save</a><button id="ivX" aria-label="Close">✕</button><img id="ivImg" alt=""></dialog>
+<input type="file" id="fCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="fAny" hidden>
 <div class="toast" id="toast"></div>
 <script src="common.js"></script>
 <script>
 const SVG = {
   call: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>',
-  vid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>'
+  vid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>',
+  msg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  clip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m21 11-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-9 9a1.8 1.8 0 0 1-2.6-2.6L15.5 6"/></svg>'
 };
 const GROUPS = [["VRM", "ABC Verdun Mall"], ["ACM", "ABC Achrafieh Mall"], ["DBS", "Dbayeh Department Store"], ["VRS", "Verdun Department Store"], ["ACS", "Achrafieh Department Store"], ["LEAD", "Leadership & administration"]];
+const EMO_R = ["👍", "❤️", "😂", "😮", "🙏", "✅"];
+const EMO = "😀 😁 😂 🤣 😊 😍 😘 😎 🤔 😅 😢 😡 🙏 👍 👎 👏 🙌 💪 👌 ✌️ 🤝 👋 ❤️ 💚 🔥 ⭐ ✅ ❌ ⚠️ 🚨 📢 📌 📷 📄 🧾 🔧 🧹 🚧 🛠️ 💡 🕒 📅 🎉 ☕ 🚗 🏬 🔑".split(" ");
 const P = (() => { try { return window.parent !== window && window.parent.HubPhone ? window.parent.HubPhone : null; } catch { return null; } })();
-let BOOK = null, REC = null, TAB = "pad", DIAL = "", Q = "", GF = "ALL", ONLY = false;
+const PX = (() => { try { return window.parent !== window ? window.parent.HUBX : null; } catch { return null; } })();
+const CAN_CHAT = !PX || !PX.can || PX.can("chat");
+const QS = new URLSearchParams(location.search);
+let BOOK = null, REC = null, CHATS = null, TAB = (QS.getAll("tab").pop() || (CAN_CHAT ? "chats" : "rec")), DIAL = "", Q = "", CQ = "", GF = "ALL", ONLY = false, FAVF = false;
+if (TAB === "calls") TAB = "rec";
+if (TAB === "chats" && !CAN_CHAT) TAB = "rec";
 const store = { get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 let FAV = store.get("hub.phoneFav", []);
+if (!CAN_CHAT) document.querySelector('#tabs [data-t="chats"]').remove();
 
 function dial(p, video){
   if (!P) return toast("Open Hub Phone from the hub to call", true);
   if (p.email === BOOK.me.email) return toast("That is your own extension", true);
   P.call(p.email, !!video, p.name);
 }
-const av = p => `<span class="av" ${p.photoAt ? `style="background-image:url('/api/profile/photo?u=${encodeURIComponent(p.email)}&v=${encodeURIComponent(p.photoAt)}');color:transparent"` : ""}>${esc(initials(p.name))}<span class="dot ${p.online ? "on" : ""}"></span></span>`;
+const photo = (email, at) => at ? `background-image:url('/api/profile/photo?u=${encodeURIComponent(email)}&v=${encodeURIComponent(at)}');color:transparent;` : "";
+const av = p => `<span class="av" style="${photo(p.email, p.photoAt)}">${esc(initials(p.name))}<span class="dot ${p.online ? "on" : ""}"></span></span>`;
 const row = (p, extra = "") => `<div class="r" data-e="${esc(p.email)}">${av(p)}<div class="tx"><b>${esc(p.name)}${p.email === BOOK.me.email ? " <span class='muted'>(you)</span>" : ""}</b><small>${esc(p.position || "")}${p.siteName ? " · " + esc(p.siteName) : ""}${p.online ? " · online" : ""}</small></div>
-  ${extra}<span class="xt">${esc(p.ext || "")}</span>${p.email === BOOK.me.email ? "" : `<button class="ib st" data-f="${esc(p.email)}" title="Favourite">${FAV.includes(p.email) ? "★" : "☆"}</button><button class="ib" data-v="${esc(p.email)}" title="Video call">${SVG.vid}</button><button class="ib g" data-c="${esc(p.email)}" title="Call">${SVG.call}</button>`}</div>`;
-const byEmail = e => BOOK.people.find(p => p.email === e);
+  ${extra}<span class="xt">${esc(p.ext || "")}</span>${p.email === BOOK.me.email ? "" : `<button class="ib st" data-f="${esc(p.email)}" title="Favourite">${FAV.includes(p.email) ? "★" : "☆"}</button>${CAN_CHAT ? `<button class="ib" data-m="${esc(p.email)}" title="Message">${SVG.msg}</button>` : ""}<button class="ib" data-v="${esc(p.email)}" title="Video call">${SVG.vid}</button><button class="ib g" data-c="${esc(p.email)}" title="Call">${SVG.call}</button>`}</div>`;
+const byEmail = e => BOOK && BOOK.people.find(p => p.email === e);
 function wire(root){
   root.querySelectorAll("[data-c]").forEach(b => b.onclick = ev => { ev.stopPropagation(); dial(byEmail(b.dataset.c), false); });
   root.querySelectorAll("[data-v]").forEach(b => b.onclick = ev => { ev.stopPropagation(); dial(byEmail(b.dataset.v), true); });
+  root.querySelectorAll("[data-m]").forEach(b => b.onclick = ev => { ev.stopPropagation(); openDm(b.dataset.m); });
   root.querySelectorAll("[data-f]").forEach(b => b.onclick = ev => { ev.stopPropagation(); const e = b.dataset.f;
     FAV = FAV.includes(e) ? FAV.filter(x => x !== e) : [...FAV, e]; store.set("hub.phoneFav", FAV); paint(); });
 }
 
+/* ---------- keypad ---------- */
 function paintPad(){
   const hits = DIAL ? BOOK.people.filter(p => p.ext && p.ext.startsWith(DIAL)).sort((a, b) => a.ext.localeCompare(b.ext)).slice(0, 3) : [];
   const exact = BOOK.people.find(p => p.ext === DIAL);
@@ -107,26 +231,32 @@ function paintPad(){
 }
 function press(k){ if (!/^[0-9]$/.test(k)) return; if (DIAL.length < 4) DIAL += k; paintPad(); }
 
-function paintContacts(list, fav){
+/* ---------- contacts (★ favourites is a filter) ---------- */
+function paintContacts(){
   const site = p => p.lead ? "LEAD" : p.site || "LEAD";
-  let L = list.filter(p => (!ONLY || p.online) && (GF === "ALL" || site(p) === GF)
+  const L = BOOK.people.filter(p => (!ONLY || p.online) && (!FAVF || FAV.includes(p.email)) && (GF === "ALL" || site(p) === GF)
     && (!Q || (p.name + " " + p.ext + " " + p.position + " " + p.siteName).toLowerCase().includes(Q.toLowerCase())));
-  const head = fav ? "" : `<input class="inp" id="q" placeholder="Search a name, extension or position" style="width:100%" value="${esc(Q)}">
-    <div class="flt"><span data-g="ALL" class="${GF === "ALL" ? "on" : ""}">All</span>${GROUPS.map(([c, n]) => `<span data-g="${c}" class="${GF === c ? "on" : ""}">${esc(n.replace("ABC ", "").replace(" Department Store", " DS").replace("Leadership & administration", "Leadership"))}</span>`).join("")}
-      <span id="onl" class="${ONLY ? "on" : ""}">● Online now</span></div>`;
-  const body = fav ? (L.map(p => row(p)).join("") || `<div class="empty">No favourites yet — tap ☆ next to a person in Contacts.</div>`)
-    : GROUPS.map(([c, n]) => { const g = L.filter(p => site(p) === c).sort((a, b) => (a.ext || "9999").localeCompare(b.ext || "9999"));
-        return g.length ? `<div class="grp">${esc(n)} · ${g.length}</div>${g.map(p => row(p)).join("")}` : ""; }).join("") || `<div class="empty">No one found.</div>`;
+  const head = `<input class="inp" id="q" placeholder="Search a name, extension or position" style="width:100%" value="${esc(Q)}">
+    <div class="flt"><span id="favf" class="${FAVF ? "on" : ""}">★ Favourites</span><span id="onl" class="${ONLY ? "on" : ""}">● Online</span><span data-g="ALL" class="${GF === "ALL" ? "on" : ""}">All</span>${GROUPS.map(([c, n]) => `<span data-g="${c}" class="${GF === c ? "on" : ""}">${esc(n.replace("ABC ", "").replace(" Department Store", " DS").replace("Leadership & administration", "Leadership"))}</span>`).join("")}</div>`;
+  const body = GROUPS.map(([c, n]) => { const g = L.filter(p => site(p) === c).sort((a, b) => (a.ext || "9999").localeCompare(b.ext || "9999"));
+    return g.length ? `<div class="grp">${esc(n)} · ${g.length}</div>${g.map(p => row(p)).join("")}` : ""; }).join("")
+    || `<div class="empty">${FAVF ? "No favourites yet — tap ☆ next to a person." : "No one found."}</div>`;
   $("#v").innerHTML = head + `<div id="lst">${body}</div>`;
   wire($("#v"));
-  const q = $("#q"); if (q){ q.oninput = () => { Q = q.value; const pos = q.selectionStart; paintContacts(list, fav); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); }; }
-  $("#v").querySelectorAll("[data-g]").forEach(s => s.onclick = () => { GF = s.dataset.g; paintContacts(list, fav); });
-  const o = $("#onl"); if (o) o.onclick = () => { ONLY = !ONLY; paintContacts(list, fav); };
+  const q = $("#q"); q.oninput = () => { Q = q.value; const pos = q.selectionStart; paintContacts(); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); };
+  $("#v").querySelectorAll("[data-g]").forEach(s => s.onclick = () => { GF = s.dataset.g; paintContacts(); });
+  $("#onl").onclick = () => { ONLY = !ONLY; paintContacts(); };
+  $("#favf").onclick = () => { FAVF = !FAVF; paintContacts(); };
 }
 
-const when = iso => { const d = new Date(iso), t = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" });
-  const day = s => new Date(s).toLocaleDateString("en-CA", { timeZone: "Asia/Beirut" }), today = day(Date.now()), y = day(Date.now() - 864e5);
-  return day(iso) === today ? "Today " + t : day(iso) === y ? "Yesterday " + t : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Beirut" }) + " " + t; };
+/* ---------- calls ---------- */
+const tz = { timeZone: "Asia/Beirut" };
+const dayOf = s => new Date(s).toLocaleDateString("en-CA", tz);
+const hm = iso => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", ...tz });
+const when = iso => { const today = dayOf(Date.now()), y = dayOf(Date.now() - 864e5);
+  return dayOf(iso) === today ? "Today " + hm(iso) : dayOf(iso) === y ? "Yesterday " + hm(iso) : new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...tz }) + " " + hm(iso); };
+const shortWhen = iso => { if (!iso) return ""; const today = dayOf(Date.now()), y = dayOf(Date.now() - 864e5);
+  return dayOf(iso) === today ? hm(iso) : dayOf(iso) === y ? "Yesterday" : new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...tz }); };
 const dur = s => s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 function paintRecent(){
   if (!REC){ $("#v").innerHTML = `<div class="empty">Loading…</div>`; return; }
@@ -141,32 +271,441 @@ function paintRecent(){
   }).join("");
   wire($("#v"));
 }
+
+/* ---------- chats list ---------- */
+const cavHtml = (c, cls = "") => {
+  if (c.kind === "dm" && c.peer) { const p = byEmail(c.peer.email);
+    return `<span class="cav ${cls}" style="background-color:#C8A24A;color:#2A0F45;${photo(c.peer.email, c.peer.photoAt)}">${esc(initials(c.name))}${p && p.online ? '<span class="dot on" style="position:absolute;right:0;bottom:0;border:2px solid var(--surface)"></span>' : ""}</span>`; }
+  return `<span class="cav ${cls}" style="background:${esc(c.color || "#4A1F73")}">${c.auto && /Announcements/.test(c.name) ? "📢" : esc(initials(c.name.replace(/[^\w\s]/g, " ")))}</span>`;
+};
+function paintChats(){
+  if (!CHATS){ $("#v").innerHTML = `<div class="empty">Loading…</div>`; return; }
+  const L = CHATS.chats.filter(c => !CQ || (c.name + " " + c.lastText).toLowerCase().includes(CQ.toLowerCase()));
+  $("#v").innerHTML = `<input class="inp" id="cq" placeholder="Search chats" style="width:100%;margin-bottom:10px" value="${esc(CQ)}">`
+    + (L.map(c => `<div class="cr" data-cv="${esc(c.id)}">${cavHtml(c)}<div class="tx"><div class="l1"><b>${esc(c.name)}</b><em class="${c.unread ? "u" : ""}">${esc(shortWhen(c.lastAt))}</em></div>
+      <div class="l2"><span>${c.lastBy && c.kind === "group" ? esc(c.lastBy.split(" ")[0]) + ": " : ""}${esc(c.lastText || (c.kind === "group" ? `${c.members} member${c.members === 1 ? "" : "s"}` : ""))}</span>
+      <span style="display:flex;gap:4px;align-items:center">${c.muted ? '<span class="mut" title="Muted">🔕</span>' : ""}${c.mentioned ? '<span class="nb at">@</span>' : ""}${c.unread ? `<span class="nb">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></div></div></div>`).join("")
+    || `<div class="empty">No chats yet — tap ＋ to start one.</div>`);
+  $("#v").querySelectorAll("[data-cv]").forEach(r => r.onclick = () => openChat(r.dataset.cv));
+  const q = $("#cq"); q.oninput = () => { CQ = q.value; const pos = q.selectionStart; paintChats(); const n = $("#cq"); n.focus(); n.setSelectionRange(pos, pos); };
+}
+function paintChatN(){ const n = CHATS ? CHATS.chats.filter(c => !c.muted || c.mentioned).reduce((a, c) => a + c.unread, 0) : 0, u = $("#chatN"); if (!u) return; u.textContent = n > 99 ? "99+" : n; u.classList.toggle("hidden", !n); }
+let chatsT = 0;
+async function loadChats(){ if (!CAN_CHAT) return; try { CHATS = await api("chat/list"); paintChatN(); if (TAB === "chats" && !($("#cq") && document.activeElement === $("#cq"))) paintChats(); } catch (e){ if (TAB === "chats") $("#v").innerHTML = `<div class="empty">${esc(e.message)}</div>`; } }
+const loadChatsSoon = () => { clearTimeout(chatsT); chatsT = setTimeout(loadChats, 500); };
+
 function paint(){
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === TAB));
+  $("#newb").classList.toggle("hidden", TAB !== "chats");
+  $("#note").textContent = TAB === "chats" ? "Chats are kept for 1 month. Groups of your flagship follow People & roles; leadership can create groups. A muted chat still notifies you when you are @mentioned."
+    : "Calls go from browser to browser, inside the hub — no phone number, no phone credit. The person you call hears it on every device where the hub is open, and gets a notification when it is closed.";
+  if (TAB === "chats") return paintChats();
   if (!BOOK) return;
   if (TAB === "pad") paintPad();
-  else if (TAB === "con") paintContacts(BOOK.people, false);
-  else if (TAB === "fav") paintContacts(BOOK.people.filter(p => FAV.includes(p.email)), true);
+  else if (TAB === "con") paintContacts();
   else paintRecent();
 }
 function paintMissed(){ const n = REC ? REC.missed : 0, u = $("#missN"); u.textContent = n; u.classList.toggle("hidden", !n); }
 async function loadRecent(){ try { REC = await api("phone/recent"); paintMissed(); if (TAB === "rec") paintRecent(); } catch {} }
 async function loadBook(){
-  try { BOOK = await api("phone/book"); } catch (e){ $("#v").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  try { BOOK = await api("phone/book"); } catch (e){ if (TAB !== "chats") $("#v").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   $("#meName").textContent = BOOK.me.name; $("#meExt").textContent = BOOK.me.ext ? "ext " + BOOK.me.ext : "no extension yet";
   if (!BOOK.ready) $("#warn").innerHTML = `<div class="warnb">Hub Phone is being set up on the server — calls start working after the next update.</div>`;
-  else if (!P) $("#warn").innerHTML = `<div class="warnb">Open Hub Phone from the hub home screen to make calls.</div>`;
-  const keep = TAB === "con" && $("#q") && document.activeElement === $("#q");
+  else if (!P) $("#warn").innerHTML = `<div class="warnb">Open Hub Phone from the hub home screen to make calls and get live messages.</div>`;
+  const keep = (TAB === "con" && $("#q") && document.activeElement === $("#q")) || (TAB === "chats" && $("#cq") && document.activeElement === $("#cq"));
   if (!keep) paint();
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = async () => { TAB = b.dataset.t; paint();
+  if (TAB === "chats") loadChats();
   if (TAB === "rec"){ await loadRecent(); if (REC && REC.missed){ api("phone/seen", {}).then(() => P && P.refresh && P.refresh()).catch(() => {}); REC.missed = 0; paintMissed(); } } });
-addEventListener("keydown", e => { if (TAB !== "pad" || e.target.tagName === "INPUT") return;
+addEventListener("keydown", e => { if (TAB !== "pad" || CUR || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
   if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === "Backspace"){ DIAL = DIAL.slice(0, -1); paintPad(); }
   else if (e.key === "Enter"){ const x = BOOK && BOOK.people.find(p => p.ext === DIAL); if (x) dial(x, false); } });
-function paintConn(s){ $("#conn").classList.toggle("on", !!(s && s.connected)); $("#connT").textContent = !P ? "" : s && s.connected ? "ready for calls" : "connecting…"; }
-if (P){ paintConn(P.state()); const off = P.on(s => { paintConn(s); if (!s.inCall) setTimeout(loadRecent, 1500); }); addEventListener("pagehide", off); }
-loadBook(); loadRecent();
+function paintConn(s){ $("#conn").classList.toggle("on", !!(s && s.connected)); $("#connT").textContent = !P ? "" : s && s.connected ? "online" : "connecting…"; }
+
+/* =====================================================================
+   THE CONVERSATION
+   ===================================================================== */
+let CUR = null, CONV = null, MEM = [], MSGS = [], REPL = new Map(), MORE = false, REPLY = null, MENT = new Map(), REC_ST = null, readT = 0;
+const dlg = $("#dlg");
+function openSheet(html){ dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); }
+dlg.addEventListener("click", ev => { if (ev.target === dlg) dlg.close(); });
+
+async function openDm(email){
+  try { const r = await api("chat/dm", { email }); if (dlg.open) dlg.close(); openChat(r.id); } catch (e){ toast(e.message, true); }
+}
+async function openChat(id){
+  CUR = id; CONV = null; MSGS = []; REPL = new Map(); REPLY = null; MENT = new Map();
+  $("#cv").classList.add("on"); $("#ms").innerHTML = `<div class="empty">Loading…</div>`; $("#cb").innerHTML = "";
+  $("#cvName").textContent = ""; $("#cvSub").textContent = ""; $("#cvAv").outerHTML = '<span class="cav" id="cvAv"></span>'; $("#cvActs").innerHTML = "";
+  try { history.replaceState(null, "", location.pathname + "?tab=chats&c=" + encodeURIComponent(id)); } catch {}
+  await loadConv(true);
+  P && P.viewing && P.viewing(document.hidden ? "" : id);
+}
+function closeChat(){
+  stopRec(true);
+  CUR = null; $("#cv").classList.remove("on"); P && P.viewing && P.viewing("");
+  try { history.replaceState(null, "", location.pathname + "?tab=chats"); } catch {}
+  loadChats();
+}
+$("#cvBack").onclick = closeChat;
+document.addEventListener("visibilitychange", () => { if (CUR && P && P.viewing) P.viewing(document.hidden ? "" : CUR); if (!document.hidden && CUR) markRead(); });
+
+async function loadConv(first){
+  const id = CUR;
+  let r; try { r = await api("chat/msgs?c=" + encodeURIComponent(id)); } catch (e){ $("#ms").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (CUR !== id) return;
+  CONV = r.conv; MEM = r.members; MSGS = r.msgs; MORE = r.more; r.replies.forEach(x => REPL.set(x.id, x));
+  paintHead(); paintMsgs(true); paintComposer(); markRead();
+}
+async function loadOlder(){
+  if (!MSGS.length) return;
+  const box = $("#ms"), h = box.scrollHeight;
+  const r = await api(`chat/msgs?c=${encodeURIComponent(CUR)}&before=${MSGS[0].id}`);
+  MSGS = [...r.msgs, ...MSGS]; MORE = r.more; r.replies.forEach(x => REPL.set(x.id, x));
+  paintMsgs(false); box.scrollTop = box.scrollHeight - h;
+}
+function paintHead(){
+  const c = CONV, chatLike = { kind: c.kind, name: c.name, peer: c.peer, color: (CHATS && (CHATS.chats.find(x => x.id === CUR) || {}).color) || "#4A1F73", auto: c.auto };
+  $("#cvAv").outerHTML = cavHtml(chatLike).replace('class="cav ', 'id="cvAv" class="cav ');
+  $("#cvName").textContent = c.name + (c.muted ? "  🔕" : "");
+  if (c.kind === "dm"){ const p = byEmail(c.peer.email);
+    $("#cvSub").textContent = [c.peer.position, c.peer.ext ? "ext " + c.peer.ext : "", p && p.online ? "online" : ""].filter(Boolean).join(" · ");
+    $("#cvActs").innerHTML = `<button class="ib" id="cvV" title="Video call">${SVG.vid}</button><button class="ib g" id="cvC" title="Call">${SVG.call}</button><button class="ib" id="cvI" title="Chat info">⋯</button>`;
+    $("#cvV").onclick = () => p && dial(p, true); $("#cvC").onclick = () => p && dial(p, false);
+  } else {
+    const on = BOOK ? MEM.filter(m => m.email !== BOOK.me.email && (byEmail(m.email) || {}).online).map(m => m.name.split(" ")[0]) : [];
+    $("#cvSub").textContent = `${MEM.length} member${MEM.length === 1 ? "" : "s"}${on.length ? " · " + on.slice(0, 3).join(", ") + (on.length > 3 ? ` +${on.length - 3}` : "") + " online" : ""}`;
+    $("#cvActs").innerHTML = `<button class="ib" id="cvI" title="Group info">ⓘ</button>`;
+  }
+  $("#cvI").onclick = info; $("#cvTt").onclick = info;
+}
+
+/* ---------- messages ---------- */
+const FT = { pdf: ["PDF", "#C0392B"], xlsx: ["XLS", "#1D6F42"], xls: ["XLS", "#1D6F42"], csv: ["CSV", "#2E6B4F"], docx: ["DOC", "#1B5E9E"], doc: ["DOC", "#1B5E9E"], pptx: ["PPT", "#C4501E"], zip: ["ZIP", "#555"] };
+const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+const fileUrl = (id, dl) => `/api/chat/file?id=${id}${dl ? "&dl=1" : ""}`;
+const nameOf = e => { const m = MEM.find(x => x.email === e) || byEmail(e); return m ? m.name : e; };
+const colorOf = e => { let h = 0; for (const ch of e) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return ["#B0562A", "#1E9E5E", "#2F6F73", "#7B4BB0", "#C07A12", "#B8456B", "#3C4F8A"][h % 7]; };
+function textHtml(m){
+  let t = esc(m.body);
+  t = t.replace(/(https?:\/\/[^\s<]+)/g, '<a class="lk" href="$1" target="_blank" rel="noopener">$1</a>');
+  for (const e of m.mentions || []) { const n = esc(nameOf(e)); t = t.split("@" + n).join(`<span class="men">@${n}</span>`); }
+  return t.replace(/\n/g, "<br>");
+}
+const preview = m => m.deleted ? "Message deleted" : m.kind === "photo" ? "📷 Photo" : m.kind === "voice" ? "🎤 Voice note" : m.kind === "file" ? "📄 " + (m.file ? m.file.name : "File") : m.body;
+function readByAll(m){ const others = MEM.filter(x => x.email !== m.by); return others.length && others.every(x => x.lastRead >= m.id); }
+function bubble(m, prev){
+  const me = BOOK && m.by === BOOK.me.email;
+  if (m.kind === "system") return `<div class="sys">${esc(m.body)}</div>`;
+  const cont = prev && prev.by === m.by && prev.kind !== "system" && dayOf(prev.at) === dayOf(m.at) && (Date.parse(m.at) - Date.parse(prev.at)) < 300000;
+  const who = CONV.kind === "group" && !me && !cont ? `<div class="w" style="color:${colorOf(m.by)}">${esc(m.name)}${(() => { const x = MEM.find(y => y.email === m.by); return x && x.position ? ` · <span style="font-weight:600;opacity:.8">${esc(x.position)}</span>` : ""; })()}</div>` : "";
+  if (m.deleted) return `<div class="m del ${me ? "me" : ""} ${cont ? "cont" : ""}" data-id="${m.id}">${who}🚫 This message was deleted<div class="tm">${hm(m.at)}</div></div>`;
+  const rq = m.reply ? (() => { const r = MSGS.find(x => x.id === m.reply) || REPL.get(m.reply); return r ? `<div class="rq"><b>${esc(r.name)}</b>${esc(preview(r))}</div>` : ""; })() : "";
+  let body = "";
+  if (m.kind === "photo") body = `<img class="ph2" loading="lazy" src="${fileUrl(m.id)}" data-img="${m.id}" alt="Photo">` + (m.body ? `<div>${textHtml(m)}</div>` : "");
+  else if (m.kind === "voice") body = `<audio controls preload="none" src="${fileUrl(m.id)}"></audio><small class="muted" style="font-size:.7rem">🎤 ${dur(m.dur || 0)}</small>`;
+  else if (m.kind === "file" && m.file) { const ext = (m.file.name.split(".").pop() || "").toLowerCase(), f = FT[ext] || [ext.slice(0, 4).toUpperCase() || "FILE", "#6D6479"];
+    body = `<a class="fc" href="${fileUrl(m.id, true)}" download="${esc(m.file.name)}" target="_blank" rel="noopener"><i style="background:${f[1]}">${esc(f[0])}</i><span><b>${esc(m.file.name)}</b><small>${kb(m.file.size)} · tap to download</small></span></a>` + (m.body ? `<div>${textHtml(m)}</div>` : ""); }
+  else body = textHtml(m);
+  const rx = Object.entries(m.reactions || {}).filter(([, l]) => l.length);
+  const ck = me ? `<span class="ck ${readByAll(m) ? "rd" : ""}">${m.id < 0 ? "🕓" : readByAll(m) ? "✓✓" : "✓"}</span>` : "";
+  return `<div class="m ${me ? "me" : ""} ${cont ? "cont" : ""}" data-id="${m.id}">${who}${rq}${body}
+    ${rx.length ? `<div class="rx">${rx.map(([e, l]) => `<span data-rx="${e}" class="${BOOK && l.includes(BOOK.me.email) ? "mine" : ""}" title="${esc(l.map(nameOf).join(", "))}">${e} ${l.length}</span>`).join("")}</div>` : ""}
+    <div class="tm">${hm(m.at)}${ck}</div></div>`;
+}
+function paintMsgs(toBottom){
+  const box = $("#ms"), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  let html = MORE ? `<button class="more" id="older">Load earlier messages</button>` : (MSGS.length ? "" : `<div class="sys">No messages yet — say hello 👋<br>Messages are kept 1 month.</div>`);
+  let prev = null, lastDay = "";
+  for (const m of MSGS) {
+    const d = dayOf(m.at);
+    if (d !== lastDay){ lastDay = d; const t = dayOf(Date.now()); html += `<div class="day">${d === t ? "TODAY" : d === dayOf(Date.now() - 864e5) ? "YESTERDAY" : new Date(m.at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...tz }).toUpperCase()}</div>`; prev = null; }
+    html += bubble(m, prev); prev = m;
+  }
+  box.innerHTML = html;
+  const o = $("#older"); if (o) o.onclick = loadOlder;
+  box.querySelectorAll(".m[data-id]").forEach(el => el.onclick = ev => {
+    if (ev.target.closest("a,audio")) return;
+    const im = ev.target.closest("[data-img]"); if (im) return viewImg(im.dataset.img);
+    const rx = ev.target.closest("[data-rx]"); if (rx) return react(Number(el.dataset.id), rx.dataset.rx);
+    msgMenu(Number(el.dataset.id));
+  });
+  if (toBottom || atBottom) box.scrollTop = box.scrollHeight;
+  box.querySelectorAll("img.ph2").forEach(i => i.addEventListener("load", () => { if (toBottom || atBottom) box.scrollTop = box.scrollHeight; }, { once: true }));
+}
+function viewImg(id){ $("#ivImg").src = fileUrl(id); $("#ivDl").href = fileUrl(id, true); $("#iv").showModal(); }
+$("#ivX").onclick = () => $("#iv").close();
+function markRead(){
+  clearTimeout(readT);
+  readT = setTimeout(() => { if (!CUR || document.hidden || !MSGS.length) return; const last = MSGS[MSGS.length - 1].id; if (last > 0) api("chat/read", { c: CUR, upTo: last }).then(() => P && P.refresh && P.refresh()).catch(() => {}); }, 400);
+}
+
+/* ---------- message menu: react, reply, copy, seen by, delete ---------- */
+function msgMenu(id){
+  const m = MSGS.find(x => x.id === id); if (!m || m.id < 0) return;
+  const mine = BOOK && m.by === BOOK.me.email, admin = CONV.kind === "group" && (CONV.lead || CONV.myRole === "admin");
+  openSheet(`<div class="dlg-h"><b>${esc(m.name)}</b><small>${esc(when(m.at))}</small></div><div class="dlg-b">
+    ${m.deleted ? "" : `<div class="mrow">${EMO_R.map(e => `<button data-e="${e}">${e}</button>`).join("")}</div>`}
+    <div class="mact">${m.deleted ? "" : `<button data-a="reply">↩ Reply</button>`}${m.kind === "text" && !m.deleted ? `<button data-a="copy">⧉ Copy text</button>` : ""}
+      ${mine ? `<button data-a="seen">✓✓ Seen by</button>` : ""}${(mine || admin) && !m.deleted ? `<button data-a="del" class="bad">🗑 Delete for everyone</button>` : ""}</div></div>
+    <div class="dlg-f"><button class="btn ghost" data-a="x">Close</button></div>`);
+  dlg.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { dlg.close(); react(id, b.dataset.e); });
+  dlg.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
+    const a = b.dataset.a;
+    if (a === "x") return dlg.close();
+    if (a === "reply"){ dlg.close(); REPLY = m; paintComposer(); $("#tx") && $("#tx").focus(); }
+    if (a === "copy"){ try { await navigator.clipboard.writeText(m.body); toast("Copied"); } catch { toast("Could not copy", true); } dlg.close(); }
+    if (a === "seen"){ try { const r = await api("chat/seen?id=" + id);
+      openSheet(`<div class="dlg-h"><b>Seen by</b><small>${esc(preview(m)).slice(0, 80)}</small></div><div class="dlg-b">
+        <div class="grp" style="margin-top:0">✓✓ Read · ${r.read.length}</div>${r.read.map(n => `<div class="pk"><span class="tx"><b>${esc(n)}</b></span></div>`).join("") || `<p class="muted">Nobody yet.</p>`}
+        <div class="grp">✓ Not read yet · ${r.waiting.length}</div>${r.waiting.map(n => `<div class="pk"><span class="tx"><b>${esc(n)}</b></span></div>`).join("") || `<p class="muted">Everyone has read it.</p>`}</div>
+        <div class="dlg-f"><button class="btn ghost" onclick="this.closest('dialog').close()">Close</button></div>`); } catch (e){ toast(e.message, true); } }
+    if (a === "del"){ if (!confirm("Delete this message for everyone?")) return; try { await api("chat/delete", { id }); dlg.close(); m.deleted = true; paintMsgs(false); } catch (e){ toast(e.message, true); } }
+  });
+}
+async function react(id, e){
+  const m = MSGS.find(x => x.id === id); if (!m) return;
+  try { const r = await api("chat/react", { id, emoji: e }); m.reactions = r.reactions; paintMsgs(false); } catch (x){ toast(x.message, true); }
+}
+
+/* ---------- composer ---------- */
+function paintComposer(){
+  const cb = $("#cb");
+  if (!CONV.canSend){ cb.innerHTML = `<div class="ro">📢 Only the group admins can send messages here.</div>`; return; }
+  if (REC_ST){
+    cb.innerHTML = `<div class="rec"><span class="rd"></span><b id="recT">0:00</b><span class="muted" style="font-size:.8rem">Recording…</span><button class="cbtn" id="recX" title="Cancel">✕</button><button class="cbtn go" id="recS" title="Send">${SVG.send}</button></div>`;
+    $("#recX").onclick = () => stopRec(true); $("#recS").onclick = () => stopRec(false); return;
+  }
+  const keep = $("#tx") ? $("#tx").value : "";
+  cb.innerHTML = `${REPLY ? `<div class="rpb"><div><b>↩ ${esc(REPLY.name)}</b> · ${esc(preview(REPLY))}</div><button id="rpX">✕</button></div>` : ""}
+    <div id="sug" class="sug hidden"></div><div id="emo" class="emo hidden">${EMO.map(e => `<button data-emo="${e}">${e}</button>`).join("")}</div><div id="att" class="att hidden"><button id="aCam">📷 Camera</button><button id="aPh">🖼 Photo</button><button id="aFile">📄 File</button></div>
+    <div class="cl"><button class="cbtn" id="bAtt" title="Attach">${SVG.clip}</button><button class="cbtn" id="bEmo" title="Emoji">😊</button>
+      <textarea id="tx" rows="1" placeholder="Message${CONV.kind === "group" ? " · @ to mention" : ""}">${esc(keep)}</textarea><button class="cbtn go" id="bGo" title="Send"></button></div>`;
+  const tx = $("#tx"), go = $("#bGo");
+  const setGo = () => { const has = tx.value.trim().length > 0; go.innerHTML = has ? SVG.send : SVG.mic; go.title = has ? "Send" : "Hold a voice note: tap to record"; };
+  const grow = () => { tx.style.height = "40px"; tx.style.height = Math.min(120, tx.scrollHeight) + "px"; };
+  setGo(); grow();
+  tx.oninput = () => { setGo(); grow(); suggest(); };
+  tx.onkeydown = ev => {
+    const s = $("#sug");
+    if (!s.classList.contains("hidden")){
+      const items = [...s.querySelectorAll("[data-me]")], on = s.querySelector(".on"), i = items.indexOf(on);
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp"){ ev.preventDefault(); const n = items[(i + (ev.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]; on && on.classList.remove("on"); n && n.classList.add("on"); return; }
+      if ((ev.key === "Enter" || ev.key === "Tab") && (on || items[0])){ ev.preventDefault(); pickMention((on || items[0]).dataset.me); return; }
+      if (ev.key === "Escape"){ s.classList.add("hidden"); return; }
+    }
+    if (ev.key === "Enter" && !ev.shiftKey && matchMedia("(pointer:fine)").matches){ ev.preventDefault(); sendText(); }
+  };
+  go.onclick = () => tx.value.trim() ? sendText() : startRec();
+  $("#bEmo").onclick = () => { $("#emo").classList.toggle("hidden"); $("#att").classList.add("hidden"); };
+  $("#bAtt").onclick = () => { $("#att").classList.toggle("hidden"); $("#emo").classList.add("hidden"); };
+  cb.querySelectorAll("[data-emo]").forEach(b => b.onclick = () => { const p = tx.selectionStart ?? tx.value.length; tx.value = tx.value.slice(0, p) + b.dataset.emo + tx.value.slice(p); tx.focus(); tx.setSelectionRange(p + b.dataset.emo.length, p + b.dataset.emo.length); setGo(); });
+  $("#aCam").onclick = () => $("#fCam").click(); $("#aPh").onclick = () => { $("#fAny").accept = "image/*"; $("#fAny").click(); };
+  $("#aFile").onclick = () => { $("#fAny").accept = ".pdf,.xlsx,.xls,.csv,.docx,.doc,.pptx,.zip,.txt,image/*"; $("#fAny").click(); };
+  const rx = $("#rpX"); if (rx) rx.onclick = () => { REPLY = null; paintComposer(); };
+}
+/* @mentions: type @ and pick a member */
+function suggest(){
+  const tx = $("#tx"), s = $("#sug"); if (CONV.kind !== "group"){ s.classList.add("hidden"); return; }
+  const before = tx.value.slice(0, tx.selectionStart), m = /(^|\s)@([^\s@]{0,20})$/.exec(before);
+  if (!m){ s.classList.add("hidden"); return; }
+  const q = m[2].toLowerCase(), L = MEM.filter(x => BOOK && x.email !== BOOK.me.email && x.name.toLowerCase().includes(q)).slice(0, 6);
+  if (!L.length){ s.classList.add("hidden"); return; }
+  s.innerHTML = L.map((x, i) => `<div data-me="${esc(x.email)}" class="${i ? "" : "on"}"><span class="av" style="width:26px;height:26px;font-size:.6rem;${photo(x.email, x.photoAt)}">${esc(initials(x.name))}</span><b>${esc(x.name)}</b><small class="muted">${esc(x.position || "")}</small></div>`).join("");
+  s.classList.remove("hidden");
+  s.querySelectorAll("[data-me]").forEach(d => d.onmousedown = ev => { ev.preventDefault(); pickMention(d.dataset.me); });
+}
+function pickMention(email){
+  const tx = $("#tx"), x = MEM.find(y => y.email === email); if (!x) return;
+  const p = tx.selectionStart, before = tx.value.slice(0, p).replace(/@([^\s@]{0,20})$/, "@" + x.name + " ");
+  tx.value = before + tx.value.slice(p); tx.focus(); tx.setSelectionRange(before.length, before.length);
+  MENT.set(email, x.name); $("#sug").classList.add("hidden"); tx.oninput();
+}
+let TMP = -1;
+async function send(payload, local){
+  const tmp = { id: TMP--, c: CUR, by: BOOK.me.email, name: BOOK.me.name, kind: local.kind || "text", body: payload.text || "", file: local.file || null, dur: payload.dur || 0, reply: payload.reply || 0,
+    mentions: payload.mentions || [], reactions: {}, at: new Date().toISOString() };
+  MSGS.push(tmp); paintMsgs(true);
+  try {
+    const r = await api("chat/send", { c: CUR, ...payload });
+    const i = MSGS.indexOf(tmp);
+    if (MSGS.some(x => x.id === r.msg.id)) MSGS.splice(i, 1); else MSGS[i] = r.msg;
+    paintMsgs(true);
+  } catch (e){ MSGS.splice(MSGS.indexOf(tmp), 1); paintMsgs(false); toast(e.message, true); throw e; }
+}
+async function sendText(){
+  const tx = $("#tx"), text = tx.value.trim(); if (!text) return;
+  const mentions = [...MENT].filter(([, n]) => text.includes("@" + n)).map(([e]) => e);
+  const reply = REPLY ? REPLY.id : 0;
+  tx.value = ""; REPLY = null; MENT = new Map(); paintComposer(); $("#tx").focus();
+  try { await send({ text, mentions, reply }, { kind: "text" }); } catch { const t = $("#tx"); if (t && !t.value) { t.value = text; t.oninput(); } }
+}
+/* photos are made smaller before sending (max 1600 px, JPEG) */
+async function shrink(file){
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type)) return null;
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", .82);
+  } catch { return null; } finally { URL.revokeObjectURL(url); }
+}
+const readData = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+async function sendFile(file, asPhoto){
+  if (!file || !CUR) return;
+  if (file.size > 15 * 1024 * 1024) return toast("The file is larger than 15 MB", true);
+  $("#att") && $("#att").classList.add("hidden");
+  const reply = REPLY ? REPLY.id : 0; REPLY = null; paintComposer();
+  try {
+    if (asPhoto && /^image\//.test(file.type)){
+      const data = (await shrink(file)) || await readData(file);
+      await send({ kind: "photo", data, name: (file.name || "photo").replace(/\.\w+$/, "") + ".jpg", reply }, { kind: "photo" });
+    } else {
+      const data = await readData(file);
+      await send({ kind: "file", data, name: file.name || "file", reply }, { kind: "file", file: { name: file.name, size: file.size } });
+    }
+  } catch {}
+}
+$("#fCam").onchange = ev => { const f = ev.target.files[0]; ev.target.value = ""; sendFile(f, true); };
+$("#fAny").onchange = ev => { const f = ev.target.files[0]; ev.target.value = ""; sendFile(f, /^image\//.test(f && f.type || "") && ev.target.accept === "image/*"); };
+/* voice notes */
+async function startRec(){
+  if (!navigator.mediaDevices || !window.MediaRecorder) return toast("This browser cannot record voice notes", true);
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); } catch { return toast("Allow the microphone for the hub", true); }
+  const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
+  const rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined), chunks = [];
+  rec.ondataavailable = e => e.data && e.data.size && chunks.push(e.data);
+  REC_ST = { rec, stream, chunks, t0: Date.now(), cancel: false, timer: 0 };
+  rec.onstop = async () => {
+    const st = REC_ST; REC_ST = null; clearInterval(st.timer); st.stream.getTracks().forEach(t => t.stop()); paintComposer();
+    if (st.cancel || !chunks.length) return;
+    const secs = Math.max(1, Math.round((Date.now() - st.t0) / 1000));
+    const blob = new Blob(chunks, { type: rec.mimeType || type || "audio/webm" });
+    const ext = /mp4/.test(blob.type) ? "m4a" : /ogg/.test(blob.type) ? "ogg" : "webm";
+    const reply = REPLY ? REPLY.id : 0; REPLY = null;
+    try { await send({ kind: "voice", data: await readData(blob), name: `voice-note.${ext}`, dur: secs, reply }, { kind: "voice" }); } catch {}
+  };
+  rec.start(); paintComposer();
+  REC_ST.timer = setInterval(() => { const t = $("#recT"); if (t && REC_ST) t.textContent = dur(Math.round((Date.now() - REC_ST.t0) / 1000)); if (REC_ST && Date.now() - REC_ST.t0 > 300000) stopRec(false); }, 500);
+}
+function stopRec(cancel){ if (!REC_ST) return; REC_ST.cancel = cancel; try { REC_ST.rec.stop(); } catch {} }
+
+/* ---------- chat info (groups: name, members, admins, settings; everyone: mute) ---------- */
+function info(){
+  const c = CONV, me = BOOK ? BOOK.me.email : "";
+  const mrow = m => `<div class="pk" style="cursor:default"><span class="av" style="${photo(m.email, m.photoAt)}">${esc(initials(m.name))}</span><span class="tx"><b>${esc(m.name)}${m.email === me ? " (you)" : ""}</b><small>${esc(m.position || "")}${m.ext ? " · ext " + esc(m.ext) : ""}</small></span>
+    ${m.role === "admin" ? '<span class="tag">Group admin</span>' : ""}${c.canEdit && m.email !== me ? `<button class="btn ghost small" data-mm="${esc(m.email)}">⋯</button>` : ""}</div>`;
+  openSheet(`<div class="dlg-h"><b>${c.kind === "dm" ? "Chat info" : "Group info"}</b><small>${c.kind === "dm" ? esc(c.name) : `${MEM.length} members${c.auto ? " · follows People & roles" : ""}`}</small></div><div class="dlg-b">
+    ${c.kind === "group" && c.canEdit ? `<label class="lbl">Group name</label><input class="inp" id="gName" style="width:100%" value="${esc(c.name)}">` : ""}
+    <label class="tgl">🔕 Mute notifications<input type="checkbox" id="gMute" ${c.muted ? "checked" : ""}></label>
+    ${c.kind === "group" && c.canEdit ? `<label class="tgl">📢 Only admins can send<input type="checkbox" id="gAnn" ${c.announce ? "checked" : ""}></label>
+      ${c.auto ? "" : `<label class="tgl">Members can add people<input type="checkbox" id="gAdd" ${c.membersAdd ? "checked" : ""}></label>`}` : ""}
+    ${c.kind === "group" ? `<div class="grp" style="display:flex;justify-content:space-between;align-items:center">Members · ${MEM.length}${c.canAdd ? `<button class="btn small" id="gAddP">＋ Add people</button>` : ""}</div>${MEM.map(mrow).join("")}` : ""}
+    ${c.kind === "group" && c.auto ? `<p class="note">The hub keeps this group's members in step with People &amp; roles. People added by hand stay until removed.</p>` : ""}
+  </div><div class="dlg-f">${c.kind === "group" && !c.auto ? `<button class="btn ghost danger" id="gLeave" style="margin-right:auto">Exit group</button>` : ""}<button class="btn ghost" id="gX">Close</button>${c.kind === "group" && c.canEdit ? `<button class="btn" id="gSave">Save</button>` : ""}</div>`);
+  $("#gX").onclick = () => dlg.close();
+  $("#gMute").onchange = async ev => { try { await api("chat/mute", { c: CUR, muted: ev.target.checked }); CONV.muted = ev.target.checked; paintHead(); P && P.refresh && P.refresh(); toast(ev.target.checked ? "Muted — @mentions still notify you" : "Notifications on"); } catch (e){ toast(e.message, true); } };
+  const sv = $("#gSave"); if (sv) sv.onclick = async () => {
+    try { await api("chat/group", { c: CUR, name: $("#gName").value.trim(), announce: $("#gAnn").checked, ...($("#gAdd") ? { membersAdd: $("#gAdd").checked } : {}) }); dlg.close(); toast("Saved"); loadConv(); } catch (e){ toast(e.message, true); } };
+  const lv = $("#gLeave"); if (lv) lv.onclick = async () => { if (!confirm("Exit this group?")) return; try { await api("chat/leave", { c: CUR }); dlg.close(); closeChat(); } catch (e){ toast(e.message, true); } };
+  const ap = $("#gAddP"); if (ap) ap.onclick = () => pickPeople("Add people", MEM.map(m => m.email), async list => { await api("chat/group", { c: CUR, add: list }); toast("Added"); loadConv(); });
+  dlg.querySelectorAll("[data-mm]").forEach(b => b.onclick = () => {
+    const m = MEM.find(x => x.email === b.dataset.mm);
+    openSheet(`<div class="dlg-h"><b>${esc(m.name)}</b><small>${esc(m.position || "")}</small></div><div class="dlg-b"><div class="mact">
+      <button data-a="admin">${m.role === "admin" ? "Remove as group admin" : "Make group admin"}</button>${m.auto ? "" : `<button data-a="rm" class="bad">Remove from the group</button>`}</div>
+      ${m.auto ? `<p class="note">${esc(m.name.split(" ")[0])} is in this group through People &amp; roles.</p>` : ""}</div><div class="dlg-f"><button class="btn ghost" data-a="x">Back</button></div>`);
+    dlg.querySelectorAll("[data-a]").forEach(x => x.onclick = async () => {
+      try {
+        if (x.dataset.a === "admin") await api("chat/group", { c: CUR, roles: { [m.email]: m.role === "admin" ? "member" : "admin" } });
+        if (x.dataset.a === "rm"){ if (!confirm(`Remove ${m.name}?`)) return; await api("chat/group", { c: CUR, remove: [m.email] }); }
+        if (x.dataset.a !== "x") toast("Saved");
+        await loadConv(); info();
+      } catch (e){ toast(e.message, true); }
+    });
+  });
+}
+
+/* ---------- people picker (new group, add people) ---------- */
+function pickPeople(title, exclude, done, extraHtml = "", onExtra){
+  const sel = new Set(); let q = "";
+  const teams = [["", "Add a whole team…"], ...GROUPS.filter(g => g[0] !== "LEAD").map(([c, n]) => [c, n + " · everyone"]), ["MGR", "All flagship managers"], ["LEAD", "Leadership & administration"]];
+  const draw = () => {
+    const L = BOOK.people.filter(p => p.email !== BOOK.me.email && !exclude.includes(p.email) && (!q || (p.name + " " + p.position + " " + p.siteName + " " + p.ext).toLowerCase().includes(q.toLowerCase())));
+    $("#pkL").innerHTML = L.map(p => `<label class="pk"><input type="checkbox" value="${esc(p.email)}" ${sel.has(p.email) ? "checked" : ""}>${av(p)}<span class="tx"><b>${esc(p.name)}</b><small>${esc(p.position || "")}${p.siteName ? " · " + esc(p.siteName) : ""}</small></span><span class="muted" style="font-size:.78rem">${esc(p.ext || "")}</span></label>`).join("") || `<p class="muted">No one found.</p>`;
+    $("#pkL").querySelectorAll("input").forEach(i => i.onchange = () => { i.checked ? sel.add(i.value) : sel.delete(i.value); $("#pkN").textContent = sel.size + " selected"; });
+    $("#pkN").textContent = sel.size + " selected";
+  };
+  openSheet(`<div class="dlg-h"><b>${esc(title)}</b><small id="pkN">0 selected</small></div><div class="dlg-b">${extraHtml}
+    <input class="inp" id="pkQ" placeholder="Search people" style="width:100%;margin-bottom:6px"><select class="sel" id="pkT" style="width:100%;margin-bottom:6px">${teams.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</select><div id="pkL"></div></div>
+    <div class="dlg-f"><button class="btn ghost" id="pkX">Cancel</button><button class="btn" id="pkGo">Done</button></div>`);
+  $("#pkQ").oninput = ev => { q = ev.target.value; draw(); };
+  $("#pkT").onchange = ev => { const v = ev.target.value; if (!v) return;
+    BOOK.people.filter(p => p.email !== BOOK.me.email && !exclude.includes(p.email) && (v === "LEAD" ? p.lead : v === "MGR" ? /Manager/.test(p.position) : p.site === v && !p.lead)).forEach(p => sel.add(p.email));
+    ev.target.value = ""; draw(); };
+  $("#pkX").onclick = () => dlg.close();
+  $("#pkGo").onclick = async () => { if (!sel.size) return toast("Choose at least one person", true); const b = $("#pkGo"); b.disabled = true;
+    try { await done([...sel]); if (dlg.open && $("#pkGo")) dlg.close(); } catch (e){ toast(e.message, true); b.disabled = false; } };
+  onExtra && onExtra();
+  draw();
+}
+/* ＋ : new chat (anyone) · new group (leadership & administrators) */
+$("#newb").onclick = () => {
+  if (!BOOK) return;
+  let q = "";
+  const draw = () => {
+    const L = BOOK.people.filter(p => p.email !== BOOK.me.email && (!q || (p.name + " " + p.position + " " + p.siteName + " " + p.ext).toLowerCase().includes(q.toLowerCase())));
+    $("#ncL").innerHTML = L.map(p => `<div class="pk" data-p="${esc(p.email)}">${av(p)}<span class="tx"><b>${esc(p.name)}</b><small>${esc(p.position || "")}${p.siteName ? " · " + esc(p.siteName) : ""}</small></span><span class="muted" style="font-size:.78rem">${esc(p.ext || "")}</span></div>`).join("");
+    $("#ncL").querySelectorAll("[data-p]").forEach(r => r.onclick = () => openDm(r.dataset.p));
+  };
+  openSheet(`<div class="dlg-h"><b>New chat</b><small>Pick a person${CHATS && CHATS.lead ? " — or create a group" : ""}</small></div><div class="dlg-b">
+    ${CHATS && CHATS.lead ? `<button class="btn" id="ncG" style="width:100%;margin-bottom:10px">👥 New group</button>` : ""}
+    <input class="inp" id="ncQ" placeholder="Search people" style="width:100%;margin-bottom:6px"><div id="ncL"></div></div><div class="dlg-f"><button class="btn ghost" id="ncX">Close</button></div>`);
+  $("#ncX").onclick = () => dlg.close();
+  $("#ncQ").oninput = ev => { q = ev.target.value; draw(); };
+  const g = $("#ncG"); if (g) g.onclick = newGroup;
+  draw();
+};
+function newGroup(){
+  pickPeople("New group", [], async list => {
+    const name = $("#ngN").value.trim(); if (!name){ $("#ngN").focus(); throw new Error("Name the group"); }
+    const r = await api("chat/group", { name, add: list, announce: $("#ngA").checked, membersAdd: $("#ngM").checked });
+    dlg.close(); await loadChats(); openChat(r.id);
+  }, `<label class="lbl">Group name</label><input class="inp" id="ngN" placeholder="e.g. Verdun Mall · Night shift" style="width:100%;margin-bottom:8px" maxlength="60">
+     <label class="tgl" style="padding-top:0">📢 Only admins can send<input type="checkbox" id="ngA"></label><label class="tgl">Members can add people<input type="checkbox" id="ngM"></label><label class="lbl" style="margin-top:10px">Members</label>`);
+}
+
+/* ---------- live events from the hub (Hub Phone connection) ---------- */
+function onChat(m){
+  if (m.ev === "msg"){
+    if (CUR && m.c === CUR){
+      if (!MSGS.some(x => x.id === m.msg.id)){
+        if (BOOK && m.msg.by === BOOK.me.email && MSGS.some(x => x.id < 0)) return;   // my own message: the send answer places it
+        MSGS.push(m.msg); paintMsgs(false); markRead();
+        const box = $("#ms"); if (box.scrollHeight - box.scrollTop - box.clientHeight < 240) box.scrollTop = box.scrollHeight;
+      }
+    }
+    loadChatsSoon(); return;
+  }
+  if (m.ev === "read" && CUR && m.c === CUR){ const x = MEM.find(y => y.email === m.email); if (x){ x.lastRead = Math.max(x.lastRead, m.upTo); paintMsgs(false); } return; }
+  if (m.ev === "react" && CUR && m.c === CUR){ const x = MSGS.find(y => y.id === m.id); if (x){ x.reactions = m.reactions; paintMsgs(false); } return; }
+  if (m.ev === "del" && CUR && m.c === CUR){ const x = MSGS.find(y => y.id === m.id); if (x){ x.deleted = true; paintMsgs(false); } loadChatsSoon(); return; }
+  if (m.ev === "conv"){ if (CUR && m.c === CUR) loadConv(); loadChatsSoon(); }
+}
+/* without the hub around this page (opened on its own): check every few seconds */
+setInterval(async () => {
+  if (P || document.hidden) return;
+  if (CUR && MSGS.length){ try { const r = await api(`chat/msgs?c=${encodeURIComponent(CUR)}&after=${Math.max(...MSGS.map(x => x.id))}`); if (r.msgs.length){ MSGS.push(...r.msgs); paintMsgs(false); markRead(); } } catch {} }
+  else if (TAB === "chats") loadChats();
+}, 6000);
+
+if (P){ paintConn(P.state()); const off = P.on(s => { paintConn(s); if (!s.inCall) setTimeout(loadRecent, 1500); }); const off2 = P.onChat ? P.onChat(onChat) : () => {};
+  addEventListener("pagehide", () => { off(); off2(); P.viewing && P.viewing(""); }); }
+paint();
+loadBook().then(() => { if (CUR && CONV){ paintHead(); paintMsgs(false); } }); loadRecent(); loadChats();
+if (QS.get("c") && CAN_CHAT){ TAB = "chats"; paint(); openChat(QS.get("c")); }
 setInterval(() => { if (!document.hidden) loadBook(); }, 30000);
 </script>
 </body>

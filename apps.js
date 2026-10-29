@@ -28,6 +28,8 @@ window.HUB = {
 
   GROUPS: ["Day to Day Operations", "Property Overview & Info", "ABC Platforms", "Tenant Management", "Micro Tools", "Access and Security", "Soft Services Management",
     "Hub Applications", "Reports", "Dashboards",
+    /* Hub Phone and Hub Chat (Oct 2026) */
+    "Phone",
     /* new tools wait here while they are tested; they move to their real folder afterwards (Oct 2026) */
     "Upcoming - Testing",
     /* the header "Operations tools" button (not a home section) */
@@ -201,7 +203,9 @@ window.HUB = {
     /* Operations Calendar feature — see docs/FEATURE-calendar.md */
     /* Downloads feature — see docs/FEATURE-downloads.md */
     /* Hub Phone — voice and video calls between hub users, extensions per flagship (see docs/FEATURE-hub-phone.md). Everyone can use it. */
-    { id: "phone", name: "Hub Phone", desc: "Call any hub user — keypad, extensions, contacts, voice and video", group: "Hub Applications", icon: "phone", color: "#2EB872", url: "/tools/phone" },
+    { id: "phone", name: "Hub Phone", desc: "Call any hub user — keypad, extensions, contacts, voice and video", group: "Phone", icon: "phone", color: "#2EB872", url: "/tools/phone?tab=calls" },
+    /* Hub Chat — groups and one-to-one chats; the same page as Hub Phone, opened on Chats (see docs/FEATURE-hub-chat.md) */
+    { id: "chat", name: "Hub Chat", desc: "Group and one-to-one chats — photos, files, voice notes", group: "Phone", icon: "chat", color: "#1E9E5E", url: "/tools/phone?tab=chats" },
     { id: "downloads", name: "Downloads", desc: "Files you exported or downloaded from the hub on this device", group: "Hub Applications", icon: "download", color: "#3C4F8A", url: "/tools/downloads" },
     /* Quick Access Pass — one-entry QR for a contractor or visitor, live 30 minutes, sent by WhatsApp (see docs/FEATURE-quick-pass.md). Everyone can open it. */
     { id: "quickpass", name: "Quick Access Pass", desc: "One-entry QR for a contractor or visitor — 30 minutes, sent by WhatsApp", group: "Access and Security", icon: "qr", color: "#1E8A4C", url: "/tools/quickpass" },
