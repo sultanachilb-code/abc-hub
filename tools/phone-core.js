@@ -13,7 +13,7 @@
   const rid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, "").slice(0, 20);
   const DEV = (() => { try { let d = sessionStorage.getItem("hub.phoneDev"); if (!d){ d = rid().slice(0, 12); sessionStorage.setItem("hub.phoneDev", d); } return d; } catch { return rid().slice(0, 12); } })();
   const api = (p, b) => window.HUBX ? HUBX.api(p, b) : Promise.reject(new Error("hub not ready"));
-  const listeners = new Set(), emit = () => listeners.forEach(f => { try { f(state()); } catch {} });
+  const listeners = new Set(), emit = () => { try { paintFab(); } catch {} listeners.forEach(f => { try { f(state()); } catch {} }); };
 
   let ws = null, wsOk = false, backoff = 1000, pingT = 0, ICE = null, ICE_AT = 0;
   let C = null;            // the current call
@@ -71,17 +71,67 @@
 #hpBox.vid .hp-mid{justify-content:flex-end}
 #hpBox.vid .hp-mid > *:not(video){position:relative;z-index:1;text-shadow:0 1px 6px rgba(0,0,0,.6)}
 #hpBox.vid .hp-bot,#hpBox.vid .hp-top{position:relative;z-index:1}
-#hpBar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:2147482999;display:none;align-items:center;gap:10px;background:#2EB872;color:#fff;border-radius:999px;padding:8px 16px;font-weight:800;font-size:.84rem;box-shadow:0 8px 26px rgba(0,0,0,.28);cursor:pointer}
-#hpBar.on{display:flex}
 #hpToast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:2147483001;background:#1C0B30;color:#fff;padding:10px 16px;border-radius:12px;font-size:.86rem;font-weight:600;display:none;max-width:90vw;text-align:center}
 #hpToast.on{display:block}
-@media (prefers-reduced-motion:reduce){ #hpBox.ring .hp-av{animation:none} }`;
+@media (prefers-reduced-motion:reduce){ #hpBox.ring .hp-av{animation:none} }
+/* the floating Hub Phone button (above the Emergency button) + quick dial */
+#hpFab{position:fixed;z-index:61;right:96px;top:calc(55% - 92px);height:66px;min-width:66px;border-radius:33px;border:0;cursor:pointer;display:none;align-items:center;justify-content:center;gap:10px;
+  background:linear-gradient(145deg,#34C77E,#1E9E5E);color:#fff;box-shadow:0 8px 22px rgba(30,158,94,.38);font:inherit;transition:transform .15s,top .25s,bottom .25s}
+#hpFab.on{display:flex}
+#hpFab.solo{top:55%}
+#hpFab::after{content:"";position:absolute;inset:-7px;border-radius:40px;border:2px solid rgba(46,184,114,.35);pointer-events:none}
+#hpFab:hover{transform:scale(1.05)}
+#hpFab > svg{width:30px;height:30px}
+#hpFab .bd{position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;border-radius:11px;background:#E5484D;color:#fff;font-size:.74rem;font-weight:800;display:none;place-items:center;border:2px solid #fff;padding:0 4px}
+#hpFab .bd.on{display:grid}
+#hpFab .lb{position:absolute;right:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#1E9E5E;color:#fff;font-weight:800;font-size:.8rem;padding:6px 11px;border-radius:9px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;text-align:left}
+#hpFab .lb small{display:block;font-weight:600;opacity:.85;font-size:.7rem}
+#hpFab:hover .lb{opacity:1}
+#hpFab.ring{animation:hpShake .9s ease-in-out infinite;box-shadow:0 0 0 10px rgba(46,184,114,.22),0 0 0 22px rgba(46,184,114,.1),0 8px 22px rgba(30,158,94,.38)}
+@keyframes hpShake{0%,100%{transform:rotate(0)}15%{transform:rotate(-14deg)}30%{transform:rotate(12deg)}45%{transform:rotate(-10deg)}60%{transform:rotate(8deg)}75%{transform:rotate(0)}}
+#hpFab.call{padding:0 8px 0 18px;font-weight:800;font-size:.9rem;height:52px}
+#hpFab.call::after{display:none}
+#hpFab.call .nm{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hpFab.call .x{width:38px;height:38px;border-radius:50%;background:#E5484D;display:grid;place-items:center}
+#hpFab.call .x svg{width:18px;height:18px}
+#hpQd{position:fixed;z-index:62;width:250px;background:var(--surface,#fff);color:var(--text,#221A2E);border:1px solid var(--line,#E3DCEC);border-radius:18px;box-shadow:0 18px 50px rgba(42,15,69,.28);padding:12px;display:none;font-size:.82rem;max-height:calc(100dvh - 24px);overflow:auto}
+#hpQd.on{display:block}
+#hpQd .qhd{display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:4px}
+#hpQd .qhd span{font-size:.7rem;color:#1E9E5E;background:rgba(46,184,114,.13);padding:2px 8px;border-radius:999px}
+#hpQd .qhd button{margin-left:auto;color:var(--muted,#6D6479);font-size:1rem;background:none;border:0;cursor:pointer;width:28px;height:28px;border-radius:8px}
+#hpQd .qds{text-align:center;font-size:1.5rem;font-weight:800;letter-spacing:.12em;height:34px;line-height:34px;font-variant-numeric:tabular-nums}
+#hpQd .qds:empty::before{content:"Extension";font-size:.85rem;letter-spacing:0;font-weight:600;color:var(--muted,#6D6479)}
+#hpQd .qmt{text-align:center;font-size:.74rem;color:var(--muted,#6D6479);min-height:1.2em;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hpQd .qmt b{color:var(--text,#221A2E)}
+#hpQd .qkp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+#hpQd .qkp button{height:38px;border-radius:10px;background:var(--paper,#F6F4F9);border:0;font:inherit;font-weight:700;font-size:1.05rem;color:inherit;cursor:pointer}
+#hpQd .qkp button:active{transform:scale(.96)}
+#hpQd .qcl{display:flex;gap:10px;justify-content:center;margin-bottom:10px}
+#hpQd .qcl button{width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;color:#fff;background:#2EB872;cursor:pointer}
+#hpQd .qcl button.v{background:#4A1F73}
+#hpQd .qcl button[disabled]{opacity:.35;cursor:default}
+#hpQd .qcl svg{width:19px;height:19px}
+#hpQd .qsc{font-size:.64rem;font-weight:800;letter-spacing:.08em;color:var(--muted,#6D6479);margin:8px 0 2px;text-transform:uppercase}
+#hpQd .qpr{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line,#EEE9F3)}
+#hpQd .qav{width:28px;height:28px;border-radius:50%;background:#C8A24A;color:#2A0F45;font-size:.66rem;font-weight:800;display:grid;place-items:center;position:relative;flex:none}
+#hpQd .qav u{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border-radius:50%;background:#2EB872;border:1.5px solid var(--surface,#fff)}
+#hpQd .qtx{flex:1;min-width:0;line-height:1.2}
+#hpQd .qtx b{display:block;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hpQd .qtx small{font-size:.7rem;color:var(--muted,#6D6479)}
+#hpQd .qtx small.m{color:#E5484D;font-weight:700}
+#hpQd .qpr button{width:30px;height:30px;border-radius:50%;border:0;background:#2EB872;color:#fff;display:grid;place-items:center;cursor:pointer;flex:none}
+#hpQd .qpr button svg{width:14px;height:14px}
+#hpQd .qnt{font-size:.74rem;color:var(--muted,#6D6479);padding:4px 0}
+#hpQd .qop{display:block;width:100%;text-align:center;margin-top:8px;color:var(--brand-2,#7B4BB0);font-weight:800;font-size:.8rem;background:none;border:0;cursor:pointer;padding:6px}
+@media (max-width:1500px){ #hpFab{right:22px} }
+@media (max-width:900px){ #hpFab{top:auto!important;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--hpb,18px));height:56px;min-width:56px} #hpFab > svg{width:26px;height:26px} #hpFab .lb{display:none} #hpFab.call{height:48px} }
+@media (prefers-reduced-motion:reduce){ #hpFab.ring{animation:none} }
+@media print{ #hpFab,#hpQd{display:none!important} }`;
   document.head.append(css);
   const box = document.createElement("div"); box.id = "hpBox"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
-  const bar = document.createElement("button"); bar.id = "hpBar"; bar.type = "button";
   const tst = document.createElement("div"); tst.id = "hpToast";
   const remAudio = document.createElement("audio"); remAudio.autoplay = true; remAudio.setAttribute("playsinline", "");
-  document.body.append(box, bar, tst, remAudio);
+  document.body.append(box, tst, remAudio);
   let tstT = 0; const toast = m => { tst.textContent = m; tst.classList.add("on"); clearTimeout(tstT); tstT = setTimeout(() => tst.classList.remove("on"), 4200); };
 
   const I = {
@@ -118,7 +168,7 @@
     if (m.type === "ring") return incoming(m);
     if (ringing && m.callId === ringing.callId && (m.type === "cancel" || m.type === "taken")){
       toneOff(); const who = ringing.fromName; ringing = null; hide();
-      if (m.type === "cancel") toast(`Missed call from ${who}`);
+      if (m.type === "cancel"){ toast(`Missed call from ${who}`); setTimeout(loadRec, 800); }
       emit(); return;
     }
     if (!C || m.callId !== C.id) return;
@@ -183,6 +233,7 @@
     C = { id: m.callId, role: "callee", peer: m.from, peerName: m.fromName, video: !!m.video, state: "connecting", local: stream, polite: true, peerCam: !!m.video, peerMic: true, mic: true, cam: !!video, facing: "user", q: [] };
     if (!send({ type: "accept", callId: m.callId })){ finish("No connection to the hub", true); return; }
     show(); paintStatus("Connecting…"); emit();
+    [1500, 4000].forEach(t => setTimeout(() => closeNotes(m.callId), t));   // the ringing notification on this device
     await makePeer();
   }
 
@@ -277,11 +328,11 @@
     box.querySelector("#hpEnd").onclick = hangup;
     const lv = box.querySelector("video.loc"); lv.srcObject = C.local;
     if (C.remote) box.querySelector("video.rem").srcObject = C.remote;
-    bar.classList.remove("on");
+    C.min = false; paintFab();
     paintVideo(); paintCtl();
   }
-  function minimise(){ box.classList.remove("on"); bar.classList.add("on"); paintBar(); }
-  bar.onclick = () => { if (C){ box.classList.add("on"); bar.classList.remove("on"); } };
+  function minimise(){ if (!C) return; box.classList.remove("on"); C.min = true; paintFab(); }
+  function restore(){ if (C){ box.classList.add("on"); C.min = false; paintFab(); } }
   function paintCtl(){
     if (!C) return;
     const m = box.querySelector("#hpMic"), c = box.querySelector("#hpCam"), f = box.querySelector("#hpFlip");
@@ -303,11 +354,10 @@
     const el = box.querySelector("#hpSt");
     const t = C.state === "live" && C.pc && C.pc.connectionState === "connected" ? mmss(Math.round((Date.now() - C.t0) / 1000)) + (C.peerMic === false ? " · they are muted" : "") : C.status || "";
     if (el) el.textContent = t;
-    paintBar();
+    paintFab();
   }
-  function paintBar(){ if (!C) return; bar.textContent = `📞 ${C.peerName} · ${C.state === "live" ? mmss(Math.round((Date.now() - C.t0) / 1000)) : (C.status || "Calling…")} — tap to return`; }
   let tickT = 0; function tick(){ clearInterval(tickT); tickT = setInterval(() => { if (!C){ clearInterval(tickT); return; } paintStatus(); }, 1000); }
-  function hide(){ box.className = ""; box.innerHTML = ""; bar.classList.remove("on"); }
+  function hide(){ box.className = ""; box.innerHTML = ""; paintFab(); }
   function finish(msg, showIt){
     toneOff(); clearInterval(tickT);
     if (C){ clearTimeout(C.noAnswerT); try { C.pc && C.pc.close(); } catch {} C.local && C.local.getTracks().forEach(t => t.stop()); }
@@ -318,12 +368,123 @@
   }
   addEventListener("pagehide", () => { if (C) send({ type: C.state === "calling" ? "cancel" : "end", callId: C.id }); });
 
-  window.HubPhone = { call, state, on: f => { listeners.add(f); return () => listeners.delete(f); }, dev: DEV };
+  /* ---------- the floating Hub Phone button + quick dial (Oct 2026) ----------
+     Above the Emergency button (in its place when it is not shown), on every screen of the hub.
+     Missed calls → red count · ringing → shakes · minimised call → "Name · 03:12" with a red End button */
+  function closeNotes(id){ try { navigator.serviceWorker && navigator.serviceWorker.ready.then(r => r.getNotifications({ tag: "call-" + id })).then(ns => (ns || []).forEach(n => n.close())).catch(() => {}); } catch {} }
+  var fab = null, qd = null, BOOK = null, BOOK_AT = 0, REC = null, DIAL = "", allowed = false, qdMissed = 0;
+  const favs = () => { try { return JSON.parse(localStorage.getItem("hub.phoneFav") || "[]"); } catch { return []; } };
+  const icoCall = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>';
+  function makeFab(){
+    fab = document.createElement("button"); fab.id = "hpFab"; fab.type = "button"; fab.setAttribute("aria-label", "Hub Phone");
+    qd = document.createElement("div"); qd.id = "hpQd"; qd.setAttribute("role", "dialog"); qd.setAttribute("aria-label", "Quick dial");
+    document.body.append(fab, qd);
+    fab.onclick = ev => {
+      if (C && C.min){ if (ev.target.closest(".x")) hangup(); else restore(); return; }
+      if (C){ restore(); return; }
+      qd.classList.contains("on") ? qdClose() : qdOpen();
+    };
+    document.addEventListener("pointerdown", ev => { if (qd.classList.contains("on") && !qd.contains(ev.target) && !fab.contains(ev.target)) qdClose(); }, true);
+    addEventListener("keydown", ev => {
+      if (!qd.classList.contains("on")) return;
+      if (ev.key === "Escape") return qdClose();
+      if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
+      if (/^[0-9]$/.test(ev.key)){ if (DIAL.length < 4) DIAL += ev.key; paintQd(); }
+      else if (ev.key === "Backspace"){ DIAL = DIAL.slice(0, -1); paintQd(); }
+      else if (ev.key === "Enter"){ const p = match(); if (p) dialP(p, false); }
+    });
+    setInterval(() => { place(); if (C && C.min) paintFab(); }, 1000);
+    addEventListener("resize", () => { place(); if (qd.classList.contains("on")) placeQd(); });
+    loadRec(); setInterval(() => { if (!document.hidden) loadRec(); }, 60000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadRec(); });
+    paintFab();
+  }
+  const vis = el => !!el && getComputedStyle(el).display !== "none" && el.getBoundingClientRect().width > 0;
+  function place(){
+    if (!fab) return;
+    const emg = document.getElementById("emgFab"), abx = document.getElementById("sanadFab");
+    fab.classList.toggle("solo", !vis(emg));
+    /* phone screen: stacked bottom right above ABCON and Emergency */
+    fab.style.setProperty("--hpb", (vis(abx) ? 166 : vis(emg) ? 92 : 18) + "px");
+  }
+  function paintFab(){
+    if (!fab) return;
+    fab.classList.toggle("on", allowed && !(C && !C.min));
+    fab.classList.toggle("ring", !!ringing);
+    if (C && C.min){
+      fab.className = "on call";
+      const t = C.state === "live" && C.t0 ? mmss(Math.round((Date.now() - C.t0) / 1000)) : (C.status || "Calling…");
+      fab.innerHTML = `<span class="nm">${esc(String(C.peerName).split(" ")[0])} · ${esc(t)}</span><span class="x" title="End the call">${I.end}</span>`;
+      fab.title = "Tap to return to the call"; fab.dataset.k = "";
+      place(); return;
+    }
+    fab.classList.remove("call"); fab.title = "";
+    const n = REC ? REC.missed : 0, ext = BOOK && BOOK.me.ext ? "ext " + BOOK.me.ext : "Hub Phone";
+    if (!fab.dataset.k || fab.dataset.k !== n + ext){
+      fab.dataset.k = n + ext;
+      fab.innerHTML = `${icoCall}<span class="bd ${n ? "on" : ""}">${n > 9 ? "9+" : n}</span><span class="lb">Hub Phone<small>${esc(ext)}${n ? ` · ${n} missed` : ""}</small></span>`;
+    }
+    place();
+  }
+  async function loadBook(force){
+    if (!force && BOOK && Date.now() - BOOK_AT < 60000) return BOOK;
+    try { BOOK = await api("phone/book"); BOOK_AT = Date.now(); } catch {}
+    return BOOK;
+  }
+  async function loadRec(){ if (!allowed) return; try { REC = await api("phone/recent"); if (fab) fab.dataset.k = ""; paintFab(); if (qd && qd.classList.contains("on")) paintQd(); } catch {} }
+  const byE = e => BOOK && BOOK.people.find(p => p.email === e);
+  const match = () => DIAL && BOOK ? BOOK.people.find(p => p.ext === DIAL) : null;
+  function dialP(p, video){
+    if (!p) return;
+    if (BOOK && p.email === BOOK.me.email) return toast("That is your own extension");
+    qdClose(); DIAL = ""; call(p.email, video, p.name);
+  }
+  function placeQd(){
+    const r = fab.getBoundingClientRect(), w = qd.offsetWidth, h = qd.offsetHeight, m = innerWidth <= 900;
+    if (m){ qd.style.right = "12px"; qd.style.left = "auto"; qd.style.top = "auto"; qd.style.bottom = Math.max(12, innerHeight - r.top + 12) + "px"; return; }
+    qd.style.bottom = "auto"; qd.style.right = "auto";
+    qd.style.left = Math.max(12, r.left - w - 16) + "px";
+    qd.style.top = Math.min(Math.max(12, r.top + r.height / 2 - h / 2), innerHeight - h - 12) + "px";
+  }
+  async function qdOpen(){
+    unlock(); DIAL = ""; qd.classList.add("on"); paintQd(); placeQd();
+    await Promise.all([loadBook(), loadRec()]); qdMissed = REC ? REC.missed : 0; paintQd(); placeQd();
+    if (qdMissed) setTimeout(() => api("phone/seen", {}).then(() => { if (REC) REC.missed = 0; fab.dataset.k = ""; paintFab(); }).catch(() => {}), 1500);
+  }
+  function qdClose(){ qd.classList.remove("on"); }
+  const tm = iso => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" });
+  function paintQd(){
+    const p = match(), me = BOOK ? BOOK.me : null;
+    const prow = (x, sub, cls) => `<div class="qpr"><span class="qav">${esc(ini(x.name))}${x.online ? "<u></u>" : ""}</span><span class="qtx"><b>${esc(x.name)}${x.ext ? " · " + esc(x.ext) : ""}</b><small class="${cls || ""}">${esc(sub)}</small></span><button type="button" data-e="${esc(x.email)}" title="Call">${icoCall}</button></div>`;
+    const calls = REC ? REC.calls : [];
+    const missed = calls.filter(c => !c.out && c.status === "missed").slice(0, Math.min(3, qdMissed));
+    const list = missed.length ? missed : calls.slice(0, 3);
+    const recRows = list.map(c => { const x = byE(c.peer) || { email: c.peer, name: c.peerName || c.peer, ext: "" };
+      const miss = !c.out && c.status === "missed";
+      return prow(x, (miss ? "Missed · " : c.out ? "↗ " : "↙ ") + tm(c.at), miss ? "m" : ""); }).join("");
+    const F = favs().map(byE).filter(Boolean).slice(0, 4);
+    qd.innerHTML = `<div class="qhd">Quick dial ${me && me.ext ? `<span>ext ${esc(me.ext)}</span>` : ""}<button type="button" data-x title="Close">✕</button></div>
+      <div class="qds">${esc(DIAL)}</div><div class="qmt">${p ? `<b>${esc(p.name)}</b> · ${esc(p.position || "")}${p.online ? " · online" : ""}` : DIAL ? (BOOK ? "No one has this extension" : "Loading…") : ""}</div>
+      <div class="qkp">${["1","2","3","4","5","6","7","8","9","*","0","⌫"].map(k => `<button type="button" data-k="${k}">${k}</button>`).join("")}</div>
+      <div class="qcl"><button type="button" class="v" data-call="v" title="Video call" ${p ? "" : "disabled"}>${I.cam}</button><button type="button" data-call="a" title="Call" ${p ? "" : "disabled"}>${icoCall}</button></div>
+      ${list.length ? `<div class="qsc">${missed.length ? "Missed · " + missed.length : "Recent"}</div>${recRows}` : ""}
+      <div class="qsc">Favourites</div>${F.map(x => prow(x, (x.siteName || x.position || "") + (x.online ? " · online" : ""))).join("") || `<div class="qnt">Tap ☆ next to a person in Hub Phone to add favourites.</div>`}
+      <button type="button" class="qop" data-open>Open Hub Phone ›</button>`;
+    qd.querySelector("[data-x]").onclick = qdClose;
+    qd.querySelector("[data-open]").onclick = () => { qdClose(); window.HUBX && HUBX.open("phone"); };
+    qd.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k;
+      if (k === "⌫") DIAL = DIAL.slice(0, -1); else if (/^[0-9]$/.test(k) && DIAL.length < 4) DIAL += k; paintQd(); });
+    qd.querySelectorAll("[data-call]").forEach(b => b.onclick = () => dialP(match(), b.dataset.call === "v"));
+    qd.querySelectorAll(".qpr [data-e]").forEach(b => b.onclick = () => dialP(byE(b.dataset.e) || { email: b.dataset.e, name: b.dataset.e }, false));
+  }
+
+  window.HubPhone = { call, state, on: f => { listeners.add(f); return () => listeners.delete(f); }, dev: DEV, refresh: () => loadRec() };
 
   /* start once the hub is signed in and Hub Phone is open to this person */
   (function boot(n){
     if (!window.HUBX || !HUBX.me()){ if (n < 600) setTimeout(() => boot(n + 1), 500); return; }
     if (HUBX.can && !HUBX.can("phone")) return;
+    allowed = true; makeFab(); loadBook().then(() => { if (fab) fab.dataset.k = ""; paintFab(); });
     connect();
   })(0);
 })();
