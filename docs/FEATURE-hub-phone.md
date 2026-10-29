@@ -20,12 +20,23 @@ Hub users can call each other by voice or video inside the hub. There are no rea
 - **Recent:** incoming and outgoing calls with their duration. Missed calls are shown in red, and a badge shows the number not seen yet.
 - **Favourites:** tap ☆ next to a person. Favourites are kept on each device.
 
+## The floating button (Oct 2026)
+- A round green button sits above the red Emergency button on every screen of the hub, also while a tool is open. When the Emergency button is not shown, the phone button takes its place.
+- Phones stack the buttons bottom right: Phone, then ABCON, then Emergency.
+- **Tap:** opens **Quick dial**, with a keypad (the matching name shows as you type), voice and video buttons, unseen missed calls (otherwise the last 3 calls), your favourites, and "Open Hub Phone".
+- **States:**
+  - a red badge counts missed calls, and it clears when Quick dial or Recent is opened;
+  - the button shakes while a call is ringing;
+  - a minimised call shows as a pill, "Name · 03:12", with a red End button. Tapping the pill returns to the call.
+
 ## A call
 - The hub keeps a live connection while it is open (`tools/phone-core.js`, loaded by `index.html`).
 - **Incoming call:** a full-screen call screen opens over the whole hub on every device where the hub is open. The screen offers Answer, Voice only (for a video call) and Decline. The hub also plays a ringtone and vibrates the phone.
 - **Hub closed or hidden:** after 3.5 s the person gets a push notification with **Answer** and **Decline**. Answer opens the hub on the call.
+- **Ringing:** the notification is sent again **every 2 s for 40 s**, with the same tag, so it replaces itself and rings again. It stops when the call is answered, declined, cancelled, or seen in an open hub. Once answered, it is replaced quietly by "Call answered".
+- **iPhone:** iPhone may space the rings out to 3–5 s. A real full-screen call screen on a locked phone, like WhatsApp, needs a native app.
 - **Missed call:** when nobody answers within 40 s, the call counts as missed. The person gets a "Missed call" notification and the call appears in red in Recent.
-- **During the call:** Mute, Camera (on and off, also during a voice call), Flip (front and back camera), Minimise and End. Minimise shrinks the call to a green bar, so the hub can be used during the call.
+- **During the call:** Mute, Camera (on and off, also during a voice call), Flip (front and back camera), Minimise and End. Minimise shrinks the call to the green pill on the floating button, so the hub can be used during the call.
 - **Busy:** a person already on a call is not rung. The call is logged as missed for them.
 
 ## How it works

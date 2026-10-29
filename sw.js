@@ -1,7 +1,7 @@
 /* ABC Operations Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v82";
+const CACHE = "abc-hub-v83";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
   "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png",
   /* works offline: the checklists and the handover open without signal once visited */
@@ -46,6 +46,7 @@ self.addEventListener("push", e => {
     actions: [{ action: "ack", title: "I'm on it" }, { action: "open", title: "Open" }],
     data: { url: d.url || "/", emergency: d.emergency.id }
   });
+  if (d.silent) Object.assign(opts, { silent: true, renotify: false });   // Hub Phone: "Call answered" replaces the ringing notification quietly
   /* Hub Phone: an incoming call rings like a call — Answer opens the hub on the call, Decline tells the caller */
   if (d.call) Object.assign(opts, {
     requireInteraction: true, renotify: true, silent: false, vibrate: [900, 300, 900, 300, 900, 300, 900, 300, 900],

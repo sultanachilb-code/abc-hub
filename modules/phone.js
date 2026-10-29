@@ -21,6 +21,8 @@ const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const RING_MS = 45000;          // a ring waits this long for a device to connect (opened from the push)
 const PUSH_AFTER_MS = 3500;     // no device showing the call after 3.5 s → push notification
+const RING_EVERY_MS = 2000;     // the push is repeated every 2 s so the phone keeps ringing on the lock screen
+const RING_LOOP_MS = 40000;     // … for 40 s at most (then it is a missed call)
 const PREFIX = { VRM: 1, ACM: 2, DBS: 3, VRS: 4, ACS: 5 };
 const LEAD_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"];
 
@@ -155,7 +157,7 @@ async function pushTo(env, email, msg) {
    (hibernating: free while nobody talks). It only relays small JSON messages between two people.
    ===================================================================== */
 export class PhoneHub {
-  constructor(ctx, env) { this.ctx = ctx; this.env = env; this.timers = new Map(); }
+  constructor(ctx, env) { this.ctx = ctx; this.env = env; this.timers = new Map(); this.pushed = new Set(); }
   socks(email) { return this.ctx.getWebSockets(email); }
   att(ws) { try { return ws.deserializeAttachment() || {}; } catch { return {}; } }
   tell(ws, o) { try { ws.send(JSON.stringify(o)); } catch {} }
@@ -235,17 +237,24 @@ export class PhoneHub {
       const k = "ring:" + to; await this.ctx.storage.put(k, [...((await this.ctx.storage.get(k)) || []).filter(r => Date.now() - r.at < RING_MS), ring]);
       const devices = this.toUser(to, { type: "ring", ...ring });
       if (ws) this.tell(ws, { type: "calling", callId, online: devices > 0 });
+      /* Lock-screen ringing: the push is sent again every 2 s (same tag, so it replaces itself and rings again)
+         until the call is answered, declined, cancelled, shown on an open hub — or 40 s pass */
+      let first = true;
       const push = async () => {
         const cur = await this.call(callId);
-        if (!cur || cur.status !== "ringing" || cur.shown) return;
+        if (!cur || cur.status !== "ringing" || cur.shown || Date.now() - c.at > RING_LOOP_MS) { this.timers.delete(callId); return; }
         const n = await pushTo(env, to, { title: c.video ? "🎥 Incoming video call" : "📞 Incoming call",
-          body: `${a.n}${a.x ? " · ext " + a.x : ""} is calling you`, tag: "call-" + callId, tone: "alert", ttl: 45,
+          body: `${a.n}${a.x ? " · ext " + a.x : ""} is calling you`, tag: "call-" + callId, tone: "alert", ttl: 10,
           url: "/?call=" + encodeURIComponent(callId), call: { id: callId, from: a.n, video: c.video } });
+        this.pushed.add(callId);
         const live = await this.call(callId);
-        if (live && live.status === "ringing") for (const s of this.socks(live.from)) if (this.att(s).d === live.fromDev) this.tell(s, { type: "pushed", callId, devices: n });
+        if (!live || live.status !== "ringing") { this.timers.delete(callId); return; }
+        if (first) { first = false; for (const s of this.socks(live.from)) if (this.att(s).d === live.fromDev) this.tell(s, { type: "pushed", callId, devices: n }); }
+        if (!n) { this.timers.delete(callId); return; }   // no phone has notifications on
+        this.timers.set(callId, setTimeout(push, RING_EVERY_MS));
       };
       if (!devices) await push();
-      else this.timers.set(callId, setTimeout(() => { this.timers.delete(callId); push(); }, PUSH_AFTER_MS));
+      else this.timers.set(callId, setTimeout(push, PUSH_AFTER_MS));
       return;
     }
 
@@ -269,6 +278,7 @@ export class PhoneHub {
       await this.log("UPDATE phone_calls SET status = 'answered', answered_at = ? WHERE id = ?", now, callId);
       this.toUser(c.from, { type: "accept", callId, dev: a.d }, c.fromDev);
       for (const s of this.socks(c.to)) if (this.att(s).d !== a.d) this.tell(s, { type: "taken", callId });
+      if (this.pushed.delete(callId)) await pushTo(env, c.to, { title: "📞 Call answered", body: `On a call with ${c.fromName}`, tag: "call-" + callId, silent: true, ttl: 20, url: "/" });
       return;
     }
     if (m.type === "decline" && isTo) {
@@ -279,6 +289,7 @@ export class PhoneHub {
       await this.log("UPDATE phone_calls SET status = 'declined', ended_at = ?, seen = 1 WHERE id = ?", now, callId);
       this.toUser(c.from, { type: "decline", callId }, c.fromDev);
       this.toUser(c.to, { type: "taken", callId });
+      if (this.pushed.delete(callId) && a.d !== "push") await pushTo(env, c.to, { title: "📞 Call declined", body: `${c.fromName} — declined`, tag: "call-" + callId, silent: true, ttl: 20, url: "/#/app/phone" });
       return;
     }
     if (m.type === "cancel" && isFrom) {   // the caller hung up before an answer (or 40 s passed)
@@ -287,7 +298,7 @@ export class PhoneHub {
       clearTimeout(this.timers.get(callId)); this.timers.delete(callId);
       await this.dropRing(c.to, callId);
       await this.log("UPDATE phone_calls SET status = 'missed', ended_at = ? WHERE id = ?", now, callId);
-      this.toUser(c.to, { type: "cancel", callId });
+      this.toUser(c.to, { type: "cancel", callId }); this.pushed.delete(callId);
       await pushTo(env, c.to, { title: c.video ? "🎥 Missed video call" : "📞 Missed call", body: `${c.fromName}${c.fromExt ? " · ext " + c.fromExt : ""} — tap to call back`,
         tag: "call-" + callId, url: "/#/app/phone" });
       return;

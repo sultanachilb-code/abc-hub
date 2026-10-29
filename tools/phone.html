@@ -160,7 +160,7 @@ async function loadBook(){
   if (!keep) paint();
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = async () => { TAB = b.dataset.t; paint();
-  if (TAB === "rec"){ await loadRecent(); if (REC && REC.missed){ api("phone/seen", {}).catch(() => {}); REC.missed = 0; paintMissed(); } } });
+  if (TAB === "rec"){ await loadRecent(); if (REC && REC.missed){ api("phone/seen", {}).then(() => P && P.refresh && P.refresh()).catch(() => {}); REC.missed = 0; paintMissed(); } } });
 addEventListener("keydown", e => { if (TAB !== "pad" || e.target.tagName === "INPUT") return;
   if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === "Backspace"){ DIAL = DIAL.slice(0, -1); paintPad(); }
   else if (e.key === "Enter"){ const x = BOOK && BOOK.people.find(p => p.ext === DIAL); if (x) dial(x, false); } });
