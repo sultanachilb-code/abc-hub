@@ -105,6 +105,9 @@ const pct = (x, d = 1) => (Math.round(x * Math.pow(10, d + 2)) / Math.pow(10, d)
 /* live statuses: Open · Closed · Fit-out · Terminated · Vacant  (Terminated and Vacant count as empty space) */
 const st = u => u.status === "Vacant" ? "vac" : u.status === "Terminated" ? "term" : u.status === "Fit-out" ? "fit" : u.status === "Closed" ? "closed" : u.status === "Reserved" ? "res" : "ok";
 const empty = u => u.status === "Vacant" || u.status === "Terminated";
+/* department stores (Verdun DS, Dbayeh, Achrafieh DS): their own retail space is "ABC Retail" (Oct 2026) */
+const DSF = () => !!CTX && ["VRS", "DBS", "ACS"].includes(CTX.site);
+const RETAIL = () => DSF() ? "ABC Retail" : "Department store / iPlay";
 const kind = u => u.section === "DS" || u.section === "iPlay" ? "ds" : u.section === "Pop-up" ? "pop" : "lease";
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Beirut" });
 
@@ -141,27 +144,27 @@ function render(){
         <span class="oc">${pct(locc)} occupied · ${us.filter(u => empty(u)).length} vacant</span></div>
       ${lease.map(row).join("")}
       ${pops.length ? `<div class="grp">Pop-ups · ${fmt(lp)} sqm</div>${pops.map(row).join("")}` : ""}
-      ${dss.length ? `<div class="grp">Department store / iPlay</div>${dss.map(row).join("")}` : ""}
+      ${dss.length ? `<div class="grp">${RETAIL()}</div>${dss.map(row).join("")}` : ""}
       <div class="sub"><span>Total ${esc(l)}</span><span>${fmt(lt)}</span></div></div>`;
   };
   const cats = {}; U.filter(u => !empty(u) && kind(u) !== "ds" && !/warehouse/i.test(u.dept)).forEach(u => { const k = (u.dept || "Other").toUpperCase(); cats[k] = (cats[k] || 0) + u.area; });
   const topC = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const keys = [["t", "Total"], ["d", "DS"], ["l", "Lease"], ["p", "Pop"], ["f", "Fit"], ["v", "Vac"]];
+  const keys = [["t", "Total"], ["d", DSF() ? "Retail" : "DS"], ["l", "Lease"], ["p", "Pop"], ["f", "Fit"], ["v", "Vac"]];
   const tally = us => ({ t: us.reduce((a, u) => a + u.area, 0), d: us.filter(u => kind(u) === "ds").reduce((a, u) => a + u.area, 0),
     l: us.filter(u => kind(u) === "lease").reduce((a, u) => a + u.area, 0), p: us.filter(u => kind(u) === "pop").reduce((a, u) => a + u.area, 0),
     f: us.filter(u => st(u) === "fit").reduce((a, u) => a + u.area, 0), v: us.filter(u => empty(u) && kind(u) === "lease").reduce((a, u) => a + u.area, 0) });
   const LT = [...G.levels.map(l => ({ level: l, ...tally(U.filter(u => u.level === l)) })), { level: "Total", ...tally(U) }];
   $("#stage").innerHTML = `<div class="sheet" id="sheet">
-    <div class="sh-head"><div><h2>ABC ${esc(G.siteName || G.name).toUpperCase()} — GLA &amp; OCCUPANCY</h2><small>Leasing spaces, pop-ups and department store by level${CAN.gla ? " · click a unit to update it" : ""}</small></div><div class="mo">${esc(monthName)}</div></div>
+    <div class="sh-head"><div><h2>ABC ${esc(G.siteName || G.name).toUpperCase()} — GLA &amp; OCCUPANCY</h2><small>Leasing spaces, pop-ups and ${DSF() ? "ABC Retail" : "department store"} by level${CAN.gla ? " · click a unit to update it" : ""}</small></div><div class="mo">${esc(monthName)}</div></div>
     <div class="kp">
       <div class="occ"><strong>${pct(occ, 2)}</strong><span>Occupancy</span></div>
-      <div><strong>${fmt(total)}</strong><span>Total GLA incl. DS (sqm)</span></div>
+      <div><strong>${fmt(total)}</strong><span>Total GLA incl. ${DSF() ? "ABC Retail" : "DS"} (sqm)</span></div>
       <div><strong>${fmt(leasing)}</strong><span>Leasing GLA (sqm)</span></div>
-      <div><strong>${fmt(ds)}</strong><span>Department store</span></div>
+      <div><strong>${fmt(ds)}</strong><span>${DSF() ? "ABC Retail" : "Department store"}</span></div>
       <div><strong style="color:var(--alert)">${fmt(vac)}</strong><span>Vacant · ${U.filter(u => empty(u) && u.section === "Leasing").length} units</span></div>
       <div><strong style="color:#8A6A1C">${fmt(fit)}</strong><span>Fit-out</span></div>
       <div><strong>${fmt(pop)}</strong><span>Pop-ups · ${U.filter(u => kind(u) === "pop" && !empty(u)).length}</span></div>
-      <div><strong>${fmt(iplay)}</strong><span>iPlay</span></div>
+      ${DSF() && !iplay ? "" : `<div><strong>${fmt(iplay)}</strong><span>iPlay</span></div>`}
     </div>
     <div class="cols" style="grid-template-columns:repeat(${big.length},minmax(0,1fr)) minmax(0,1.45fr)">
       ${big.map(levelCol).join("")}
@@ -170,7 +173,7 @@ function render(){
         ${LT.length ? `<h3>Level totals (sqm)</h3><table class="lt"><tr><th></th>${keys.map(([, h]) => `<th>${h}</th>`).join("")}</tr>
           ${LT.map(r => `<tr class="${/^total/i.test(r.level) ? "tot" : ""}"><td>${esc(r.level.replace(/^Add\. Spaces$/, "Add."))}</td>${keys.map(([k]) => `<td>${r[k] ? fmt(r[k]) : "–"}</td>`).join("")}</tr>`).join("")}</table>` : ""}
         <h3>Largest categories (sqm)</h3><div class="dp">${topC.map(([k, v]) => `<span>${esc(k)}</span><b>${fmt(v)}</b>`).join("")}</div>
-        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:rgba(47,128,237,.45)"></i>Reserved (signed, not in fit-out yet)</span><span><i style="background:var(--line)"></i>Closed (grey italic)</span><span><i style="background:rgba(229,72,77,.5)"></i>Terminated (struck through)</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>Department store / iPlay</span></div>
+        <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:rgba(47,128,237,.45)"></i>Reserved (signed, not in fit-out yet)</span><span><i style="background:var(--line)"></i>Closed (grey italic)</span><span><i style="background:rgba(229,72,77,.5)"></i>Terminated (struck through)</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>${RETAIL()}</span></div>
       </div>
     </div>
     <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA · ${G.changes} change${G.changes === 1 ? "" : "s"} since ${esc((G.baseline && G.baseline.source) || "the workbook")}</span><span>${U.length} units · figures in square metres</span></div>
