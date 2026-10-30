@@ -2743,7 +2743,7 @@ async function glaSeed(env, site) {
   if (!claim.meta || claim.meta.changes !== 1) return;
   const g = GLA[site], at = nowIso();
   const status = u => /vacant/i.test(u.status) || /^vacant/i.test(u.brand) ? "Vacant" : /fit/i.test(u.status) ? "Fit-out" : /close/i.test(u.status) ? "Closed" : "Open";
-  const section = u => /^ds$/i.test(u.type) ? "DS" : /iplay/i.test(u.type) ? "iPlay" : /pop/i.test(u.type) ? "Pop-up" : u.level === "B6" ? "Additional" : "Leasing";
+  const section = u => /^(ds|vm)$/i.test(u.type) ? "DS" : /iplay/i.test(u.type) ? "iPlay" : /pop/i.test(u.type) ? "Pop-up" : u.level === "B6" ? "Additional" : "Leasing";   // VM (department store focal points) counts with the department store
   const ops = g.units.map((u, i) => env.DB.prepare(`INSERT INTO gla_units (site, level, code, brand, status, section, dept, area, seq, updated_at, updated_by)
       VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(site, u.level, u.code, status(u) === "Vacant" ? "" : u.brand, status(u), section(u), u.dept || "", Number(u.area) || 0, i + 1, at, "GLA workbook"));
   for (let i = 0; i < ops.length; i += 90) await env.DB.batch(ops.slice(i, i + 90));
