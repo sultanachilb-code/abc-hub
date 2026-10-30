@@ -162,9 +162,40 @@ async function rrRooms(env, f) {   // rooms inspected in the last 30 days — co
   env.DB.prepare("DELETE FROM meta WHERE k >= 'rr:rooms:' AND k < 'rr:rooms;' AND k NOT LIKE ?").bind(`%:${day}`).run().catch(() => {});
   return n;
 }
+/* Each flagship's own windows and restroom list come from the Restroom Inspection system (/api/hubconfig) — Dbayeh has its own
+   30-minute windows (Oct 2026). Kept 10 minutes in memory and in meta; without it the hub falls back to the standard windows above
+   and the rooms inspected in the last 30 days. Grace stays as before: the standard flagships' windows count from the hub's usual
+   times (11:00, 13:30 … 21:30); a flagship with its own schedule counts each window from when it closes. */
+const STD_ENDS = ["11:00", "13:00", "15:00", "17:00", "19:00", "21:00"];
+let RRCFG = null, RRCFG_AT = 0;
+async function rrConfig(env) {
+  if (RRCFG && Date.now() - RRCFG_AT < 600000) return RRCFG;
+  if (env.HUB_KEY && env.RESTROOM) {
+    try {
+      const r = await env.RESTROOM.fetch("https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/hubconfig", { headers: { "x-hub-key": env.HUB_KEY }, signal: AbortSignal.timeout(5000) });
+      const j = await r.json().catch(() => null);
+      if (j && j.ok && j.data && j.data.sites) {
+        RRCFG = j.data.sites; RRCFG_AT = Date.now();
+        env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('rr:cfg', ?)").bind(JSON.stringify(RRCFG)).run().catch(() => {});
+        return RRCFG;
+      }
+    } catch {}
+  }
+  try { const m = await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'rr:cfg'")); if (m) { RRCFG = JSON.parse(m.v); RRCFG_AT = Date.now() - 300000; return RRCFG; } } catch {}
+  return null;
+}
+/* { rooms, due: ["HH:MM" per window], own } — "due" is when a window starts counting as expected */
+async function rrSchedule(env, site) {
+  const cfg = await rrConfig(env), c = cfg && cfg[site];
+  if (c && Array.isArray(c.windows) && c.windows.length && c.rooms) {
+    const ends = c.windows.map(w => w.end), std = ends.length === STD_ENDS.length && ends.every((e, i) => e === STD_ENDS[i]);
+    return { rooms: Number(c.rooms) || 0, due: std ? RR_W.map(([, e]) => e) : ends, own: !std, windows: c.windows };
+  }
+  return { rooms: await rrRooms(env, RR[site]), due: RR_W.map(([, e]) => e), own: false, fallback: true };
+}
 async function rrDay(env, site, day) {
-  const f = RR[site], rooms = await rrRooms(env, f), today = new Date().toISOString().slice(0, 10), now = nowHM();
-  const ended = day < dayB(new Date().toISOString()) ? RR_W.length : RR_W.filter(([, end]) => end <= now).length;
+  const f = RR[site], sch = await rrSchedule(env, site), rooms = sch.rooms, today = new Date().toISOString().slice(0, 10), now = nowHM();
+  const ended = day < dayB(new Date().toISOString()) ? sch.due.length : sch.due.filter(end => end <= now).length;
   const r = await one(env.RR_DB.prepare("SELECT COUNT(DISTINCT room_id || '|' || window_id) AS n, SUM(has_issues) AS bad FROM inspection_logs WHERE flagship = ? AND log_date = ?").bind(f, day));
   const done = (r && r.n) || 0, expected = rooms * ended;
   return { done: Math.min(done, expected || done), expected, pct: expected ? Math.min(100, pct(done, expected)) : null, issues: (r && r.bad) || 0, today };
@@ -207,11 +238,13 @@ async function pirOnTime(env, site, from, to) {
   for (const x of r) { if (x.pir_submitted_at) { n++; if (x.pir_submitted_at <= x.pir_due_at) ok++; } else if (x.pir_due_at < now) n++; }
   return n ? pct(ok, n) : null;
 }
-async function restroomPct(env, site, from, to, today) {
+async function restroomPct(env, site, from, to, today, info) {
   if (!env.RR_DB || !RR[site]) return null;
-  const f = RR[site], rooms = await rrRooms(env, f); if (!rooms) return null;
+  const f = RR[site], sch = await rrSchedule(env, site), rooms = sch.rooms; if (!rooms) return null;
   const r = await one(env.RR_DB.prepare("SELECT COUNT(DISTINCT log_date || '|' || room_id || '|' || window_id) AS n FROM inspection_logs WHERE flagship = ? AND log_date BETWEEN ? AND ?").bind(f, from, to));
-  const now = nowHM(), expected = daysIn(from, to).reduce((a, x) => a + rooms * (x < today ? RR_W.length : RR_W.filter(([, end]) => end <= now).length), 0);
+  const now = nowHM(), days = daysIn(from, to), closedToday = sch.due.filter(end => end <= now).length;
+  const expected = days.reduce((a, x) => a + rooms * (x < today ? sch.due.length : closedToday), 0), done = Math.min((r && r.n) || 0, expected);
+  if (info) info.hint = `${done} of ${expected} inspections · ${rooms} restroom${rooms === 1 ? "" : "s"} × ${days.length === 1 && days[0] === today ? `${closedToday} window${closedToday === 1 ? "" : "s"} closed so far` : `${sch.due.length} windows a day`}${sch.own && sch.windows ? ` · own timing (${sch.windows.map(w => w.start).join(", ")})` : ""}`;
   return expected ? Math.min(100, pct((r && r.n) || 0, expected)) : null;
 }
 async function mf48(env, site, from, to) {
@@ -259,13 +292,14 @@ async function contractsEnding(env, site, day) {
 
 async function kpiBrief(env, sites, period, d, cfg) {
   const day = d.today(), R = rangeOf(period, day), P = prevRange(R);
-  const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}`;
+  const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}:r2`;
   try { const c = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(ck))) || {}).v || "null"); if (c && Date.now() - c.t < 30 * 60e3) return c.data; } catch {}
   const snag = cfg.snags && d.snagReport ? await d.snagReport(R.from, R.to).catch(() => null) : null;
   const S = new Map(((snag && snag.sites) || []).map(s => [s.site, s]));
+  const HINT = new Map();   // the basis shown when hovering a value (restroom: rooms × windows)
   const calc = async (site, k, r, prev) => {
     switch (k) {
-      case "restroom": return restroomPct(env, site, r.from, r.to, day);
+      case "restroom": { const info = {}; const v = await restroomPct(env, site, r.from, r.to, day, prev ? null : info); if (info.hint) HINT.set(site + "|" + k, info.hint); return v; }
       case "pir": return pirOnTime(env, site, r.from, r.to);
       case "amcheck": return checklistOnTime(env, site, r.from, r.to, "am", DEADLINES.amCheck, day);
       case "pmcheck": return checklistOnTime(env, site, r.from, r.to, "pm", DEADLINES.pmCheck, day);
@@ -288,7 +322,7 @@ async function kpiBrief(env, sites, period, d, cfg) {
     const cells = await Promise.all(sites.map(async s => {
       const v = await calc(s, k, R, false), pv = PCT.has(k) && !["cleaning", "gla"].includes(k) ? await calc(s, k, P, true) : null;
       return { site: s, v, pct: PCT.has(k), tone: PCT.has(k) && k !== "gla" ? tone(v) : "", delta: v != null && pv != null ? Math.round(v - pv) : null,
-        sub: k === "snags" && S.has(s) ? `${S.get(s).openTotal} open` : "" };
+        sub: k === "snags" && S.has(s) ? `${S.get(s).openTotal} open` : "", hint: HINT.get(s + "|" + k) || "" };
     }));
     out.push({ key: k, label: KPI_ITEMS[k], cells });
   }
