@@ -8,7 +8,7 @@
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const addDays = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const norm = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9؀-ۿ]+/g, " ").trim();
-const codeKey = c => String(c || "").replace(/^VM[\s-]*/i, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const codeKey = c => String(c || "").trim().toUpperCase().replace(/^VM[\s-]*/, "").replace(/^[A-Z]{2,3}[\s-]+(?=[A-Z0-9]{1,3}-)/, "").replace(/[^A-Z0-9]/g, "");   // "VD-L2-007" (GLA) = "L2-007" (plan)
 const LEVEL_RE = /\b(B[1-4]|LG|LGF|UG|GF|G|L[0-9]|P[1-4]|M|R|ROOF|-[1-4])\b/i;
 const levelOf = t => { const m = String(t || "").toUpperCase().match(LEVEL_RE); return m ? m[1] : ""; };
 const PATROL_EN = { corridor: "Corridor blocked", storage: "Storage in the corridor", cartons: "Cartons not folded in the bins", garbage: "Garbage outside the bins",

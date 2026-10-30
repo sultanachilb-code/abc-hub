@@ -140,8 +140,14 @@ const FK = { bin: ["♻️", "Recycle bin", "Recycle bins", "BIN"], bench: ["�
 const isFur = p => !!FK[p.kind];
 let FURN = null, FSHOW = (() => { try { return new Set(JSON.parse(localStorage.getItem("hub.layouts.fur") || '["bin","bench"]')); } catch { return new Set(["bin", "bench"]); } })();
 const V = { s: 1, x: 0, y: 0, w: 0, h: 0 };
-const norm = c => String(c || "").replace(/^VM[\s-]*/i, "").trim().toUpperCase();
-const byCode = () => { const m = new Map(); UNITS.forEach(u => m.set(norm(u.code), u)); return m; };
+/* plan and GLA codes compared without the flagship prefix: "VM L2-007" (Verdun Mall), "VD-L2-007" (Verdun DS GLA) and "L2-007" (plan) are the same unit */
+const norm = c => String(c || "").trim().toUpperCase().replace(/^VM[\s-]*/, "").replace(/^[A-Z]{2,3}[\s-]+(?=[A-Z0-9]{1,3}-)/, "").trim();
+/* one code can hold several brands (department store concessions): the pin shows them together */
+const byCode = () => { const m = new Map(); UNITS.forEach(u => { const k = norm(u.code), o = m.get(k);
+  if (!o) return m.set(k, u);
+  const brands = [...new Set([...(o._brands || [o.brand]), u.brand].filter(Boolean))];
+  m.set(k, { ...o, _brands: brands, brand: brands.length > 2 ? `${brands.slice(0, 2).join(", ")} +${brands.length - 2}` : brands.join(", "), area: Math.round(((o.area || 0) + (u.area || 0)) * 100) / 100,
+    status: [o.status, u.status].includes("Vacant") && [o.status, u.status].some(x => x !== "Vacant") ? "Open" : o.status }); }); return m; };
 const stCls = u => !u ? "s-none" : u.status === "Fit-out" ? "s-fit" : u.status === "Reserved" ? "s-res" : u.status === "Vacant" ? "s-vac" : u.status === "Terminated" ? "s-term" : u.status === "Closed" ? "s-closed" : "s-open";
 const fmt = n => Math.round(n).toLocaleString("en-US");
 const params = new URLSearchParams(location.search);
@@ -199,7 +205,7 @@ function renderSide(){
   const map = byCode(), pinsHere = L.pins.filter(p => p.level === LEVEL && p.kind === "unit");
   const pinned = new Set(L.pins.filter(p => p.kind === "unit").map(p => norm(p.code)));
   const us = UNITS.filter(u => u.level === LEVEL || (LEVEL === "LGF" && u.level === "LG"));
-  const missingOnPlan = us.filter(u => !pinned.has(norm(u.code)));
+  const seenC = new Set(), missingOnPlan = us.filter(u => { const k = norm(u.code); if (pinned.has(k) || seenC.has(k)) return false; seenC.add(k); return true; });
   const notInGla = pinsHere.filter(p => !map.get(norm(p.code)));
   const label = { total: "Total level area", circulation: "Circulation", leasing: "Leasing", vacant: "Leasing – vacant", fitout: "Leasing – fit-out", popup: "Pop-up", store: "ABC store area", iplay: "iPlay", park: "Central park", parking: "Parking area" };
   const live = { units: us.length, vac: us.filter(u => u.status === "Vacant" || u.status === "Terminated").length, fit: us.filter(u => u.status === "Fit-out").length, closed: us.filter(u => u.status === "Closed").length };
