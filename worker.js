@@ -7,7 +7,8 @@ import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./
 export { EmergencyPager } from "./modules/emergency.js";
 import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules/phone.js";   // Hub Phone — see docs/FEATURE-hub-phone.md
 export { PhoneHub } from "./modules/phone.js";
-import { chatSchema, chatRoute, chatDeps, chatSync, chatRun } from "./modules/chat.js";   // Hub Chat — see docs/FEATURE-hub-chat.md
+import { chatSchema, chatRoute, chatDeps, chatSync, chatRun } from "./modules/chat.js";
+import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
@@ -595,7 +596,8 @@ export default {
       await followupRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("followups", e && e.message));   // Follow-ups: reminders
       await mbRun(env, MB_DEPS).catch(e => console.error("mailbox", e && e.message));   // Report mailbox: 07:00–08:00 import + 08:05 missing check
       await pushRun(env).catch(e => console.error("push", e && e.message));
-      await chatRun(env).catch(e => console.error("chat", e && e.message));   // Hub Chat: messages and files kept 1 month
+      await chatRun(env).catch(e => console.error("chat", e && e.message));
+      await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
