@@ -106,7 +106,7 @@ export async function phoneRoute(env, path, method, body, url, request, d) {
   }
   if (path === "phone/book" && method === "GET") {
     await extEnsure(env);
-    const { results } = await env.DB.prepare("SELECT email, full_name, role, site_code, position, ext, photo_at, last_seen_at FROM users WHERE active = 1 ORDER BY full_name").all();
+    const { results } = await env.DB.prepare("SELECT email, full_name, role, site_code, position, ext, photo_at, last_seen_at FROM users WHERE active = 1 AND role != 'EXTERNAL' ORDER BY full_name").all();
     let online = [];
     if (env.PHONE) try { online = await (await stub(env).fetch("https://phone/online")).json(); } catch {}
     const on = new Set(online);

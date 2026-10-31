@@ -54,7 +54,7 @@ export async function chatSync(env, d, force) {
   if (!force && Date.now() - SYNC_AT < 60000) return;
   SYNC_AT = Date.now();
   const now = new Date().toISOString(), codes = Object.keys(d.SITES);
-  const { results } = await env.DB.prepare("SELECT email, role, site_code, sites, is_admin FROM users WHERE active = 1").all();
+  const { results } = await env.DB.prepare("SELECT email, role, site_code, sites, is_admin FROM users WHERE active = 1 AND role != 'EXTERNAL'").all();   // external accounts are not in Hub Chat
   const users = results || [];
   const lead = u => LEAD_ROLES.includes(u.role) || !!u.is_admin;
   const want = {};
