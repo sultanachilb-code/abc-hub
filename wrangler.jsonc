@@ -23,6 +23,10 @@
   "vars": {
     "MAIL_RELAY_URL": "https://script.google.com/macros/s/AKfycbwXyT6w5JgPIaW3XX-XbKovyBY1FADZ79wC84JduLHgWndNpgp_UCaB-4KHkzHPo9NiaA/exec"
   },
+  "vars": {
+    "CLEANER_SHEET_URL": "https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec",
+    "MAIL_RELAY_URL": "https://script.google.com/macros/s/AKfycbwXyT6w5JgPIaW3XX-XbKovyBY1FADZ79wC84JduLHgWndNpgp_UCaB-4KHkzHPo9NiaA/exec"
+  },
   /* Hub Assistant (docs/FEATURE-ai.md): Cloudflare Workers AI — free daily allowance, no API key, no card */
   "ai": { "binding": "AI" },
   "triggers": { "crons": ["*/2 * * * *"] },
