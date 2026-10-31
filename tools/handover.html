@@ -305,6 +305,9 @@ function liveHtml(){
     ${gl.length ? gl.map(x => `<tr><td><b>${esc(x.contractor || x.tenant || x.req)}</b> <small class="muted">${hm(x.at)} · ${esc(x.by)}</small></td><td>${esc(x.tenant)}${x.req ? ` <small class="muted">· ${esc(x.req)}</small>` : ""}</td>
       <td>${x.decision === "in" ? `<span class="done">Approved in</span>${x.workers ? ` <small class="muted">· ${x.workers} workers</small>` : ""}${x.override ? ` <small class="nd">· override: ${esc(x.reason)}</small>` : ""}` : `<span class="nd">Rejected out</span> <small class="muted">· ${esc(x.reason)}</small>`}</td></tr>`).join("")
       : `<tr><td colspan="3" class="emptyrow" style="padding:8px">No QR scanned at the loading gate today.</td></tr>`}</table>` : "";
+  /* Cleaner Access: only the number of cleaners who entered the mall today (live) */
+  const CL = LIVE.cleaners;
+  const clT = CL ? `<table class="t live"><tr><th>Cleaners in the mall today</th><th style="width:34%"><b style="font-size:1.05rem">${CL.count}</b> cleaner${CL.count === 1 ? "" : "s"} entered</th><th style="width:30%"><small class="muted">live · Loading Gate</small></th></tr></table>` : "";
   /* Contractor access of the day that no handover line covers yet (approved later than the handover was written, Quick Passes, hand check-ins) */
   const lineTxt = H && H.doc ? ["today", "ongoing", "tomorrow"].flatMap(k => H.doc[k] || []) : [];
   const keys = new Set(lineTxt.map(reqKey).filter(Boolean)), allTxt = lineTxt.map(x => String(x.text || "")).join("\n").toUpperCase();
@@ -326,7 +329,7 @@ function liveHtml(){
       || `<tr><td colspan="3" class="emptyrow" style="padding:8px">Everything due is done.</td></tr>`}</table>` : "";
   const wrow = w => { const cls = (n) => n >= R.rooms ? "done" : w.state === "closed" ? "nd" : w.state === "open" ? "pr" : ""; const cell = (n, by) => R.rooms ? `<span class="${cls(n)}">${n}/${R.rooms}</span>${by.length ? ` <small class="muted">${esc(by.join(", "))}</small>` : ""}` : "—";
     return `<tr><td>${esc(w.label)} <small class="muted">${esc(w.time)}</small></td><td>${cell(w.ops, w.opsBy)}</td><td>${cell(w.ss, w.ssBy)}</td></tr>`; };
-  return incT + fbT + gateT + accT + cleanT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
+  return incT + fbT + gateT + clT + accT + cleanT + `<table class="t live"><tr><th>Checklists · live</th><th style="width:34%">Status</th><th style="width:30%"></th></tr>
     <tr><td><b>AM Checklist</b></td><td colspan="2">${ckCell(LIVE.am)}</td></tr>
     <tr><td><b>PM Checklist</b></td><td colspan="2">${ckCell(LIVE.pm)}</td></tr></table>
     <table class="t live"><tr><th>Restroom inspections${R.rooms ? ` · ${R.rooms} restrooms` : ""}</th><th style="width:34%">OPS</th><th style="width:30%">S.S</th></tr>
