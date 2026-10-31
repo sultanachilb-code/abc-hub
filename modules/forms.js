@@ -16,6 +16,7 @@
 
 const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
 import { reminderDone } from "./reminders.js";   // checklist submitted → its reminders are done
+import { trigSchema, trigRoute, trigForSheet, triggersOf, fireTrigger, TRIG_FORMS } from "./formtriggers.js";   // ⚡ checklist triggers (Oct 2026)
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
 const SITES5 = ["VRM", "ACM", "DBS", "ACS", "VRS"];
@@ -186,6 +187,7 @@ export async function formsSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS dbank_machines (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0,
       tenant TEXT NOT NULL, old_id TEXT NOT NULL DEFAULT '', new_id TEXT NOT NULL DEFAULT '', floor TEXT NOT NULL DEFAULT '')`)
   ]);
+  await trigSchema(env);   // ⚡ checklist triggers
 }
 
 async function template(env, site, form) {
@@ -241,6 +243,7 @@ function cleanAnswers(items, a) {
     if (v.r) o.r = clip(v.r, 300);
     if (v.tr === "yes" || v.tr === "no") o.tr = v.tr;
     if (isDay(v.day)) o.day = v.day;
+    if (typeof v.ph === "string" && /^forms\/[A-Z]{3}\/\d{4}-\d{2}-\d{2}\/[\w-]+\.jpg$/.test(v.ph)) o.ph = v.ph;   // ⚡ trigger photo (R2 key)
     if (v.f && typeof v.f === "object") { o.f = {}; for (const [fk, fv] of Object.entries(v.f)) if (fv) o.f[clip(fk, 40)] = clip(fv, 80); }
     if (Object.keys(o).length) out[k] = o;
   }
@@ -271,6 +274,8 @@ export async function formsRoute(env, p, method, b, url, ctx) {
   const isAdmin = me.role === "ADMIN";
   const lead = !!can.formsLead;
   const formOf = v => { if (!FORMS[v]) throw err("Choose a checklist"); return v; };
+  if (p.startsWith("forms/trig/")) { const r = await trigRoute(env, p, method, b, url, ctx, FORMS, template); if (r) return r; throw err("Unknown endpoint", 404); }
+  const withTrig = async (form, run) => TRIG_FORMS.includes(form) ? { ...run, trig: await trigForSheet(env, site, form, run.day).catch(() => null) } : run;
 
   if (p === "forms/meta") {
     const form = formOf(q("form"));
@@ -294,7 +299,7 @@ export async function formsRoute(env, p, method, b, url, ctx) {
   if (p === "forms/get") {
     const r = await env.DB.prepare("SELECT * FROM form_runs WHERE id = ? AND site = ?").bind(Number(q("id")), site).first();
     if (!r) throw err("This record no longer exists", 404);
-    return { run: runOut(r, true) };
+    return { run: await withTrig(r.form, runOut(r, true)) };
   }
   /* a blank record (not saved until the first answer) — AM/PM reopen today's if it exists */
   if (p === "forms/new") {
@@ -302,14 +307,14 @@ export async function formsRoute(env, p, method, b, url, ctx) {
     const day = isDay(q("day")) ? q("day") : today();
     if (FORMS[form].daily) {
       const r = await env.DB.prepare("SELECT * FROM form_runs WHERE site = ? AND form = ? AND day = ? ORDER BY id LIMIT 1").bind(site, form, day).first();
-      if (r) return { run: runOut(r, true) };
+      if (r) return { run: await withTrig(form, runOut(r, true)) };
     }
     let items;
     if (form === "dbank") {
       items = machineItems(await machines(env, site));
       if (!items.length) throw err("Upload the Areeba machines Excel sheet first");
     } else items = (await template(env, site, form)).items;
-    return { run: { id: 0, form, day, title: "", status: "draft", items, header: {}, answers: {}, comments: "", createdName: me.full_name, done: 0, total: items.length, issues: 0 } };
+    return { run: await withTrig(form, { id: 0, form, day, title: "", status: "draft", items, header: {}, answers: {}, comments: "", createdName: me.full_name, done: 0, total: items.length, issues: 0 }) };
   }
   if (p === "forms/save" && method === "POST") {
     if (!can.formsFill) throw err("You can view this checklist but not fill it", 403);
@@ -336,6 +341,12 @@ export async function formsRoute(env, p, method, b, url, ctx) {
     const comments = clip(b.comments || "", 3000);
     const submit = !!b.submit;
     if (submit && t.done < t.total) throw err(`${t.total - t.done} item${t.total - t.done === 1 ? "" : "s"} still to tick before submitting`);
+    /* ⚡ triggers: a ✗ on an item with a trigger may need a photo / remark before submitting */
+    const TRIG = submit && TRIG_FORMS.includes(form) ? await triggersOf(env, site, form) : {};
+    for (const it of items) { const c = TRIG[it.id], a = answers[it.id] || {};
+      if (!c || a.v !== "n") continue;
+      if (c.require.photo && !a.ph) throw err(`“${it.t.slice(0, 60)}” needs a photo (⚡ trigger)`);
+      if (c.require.remark !== false && !String(a.r || "").trim()) throw err(`“${it.t.slice(0, 60)}” needs a remark (⚡ trigger)`); }
     const at = now();
     let id = cur && cur.id;
     if (cur) {
@@ -354,6 +365,9 @@ export async function formsRoute(env, p, method, b, url, ctx) {
       const issueText = t.issues ? `${t.issues} issue${t.issues === 1 ? "" : "s"}` : "no issues";
       await ctx.raiseEvent(env, { site, app: "forms", tone: t.issues ? "warn" : "ok",
         title: `${name} submitted`, body: `${day} · ${issueText} · by ${me.full_name}` });
+      /* ⚡ triggers not sent yet ("Send now") go out with the submission */
+      for (const it of items) { const c = TRIG[it.id], a = answers[it.id] || {};
+        if (c && a.v === "n") await fireTrigger(env, ctx, { site, form, day, item: it, cfg: c, remark: a.r || "", photoKey: a.ph || "", runId: id, me, FORMS }).catch(e => console.error("trigger", e && e.message)); }
       /* reminders for this checklist are done for today — no reminder goes out */
       await reminderDone(env, site, "form", p => p.form === form, `${FORMS[form].name} submitted by ${me.full_name}`, at);
     }

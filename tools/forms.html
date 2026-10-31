@@ -152,6 +152,23 @@ html.pm .foot label{min-height:40px}
 html.pm .foot textarea{min-height:26px}
 html.pm .fld input{width:7em}
 html.pm .ck td.rem input,html.pm .ck td.rem select{font-size:.78rem;padding:0}
+/* ⚡ checklist triggers (Oct 2026) */
+.tg{display:inline-flex;align-items:center;gap:3px;font-size:.66rem;font-weight:800;color:#8A6418;background:rgba(200,162,74,.2);padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.tg.sent{color:#1E7A4C;background:rgba(46,184,114,.14)}
+.tg.mfo{color:#C0392B;background:rgba(229,72,77,.12)}
+.tset{border:0;background:none;color:#B07A12;font-size:.8rem;cursor:pointer;padding:0 4px;opacity:.55}
+.tset:hover,.tset.on{opacity:1}
+.tph{display:block;margin-top:4px;width:64px;height:48px;border-radius:6px;object-fit:cover;border:1px solid var(--line)}
+#dTr,#dTe{width:min(520px,calc(100% - 20px))}
+#dTr .dlg-b,#dTe .dlg-b{max-height:min(66dvh,600px);overflow:auto}
+.tl{margin:0;padding-left:18px;font-size:.84rem;line-height:1.6}
+.tgl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.tgl input[type=checkbox]{width:18px;height:18px;accent-color:#2EB872}
+.tsub{display:grid;gap:6px;padding:4px 0 10px 4px}
+.tsub .chk{display:flex;gap:6px;align-items:center;font-size:.82rem}
+.phbox{border:2px dashed var(--line);border-radius:12px;padding:12px;text-align:center;cursor:pointer;font-size:.85rem;color:var(--muted);margin-top:8px}
+.phbox img{max-width:100%;max-height:180px;border-radius:8px;display:block;margin:0 auto}
+@media print{ .tset,.tg{display:none!important} }
 </style>
 </head>
 <body>
@@ -305,6 +322,7 @@ function rowsHTML(){
       let task = `${k === i ? `<span class="ar">${esc(x.a)}</span>` : ""}${cond}${esc(x.t)}`;
       if (x.ids) task += `<span class="ids">${esc(x.ids)}</span>`;
       if (x.f && !off) task += `<div>${x.f.map(n => `<label class="fld">${esc(n)}<input data-f="${esc(x.id)}" data-n="${esc(n)}" value="${esc((a.f || {})[n] || "")}" ${L ? "readonly" : ""}></label>`).join("")}</div>`;
+      task += trigBadge(x, a);
       if (x.k === "gla" && run.header && run.header.unitId) task += `<a class="glalink noprint" href="/tools/gla?unit=${run.header.unitId}&back=${encodeURIComponent(`/tools/forms?f=${FORM}&site=${site}${run.id ? `&id=${run.id}` : ""}`)}">Open in GLA ↗</a>`;
       const cls = ["it", off ? "off" : "", a.v === "n" ? "bad" : "", a.r ? "hasrem" : ""].join(" ");
       let marks;
@@ -357,10 +375,14 @@ function redrawRows(){ $("#rows").innerHTML = rowsHTML(); paintStatus(); }
 function wire(){
   const sh = $("#sheet"), ans = id => (run.answers[id] = run.answers[id] || {});
   sh.onclick = e => {
+    const ts = e.target.closest("[data-tset]"); if (ts){ e.stopPropagation(); return trigEdit(ts.dataset.tset); }   // ⚡ set a trigger (admins, managers)
+    const tb = e.target.closest("[data-tfire]"); if (tb && !locked()){ e.stopPropagation(); return trigAsk(tb.dataset.tfire); }
     if (locked()) return;
     const m = e.target.closest("[data-mk]");
     if (m){ const a = ans(m.dataset.mk); a.v = a.v === m.dataset.v ? undefined : m.dataset.v; if (!a.v) delete a.v;
-      redrawRows(); changed(); if (a.v === "n"){ const i = sh.querySelector(`tr[data-id="${m.dataset.mk}"] td.rem input, tr[data-id="${m.dataset.mk}"] td.rem select`); i && i.focus(); } return; }
+      redrawRows(); changed();
+      if (a.v === "n" && TRG()[m.dataset.mk] && !FIRED()[m.dataset.mk]) return trigAsk(m.dataset.mk);   // ⚡ this item has a trigger
+      if (a.v === "n"){ const i = sh.querySelector(`tr[data-id="${m.dataset.mk}"] td.rem input, tr[data-id="${m.dataset.mk}"] td.rem select`); i && i.focus(); } return; }
     const f = e.target.closest("[data-flag]");
     if (f){ run.header.flags = run.header.flags || {}; run.header.flags[f.dataset.flag] = f.dataset.v === "1";
       $("#sheet").querySelectorAll(`[data-flag="${f.dataset.flag}"]`).forEach(b => b.classList.toggle("on", b === f)); f.closest(".flag").classList.remove("unset");
@@ -415,6 +437,118 @@ function pickTenant(name){
   sh.querySelectorAll('[data-flag="fnb"]').forEach(b => b.classList.toggle("on", (b.dataset.v === "1") === run.header.flags.fnb));
   sh.querySelector('[data-flag="fnb"]').closest(".flag").classList.remove("unset");
   redrawRows();
+}
+
+/* ---------- ⚡ checklist triggers ---------- */
+const TRG = () => (run && run.trig && run.trig.triggers) || {};
+const FIRED = () => (run && run.trig && run.trig.fired) || {};
+const canTrig = () => ["am", "pm"].includes(FORM) && ctx && ctx.me && ["ADMIN", "MANAGER"].includes(ctx.me.role);
+const tmT = iso => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" });
+function trigBadge(x, a){
+  if (!["am", "pm"].includes(FORM)) return "";
+  const t = TRG()[x.id], f = FIRED()[x.id], last = run.trig && run.trig.last && run.trig.last[x.id];
+  let h = "";
+  if (t) h += f ? `<span class="tg sent" title="${esc((t.list || []).join(" · "))}">⚡ sent ${esc(tmT(f.at))}${f.mfId ? ` · MF #${f.mfId}` : ""}</span>`
+    : `<span class="tg" title="On ✗: ${esc((t.list || []).join(" · "))}">⚡${a.v === "n" && !locked() ? ` <u data-tfire="${esc(x.id)}" style="cursor:pointer">send now</u>` : ""}</span>`;
+  if (last && last.mfId && (!f || f.mfId !== last.mfId)) h += ["Fixed", "Closed"].includes(last.status)
+    ? `<span class="tg sent">✔ MF #${last.mfId} fixed${last.fixedAt ? " " + esc(new Date(last.fixedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Beirut" })) : ""}</span>`
+    : `<span class="tg mfo">MF #${last.mfId} still open since ${esc(D.fmt(last.day))}</span>`;
+  if (canTrig()) h += `<button class="tset noprint ${t ? "on" : ""}" data-tset="${esc(x.id)}" title="${t ? "Change the ⚡ trigger" : "Add a ⚡ trigger"}">⚡${t ? "" : "+"}</button>`;
+  if (a.ph) h += `<img class="tph" src="/api/ops/forms/trig/img?site=${encodeURIComponent(site)}&k=${encodeURIComponent(a.ph)}" alt="Photo" loading="lazy">`;
+  return h;
+}
+function dlg(id){ let d = document.getElementById(id); if (!d){ d = document.createElement("dialog"); d.id = id; document.body.append(d); d.addEventListener("click", e => { if (e.target === d) d.close(); }); } return d; }
+/* photos are made smaller before upload (max 1280 px JPEG) */
+async function shrinkPhoto(file){
+  const url = URL.createObjectURL(file);
+  try { const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", .78); } finally { URL.revokeObjectURL(url); }
+}
+/* the person ticked ✗ on an item with a trigger: remark, photo, Send now / on submit */
+function trigAsk(id){
+  const it = run.items.find(i => i.id === id), t = TRG()[id]; if (!it || !t) return;
+  const a = run.answers[id] = run.answers[id] || {};
+  const d = dlg("dTr");
+  const draw = () => {
+    d.innerHTML = `<div class="dlg-h"><b style="color:var(--alert)">⚡ ${esc(it.t)}</b><small>✗ on this item starts ${t.list.length} action${t.list.length === 1 ? "" : "s"}</small></div>
+      <div class="dlg-b"><ul class="tl">${t.list.map(x => `<li>${esc(x)}</li>`).join("")}${t.escalate ? `<li>Escalation if ✗ ${t.escalate} times in a row</li>` : ""}</ul>
+        <label class="lbl" style="margin-top:12px">What is wrong?${t.remark ? " (required)" : ""}</label><textarea id="tRem" rows="3" style="width:100%">${esc(a.r || "")}</textarea>
+        <label class="lbl" style="margin-top:10px">Photo${t.photo ? " (required)" : " (optional)"}</label>
+        <div class="phbox" id="tPh">${a.ph ? `<img src="/api/ops/forms/trig/img?site=${encodeURIComponent(site)}&k=${encodeURIComponent(a.ph)}" alt="">Tap to change` : "📷 Take or choose a photo"}</div>
+        <input type="file" id="tFile" accept="image/*" capture="environment" hidden></div>
+      <div class="dlg-f"><button class="btn ghost" id="tLater">Later · on submit</button><button class="btn" id="tNow" style="background:var(--alert)">Send now</button></div>`;
+    const rem = d.querySelector("#tRem");
+    rem.oninput = () => { a.r = rem.value; const i = document.querySelector(`input[data-r="${id}"]`); if (i) i.value = rem.value; changed(); };
+    d.querySelector("#tPh").onclick = () => d.querySelector("#tFile").click();
+    d.querySelector("#tFile").onchange = async ev => { const f = ev.target.files[0]; if (!f) return;
+      const box = d.querySelector("#tPh"); box.textContent = "Uploading the photo…";
+      try { const data = await shrinkPhoto(f); const r = await api("ops/forms/trig/photo", { site, form: FORM, day: run.day, itemId: id, data }); a.ph = r.key; changed(); draw(); }
+      catch (e){ toast(e.message, true); draw(); } };
+    d.querySelector("#tLater").onclick = () => { d.close(); redrawRows(); };
+    d.querySelector("#tNow").onclick = async ev => {
+      if (t.remark && !String(a.r || "").trim()) return toast("Write what is wrong first", true);
+      if (t.photo && !a.ph) return toast("Add a photo first", true);
+      const b = ev.currentTarget; b.disabled = true; b.textContent = "Sending…";
+      try { await flush(); const r = await api("ops/forms/trig/fire", { site, form: FORM, day: run.day, itemId: id, remark: a.r || "", photo: a.ph || "", runId: run.id || 0 });
+        run.trig.fired[id] = { at: new Date().toISOString(), mfId: r.mfId || 0, result: r }; d.close(); redrawRows();
+        const done = [r.mfId ? `malfunction #${r.mfId}` : "", r.notified ? `${r.notified} notified` : "", r.chat ? "Team chat" : "", r.email ? "email sent" : "", r.followups ? "follow-up" : "", r.escalated ? "escalated" : ""].filter(Boolean);
+        toast(r.already ? "Already sent today" : `⚡ Sent: ${done.join(" · ") || "done"}`); }
+      catch (e){ b.disabled = false; b.textContent = "Send now"; toast(e.message, true); } };
+  };
+  draw(); if (!d.open) d.showModal();
+}
+/* admins and the flagship's managers: set / change / remove the trigger of one item */
+let TL = null;
+async function trigEdit(id){
+  const it = run.items.find(i => i.id === id); if (!it) return;
+  try { TL = TL || await api(`ops/forms/trig/list?form=${FORM}&site=${site}`); } catch (e){ return toast(e.message, true); }
+  const c = TL.triggers[id] || { actions: {}, require: { remark: true } }, A = c.actions || {}, E = c.escalate || {};
+  const d = dlg("dTe");
+  const gbox = (pre, sel) => Object.entries(TL.groups).map(([k, n]) => `<label class="chk"><input type="checkbox" data-${pre}="${k}" ${sel.includes(k) ? "checked" : ""}> ${esc(n)}</label>`).join("");
+  d.innerHTML = `<div class="dlg-h"><b>⚡ Trigger · ${esc(M.meta.short)} · ${esc(ctx.siteName)}</b><small>${esc(it.t)}</small></div><div class="dlg-b">
+    <p class="muted" style="font-size:.8rem;margin:0 0 6px">When this item is ticked <b style="color:var(--alert)">✗</b>:</p>
+    <label class="tgl">🛠 Create a Malfunction Record<input type="checkbox" id="eMf" ${A.mf ? "checked" : ""}></label>
+    <div class="tsub" id="eMfB"><select class="sel" id="eCat">${TL.categories.map(x => `<option ${(A.mf || {}).category === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <select class="sel" id="ePri">${TL.priorities.map(x => `<option ${((A.mf || {}).priority || "Medium") === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></div>
+    <label class="tgl">🔔 Notify (hub alert + push)<input type="checkbox" id="eNo" ${A.notify ? "checked" : ""}></label>
+    <div class="tsub" id="eNoB">${gbox("ng", (A.notify || {}).groups || [])}
+      <input class="inp" id="eNp" list="tPeople" placeholder="More people: emails, comma separated" value="${esc(((A.notify || {}).people || []).join(", "))}"></div>
+    <label class="tgl">💬 Post in the flagship's Team chat<input type="checkbox" id="eCh" ${A.chat ? "checked" : ""}></label>
+    <label class="tgl">✉ Email (for example the contractor)<input type="checkbox" id="eEm" ${A.email ? "checked" : ""}></label>
+    <div class="tsub" id="eEmB"><input class="inp" id="eEt" placeholder="email@company.com, …" value="${esc(((A.email || {}).to || []).join(", "))}"></div>
+    <label class="tgl">🚩 Follow-up flag for the people notified<input type="checkbox" id="eFu" ${A.fu ? "checked" : ""}></label>
+    <p class="lbl" style="margin-top:12px">Ask the person filling it</p>
+    <label class="tgl">✍ Remark required<input type="checkbox" id="eRr" ${c.require.remark !== false ? "checked" : ""}></label>
+    <label class="tgl">📷 Photo required<input type="checkbox" id="eRp" ${c.require.photo ? "checked" : ""}></label>
+    <p class="lbl" style="margin-top:12px">Escalate when repeated</p>
+    <div class="tsub"><select class="sel" id="eEa"><option value="0">No escalation</option>${[2, 3, 4, 5, 7].map(n => `<option value="${n}" ${E.after === n ? "selected" : ""}>✗ ${n} times in a row</option>`).join("")}</select>
+      <div id="eEaB">${gbox("eg", E.groups || ["managers"])}<input class="inp" id="eEp" list="tPeople" placeholder="More people: emails" value="${esc((E.people || []).join(", "))}"></div></div>
+    ${ctx.me.role === "ADMIN" ? `<label class="tgl">Apply to all five flagships (same item)<input type="checkbox" id="eAll"></label>` : ""}
+    <datalist id="tPeople">${TL.people.map(p => `<option value="${esc(p.email)}">${esc(p.name)}${p.site ? " · " + esc(p.site) : ""}</option>`).join("")}</datalist></div>
+    <div class="dlg-f">${TL.triggers[id] ? `<button class="btn ghost danger" id="eDel" style="margin-right:auto">Remove</button>` : ""}<button class="btn ghost" id="eX">Cancel</button><button class="btn" id="eOk">Save trigger</button></div>`;
+  const vis = () => { d.querySelector("#eMfB").style.display = d.querySelector("#eMf").checked ? "" : "none"; d.querySelector("#eNoB").style.display = d.querySelector("#eNo").checked ? "" : "none";
+    d.querySelector("#eEmB").style.display = d.querySelector("#eEm").checked ? "" : "none"; d.querySelector("#eEaB").style.display = d.querySelector("#eEa").value !== "0" ? "" : "none"; };
+  d.querySelectorAll("input,select").forEach(x => x.addEventListener("change", vis)); vis();
+  const list = v => v.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+  const after = async () => { TL = null; const fresh = await api(`ops/forms/${run.id ? `get?id=${run.id}` : `new?form=${FORM}`}&site=${site}`); run.trig = fresh.run.trig; redrawRows(); };
+  d.querySelector("#eX").onclick = () => d.close();
+  const del = d.querySelector("#eDel"); if (del) del.onclick = async () => { try { await api("ops/forms/trig/save", { site, form: FORM, itemId: id, remove: true, allSites: !!(d.querySelector("#eAll") || {}).checked }); d.close(); toast("Trigger removed"); after(); } catch (e){ toast(e.message, true); } };
+  d.querySelector("#eOk").onclick = async () => {
+    const g = pre => [...d.querySelectorAll(`[data-${pre}]:checked`)].map(x => x.getAttribute(`data-${pre}`));
+    const cfg = { actions: {
+        ...(d.querySelector("#eMf").checked ? { mf: { on: true, category: d.querySelector("#eCat").value, priority: d.querySelector("#ePri").value } } : {}),
+        ...(d.querySelector("#eNo").checked ? { notify: { groups: g("ng"), people: list(d.querySelector("#eNp").value) } } : {}),
+        ...(d.querySelector("#eCh").checked ? { chat: true } : {}),
+        ...(d.querySelector("#eEm").checked ? { email: { to: list(d.querySelector("#eEt").value) } } : {}),
+        ...(d.querySelector("#eFu").checked ? { fu: true } : {}) },
+      require: { remark: d.querySelector("#eRr").checked, photo: d.querySelector("#eRp").checked },
+      ...(d.querySelector("#eEa").value !== "0" ? { escalate: { after: Number(d.querySelector("#eEa").value), groups: g("eg"), people: list(d.querySelector("#eEp").value) } } : {}) };
+    try { const r = await api("ops/forms/trig/save", { site, form: FORM, itemId: id, cfg, allSites: !!(d.querySelector("#eAll") || {}).checked });
+      d.close(); toast(r.sites > 1 ? `Trigger saved for ${r.sites} flagships` : "Trigger saved"); after(); } catch (e){ toast(e.message, true); }
+  };
+  d.showModal();
 }
 
 /* ---------- saving ---------- */
