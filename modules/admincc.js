@@ -189,6 +189,24 @@ async function overview(env, d) {
     jobs: { ok: J.filter(j => j.ok).length, total: J.length, bad: jobsBad.map(j => j.name) },
     backup: bk, security: { failed: Number(fails.n) || 0, signins: Number(okIns.n) || 0, twofaMissing: tf.n } };
 }
+/* landing layout: { sections: [{ id, name, icon, size: card|small, closed, items: [page or shortcut ids] }], hidden: [ids], shortcuts: [{ id, name, icon, kind: tool|link, ref }] } */
+function cleanLanding(x) {
+  const idOk = v => /^[\w-]{1,40}$/.test(String(v || ""));
+  const seen = new Set();
+  const shortcuts = (Array.isArray(x.shortcuts) ? x.shortcuts : []).slice(0, 40).map(c => {
+    const kind = c && c.kind === "link" ? "link" : "tool", ref = clip(c && c.ref, 300);
+    if (!c || !/^x[\w-]{1,30}$/.test(String(c.id || "")) || !ref) return null;
+    if (kind === "link" && !/^https:\/\/[^\s"<>]+$/i.test(ref)) return null;
+    if (kind === "tool" && !idOk(ref)) return null;
+    return { id: c.id, name: clip(c.name, 50) || ref, icon: clip(c.icon, 12) || "🔗", kind, ref };
+  }).filter(Boolean);
+  const sections = (Array.isArray(x.sections) ? x.sections : []).slice(0, 30).map(sc => {
+    if (!sc || !/^s[\w-]{1,30}$/.test(String(sc.id || ""))) return null;
+    const items = (Array.isArray(sc.items) ? sc.items : []).filter(i => idOk(i) && !seen.has(i) && seen.add(i)).slice(0, 80);
+    return { id: sc.id, name: clip(sc.name, 40) || "Section", icon: clip(sc.icon, 12), size: sc.size === "small" ? "small" : "card", closed: !!sc.closed, items };
+  }).filter(Boolean);
+  return { sections, hidden: (Array.isArray(x.hidden) ? x.hidden : []).filter(idOk).slice(0, 80), shortcuts };
+}
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : n >= 1e3 ? Math.round(n / 1e3) + " k" : String(n);
 async function twofaMissing(env, d) {
   const roles = await d.requiredRoles(env).catch(() => []); if (!roles.length) return { n: 0, emails: [] };
@@ -239,6 +257,8 @@ export async function admRoute(env, a, method, b, url, d) {
     const sys = await systems(env, d, url.searchParams.get("fresh") === "1");
     return { ...sys, secrets: SECRETS.map(([k, use, req]) => ({ name: k, use, required: req, set: !!env[k] })), jobs: await jobs(env, d) };
   }
+  /* Landing page of the Admin Control Center: one arrangement shared by every administrator (Oct 2026) */
+  if (a === "cc/landing" && method === "GET") return { layout: await metaJson(env, "admin:landing") };
   if (a === "cc/tools" && method === "GET") {
     const cfg = await toolsCfg(env), since = new Date(Date.now() - 7 * 864e5).toISOString();
     const use = ((await env.DB.prepare("SELECT app, COUNT(*) AS n, COUNT(DISTINCT email) AS people FROM usage_log WHERE at >= ? GROUP BY app").bind(since).all()).results || []);
@@ -276,6 +296,14 @@ export async function admRoute(env, a, method, b, url, d) {
     if (u.email === me.email) throw err("That is you");
     await log("view as", `Viewed the hub as ${u.full_name}`, u.email);
     return { cookie: await d.viewAsCookie(env, me.email, u.email), name: u.full_name };
+  }
+  if (a === "cc/landing") {
+    if (b.reset) { await env.DB.prepare("DELETE FROM meta WHERE k = 'admin:landing'").run(); await log("landing", "Admin Control landing page reset to the standard arrangement"); return { layout: null }; }
+    const L = cleanLanding(b.layout || {});
+    L.at = new Date().toISOString(); L.by = me.full_name || me.email;
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('admin:landing', ?)").bind(JSON.stringify(L)).run();
+    await log("landing", `Admin Control landing page arranged · ${L.sections.length} sections${L.shortcuts.length ? ` · ${L.shortcuts.length} shortcuts` : ""}`);
+    return { layout: L };
   }
   if (a === "cc/tools") {
     const id = clip(b.id, 40); if (!/^[\w-]+$/.test(id)) throw err("Choose a tool");
