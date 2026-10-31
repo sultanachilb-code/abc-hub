@@ -389,3 +389,22 @@ export async function chatRun(env) {
     await env.DB.prepare(`DELETE FROM chat_msgs WHERE id IN (${rows.map(() => "?").join(",")})`).bind(...rows.map(r => r.id)).run();
   }
 }
+
+/* ---------- a message posted by the hub on someone's behalf (checklist triggers, Oct 2026) ----------
+   Into the flagship's ready-made "Team" group, as the person who ticked the item; with an optional photo already in R2. */
+export async function chatPostTeam(env, site, me, text, photo) {
+  const c = await env.DB.prepare("SELECT id, name FROM chat_convs WHERE auto_key = ?").bind("site:" + site).first();
+  if (!c) return { ok: false, error: "No team group for this flagship yet" };
+  const now = new Date().toISOString(), body = clip(text, 4000);
+  const kind = photo && photo.key ? "photo" : "text";
+  const r = await env.DB.prepare(`INSERT INTO chat_msgs (conv_id, email, name, kind, body, file_key, file_name, file_type, file_size, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+    .bind(c.id, me.email, me.full_name || me.email, kind, body, photo ? photo.key : "", photo ? photo.name || "photo.jpg" : "", photo ? photo.type || "image/jpeg" : "", photo ? photo.size || 0 : 0, now).run();
+  const row = { id: r.meta.last_row_id, conv_id: c.id, email: me.email, name: me.full_name || me.email, kind, body, file_key: photo ? photo.key : "", file_name: photo ? photo.name || "photo.jpg" : "",
+    file_type: photo ? photo.type || "image/jpeg" : "", file_size: photo ? photo.size || 0 : 0, dur: 0, reply_to: 0, mentions: "", reactions: "", deleted: 0, created_at: now };
+  await env.DB.prepare("UPDATE chat_convs SET last_at = ?, last_text = ?, last_by = ? WHERE id = ?").bind(now, clip(preview(row), 140), me.full_name || me.email, c.id).run();
+  const { results: mem } = await env.DB.prepare("SELECT email, muted FROM chat_members WHERE conv_id = ?").bind(c.id).all();
+  const viewing = new Set(await fan(env, (mem || []).map(x => x.email), { type: "chat", ev: "msg", c: c.id, msg: msgOut(row) }, c.id));
+  await pushMany(env, (mem || []).filter(x => x.email !== me.email && !x.muted && !viewing.has(x.email)).map(x => x.email),
+    { title: "💬 " + c.name, body: `${me.full_name || ""}: ${clip(preview(row), 160)}`, tag: "chat-" + c.id, url: "/?chat=" + encodeURIComponent(c.id), ttl: 86400 });
+  return { ok: true, conv: c.id, name: c.name };
+}

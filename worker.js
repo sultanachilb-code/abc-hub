@@ -7,7 +7,7 @@ import { emergencySchema, emergencyRoute, emergencyRun, emergencyDeps } from "./
 export { EmergencyPager } from "./modules/emergency.js";
 import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules/phone.js";   // Hub Phone — see docs/FEATURE-hub-phone.md
 export { PhoneHub } from "./modules/phone.js";
-import { chatSchema, chatRoute, chatDeps, chatSync, chatRun } from "./modules/chat.js";
+import { chatSchema, chatRoute, chatDeps, chatSync, chatRun, chatPostTeam } from "./modules/chat.js";
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
@@ -1997,7 +1997,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("emergency/")) return emergencyRoute(env, p, method, b, url, { site, can, me, now: nowIso, raiseEvent, sendPush, canSite: s => canSite(me, s), sites: sitesOf(me) });
 
   /* ----- Operations Forms feature (modules/forms.js) ----- */
-  if (p.startsWith("forms/")) return formsRoute(env, p, method, b, url, { site, can, me, now: nowIso, today: beirutToday, raiseEvent });
+  if (p.startsWith("forms/")) return formsRoute(env, p, method, b, url, { site, can, me, now: nowIso, today: beirutToday, raiseEvent, relay, siteName, chatPostTeam });   // ⚡ triggers: malfunction, notify, Team chat, email
 
   /* ----- tenant feedback ----- */
   if (p === "feedback/list") {
