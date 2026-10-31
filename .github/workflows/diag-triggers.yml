@@ -10,7 +10,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" | jq -c '.[0].results[]' ; }
-          echo "== triggers"; q "SELECT site, form, item_id, data, updated_at FROM form_triggers" || true
-          echo "== log"; q "SELECT site, form, day, item_id, item_text, by_name, at, result FROM form_trig_log ORDER BY id DESC LIMIT 20" || true
-          echo "== today's AM/PM"; q "SELECT id, site, form, day, status, updated_at, issues FROM form_runs WHERE day >= date('now','-1 day') ORDER BY id DESC LIMIT 15" || true
+          q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" | jq -r '.[0].results[] | tojson' | while read -r l; do echo "::notice title=$2::${l//,/ ·}"; done; }
+          q "SELECT site, form, item_id, data, updated_at FROM form_triggers" "triggers" || true
+          q "SELECT site, form, day, item_id, item_text, by_name, at, result FROM form_trig_log ORDER BY id DESC LIMIT 20" "log" || true
+          q "SELECT id, site, form, day, status, updated_at, issues FROM form_runs WHERE day >= date('now','-1 day') ORDER BY id DESC LIMIT 15" "todays AM/PM" || true
