@@ -22,6 +22,7 @@ sheet "ABC Verdun - Cleaner Control Sheet" (Workers, Attendance, Agents, Images,
 ## Emails (Outlook, from salaachi@abc.com.lb)
 - 21:00 daily entry report per flagship — To: security supervisor (Daily report tab), Cc: the flagship's operations group email (+ extra Cc).
 - Last day of each month 10:00 — one verification email per tenant (tenant email from the Tenants tab), Cc the operations group email.
+- Shift Handover (Daily operations tracker): one live line "Cleaners in the mall today · N" — the number only.
 - Only once switched; afterwards delete the Apps Script triggers `sendDailyReport` and `sendMonthlyVerification`.
 
 ## Migration (Cleaner Access → Migration, administrators)

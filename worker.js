@@ -2346,7 +2346,8 @@ async function opsRoute(env, me, p, method, b, url) {
     gateMarks = { ...gateMarks, ...(await gateScanMarks(env, site, day).catch(() => ({}))) };   // and approvals scanned before their REQ was imported
     const access = await accessLog(env, site, day, hd).catch(() => []);   // every contractor access of the day, flagged when no handover line covers it
     const cleaning = await ccHandover(env, site, day).catch(() => null);   // Cleaning Control: the cleaning schedule — done, missing, special tasks
-    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks, access, cleaning };
+    const cleaners = await cleanersCount(env, site, day);   // Cleaner Access: how many cleaners entered the mall today (number only)
+    return { day, am: ck("am"), pm: ck("pm"), restroom, incidents, feedback, calendar, gate, gateMarks, access, cleaning, cleaners };
   }
   if (p === "handover/save" && method === "POST") {
     if (!can.handover) throw fail("Not allowed", 403);
@@ -2845,6 +2846,16 @@ async function pullDay(env, id, site, day) {
   } catch (e) { return { error: "Not reachable" }; }
 }
 /* Cleaner QR access lives in a Google Sheet: an Apps Script web app returns the day's entries */
+/* Shift Handover: only the number of cleaners who entered today (live). From the sheet (before the switch) at most every 2 minutes. */
+const CLN_COUNT = new Map();
+async function cleanersCount(env, site, day) {
+  const k = site + "|" + day, hit = CLN_COUNT.get(k);
+  if (hit && Date.now() - hit.at < ((await clMode(env).catch(() => "sheet")) === "hub" ? 0 : 120000)) return hit.v;
+  const d = await cleanerDay(env, site, day).catch(() => null);
+  const v = d && !d.error ? { count: d.count || 0, entries: d.entries || 0 } : null;
+  if (v) CLN_COUNT.set(k, { at: Date.now(), v });
+  return v || (hit ? hit.v : null);
+}
 async function cleanerDay(env, site, day) {
   if ((await clMode(env).catch(() => "sheet")) === "hub") return cleanDay(env, site, day);   // Cleaner Access: switched to the hub
   if (!env.CLEANER_SHEET_URL) return { error: "Not connected yet" };
