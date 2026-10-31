@@ -5,17 +5,13 @@ on:
 jobs:
   q:
     runs-on: ubuntu-latest
-    env:
-      CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      ACC: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          n(){ echo "::notice title=$1::$(curl -s -m 15 "$2" | head -c 300 | tr ',' ' ')"; }
-          n incidents-signin "https://abc-incident-system.sultanachi-lb-61f.workers.dev/api/hub-signin"
-          n snaglist-signin "https://abc-snaglist.sultanalachi-work.workers.dev/api?hubsignin=1"
-          n restroom-probe "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/sso?probe=1"
-          n restroom-session "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/session"
-          n restroom-data-locked "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/report-data?from=2026-10-01&to=2026-10-31"
-          n hub-policy-nokey "https://operations-hub.sultanachi-lb-61f.workers.dev/api/sso/policy?app=snaglist"
-          echo "::notice title=pin-in-page::$(curl -s -m 15 https://abc-restroom-report.sultanachi-lb-61f.workers.dev/ | grep -c "const PIN")"
-          curl -s -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$ACC/workers/scripts/abc-incident-system/schedules" | jq -c '.result' | sed 's/^/::notice title=inc-crons::/' | tr ',' ' '
+          n(){ echo "::notice title=$1::$2"; }
+          n pass-title "$(curl -s -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8' | grep -o '<title>[^<]*')"
+          n pass-status "$(curl -s -o /dev/null -m 20 -w '%{http_code} %{redirect_url}' 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8')"
+          n admin-title "$(curl -s -m 20 'https://abcv-admin-access.sultanachi-lb-61f.workers.dev/' | grep -o '<title>[^<]*')"
+          n mode "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-mode')"
+          n cp-page "$(curl -s -m 20 -o /dev/null -w '%{http_code}' 'https://operations-hub.sultanachi-lb-61f.workers.dev/cp?id=x&t=y')"
+          n cl-pass "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-pass?id=CLN-0005&t=bad')"
+          n gate-cleaner "$(curl -s -m 20 'https://abc-loading-gate.sultanachi-lb-61f.workers.dev/api/cleaner?id=CLN-0005&t=x' | head -c 200)"
