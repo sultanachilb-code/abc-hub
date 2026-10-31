@@ -92,6 +92,35 @@ dialog.cc{border:0;border-radius:18px;padding:0;width:min(460px,calc(100% - 24px
 dialog.cc label{font-size:.76rem;font-weight:700;color:var(--cmut)}dialog.cc input{border:1px solid var(--cline);border-radius:10px;padding:9px;font:inherit;background:var(--ccard);color:var(--ctext)}
 .deny{max-width:460px;margin:80px auto;text-align:center;padding:24px}
 @media(max-width:860px){.app{grid-template-columns:1fr}nav{position:sticky;top:0;z-index:5;height:auto;display:flex;gap:2px;overflow-x:auto;padding:8px}nav .lg,nav .sep{display:none}nav button,nav a{white-space:nowrap;width:auto;padding:8px 10px}main{padding:14px 14px 70px}}
+/* ---------- Landing page (Home) with sections you arrange (Oct 2026) ---------- */
+#navL{display:contents}
+.lmore{display:flex;gap:8px;align-items:center;font-size:.8rem;color:var(--cmut);margin:-2px 0 8px;font-weight:700}
+.lsrch{display:flex;gap:8px;margin:4px 0 6px}.lsrch input{flex:1;border:1px solid var(--cline);border-radius:12px;padding:10px 12px;font:inherit;font-size:.88rem;background:var(--ccard);color:var(--ctext)}
+.ls{margin-top:16px}.ls.dragging{opacity:.35}
+.lsh{display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cmut);margin:0 0 9px;cursor:pointer;user-select:none}
+.lsh::after{content:"";flex:1;height:1px;background:var(--cline);order:5}.lsh .n{font-weight:700;letter-spacing:0;text-transform:none;opacity:.8}.lsh .cv{order:6;transition:transform .15s}.ls.closed .lsh .cv{transform:rotate(-90deg)}.ls.closed .lg2{display:none}
+.lg2{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px;min-height:20px}
+.lg2.small{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
+.lt{position:relative;display:flex;gap:10px;align-items:flex-start;background:var(--ccard);border:1px solid var(--cline);border-radius:14px;padding:11px 12px;cursor:pointer;min-height:66px;text-align:left;color:var(--ctext);font:inherit}
+.lt:hover{border-color:#8A5CC0}.lt i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-style:normal;font-size:17px;flex:none;background:var(--cpaper);border:1px solid var(--cline)}
+.lt b{display:block;font-size:.86rem;line-height:1.22}.lt small{display:block;font-size:.74rem;color:var(--cmut);margin-top:3px;line-height:1.3}.lt .pill{margin-top:5px}
+.lt .ldt{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%}
+.lg2.small .lt{flex-direction:column;align-items:center;text-align:center;min-height:0;padding:12px 6px 10px;gap:6px}.lg2.small .lt b{font-size:.76rem}.lg2.small .lt small,.lg2.small .lt .pill{display:none}
+.lt .xo{font-size:.62rem;font-weight:800;color:#8A5CC0;letter-spacing:.04em}
+/* arrange mode */
+.lebar{position:sticky;top:0;z-index:4;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#FFF6DF;border:1px solid #EED9A4;border-radius:14px;padding:10px 12px;margin-bottom:6px;color:#7A5410;font-size:.82rem;font-weight:700}
+:root[data-adm="dark"] .lebar{background:#3A2C10;border-color:#5C4718;color:#F0D08A}.lebar .sp{flex:1}
+.ed .lt{border-style:dashed;cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.ed .lt.ph{opacity:.25;border:2px dashed #C8A24A}
+.ed .lsh{cursor:default}.ed .lsh .hd2{cursor:grab;touch-action:none;color:var(--cmut);letter-spacing:-2px;font-size:.9rem;padding:2px 4px}
+.ed .lg2{border:1px dashed transparent;border-radius:14px;padding:4px;margin:-4px}.ed .lg2:empty{border-color:var(--cline);min-height:70px}.ed .lg2:empty::before{content:"Drop tiles here";display:grid;place-items:center;color:var(--cmut);font-size:.8rem;grid-column:1/-1;min-height:60px}
+.lx{position:absolute;top:5px;right:5px;border:1px solid var(--cline);background:var(--ccard);color:var(--cmut);border-radius:8px;font-size:.72rem;padding:2px 6px;cursor:pointer}
+.lsh .lb2{border:1px solid var(--cline);background:var(--ccard);color:#6B3FA0;border-radius:8px;padding:3px 8px;font:inherit;font-size:.72rem;font-weight:800;cursor:pointer;letter-spacing:0;text-transform:none}
+.lghost{position:fixed;z-index:50;pointer-events:none;transform:rotate(-2.5deg) scale(1.04);box-shadow:0 16px 34px rgba(42,15,69,.3);border:2px solid #C8A24A!important;opacity:.96;background:var(--ccard);border-radius:14px}
+.lhid{margin-top:22px;border-top:1px solid var(--cline);padding-top:6px}
+.seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--cpaper);border:1px solid var(--cline);padding:3px;border-radius:10px}.seg2 button{border:0;background:none;border-radius:8px;padding:7px;font:inherit;font-size:.78rem;font-weight:700;color:var(--ctext);cursor:pointer}.seg2 button.on{background:var(--ccard);box-shadow:0 2px 6px rgba(0,0,0,.1)}
+dialog.cc select,dialog.cc textarea{border:1px solid var(--cline);border-radius:10px;padding:9px;font:inherit;background:var(--ccard);color:var(--ctext)}
+.emo{display:flex;gap:4px;flex-wrap:wrap}.emo button{border:1px solid var(--cline);background:var(--ccard);border-radius:8px;width:34px;height:34px;font-size:17px;cursor:pointer}.emo button.on{border-color:#C8A24A;box-shadow:0 0 0 2px #C8A24A}
 </style>
 </head>
 <body>
@@ -107,7 +136,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
   try { localStorage.setItem("adm.theme", t); } catch {} document.querySelectorAll("#thm [data-th]").forEach(b => b.classList.toggle("on", b.dataset.th === t));
   document.querySelectorAll("iframe.emb").forEach(f => { try { f.contentDocument.documentElement.setAttribute("data-theme", t); } catch {} }); }
 setTheme(THEME);
-let ME = null, PAGE = (location.hash || "#ov").slice(1), UF = "all", UQ = "", USERS = null;
+let ME = null, PAGE = (location.hash || "#hm").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
   ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["ws", "🎚", "Who sees what"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
@@ -131,10 +160,11 @@ async function boot(){
   if (!ME.admin) { $("#root").innerHTML = `<div class="deny card"><h2>Administrators only</h2><p class="mut">This page is for hub administrators.</p><a class="b" href="/">Back to the hub</a></div>`; return; }
   if (!ME.admin.unlocked) return lockScreen();
   $("#root").innerHTML = `<div class="app"><nav id="nav"><div class="lg"><span class="lgm"><img src="/icons/abc-logo-white.png" alt="ABC"></span><div><b>Admin Control</b><small>${esc(ME.user.name)}</small></div></div>
-    ${NAV.map(n => n[0] === "sep" ? `<div class="sep">${n[1]}</div>` : `<button data-p="${n[0]}">${n[1]} ${n[2]}<span class="dt" id="dt-${n[0]}"></span></button>`).join("")}
+    <div id="navL"></div>
     <div class="sep">Display</div><div class="thm" id="thm"><button data-th="light">☀️ Light</button><button data-th="dark">🌙 Dark</button></div>
     <div class="sep">Hub</div><a href="/">🛡 Open the hub as administrator</a><button id="lockB">⎋ Exit administrator mode</button></nav><main id="main"></main></div>`;
-  $("#nav").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
+  $("#nav").onclick = e => { const x = e.target.closest("[data-x]"); if (x) return openShortcut(x.dataset.x); const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
+  await loadLanding(); drawNav();
   $("#lockB").onclick = async () => { await api("admin/lock", {}).catch(() => {}); location.href = "/"; };
   $("#thm").onclick = e => { const b = e.target.closest("[data-th]"); if (b) setTheme(b.dataset.th); }; setTheme(THEME);
   const qm = new URLSearchParams(location.search).get("mailbox");
@@ -143,10 +173,11 @@ async function boot(){
   go(PAGE);
 }
 function go(p){
-  PAGE = NAV.some(n => n[0] === p) ? p : "ov"; history.replaceState(null, "", "#" + PAGE);
+  PAGE = p === "hm" || NAV.some(n => n[0] === p) ? p : "hm"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
+  const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ hm, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -163,13 +194,257 @@ function lockScreen(){
 }
 function dotNav(id, t){ const d = $("#dt-" + id); if (d){ d.className = "dt" + (t ? " on bg-" + t : ""); } }
 
+/* ---------- landing page (Home): every page of the Admin Control Center as a tile, in sections the administrators arrange (Oct 2026)
+   One arrangement shared by all administrators (meta admin:landing). Pages added later appear in "Other" by themselves. ---------- */
+let LAY = null, OV = null, EDIT = null, LQ = "", OPEN = {}, LDRAG = null;
+const PG = () => Object.fromEntries(NAV.filter(n => n[0] !== "sep").map(n => [n[0], { icon: n[1], name: n[2] }]));
+const SEC_ICON = { People: "👥", Platform: "⚙️", Content: "📣" };
+const PDESC = { ov: "Today at a glance", pr: "Positions, roles and flagships", us: "Accounts, sign-in and access", ur: "Who uses which tool", sec: "Sign-ins and two-step", hi: "Every change, by whom",
+  al: "Free-plan allowances", db: "Tables and file storage", sy: "Connected systems and automatic jobs", mb: "Emails imported from IT reports", pc: "Projects and repositories", tl: "Switch tools on / off, folders",
+  ws: "Which positions see each tool", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
+function defaultLayout(){
+  const sections = []; let cur = { id: "s-glance", name: "At a glance", icon: "🏠", size: "card", closed: false, items: [] };
+  for (const n of NAV){ if (n[0] === "sep"){ if (cur.items.length) sections.push(cur); cur = { id: "s-" + n[1].toLowerCase().replace(/[^a-z]+/g, ""), name: n[1], icon: SEC_ICON[n[1]] || "", size: "card", closed: false, items: [] }; } else cur.items.push(n[0]); }
+  if (cur.items.length) sections.push(cur);
+  return { sections, hidden: [], shortcuts: [] };
+}
+/* every page sits exactly once in a section or in "hidden"; unknown ids are dropped; new pages go to "Other" */
+function normLayout(L){
+  L = JSON.parse(JSON.stringify(L && Array.isArray(L.sections) ? L : defaultLayout()));
+  L.hidden = L.hidden || []; L.shortcuts = L.shortcuts || [];
+  const known = new Set([...Object.keys(PG()), ...L.shortcuts.map(c => c.id)]), seen = new Set();
+  const keep = id => known.has(id) && !seen.has(id) && seen.add(id);
+  L.sections.forEach(s => { s.items = (s.items || []).filter(keep); });
+  L.hidden = L.hidden.filter(keep);
+  const miss = [...known].filter(id => !seen.has(id));
+  if (miss.length){ let o = L.sections.find(s => s.id === "s-other"); if (!o){ o = { id: "s-other", name: "Other", icon: "🗂", size: "card", closed: false, items: [] }; L.sections.push(o); } o.items.push(...miss); }
+  return L;
+}
+async function loadLanding(){ try { const r = await api("admin/cc/landing"); LAY = normLayout(r.layout); LAY.at = r.layout && r.layout.at; LAY.by = r.layout && r.layout.by; } catch { LAY = normLayout(null); } }
+const scOf = (L, id) => (L.shortcuts || []).find(c => c.id === id);
+const appOf = id => ((window.HUB && window.HUB.APPS) || []).find(a => a.id === id);
+function itemInfo(L, id){
+  const p = PG()[id]; if (p) return { icon: p.icon, name: p.name, page: true };
+  const c = scOf(L, id); if (!c) return null;
+  return { icon: c.icon || "🔗", name: c.name, page: false, sub: c.kind === "link" ? c.ref.replace(/^https:\/\/(www\.)?/, "").split("/")[0] : ((appOf(c.ref) || {}).name || c.ref) };
+}
+function openShortcut(id){
+  const c = scOf(LAY, id); if (!c) return;
+  if (c.kind === "link") return window.open(c.ref, "_blank", "noopener");
+  const a = appOf(c.ref), u = a && a.url; if (!u) return toast("This tool is no longer in the hub", true);
+  if (/^https?:/i.test(u)) return window.open(u, "_blank", "noopener");
+  location.href = u.startsWith("#") ? "/" + u : u;
+}
+function drawNav(){
+  const L = LAY, el = $("#navL"); if (!el) return;
+  el.innerHTML = `<button data-p="hm">🏠 Home<span class="dt" id="dt-hm"></span></button>` + L.sections.filter(s => s.items.length).map(s => `<div class="sep">${esc(s.name)}</div>` + s.items.map(id => {
+    const i = itemInfo(L, id); if (!i) return "";
+    return i.page ? `<button data-p="${id}">${esc(i.icon)} ${esc(i.name)}<span class="dt" id="dt-${id}"></span></button>` : `<button data-x="${id}">${esc(i.icon)} ${esc(i.name)} <small style="margin-left:auto;opacity:.6">↗</small></button>`;
+  }).join("")).join("");
+  document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
+  if (OV) navDots(OV);
+}
+function navDots(O){
+  const d1 = O.cloud.d1 || {}, wr = O.cloud.workers || {}, d1p = d1.pct ? Math.max(d1.pct.reads || 0, d1.pct.writes || 0) : null;
+  const t = O.alerts.some(a => a.tone === "bad") ? "bad" : O.alerts.length ? "warn" : "";
+  dotNav("ov", t); dotNav("hm", t);
+  dotNav("sy", O.systems.down.length || O.jobs.bad.length ? "bad" : ""); dotNav("al", d1p >= 70 || (wr.pct || 0) >= 70 || O.ai.pct >= 70 ? "warn" : ""); dotNav("us", O.users.twofaMissing || O.users.locked ? "warn" : "");
+  dotNav("bk", O.backup && O.backup.ok === false ? "bad" : ""); dotNav("sec", O.security.failed >= 10 ? "warn" : "");
+}
+/* live status of a page tile, from the overview figures */
+function liveOf(id, O){
+  if (!O) return null;
+  const u = O.users, d1 = O.cloud.d1 || {}, st = O.cloud.storage || {}, wr = O.cloud.workers || {}, s = O.security;
+  const d1p = d1.pct ? Math.max(d1.pct.reads || 0, d1.pct.writes || 0) : null;
+  switch (id){
+    case "ov": return { sub: O.alerts.length ? `${O.alerts.length} to look at` : "Everything is fine", p: [O.alerts.some(a => a.tone === "bad") ? "bad" : O.alerts.length ? "warn" : "ok", O.alerts.length ? O.alerts.length + " alert" + (O.alerts.length === 1 ? "" : "s") : "OK"] };
+    case "us": return { sub: `${u.active} active · ${u.online} online now`, p: u.locked ? ["warn", u.locked + " locked"] : u.twofaMissing ? ["warn", u.twofaMissing + " without two-step"] : ["ok", "OK"] };
+    case "sec": return { sub: `${s.signins} sign-ins · ${s.failed} failed · 24 h`, p: s.failed >= 10 ? ["warn", s.failed + " failed"] : ["ok", "OK"] };
+    case "ur": return { sub: `${u.today} people used the hub today` };
+    case "al": { const m = Math.max(d1p || 0, wr.pct || 0, O.ai.pct || 0); return { sub: `Database ${d1p == null ? "—" : Math.round(d1p) + " %"} · Requests ${wr.pct == null ? "—" : Math.round(wr.pct) + " %"} · AI ${O.ai.pct} %`, p: [tone(m), Math.round(m) + " %"] }; }
+    case "db": return { sub: `Database ${fmtB(st.d1 && st.d1.bytes)} · Files ${fmtB(st.r2 && st.r2.bytes)}`, p: st.pct && st.pct.r2 != null ? [tone(st.pct.r2, 80, 95), "Files " + st.pct.r2 + " %"] : null };
+    case "sy": return { sub: `${O.systems.ok} / ${O.systems.total} systems · ${O.jobs.ok} / ${O.jobs.total} jobs`, p: O.systems.down.length ? ["bad", O.systems.down.length + " down"] : O.jobs.bad.length ? ["warn", O.jobs.bad.length + " job" + (O.jobs.bad.length === 1 ? "" : "s") + " to check"] : ["ok", "All up"] };
+    case "bk": { const b = O.backup; return { sub: b ? "Last backup " + ago(b.at) : "No backup yet", p: b ? (b.ok === false ? ["bad", "Failed"] : ["ok", "OK"]) : ["warn", "None"] }; }
+    case "mb": return { sub: `${O.email.outlookSent} emails sent by Outlook today` };
+  }
+  return null;
+}
+function tileHTML(L, id, size, ed){
+  const i = itemInfo(L, id); if (!i) return "";
+  const lv = i.page ? liveOf(id, OV) : null;
+  const sub = lv ? lv.sub : i.page ? PDESC[id] || "" : i.sub;
+  const pl = lv && lv.p ? pill(lv.p[0], esc(lv.p[1])) : "";
+  const dot = size === "small" && lv && lv.p && lv.p[0] !== "ok" ? `<span class="ldt bg-${lv.p[0]}"></span>` : "";
+  const ctl = ed ? (i.page ? `<button class="lx" data-hide="${id}" title="Hide from the landing page">👁</button>` : `<button class="lx" data-delx="${id}" title="Remove this shortcut">✕</button>`) : "";
+  return `<div class="lt" data-id="${id}" ${ed ? "" : `role="button" tabindex="0"`}><i>${esc(i.icon)}</i><div><b>${esc(i.name)}</b>${i.page ? "" : `<span class="xo">SHORTCUT ↗</span>`}${sub ? `<small>${esc(sub)}</small>` : ""}${pl}</div>${dot}${ctl}</div>`;
+}
+async function hm(){
+  if (!LAY) await loadLanding();
+  const L = EDIT || LAY, ed = !!EDIT, hr = new Date().getHours();
+  const q = LQ.trim().toLowerCase();
+  const match = id => { if (!q) return true; const i = itemInfo(L, id); return i && (i.name + " " + (PDESC[id] || "") + " " + (i.sub || "")).toLowerCase().includes(q); };
+  const secs = L.sections.map(s => {
+    const items = ed ? s.items : s.items.filter(match);
+    if (!ed && (!items.length)) return "";
+    const closed = !ed && !q && (s.id in OPEN ? !OPEN[s.id] : s.closed);
+    return `<section class="ls ${closed ? "closed" : ""}" data-sid="${s.id}"><div class="lsh" data-tg="${s.id}">${ed ? `<span class="hd2" data-sh="${s.id}" title="Drag to move the section">⋮⋮</span>` : ""}<span>${esc(s.icon || "")} ${esc(s.name)}</span><span class="n">· ${s.items.length}</span>${ed ? `<button class="lb2" data-sset="${s.id}">⚙ Settings</button>` : `<span class="cv">▾</span>`}</div>
+      <div class="lg2 ${s.size === "small" ? "small" : ""}" data-sec="${s.id}">${items.map(id => tileHTML(L, id, s.size, ed)).join("")}</div></section>`;
+  }).join("");
+  const none = !ed && q && !L.sections.some(s => s.items.some(match));
+  V((ed ? `<div class="lebar">✎ Arranging — drag tiles and sections (long-press on a phone)<span class="sp"></span><button class="b g" id="lAddS">＋ Section</button><button class="b g" id="lAddX">＋ Shortcut</button><button class="b g" id="lReset">Reset</button><button class="b g" id="lCancel">Cancel</button><button class="b" id="lSave">Save</button></div>`
+      : head(`${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(ME.user.name.split(" ")[0])}`, `Admin Control Center · ${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Beirut" })}${LAY.at ? ` · arranged by ${esc(LAY.by || "")}` : ""}`, `<button class="b g" id="lArr">✎ Arrange</button><button class="b g" id="rf">↻</button>`)
+        + `<div id="lAl">${OV ? alertsHTML(OV) : ""}</div><div class="lsrch"><input id="lQ" placeholder="🔎 Search a page, setting or person…" value="${esc(LQ)}" autocomplete="off"></div>`)
+    + `<div id="lsecs" class="${ed ? "ed" : ""}">${secs}</div>`
+    + (none ? `<div class="allgood" style="border-left-color:#8A5CC0;margin-top:14px">Nothing matches “${esc(LQ)}”. <button class="b g" id="lPpl" style="margin-left:8px">Search people for “${esc(LQ)}”</button></div>` : "")
+    + (ed ? `<section class="ls lhid"><div class="lsh"><span>👁 Hidden from the landing page</span><span class="n">· still in Search · drag back to show</span></div><div class="lg2 small" data-sec="_hidden">${L.hidden.map(id => tileHTML(L, id, "small", false)).join("")}</div></section>` : ""));
+  wireHome(ed);
+  if (!ed && !OV) api("admin/cc/overview").then(O => { OV = O; navDots(O); if (PAGE === "hm" && !EDIT) hm(); }).catch(() => {});
+}
+function alertsHTML(O){ const n = O.alerts.length - 3; return O.alerts.slice(0, 3).map(a => `<div class="al ${a.tone === "bad" ? "bad" : ""}"><div class="m"><b>${esc(a.title)}</b>${a.sub ? `<small>${esc(a.sub)}</small>` : ""}</div><button class="b g" data-go="${a.where}">Open</button></div>`).join("") + (n > 0 ? `<div class="lmore">+ ${n} more alert${n === 1 ? "" : "s"}<button class="b g" data-go="ov">See all in Overview</button></div>` : ""); }
+function wireHome(ed){
+  const m = $("#main");
+  if (!ed){
+    $("#lArr").onclick = () => { EDIT = JSON.parse(JSON.stringify(LAY)); hm(); };
+    $("#rf").onclick = () => { OV = null; hm(); };
+    const qi = $("#lQ"); qi.oninput = () => { LQ = qi.value; const pos = qi.selectionStart; hm().then(() => { const n = $("#lQ"); n.focus(); n.setSelectionRange(pos, pos); }); };
+    qi.onkeydown = e => { if (e.key === "Enter"){ const t = m.querySelector(".lt"); if (t) t.click(); else if (LQ.trim()) { UQ = LQ.trim(); LQ = ""; go("us"); } } };
+    m.onclick = e => {
+      const g = e.target.closest("[data-go]"); if (g) return go(g.dataset.go);
+      if (e.target.closest("#lPpl")){ UQ = LQ.trim(); LQ = ""; return go("us"); }
+      const t = e.target.closest(".lt[data-id]"); if (t){ const id = t.dataset.id; LQ = ""; return PG()[id] ? go(id) : openShortcut(id); }
+      const h = e.target.closest("[data-tg]"); if (h){ const s = LAY.sections.find(x => x.id === h.dataset.tg); const cl = h.parentElement.classList.toggle("closed"); OPEN[s.id] = !cl; }
+    };
+    m.onkeydown = e => { if (e.key === "Enter" && e.target.matches(".lt")) e.target.click(); };
+    return;
+  }
+  const W = EDIT;
+  $("#lCancel").onclick = () => { EDIT = null; hm(); };
+  $("#lSave").onclick = async e => { e.target.disabled = true;
+    try { const r = await api("admin/cc/landing", { layout: W }); LAY = normLayout(r.layout); LAY.at = r.layout.at; LAY.by = r.layout.by; EDIT = null; drawNav(); toast("Landing page saved for all administrators"); hm(); }
+    catch (er){ e.target.disabled = false; toast(er.message, true); } };
+  $("#lReset").onclick = async () => {
+    if (!(await confirmBox("Reset the landing page", "Back to the standard sections (People, Platform, Content). Your sections and shortcuts are removed.", "Reset"))) return;
+    try { await api("admin/cc/landing", { reset: true }); LAY = normLayout(null); EDIT = null; drawNav(); toast("Landing page reset"); hm(); } catch (er){ toast(er.message, true); } };
+  $("#lAddS").onclick = () => secDialog(null);
+  $("#lAddX").onclick = () => shortcutDialog();
+  m.onclick = e => {
+    const st = e.target.closest("[data-sset]"); if (st) return secDialog(st.dataset.sset);
+    const hd = e.target.closest("[data-hide]"); if (hd){ const id = hd.dataset.hide; W.sections.forEach(s => s.items = s.items.filter(x => x !== id)); W.hidden.push(id); return hm(); }
+    const dx = e.target.closest("[data-delx]"); if (dx){ const id = dx.dataset.delx; W.sections.forEach(s => s.items = s.items.filter(x => x !== id)); W.shortcuts = W.shortcuts.filter(c => c.id !== id); return hm(); }
+  };
+  m.onkeydown = null;
+  m.onpointerdown = dragStart;
+  m.oncontextmenu = e => { if (e.target.closest(".lt,[data-sh]")) e.preventDefault(); };
+}
+/* drag and drop with the pointer (mouse: straight away · finger: after a short press, so the page still scrolls) */
+function readOrder(){
+  const W = EDIT; if (!W) return;
+  const by = {}; document.querySelectorAll("#main .lg2[data-sec]").forEach(g => { by[g.dataset.sec] = [...g.querySelectorAll(":scope > .lt[data-id]")].map(t => t.dataset.id); });
+  const order = [...document.querySelectorAll("#lsecs > .ls[data-sid]")].map(x => x.dataset.sid);
+  W.sections = order.map(id => W.sections.find(s => s.id === id)).filter(Boolean);
+  W.sections.forEach(s => { if (by[s.id]) s.items = by[s.id]; });
+  if (by._hidden) W.hidden = by._hidden;
+}
+function dragStart(e){
+  if (!EDIT || e.button > 0 || e.target.closest("button:not(.hd2)") || e.target.closest("[data-hide],[data-delx],[data-sset]")) return;
+  const sh = e.target.closest("[data-sh]"), tile = !sh && e.target.closest(".lt[data-id]");
+  if (!sh && !tile) return;
+  const el = sh ? sh.closest(".ls") : tile;
+  const D = LDRAG = { el, kind: sh ? "sec" : "tile", x0: e.clientX, y0: e.clientY, on: false, id: e.pointerId, touch: e.pointerType !== "mouse" };
+  if (D.touch && !sh) D.timer = setTimeout(() => begin(D, D.x0, D.y0), 260); else if (sh) begin(D, e.clientX, e.clientY);
+  const mv = ev => {
+    if (ev.pointerId !== D.id) return;
+    if (!D.on){ const d = Math.hypot(ev.clientX - D.x0, ev.clientY - D.y0); if (D.touch){ if (d > 8){ clearTimeout(D.timer); end(); } return; } if (d > 5) begin(D, ev.clientX, ev.clientY); else return; }
+    ev.preventDefault(); moveTo(D, ev.clientX, ev.clientY);
+  };
+  const up = ev => { if (ev.pointerId !== D.id) return; clearTimeout(D.timer); end(); };
+  const end = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+    if (D.on){ D.ghost.remove(); D.el.classList.remove("ph", "dragging"); readOrder(); setTimeout(() => hm(), 0); } LDRAG = null; };
+  addEventListener("pointermove", mv, { passive: false }); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+}
+function begin(D, x, y){
+  if (D.on) return; D.on = true;
+  const r = D.el.getBoundingClientRect(); D.dx = x - r.left; D.dy = y - r.top;
+  const g = D.kind === "sec" ? D.el.querySelector(".lsh").cloneNode(true) : D.el.cloneNode(true);
+  g.classList.add("lghost"); g.style.width = r.width + "px"; if (D.kind === "sec") g.style.padding = "8px 12px";
+  g.style.left = r.left + "px"; g.style.top = r.top + "px"; document.body.append(g); D.ghost = g;
+  D.el.classList.add(D.kind === "sec" ? "dragging" : "ph");
+  try { navigator.vibrate && navigator.vibrate(12); } catch {}
+}
+function moveTo(D, x, y){
+  D.ghost.style.left = (x - D.dx) + "px"; D.ghost.style.top = (y - D.dy) + "px";
+  if (y < 70) scrollBy(0, -14); else if (y > innerHeight - 70) scrollBy(0, 14);
+  const t = document.elementFromPoint(x, y); if (!t) return;
+  if (D.kind === "tile"){
+    const g = t.closest(".lg2[data-sec]"); if (!g) return;
+    const ov = t.closest(".lt[data-id]");
+    if (ov && ov !== D.el){ const r = ov.getBoundingClientRect(); const after = g.classList.contains("small") || r.width < 300 ? x > r.left + r.width / 2 : y > r.top + r.height / 2; g.insertBefore(D.el, after ? ov.nextSibling : ov); }
+    else if (!ov && D.el.parentElement !== g) g.append(D.el);
+  } else {
+    const s = t.closest("#lsecs > .ls[data-sid]"); if (!s || s === D.el) return;
+    const r = s.getBoundingClientRect(); s.parentElement.insertBefore(D.el, y > r.top + r.height / 2 ? s.nextSibling : s);
+  }
+}
+document.addEventListener("touchmove", e => { if (LDRAG && LDRAG.on) e.preventDefault(); }, { passive: false });
+const EMOJI = ["🏠", "⭐", "👥", "⚙️", "📣", "🔐", "📊", "🗄", "🔌", "💾", "🧩", "🧭", "📥", "🖼", "🛡", "🚨", "🧰", "📁", "🔗", "📌"];
+function emoPick(cur){ return `<div class="emo" id="dEmo">${EMOJI.map(x => `<button type="button" data-e="${x}" class="${x === cur ? "on" : ""}">${x}</button>`).join("")}<input id="dIc" value="${esc(cur || "")}" maxlength="8" style="width:64px;text-align:center" title="Or type / paste any emoji"></div>`; }
+function wireEmo(d){ d.querySelector("#dEmo").onclick = e => { const b = e.target.closest("[data-e]"); if (!b) return; d.querySelector("#dIc").value = b.dataset.e; d.querySelectorAll("#dEmo [data-e]").forEach(x => x.classList.toggle("on", x === b)); }; }
+function segVal(d, id){ const b = d.querySelector(`#${id} button.on`); return b && b.dataset.v; }
+function wireSeg(d){ d.querySelectorAll(".seg2").forEach(g => g.onclick = e => { const b = e.target.closest("button"); if (!b) return; g.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); }); }
+function secDialog(sid){
+  const W = EDIT, s = sid ? W.sections.find(x => x.id === sid) : { name: "", icon: "📁", size: "card", closed: false, items: [] }, d = $("#dlg");
+  d.innerHTML = `<div class="bd"><b>${sid ? "⚙ Section settings" : "＋ New section"}</b>
+    <label>Name</label><input id="dNm" maxlength="40" value="${esc(s.name)}" placeholder="e.g. Every morning">
+    <label>Icon</label>${emoPick(s.icon)}
+    <label>Tiles</label><div class="seg2" id="dSz"><button type="button" data-v="card" class="${s.size !== "small" ? "on" : ""}">Cards with status</button><button type="button" data-v="small" class="${s.size === "small" ? "on" : ""}">Small icons</button></div>
+    <label>When the page opens</label><div class="seg2" id="dCl"><button type="button" data-v="0" class="${!s.closed ? "on" : ""}">Open</button><button type="button" data-v="1" class="${s.closed ? "on" : ""}">Collapsed</button></div>
+    <div style="display:flex;gap:8px;margin-top:8px">${sid && W.sections.length > 1 ? `<button class="b r" id="dDel">Delete section</button>` : ""}<span style="flex:1"></span><button class="b g" id="dNo">Cancel</button><button class="b" id="dOk">${sid ? "Done" : "Add"}</button></div>
+    ${sid ? `<span class="mut">Deleting a section never removes pages: its tiles move to “Other”.</span>` : ""}</div>`;
+  wireEmo(d); wireSeg(d); d.showModal(); setTimeout(() => d.querySelector("#dNm").focus(), 30);
+  d.onclick = e => { if (e.target === d) d.close(); };
+  d.querySelector("#dNo").onclick = () => d.close();
+  d.querySelector("#dOk").onclick = () => {
+    const nm = d.querySelector("#dNm").value.trim(); if (!nm) return toast("Give the section a name", true);
+    Object.assign(s, { name: nm.slice(0, 40), icon: d.querySelector("#dIc").value.trim().slice(0, 8), size: segVal(d, "dSz") || "card", closed: segVal(d, "dCl") === "1" });
+    if (!sid){ s.id = "s" + Date.now().toString(36); W.sections.unshift(s); }
+    d.close(); hm(); if (!sid) setTimeout(() => { const n = document.querySelector(`[data-sid="${s.id}"]`); n && n.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50);
+  };
+  const del = d.querySelector("#dDel"); if (del) del.onclick = () => {
+    W.sections = W.sections.filter(x => x !== s);
+    if (s.items.length){ let o = W.sections.find(x => x.id === "s-other"); if (!o){ o = { id: "s-other", name: "Other", icon: "🗂", size: "card", closed: false, items: [] }; W.sections.push(o); } o.items.push(...s.items); }
+    d.close(); hm();
+  };
+}
+function shortcutDialog(){
+  const W = EDIT, d = $("#dlg"), apps = ((window.HUB && window.HUB.APPS) || []).filter(a => a.url).slice().sort((a, b) => a.name.localeCompare(b.name));
+  d.innerHTML = `<div class="bd"><b>＋ Add a shortcut tile</b><span class="mut">Opens a hub tool (for example the GLA, checklist triggers or the Restroom system) or any link.</span>
+    <div class="seg2" id="dK"><button type="button" data-v="tool" class="on">Hub tool</button><button type="button" data-v="link">Link</button></div>
+    <div id="dTool"><label>Tool</label><select id="dApp" style="width:100%">${apps.map(a => `<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.group || "")}</option>`).join("")}</select></div>
+    <div id="dLink" hidden><label>Link (https://…)</label><input id="dUrl" placeholder="https://dash.cloudflare.com/" style="width:100%"></div>
+    <label>Name on the tile</label><input id="dNm" maxlength="50" placeholder="Leave empty to use the tool name">
+    <label>Icon</label>${emoPick("🔗")}
+    <label>Section</label><select id="dSec">${W.sections.map(s => `<option value="${s.id}">${esc((s.icon ? s.icon + " " : "") + s.name)}</option>`).join("")}</select>
+    <div style="display:flex;gap:8px;margin-top:8px"><span style="flex:1"></span><button class="b g" id="dNo">Cancel</button><button class="b" id="dOk">Add</button></div></div>`;
+  wireEmo(d); wireSeg(d); d.showModal();
+  d.querySelector("#dK").addEventListener("click", () => { const k = segVal(d, "dK"); d.querySelector("#dTool").hidden = k !== "tool"; d.querySelector("#dLink").hidden = k !== "link"; });
+  d.onclick = e => { if (e.target === d) d.close(); };
+  d.querySelector("#dNo").onclick = () => d.close();
+  d.querySelector("#dOk").onclick = () => {
+    const kind = segVal(d, "dK"), ref = kind === "link" ? d.querySelector("#dUrl").value.trim() : d.querySelector("#dApp").value;
+    if (kind === "link" && !/^https:\/\/\S+$/i.test(ref)) return toast("The link must start with https://", true);
+    const a = kind === "tool" ? appOf(ref) : null;
+    const c = { id: "x" + Date.now().toString(36), kind, ref, name: (d.querySelector("#dNm").value.trim() || (a ? a.name : ref.replace(/^https:\/\/(www\.)?/, "").split("/")[0])).slice(0, 50), icon: d.querySelector("#dIc").value.trim().slice(0, 8) || "🔗" };
+    W.shortcuts.push(c); (W.sections.find(s => s.id === d.querySelector("#dSec").value) || W.sections[0]).items.push(c.id);
+    d.close(); hm(); toast("Shortcut added — Save to keep it");
+  };
+}
+
 /* ---------- overview ---------- */
 async function ov(){
   const O = await api("admin/cc/overview");
   const u = O.users, e = O.email, d1 = O.cloud.d1 || {}, st = O.cloud.storage || {}, wr = O.cloud.workers || {};
   const d1p = d1.pct ? Math.max(d1.pct.reads || 0, d1.pct.writes || 0) : null;
-  dotNav("ov", O.alerts.some(a => a.tone === "bad") ? "bad" : O.alerts.length ? "warn" : "");
-  dotNav("sy", O.systems.down.length || O.jobs.bad.length ? "bad" : ""); dotNav("al", d1p >= 70 || (wr.pct || 0) >= 70 || O.ai.pct >= 70 ? "warn" : ""); dotNav("us", u.twofaMissing || u.locked ? "warn" : "");
+  OV = O; navDots(O);
   const hr = new Date().getHours();
   V(head(`${hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening"}, ${esc(ME.user.name.split(" ")[0])}`, `Everything at a glance — green is fine, amber needs a look, red needs action · ${dt(O.at)}`, `<button class="b g" id="rf">↻ Refresh</button>`) +
     (O.alerts.length ? O.alerts.map(a => `<div class="al ${a.tone === "bad" ? "bad" : ""}"><div class="m"><b>${esc(a.title)}</b>${a.sub ? `<small>${esc(a.sub)}</small>` : ""}</div><button class="b g" data-go="${a.where}">Open</button></div>`).join("")

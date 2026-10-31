@@ -59,3 +59,8 @@ The switches start from today's access: the ACCESS list in apps.js, and every po
 Turning a switch off removes that group's positions. When the result equals the tool's default access, the custom setting is removed. An amber switch means only some positions of that group have the tool, set per position in Tools control; tapping it gives the tool to the whole group.
 
 Hidden tools, the OFF folder and tools that are switched off are not listed.
+
+## Landing page (Home) — Oct 2026
+- Opening the Admin Control Center shows **Home**: the top 3 alerts, a search box (pages, settings; Enter with no match searches people), then every page as a tile in sections, with live status (Users, Security, Backup, Systems & jobs, Allowances, Storage, Overview, Usage, Report mailbox).
+- **✎ Arrange**: drag tiles between sections and sections up/down (mouse: drag; phone: long-press), ＋ Section (name, icon, cards with status / small icons, open / collapsed), ＋ Shortcut (any hub tool or an https link), 👁 hide a page (kept in Search and in the "Hidden" tray), Reset to the standard sections.
+- One arrangement shared by all administrators: `meta` key `admin:landing` (routes `admin/cc/landing` GET/POST, `{ reset: true }`), every save in Change history. The side menu follows the same sections and order. Pages added later appear in "Other" by themselves. Overview stays as its own page/tile.
