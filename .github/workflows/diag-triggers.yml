@@ -6,10 +6,10 @@ jobs:
   q:
     runs-on: ubuntu-latest
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
+      CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ACC: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" | jq -r '.[0].results[] | tojson' | while read -r l; do echo "::notice title=$2::${l//,/ ·}"; done; }
-          q "SELECT e.id, e.at, e.app, e.tone, e.email, u.role, u.site_code, (SELECT COUNT(*) FROM push_subs p WHERE p.email = e.email) AS phones, (SELECT GROUP_CONCAT(level) FROM push_subs p WHERE p.email = e.email) AS lvl, u.notif_read_at FROM hub_events e LEFT JOIN users u ON u.email = e.email WHERE e.title LIKE '%⚡%' ORDER BY e.id DESC LIMIT 20" "events"
-          q "SELECT v FROM meta WHERE k = 'push:wm'" "push watermark"
+          curl -s -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$ACC/builds/builds/70a9d226-4ae9-4758-a751-3dee78622492/logs" > l.json
+          jq -r '.result.lines[]? | .[1]' l.json | tail -40 | while IFS= read -r l; do echo "::notice title=log::${l//,/ }"; done
+          jq -c '.errors' l.json | sed 's/^/::notice title=err::/'
