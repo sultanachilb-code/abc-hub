@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cleaner Pass Admin — ABC Operations</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --navy:#0F2A4A; --navy-deep:#0A1D33; --gold:#C9A24B;
+    --bg:#E9ECF1; --card:#fff; --ink:#1A2433; --muted:#6B7686; --line:#E3E7ED;
+    --green:#1E7B4F; --green-bg:#E7F5EE; --red:#B3362B; --red-bg:#FBEAE8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  header{
+    background:linear-gradient(160deg,var(--navy),var(--navy-deep));color:#fff;
+    padding:18px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+  .brand{font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;letter-spacing:.24em;text-transform:uppercase}
+  .brand span{color:var(--gold)}
+  .brand small{display:block;font-weight:500;letter-spacing:.14em;font-size:10px;color:#9FB0C6;margin-top:3px}
+  nav{display:flex;gap:8px;flex-wrap:wrap}
+  nav button{
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;
+    border-radius:9px;padding:9px 16px;font-family:'Archivo',sans-serif;font-weight:600;
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+  }
+  nav button.on{background:var(--gold);border-color:var(--gold);color:var(--navy-deep)}
+  main{max-width:1080px;margin:0 auto;padding:22px 16px 60px}
+
+  .panel{background:var(--card);border-radius:14px;box-shadow:0 4px 18px rgba(15,42,74,.08);padding:20px;margin-bottom:18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;display:block;margin-bottom:5px}
+  input,select,textarea{
+    width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:14px;
+    font-family:'IBM Plex Sans',sans-serif;background:#fff;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy)}
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .btn{
+    border:0;border-radius:10px;padding:12px 22px;cursor:pointer;background:var(--navy);color:#fff;
+    font-family:'Archivo',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .btn.gold{background:var(--gold);color:var(--navy-deep)}
+  .btn.ghost{background:#fff;color:var(--navy);border:1.5px solid var(--line)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  h2{font-family:'Archivo',sans-serif;font-size:16px;margin-bottom:14px}
+  .muted{color:var(--muted);font-size:13px}
+  .msg{border-radius:10px;padding:12px 15px;font-size:13.5px;font-weight:600;margin-top:14px;display:none;line-height:1.5}
+  .msg.err{display:block;background:var(--red-bg);color:var(--red)}
+  .msg.ok{display:block;background:var(--green-bg);color:var(--green)}
+
+  /* photo pickers */
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .shot{
+    border:1.5px dashed var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer;
+    transition:border-color .15s;background:#FAFBFC;
+  }
+  .shot:hover{border-color:var(--gold)}
+  .shot img{max-width:100%;max-height:160px;border-radius:8px;margin-top:8px;display:none}
+  .shot .plus{font-size:26px;color:var(--muted)}
+  .shot .cap{font-size:12px;color:var(--muted);margin-top:4px;font-weight:600}
+  .shot input{display:none}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+  .stat{background:var(--card);border-radius:12px;padding:16px;border-top:3px solid var(--gold);box-shadow:0 3px 12px rgba(15,42,74,.07)}
+  .stat .n{font-family:'Archivo',sans-serif;font-weight:800;font-size:26px;color:var(--navy)}
+  .stat .l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:2px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+  th{text-align:left;padding:10px 12px;background:#F4F6F9;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+  td{padding:11px 12px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  .tag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .tag.active{background:var(--green-bg);color:var(--green)}
+  .tag.suspended{background:#FCF3E0;color:#9A6B0F}
+  .tag.blacklist{background:#1C1C1E;color:#FF6B5E}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-top:16px}
+  .badge{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;text-align:center;page-break-inside:avoid;break-inside:avoid}
+  .badge .top{background:var(--navy);color:#fff;padding:10px}
+  .badge .top .b1{font-family:'Archivo',sans-serif;font-weight:800;font-size:10px;letter-spacing:.22em;text-transform:uppercase}
+  .badge .top .b1 span{color:var(--gold)}
+  .badge .top .b2{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:#9FB0C6;margin-top:2px}
+  .badge .qr{padding:16px 16px 8px;display:flex;justify-content:center}
+  .badge .qr img,.badge .qr canvas{width:150px !important;height:150px !important}
+  .badge .nm{font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:0 12px}
+  .badge .tn{font-size:11.5px;color:var(--muted);margin:2px 0 4px}
+  .badge .id{font-family:'Archivo',sans-serif;font-size:10px;font-weight:600;letter-spacing:.16em;color:var(--navy);background:#FBF7EC;border-top:1px solid var(--gold);padding:7px;margin-top:8px}
+
+  #login{max-width:380px;margin:14vh auto 0}
+  @media print{
+    header,nav,.no-print{display:none !important}
+    body{background:#fff} main{max-width:none;padding:0}
+    .panel{box-shadow:none;padding:0;margin:0}
+    .cards{grid-template-columns:repeat(3,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">ABC <span>Operations</span><small>Cleaner Access Pass — Admin</small></div>
+  <nav id="nav" style="display:none">
+    <button id="tabReg" class="on">Register Cleaner</button>
+    <button id="tabQr">QR Passes</button>
+    <button id="tabAtt">Attendance</button>
+  </nav>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <div class="panel" id="login">
+    <h2>Admin access</h2>
+    <div class="row">
+      <input type="password" id="adminKey" placeholder="Admin key" style="flex:1">
+      <button class="btn" id="loginBtn" style="width:auto">Enter</button>
+    </div>
+    <div class="msg err" id="loginMsg"></div>
+  </div>
+
+  <!-- REGISTER -->
+  <section id="viewReg" style="display:none">
+    <div class="panel">
+      <h2>Register a new cleaner</h2>
+      <div class="fgrid">
+        <div><label>Full name *</label><input id="fName" placeholder="e.g. Rahul Kumar"></div>
+        <div><label>Nationality</label><input id="fNationality" placeholder="e.g. Indian"></div>
+        <div><label>Cleaner phone</label><input id="fPhone" type="tel" placeholder="+961 ..."></div>
+        <div><label>Position</label><input id="fPosition" value="Cleaner"></div>
+        <div><label>Company (contractor) *</label><input id="fCompany" placeholder="e.g. CleanCo SARL"></div>
+        <div><label>Company phone (emergency)</label><input id="fCompanyPhone" type="tel" placeholder="+961 ..."></div>
+        <div><label>Tenant *</label><input id="fTenant" placeholder="e.g. Zara"></div>
+        <div><label>Tenant email (monthly verification)</label><input id="fTenantEmail" type="email" placeholder="manager@tenant.com"></div>
+        <div>
+          <label>Mall *</label>
+          <select id="fMall">
+            <option>Verdun Mall</option><option>Achrafieh Mall</option>
+            <option>Dbayeh Department Store</option><option>Achrafieh Department Store</option>
+            <option>Verdun Department Store</option>
+          </select>
+        </div>
+        <div><label>Comment (optional)</label><input id="fComment" placeholder="Notes, sponsor info…"></div>
+      </div>
+
+      <div style="margin-top:16px" class="shots">
+        <div class="shot" id="shotPhoto">
+          <div class="plus">📷</div><div class="cap">Cleaner photo — tap to take / choose</div>
+          <img id="prevPhoto"><input type="file" id="filePhoto" accept="image/*" capture="environment">
+        </div>
+        <div class="shot" id="shotId">
+          <div class="plus">🪪</div><div class="cap">ID / Passport copy — tap to take / choose</div>
+          <img id="prevId"><input type="file" id="fileId" accept="image/*" capture="environment">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:18px">
+        <button class="btn gold" id="regBtn">Register &amp; Generate QR</button>
+        <span class="muted">Images are compressed and stored in the system — no Drive files needed.</span>
+      </div>
+      <div class="msg" id="regMsg"></div>
+      <div id="regResult" style="display:none;margin-top:18px">
+        <div class="cards" style="grid-template-columns:minmax(230px,280px)"><div class="badge" id="newBadge"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QR GENERATOR -->
+  <section id="viewQr" style="display:none">
+    <div class="panel">
+      <h2>QR passes</h2>
+      <div class="row no-print">
+        <select id="mallFilter" style="width:auto"><option value="">All malls</option></select>
+        <select id="tenantFilter" style="width:auto"><option value="">All tenants</option></select>
+        <input type="text" id="searchWorker" placeholder="Search name or ID…" style="flex:1;min-width:160px">
+        <button class="btn gold" style="width:auto" onclick="window.print()">Print Badges</button>
+        <button class="btn ghost" style="width:auto" id="refreshBtn">Refresh</button>
+      </div>
+      <div class="muted" style="margin-top:10px" id="qrCount"></div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </section>
+
+  <!-- ATTENDANCE -->
+  <section id="viewAtt" style="display:none">
+    <div class="panel">
+      <h2>Attendance log</h2>
+      <div class="row">
+        <input type="date" id="fromDate" style="width:auto">
+        <input type="date" id="toDate" style="width:auto">
+        <button class="btn" id="loadAtt" style="width:auto">Load</button>
+        <button class="btn ghost" id="exportCsv" style="width:auto">Export CSV</button>
+      </div>
+      <div class="stats" id="attStats"></div>
+      <div style="overflow-x:auto">
+        <table id="attTable">
+          <thead><tr><th>Date</th><th>Time</th><th>ID</th><th>Name</th><th>Company</th><th>Tenant</th><th>Mall</th><th>Agent</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="muted" id="attEmpty" style="display:none;padding:20px;text-align:center">No check-ins for this period.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ================== CONFIG ================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec';
+const PASS_PAGE_URL = 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/';
+/* ============================================ */
+
+let ADMIN_KEY = localStorage.getItem('wpAdminKey') || '';
+let workers = [], attRecords = [];
+let photoB64 = '', idCopyB64 = '';
+
+const el = id => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0,10);
+const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function jsonp(params){
+  return new Promise((resolve, reject)=>{
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    window[cb] = d=>{ resolve(d); delete window[cb]; s.remove(); };
+    const s = document.createElement('script');
+    s.src = API_URL + '?' + new URLSearchParams({...params, callback:cb});
+    s.onerror = ()=>{ reject(new Error('Network error')); delete window[cb]; s.remove(); };
+    document.body.appendChild(s);
+  });
+}
+async function post(payload){
+  const res = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) });
+  return res.json();
+}
+
+/* ---------- auth ---------- */
+async function tryLogin(key){
+  const res = await jsonp({action:'listWorkers', key});
+  if(!res.ok) throw new Error(res.error || 'Unauthorized');
+  ADMIN_KEY = key;
+  localStorage.setItem('wpAdminKey', key);
+  workers = res.workers;
+  el('login').style.display='none';
+  el('nav').style.display='flex';
+  switchTab('reg');
+  buildFilters(); renderCards();
+}
+el('loginBtn').addEventListener('click', async ()=>{
+  el('loginMsg').style.display='none';
+  try{ await tryLogin(el('adminKey').value.trim()); }
+  catch(e){ el('loginMsg').textContent = e.message; el('loginMsg').className='msg err'; }
+});
+if(ADMIN_KEY){ tryLogin(ADMIN_KEY).catch(()=>localStorage.removeItem('wpAdminKey')); }
+
+/* ---------- tabs ---------- */
+el('tabReg').addEventListener('click', ()=>switchTab('reg'));
+el('tabQr').addEventListener('click', ()=>switchTab('qr'));
+el('tabAtt').addEventListener('click', ()=>{ switchTab('att'); if(!attRecords.length) loadAttendance(); });
+function switchTab(t){
+  ['Reg','Qr','Att'].forEach(x=>{
+    el('tab'+x).classList.toggle('on', t===x.toLowerCase());
+    el('view'+x).style.display = t===x.toLowerCase() ? 'block':'none';
+  });
+}
+
+/* ---------- image capture + compression ---------- */
+function bindShot(boxId, inputId, prevId, maxW, quality, setter){
+  el(boxId).addEventListener('click', ()=>el(inputId).click());
+  el(inputId).addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const b64 = await compressImage(file, maxW, quality);
+    setter(b64);
+    const img = el(prevId);
+    img.src = b64; img.style.display='block';
+  });
+}
+function compressImage(file, maxW, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const scale = Math.min(1, maxW / img.width);
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+bindShot('shotPhoto','filePhoto','prevPhoto', 500, 0.72, b=>photoB64=b);
+bindShot('shotId','fileId','prevId', 1100, 0.7, b=>idCopyB64=b);
+
+/* ---------- register ---------- */
+el('regBtn').addEventListener('click', async ()=>{
+  const msg = el('regMsg'); msg.className='msg'; msg.style.display='none';
+  el('regResult').style.display='none';
+
+  const name = el('fName').value.trim(), tenant = el('fTenant').value.trim(),
+        company = el('fCompany').value.trim();
+  if(!name || !tenant || !company){
+    msg.className='msg err'; msg.textContent='Full name, company and tenant are required.'; return;
+  }
+  if(!photoB64){ msg.className='msg err'; msg.textContent='Please add the cleaner photo.'; return; }
+
+  const btn = el('regBtn'); btn.disabled = true; btn.textContent = 'Registering…';
+  try{
+    const res = await post({
+      action:'registerWorker', key:ADMIN_KEY,
+      name, nationality:el('fNationality').value.trim(),
+      company, companyPhone:el('fCompanyPhone').value.trim(),
+      tenant, tenantEmail:el('fTenantEmail').value.trim(),
+      mall:el('fMall').value, position:el('fPosition').value.trim(),
+      phone:el('fPhone').value.trim(), comment:el('fComment').value.trim(),
+      photoB64, idCopyB64
+    });
+    if(!res.ok){
+      msg.className='msg err';
+      msg.textContent = res.error;
+      return;
+    }
+    msg.className='msg ok';
+    msg.textContent = 'Registered as ' + res.id + '. QR pass generated below — print it or screenshot it for WhatsApp.';
+    const b = el('newBadge');
+    b.innerHTML = `
+      <div class="top"><div class="b1">ABC <span>Operations</span></div><div class="b2">Cleaner Access Pass</div></div>
+      <div class="qr"></div>
+      <div class="nm">${escapeHtml(name)}</div>
+      <div class="tn">${escapeHtml(tenant)} · ${escapeHtml(el('fMall').value)}</div>
+      <div class="id">${escapeHtml(res.id)}</div>`;
+    new QRCode(b.querySelector('.qr'), {
+      text: PASS_PAGE_URL + '?id=' + encodeURIComponent(res.id) + '&t=' + encodeURIComponent(res.token),
+      width:300, height:300, correctLevel:QRCode.CorrectLevel.M
+    });
+    el('regResult').style.display='block';
+    workers.push({id:res.id, token:res.token, name, company, tenant, mall:el('fMall').value, status:'Active'});
+    clearForm();
+  }catch(e){
+    msg.className='msg err'; msg.textContent='Network error — please try again.';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Register & Generate QR';
+  }
+});
+function clearForm(){
+  ['fName','fNationality','fPhone','fCompany','fCompanyPhone','fTenant','fTenantEmail','fComment'].forEach(id=>el(id).value='');
+  photoB64=''; idCopyB64='';
+  ['prevPhoto','prevId'].forEach(id=>{ el(id).style.display='none'; el(id).src=''; });
+  ['filePhoto','fileId'].forEach(id=>el(id).value='');
+}
+
+/* ---------- QR badges ---------- */
+el('refreshBtn').addEventListener('click', async ()=>{
+  const res = await jsonp({action:'listWorkers', key:ADMIN_KEY});
+  if(res.ok){ workers = res.workers; buildFilters(); renderCards(); }
+});
+function buildFilters(){
+  el('mallFilter').innerHTML = '<option value="">All malls</option>';
+  el('tenantFilter').innerHTML = '<option value="">All tenants</option>';
+  [...new Set(workers.map(w=>w.mall).filter(Boolean))].sort()
+    .forEach(m=>el('mallFilter').insertAdjacentHTML('beforeend',`<option>${escapeHtml(m)}</option>`));
+  [...new Set(workers.map(w=>w.tenant).filter(Boolean))].sort()
+    .forEach(t=>el('tenantFilter').insertAdjacentHTML('beforeend',`<option>${escapeHtml(t)}</option>`));
+}
+['mallFilter','tenantFilter','searchWorker'].forEach(id=>el(id).addEventListener('input', renderCards));
+
+function renderCards(){
+  const m = el('mallFilter').value, t = el('tenantFilter').value,
+        q = el('searchWorker').value.trim().toLowerCase();
+  const list = workers.filter(w =>
+    String(w.status).toLowerCase() !== 'blacklist' &&
+    (!m || w.mall===m) && (!t || w.tenant===t) &&
+    (!q || String(w.name).toLowerCase().includes(q) || String(w.id).toLowerCase().includes(q))
+  );
+  el('qrCount').textContent = list.length + ' cleaner(s) — blacklisted staff are excluded from QR generation.';
+  const wrap = el('cards'); wrap.innerHTML = '';
+  list.forEach(w=>{
+    const div = document.createElement('div');
+    div.className = 'badge';
+    div.innerHTML = `
+      <div class="top"><div class="b1">ABC <span>Operations</span></div><div class="b2">Cleaner Access Pass</div></div>
+      <div class="qr"></div>
+      <div class="nm">${escapeHtml(w.name)}</div>
+      <div class="tn">${escapeHtml(w.tenant||'')} · ${escapeHtml(w.mall||'')}</div>
+      <div class="id">${escapeHtml(w.id)}</div>`;
+    wrap.appendChild(div);
+    new QRCode(div.querySelector('.qr'), {
+      text: PASS_PAGE_URL + '?id=' + encodeURIComponent(w.id) + '&t=' + encodeURIComponent(w.token),
+      width:300, height:300, correctLevel:QRCode.CorrectLevel.M
+    });
+  });
+}
+
+/* ---------- attendance ---------- */
+el('fromDate').value = today(); el('toDate').value = today();
+el('loadAtt').addEventListener('click', loadAttendance);
+
+async function loadAttendance(){
+  const res = await jsonp({action:'attendanceRange', key:ADMIN_KEY, from:el('fromDate').value, to:el('toDate').value});
+  if(!res.ok) return alert(res.error);
+  attRecords = res.records;
+  const tb = el('attTable').querySelector('tbody');
+  tb.innerHTML = attRecords.map(r=>`
+    <tr><td>${r.date}</td><td>${String(r.time).slice(0,5)}</td><td>${escapeHtml(r.id)}</td>
+    <td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.company)}</td><td>${escapeHtml(r.tenant)}</td>
+    <td>${escapeHtml(r.mall)}</td><td>${escapeHtml(r.agent)}</td></tr>`).join('');
+  el('attEmpty').style.display = attRecords.length ? 'none':'block';
+
+  el('attStats').innerHTML = `
+    <div class="stat"><div class="n">${attRecords.length}</div><div class="l">Check-ins</div></div>
+    <div class="stat"><div class="n">${new Set(attRecords.map(r=>r.id)).size}</div><div class="l">Cleaners</div></div>
+    <div class="stat"><div class="n">${new Set(attRecords.map(r=>r.tenant)).size}</div><div class="l">Tenants</div></div>
+    <div class="stat"><div class="n">${new Set(attRecords.map(r=>r.company)).size}</div><div class="l">Companies</div></div>`;
+}
+
+el('exportCsv').addEventListener('click', ()=>{
+  if(!attRecords.length) return;
+  const rows = [['Date','Time','WorkerID','Name','Company','Tenant','Mall','Agent'],
+    ...attRecords.map(r=>[r.date,r.time,r.id,r.name,r.company,r.tenant,r.mall,r.agent])];
+  const csv = rows.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], {type:'text/csv'}));
+  a.download = 'cleaner_attendance_' + el('fromDate').value + '_' + el('toDate').value + '.csv';
+  a.click();
+});
+</script>
+</body>
+</html>

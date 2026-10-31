@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleaner Access · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Cleaner Access — the Cleaner QR system in the hub (Oct 2026) — docs/FEATURE-cleaner-access.md */
+.w2{max-width:1150px;margin:0 auto;display:grid;gap:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:99px;padding:7px 12px;font-size:.8rem;font-weight:700;cursor:pointer;background:var(--surface);user-select:none}
+.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.ctabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}.ctabs button{border:0;background:none;padding:10px 13px;font:inherit;font-weight:800;font-size:.86rem;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+.ctabs button.on{color:var(--brand);border-bottom-color:#C8A24A}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.k{background:var(--surface);border:1px solid var(--line);border-top:3px solid #C8A24A;border-radius:14px;padding:12px 14px}
+.k b{display:block;font-size:1.6rem;line-height:1.2}.k span{font-size:.76rem;color:var(--muted)}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.box h3{margin:0;padding:12px 14px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
+table.t{width:100%;border-collapse:collapse;font-size:.84rem}table.t th{text-align:left;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;background:var(--paper);border-bottom:1px solid var(--line)}
+table.t td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}.tw{overflow-x:auto}
+.pill{font-size:.68rem;font-weight:800;border-radius:99px;padding:3px 9px;white-space:nowrap}.p-Active{background:rgba(30,138,76,.13);color:#1E7A4F}.p-Suspended{background:rgba(184,116,15,.15);color:#8A5A00}.p-Blacklist{background:rgba(194,40,60,.13);color:#B0283C}
+.cw{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:12px}
+.cr{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;background:var(--surface)}.cr:hover{border-color:#8A5CC0}
+.th{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#E9E3F1;flex:none}.cr b{display:block;font-size:.9rem}.cr small{color:var(--muted);font-size:.74rem;display:block}
+.cr input{width:18px;height:18px;flex:none}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}.flt input,.flt select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--surface);color:var(--text)}
+.ban{border-radius:14px;padding:12px 14px;font-weight:700;font-size:.86rem;line-height:1.5;background:rgba(200,162,74,.16);border:1px solid rgba(200,162,74,.5)}
+dialog.dd{border:0;border-radius:20px;padding:0;width:min(560px,calc(100% - 20px));max-height:92dvh;background:var(--surface);color:var(--text)}
+.dd .h{padding:16px 18px 6px}.dd .h b{font-size:1.05rem}.dd .b{padding:6px 18px 14px;display:grid;gap:8px;max-height:72dvh;overflow:auto}.dd .f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dd label{font-size:.74rem;font-weight:800;color:var(--muted)}.dd input,.dd select,.dd textarea{border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;background:var(--surface);color:var(--text);width:100%}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pass{text-align:center}.pass .av{width:120px;height:120px;border-radius:50%;object-fit:cover;background:#E9E3F1;border:4px solid #fff;box-shadow:0 6px 18px rgba(42,15,69,.18)}
+.idc{width:100%;border-radius:12px;border:1px solid var(--line)}
+.shot{border:2px dashed var(--line);border-radius:14px;padding:12px;text-align:center;cursor:pointer;color:var(--muted);font-size:.84rem}.shot img{max-width:100%;max-height:150px;border-radius:10px;display:block;margin:0 auto 4px}
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--line)}.step:first-of-type{border-top:0}.step .n{width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.step .n.ok{background:#1E8A4C}.step .m{flex:1}.step small{color:var(--muted);display:block;margin-top:2px;line-height:1.45}
+pre.code{background:#1D1428;color:#EDE6F7;border-radius:12px;padding:12px;font-size:.72rem;overflow:auto;max-height:260px;white-space:pre}
+/* badges to print */
+#printArea{display:none}
+@media print{body>*:not(#printArea){display:none!important}#printArea{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8mm;padding:6mm}
+  .bdg{border:1px solid #ccc;border-radius:10px;overflow:hidden;break-inside:avoid;font-family:Segoe UI,Arial,sans-serif;text-align:center;font-size:9pt}
+  .bdg .tp{background:#2A0F45!important;color:#fff;padding:5px;font-weight:800;letter-spacing:1px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.bdg .tp small{color:#E9CF8A;display:block;font-size:7pt}
+  .bdg img.ph{width:22mm;height:22mm;border-radius:50%;object-fit:cover;margin:3mm auto 1mm;display:block}.bdg svg{width:30mm;height:30mm}.bdg b{display:block;font-size:10pt}}
+</style>
+</head>
+<body>
+<div class="top"><h1>Cleaner Access <small id="sub"></small></h1><span id="siteBox"></span></div>
+<div class="wrap"><div class="w2" id="view"><p class="muted">Loading…</p></div></div>
+<dialog class="dd" id="dlg"></dialog>
+<div id="printArea"></div>
+<script src="common.js"></script>
+<script src="/tools/qrcode.js"></script>
+<script>
+let C = null, SITE = "", TAB = "today", L = null, Q = "", FS = "", SEL = new Set();
+const UP = new URLSearchParams(location.search);
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
+const img = (id, kind, cls = "th") => `<img class="${cls}" loading="lazy" src="/api/ops/cleaners/img?id=${encodeURIComponent(id)}&kind=${kind}&site=${SITE === "ALL" ? "" : SITE}" alt="" onerror="this.style.visibility='hidden'">`;
+const pill = s => `<span class="pill p-${esc(s)}">${esc(s)}</span>`;
+const canEdit = s => !!(C && C.canEdit[s]) && C.mode === "hub";
+const sitesHere = () => SITE === "ALL" ? Object.keys(C.sites) : [SITE];
+const qrSvg = (text, cell = 4) => { try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: cell, margin: 1 }); } catch { return ""; } };
+
+async function boot(){
+  C = await api("ops/cleaners/context");
+  const keys = Object.keys(C.sites);
+  SITE = keys.includes(UP.get("site")) ? UP.get("site") : C.all ? "ALL" : keys[0];
+  draw();
+}
+function shell(inner){
+  const keys = Object.keys(C.sites), any = keys.some(s => C.canEdit[s]);
+  $("#sub").textContent = SITE === "ALL" ? "· All flagships" : "· " + C.sites[SITE];
+  const tabs = [["today", "Today"], ["cleaners", "Cleaners"], ["att", "Attendance"], ["tenants", "Tenants"], ...(any ? [["report", "Daily report"]] : []), ...(C.isAdmin ? [["mig", "Migration"]] : [])];
+  $("#view").innerHTML = (C.mode !== "hub" ? `<div class="ban">📋 This is a copy of the Cleaner sheet. Until the switch, cleaners are registered and checked in with the old system.${C.isAdmin ? " Migration tab: copy, compare, switch." : ""}</div>` : "")
+    + (keys.length > 1 ? `<div class="chips">${C.all ? `<span class="chip ${SITE === "ALL" ? "on" : ""}" data-s="ALL">All flagships</span>` : ""}${keys.map(s => `<span class="chip ${SITE === s ? "on" : ""}" data-s="${s}">${esc(C.sites[s])}</span>`).join("")}</div>` : "")
+    + `<div class="ctabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${TAB === k ? "on" : ""}">${n}</button>`).join("")}</div>` + inner;
+  $("#view").querySelectorAll("[data-s]").forEach(x => x.onclick = () => { SITE = x.dataset.s; L = null; SEL.clear(); draw(); });
+  $("#view").querySelectorAll("[data-tab]").forEach(x => x.onclick = () => { TAB = x.dataset.tab; draw(); });
+}
+async function draw(){
+  shell(`<p class="muted">Loading…</p>`);
+  try {
+    if (TAB === "today") return drawToday(await api(`ops/cleaners/overview?site=${SITE}`));
+    if (TAB === "cleaners"){ L = L || (await api(`ops/cleaners/list?site=${SITE}`)).workers; return drawList(); }
+    if (TAB === "att") return drawAtt();
+    if (TAB === "tenants") return drawTenants(await api(`ops/cleaners/tenants?site=${SITE}`));
+    if (TAB === "report") return drawReport();
+    if (TAB === "mig") return drawMig();
+  } catch (e){ shell(`<div class="ban" style="background:rgba(194,40,60,.1);border-color:rgba(194,40,60,.4)">${esc(e.message)}</div>`); }
+}
+
+/* ---------- today ---------- */
+function drawToday(o){
+  const tot = o.sites.reduce((a, s) => ({ A: a.A + s.Active, S: a.S + s.Suspended, B: a.B + s.Blacklist, T: a.T + s.today }), { A: 0, S: 0, B: 0, T: 0 });
+  shell(`<div class="kpi"><div class="k"><b>${tot.T}</b><span>entered today</span></div><div class="k"><b>${tot.A + tot.S + tot.B}</b><span>registered</span></div><div class="k"><b>${tot.S}</b><span>suspended</span></div><div class="k"><b>${tot.B}</b><span>blacklisted</span></div></div>
+    ${o.sites.length > 1 ? `<div class="box"><h3>Flagships</h3><div class="tw"><table class="t"><tr><th>Flagship</th><th>Active</th><th>Suspended</th><th>Blacklist</th><th>Today</th></tr>${o.sites.map(s => `<tr data-s2="${s.site}" style="cursor:pointer"><td><b>${esc(s.name)}</b></td><td>${s.Active}</td><td>${s.Suspended || "—"}</td><td>${s.Blacklist || "—"}</td><td><b>${s.today}</b></td></tr>`).join("")}</table></div></div>` : ""}
+    <div class="box"><h3>Entries today · ${esc(D.fmt(o.day, { weekday: "short" }))}<span style="flex:1"></span>${canEdit(SITE) ? `<button class="btn small" id="reg">＋ Register a cleaner</button>` : ""}</h3>
+      <div class="tw"><table class="t"><tr><th>Time</th><th>Pass</th><th>Name</th><th>Company</th><th>Tenant</th><th>Agent</th>${SITE === "ALL" ? "<th>Flagship</th>" : ""}</tr>
+      ${o.entries.map(e => `<tr data-w="${esc(e.id)}" style="cursor:pointer"><td>${esc(e.time)}</td><td>${esc(e.id)}</td><td><b>${esc(e.name)}</b></td><td>${esc(e.company)}</td><td>${esc(e.tenant)}</td><td>${esc(e.agent)}${e.gate ? `<br><small class="muted">${esc(e.gate)}</small>` : ""}</td>${SITE === "ALL" ? `<td>${esc(e.site)}</td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="muted" style="padding:18px;text-align:center">No cleaner entered yet today.</td></tr>`}</table></div></div>`);
+  wireCommon();
+  $("#view").querySelectorAll("[data-s2]").forEach(x => x.onclick = () => { SITE = x.dataset.s2; draw(); });
+}
+function wireCommon(){
+  $("#view").querySelectorAll("[data-w]").forEach(x => x.onclick = ev => { if (ev.target.closest("input")) return; openWorker(x.dataset.w); });
+  const r = $("#reg"); if (r) r.onclick = () => editWorker(null);
+}
+
+/* ---------- cleaners ---------- */
+function drawList(){
+  const q = Q.toLowerCase(), list = L.filter(w => (!FS || w.status === FS) && (!q || `${w.id} ${w.name} ${w.tenant} ${w.company}`.toLowerCase().includes(q)));
+  const counts = s => L.filter(w => w.status === s).length;
+  shell(`<div class="box"><div class="flt"><input id="q" placeholder="Search name, pass, tenant, company…" value="${esc(Q)}" style="flex:1;min-width:200px">
+      <select id="fs"><option value="">All · ${L.length}</option>${C.statuses.map(s => `<option ${FS === s ? "selected" : ""}>${s}</option>`).join("")}</select>
+      <button class="btn ghost small" id="selAll">Tick shown</button><button class="btn ghost small" id="prt" ${SEL.size ? "" : "disabled"}>🖨 Badges (${SEL.size})</button>
+      ${canEdit(SITE) ? `<button class="btn small" id="reg">＋ Register</button>` : ""}</div>
+    <div class="muted" style="padding:8px 14px 0;font-size:.78rem">${counts("Active")} active · ${counts("Suspended")} suspended · ${counts("Blacklist")} blacklisted · showing ${list.length}</div>
+    <div class="cw">${list.slice(0, 400).map(w => `<div class="cr" data-w="${esc(w.id)}"><input type="checkbox" data-sel="${esc(w.id)}" ${SEL.has(w.id) ? "checked" : ""}>${w.photo ? img(w.id, "photo") : `<span class="th"></span>`}
+      <div style="flex:1;min-width:0"><b>${esc(w.name)}</b><small>${esc(w.id)} · ${esc(w.tenant)}</small><small>${esc(w.company)}${SITE === "ALL" ? " · " + esc(w.site) : ""}</small></div>${pill(w.status)}</div>`).join("") || `<p class="muted">Nobody found.</p>`}</div></div>`);
+  wireCommon();
+  const qi = $("#q"); qi.oninput = () => { Q = qi.value; const p = qi.selectionStart; drawList(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
+  $("#fs").onchange = e => { FS = e.target.value; drawList(); };
+  $("#view").querySelectorAll("[data-sel]").forEach(x => x.onchange = () => { x.checked ? SEL.add(x.dataset.sel) : SEL.delete(x.dataset.sel); const b = $("#prt"); b.disabled = !SEL.size; b.textContent = `🖨 Badges (${SEL.size})`; });
+  $("#selAll").onclick = () => { list.forEach(w => SEL.add(w.id)); drawList(); };
+  $("#prt").onclick = printBadges;
+}
+async function openWorker(id){
+  const d = $("#dlg"); d.innerHTML = `<div class="h"><b>Loading…</b></div>`; d.showModal();
+  let r; try { r = await api(`ops/cleaners/get?id=${encodeURIComponent(id)}&site=${SITE === "ALL" ? "" : SITE}`); } catch (e){ d.close(); return toast(e.message, true); }
+  const w = r.worker, ed = r.canEdit && C.mode === "hub";
+  d.innerHTML = `<div class="h pass">${w.photo ? img(w.id, "photo", "av") : `<span class="av" style="display:inline-block"></span>`}<div style="margin-top:8px">${pill(w.status)}</div><b style="display:block;margin-top:6px;font-size:1.25rem">${esc(w.name)}</b>
+      <span class="muted">${esc(w.position)} · ${esc(w.id)} · ${esc(C.sites[w.site] || w.site)}</span></div>
+    <div class="b"><div class="g2">${[["Tenant", w.tenant], ["Company", w.company], ["Nationality", w.nationality], ["Company phone", w.companyPhone], ["Phone", w.phone], ["Tenant email", w.tenantEmail], ["Registered", w.registered ? D.fmt(w.registered, { year: "numeric" }) + (w.days != null ? ` · ${w.days} days` : "") : "—"], ["Comment", w.comment]].filter(x => x[1]).map(x => `<div><label>${x[0]}</label><div style="font-weight:700">${esc(x[1])}</div></div>`).join("")}</div>
+      ${w.idcopy ? `<label style="margin-top:6px">ID / passport copy</label>${img(w.id, "idcopy", "idc")}` : ""}
+      <label style="margin-top:6px">Last check-ins</label><div class="muted" style="font-size:.82rem;line-height:1.6">${r.history.slice(0, 12).map(h => `${esc(D.fmt(h.day, { weekday: "short" }))} ${esc(h.time.slice(0, 5))} · ${esc(h.agent)}`).join("<br>") || "None yet"}</div>
+      ${r.log.length ? `<label style="margin-top:6px">Changes</label><div class="muted" style="font-size:.8rem;line-height:1.6">${r.log.map(l => `${esc(new Date(l.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))} · ${esc(l.what)} · ${esc(l.by_name)}`).join("<br>")}</div>` : ""}
+      ${ed ? `<details style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-weight:700">Badge link</summary><code style="font-size:.72rem;word-break:break-all">${esc(w.passUrl)}</code></details>` : ""}</div>
+    <div class="f">${ed ? `<button class="btn ghost small" data-a="token">New QR</button><button class="btn ghost small" data-a="status">Status…</button><button class="btn ghost small" data-a="edit">Edit</button>` : ""}<button class="btn ghost small" data-a="print">🖨 Badge</button><button class="btn small" data-a="x">Close</button></div>`;
+  d.onclick = async e => { if (e.target === d) return d.close(); const a = e.target.closest("[data-a]"); if (!a) return;
+    if (a.dataset.a === "x") return d.close();
+    if (a.dataset.a === "print"){ SEL = new Set([w.id]); d.close(); return printBadges(); }
+    if (a.dataset.a === "edit"){ d.close(); return editWorker(w); }
+    if (a.dataset.a === "status") return statusBox(w);
+    if (a.dataset.a === "token"){ if (!confirm("Make a new QR? The printed badge stops working — print the new one.")) return;
+      try { await api("ops/cleaners/new-token", { id: w.id, site: w.site }); toast("New QR made — print the badge"); L = null; openWorker(w.id); } catch (er){ toast(er.message, true); } }
+  };
+}
+function statusBox(w){
+  const d = $("#dlg");
+  d.innerHTML = `<div class="h"><b>Status · ${esc(w.name)}</b></div><div class="b">
+    <select id="sS">${C.statuses.map(s => `<option ${w.status === s ? "selected" : ""}>${s}</option>`).join("")}</select>
+    <label>Reason (needed for Suspended / Blacklist)</label><textarea id="sC" rows="3">${esc(w.comment || "")}</textarea>
+    <p class="muted" style="font-size:.78rem">Blacklist: no entry at any flagship, and the same name or phone cannot be registered again anywhere.</p></div>
+    <div class="f"><button class="btn ghost" id="sX">Cancel</button><button class="btn" id="sOk">Save</button></div>`;
+  $("#sX").onclick = () => openWorker(w.id);
+  $("#sOk").onclick = async () => { try { await api("ops/cleaners/status", { id: w.id, site: w.site, status: $("#sS").value, comment: $("#sC").value }); toast("Saved"); L = null; d.close(); draw(); } catch (e){ toast(e.message, true); } };
+}
+async function shrink(file, max){
+  const url = URL.createObjectURL(file);
+  try { const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement("canvas");
+    c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", .8); } finally { URL.revokeObjectURL(url); }
+}
+function editWorker(w){
+  const d = $("#dlg"), isNew = !w, sites = Object.keys(C.sites).filter(s => C.canEdit[s]);
+  const pics = { photo: "", idcopy: "" };
+  const f = (k, l, v, ph = "") => `<div><label>${l}</label><input id="e_${k}" value="${esc(v || "")}" placeholder="${esc(ph)}"></div>`;
+  d.innerHTML = `<div class="h"><b>${isNew ? "Register a cleaner" : "Edit · " + esc(w.name)}</b></div><div class="b">
+    ${isNew && sites.length > 1 ? `<label>Flagship</label><select id="e_site">${sites.map(s => `<option value="${s}" ${s === SITE ? "selected" : ""}>${esc(C.sites[s])}</option>`).join("")}</select>` : ""}
+    ${f("name", "Full name *", w && w.name)}
+    <div class="g2">${f("nationality", "Nationality", w && w.nationality)}${f("position", "Position", (w && w.position) || "Cleaner")}</div>
+    <div class="g2">${f("tenant", "Tenant *", w && w.tenant)}${f("tenantEmail", "Tenant email (monthly check)", w && w.tenantEmail, "name@tenant.com")}</div>
+    <div class="g2">${f("company", "Cleaning company", w && w.company)}${f("companyPhone", "Company phone · emergency", w && w.companyPhone)}</div>
+    <div class="g2">${f("phone", "Cleaner's phone", w && w.phone)}${f("comment", "Comment", w && w.comment)}</div>
+    <div class="g2"><div class="shot" id="pPh">${!isNew && w.photo ? img(w.id, "photo", "") : ""}📷 ${isNew ? "Photo *" : "Change the photo"}</div><div class="shot" id="pId">${!isNew && w.idcopy ? img(w.id, "idcopy", "") : ""}🪪 ${isNew ? "ID / passport copy" : "Change the ID copy"}</div></div>
+    <input type="file" accept="image/*" capture="user" id="fPh" hidden><input type="file" accept="image/*" capture="environment" id="fId" hidden></div>
+    <div class="f"><button class="btn ghost" id="eX">Cancel</button><button class="btn" id="eOk">${isNew ? "Register" : "Save"}</button></div>`;
+  d.showModal();
+  const shot = (box, inp, k, max) => { $(box).onclick = () => $(inp).click(); $(inp).onchange = async ev => { const fl = ev.target.files[0]; if (!fl) return;
+    pics[k] = await shrink(fl, max); $(box).innerHTML = `<img src="${pics[k]}" alt="">✓ ${k === "photo" ? "Photo" : "ID copy"} ready`; }; };
+  shot("#pPh", "#fPh", "photo", 700); shot("#pId", "#fId", "idcopy", 1300);
+  $("#eX").onclick = () => d.close();
+  $("#eOk").onclick = async e => { const v = k => ($("#e_" + k) || {}).value || "";
+    e.target.disabled = true;
+    try { const r = await api("ops/cleaners/save", { id: isNew ? "" : w.id, site: isNew ? (v("site") || SITE) : w.site, name: v("name"), nationality: v("nationality"), position: v("position"), tenant: v("tenant"),
+        tenantEmail: v("tenantEmail"), company: v("company"), companyPhone: v("companyPhone"), phone: v("phone"), comment: v("comment"), photo: pics.photo, idcopy: pics.idcopy });
+      toast(isNew ? `Registered · ${r.id} — print the badge` : "Saved"); L = null; d.close(); if (isNew){ SEL = new Set([r.id]); TAB = "cleaners"; await draw(); printBadges(); } else draw(); }
+    catch (er){ e.target.disabled = false; toast(er.message, true); } };
+}
+async function printBadges(){
+  const ids = [...SEL]; if (!ids.length) return;
+  const ws = await Promise.all(ids.slice(0, 60).map(id => api(`ops/cleaners/get?id=${encodeURIComponent(id)}`).then(r => r.worker).catch(() => null)));
+  $("#printArea").innerHTML = ws.filter(Boolean).map(w => `<div class="bdg"><div class="tp">${esc(String(C.sites[w.site] || "").toUpperCase())}<small>CLEANER ACCESS PASS</small></div>
+    ${w.photo ? img(w.id, "photo", "ph") : ""}<b>${esc(w.name)}</b><div>${esc(w.id)} · ${esc(w.tenant)}</div>${qrSvg(w.passUrl, 3)}<div style="font-size:7pt;color:#666;padding-bottom:4px">Scan at the loading area</div></div>`).join("");
+  setTimeout(() => window.print(), 700);
+}
+
+/* ---------- attendance ---------- */
+let AF = null, AT = null;
+async function drawAtt(){
+  AF = AF || today(); AT = AT || AF;
+  const r = await api(`ops/cleaners/attendance?site=${SITE}&from=${AF}&to=${AT}`);
+  shell(`<div class="box"><div class="flt"><label class="muted">From</label><input type="date" id="aF" value="${AF}"><label class="muted">to</label><input type="date" id="aT" value="${AT}">
+      <span class="chip" data-r="0">Today</span><span class="chip" data-r="7">7 days</span><span class="chip" data-r="30">30 days</span><span style="flex:1"></span><button class="btn ghost small" id="csv">⬇ Excel (CSV)</button></div>
+    <div class="muted" style="padding:8px 14px 0;font-size:.78rem">${r.rows.length} entries · ${new Set(r.rows.map(x => x.id)).size} cleaners</div>
+    <div class="tw"><table class="t"><tr><th>Day</th><th>Time</th><th>Pass</th><th>Name</th><th>Company</th><th>Tenant</th><th>Agent</th>${SITE === "ALL" ? "<th>Flagship</th>" : ""}</tr>
+    ${r.rows.slice(0, 1500).map(e => `<tr data-w="${esc(e.id)}" style="cursor:pointer"><td>${esc(D.fmt(e.day, { weekday: "short" }))}</td><td>${esc(e.time)}</td><td>${esc(e.id)}</td><td><b>${esc(e.name)}</b></td><td>${esc(e.company)}</td><td>${esc(e.tenant)}</td><td>${esc(e.agent)}</td>${SITE === "ALL" ? `<td>${esc(e.site)}</td>` : ""}</tr>`).join("") || `<tr><td colspan="8" class="muted" style="padding:18px;text-align:center">No entries.</td></tr>`}</table></div></div>`);
+  wireCommon();
+  $("#aF").onchange = e => { AF = e.target.value; if (AT < AF) AT = AF; drawAtt(); }; $("#aT").onchange = e => { AT = e.target.value; drawAtt(); };
+  $("#view").querySelectorAll("[data-r]").forEach(x => x.onclick = () => { AT = today(); AF = new Date(Date.now() - Number(x.dataset.r) * 864e5).toISOString().slice(0, 10); if (x.dataset.r === "0") AF = AT; drawAtt(); });
+  $("#csv").onclick = () => { const rows = [["Day", "Time", "Pass", "Name", "Company", "Tenant", "Agent", "Flagship"], ...r.rows.map(e => [e.day, e.time, e.id, e.name, e.company, e.tenant, e.agent, e.site])];
+    const blob = new Blob(["﻿" + rows.map(x => x.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n")], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `cleaner-entries-${SITE}-${AF}-${AT}.csv`; a.click(); };
+}
+
+/* ---------- tenants ---------- */
+function drawTenants(o){
+  shell(`<div class="box"><h3>Tenants · email for the monthly verification (last day of each month, from Outlook)</h3><div class="tw"><table class="t"><tr><th>Tenant</th>${SITE === "ALL" ? "<th>Flagship</th>" : ""}<th>Cleaners</th><th>Email</th></tr>
+    ${o.tenants.map(t => `<tr><td><b>${esc(t.tenant)}</b></td>${SITE === "ALL" ? `<td>${esc(t.site)}</td>` : ""}<td>${t.active} active${t.n > t.active ? ` · ${t.n - t.active} other` : ""}</td>
+      <td>${canEdit(t.site) ? `<input data-te="${esc(t.tenant)}" data-ts="${t.site}" value="${esc(t.email || "")}" placeholder="no email — not verified" style="width:100%;min-width:200px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;background:var(--surface);color:var(--text)">` : esc(t.email || "—")}</td></tr>`).join("") || `<tr><td colspan="4" class="muted" style="padding:18px">No tenants.</td></tr>`}</table></div></div>
+    <div class="box"><h3>Verification emails sent</h3><div class="tw"><table class="t"><tr><th>When</th><th>Tenant</th><th>Email</th><th>Cleaners</th><th></th></tr>
+    ${o.log.slice(0, 120).map(v => `<tr><td>${esc(String(v.at).slice(0, 16).replace("T", " "))}</td><td>${esc(v.tenant)}</td><td>${esc(v.email)}</td><td>${v.count}</td><td class="muted">${esc(v.via)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted" style="padding:18px">None yet.</td></tr>`}</table></div></div>`);
+  $("#view").querySelectorAll("[data-te]").forEach(x => x.onchange = async () => { try { const r = await api("ops/cleaners/tenant-email", { site: x.dataset.ts, tenant: x.dataset.te, email: x.value.trim() }); toast(`Saved for ${r.changed} cleaner${r.changed === 1 ? "" : "s"}`); } catch (e){ toast(e.message, true); } });
+}
+
+/* ---------- daily report (21:00) ---------- */
+async function drawReport(){
+  if (SITE === "ALL"){ shell(`<div class="ban">Choose a flagship above to set its daily report.</div>`); return; }
+  const r = await api(`ops/cleaners/report-cfg?site=${SITE}`), c = r.cfg;
+  shell(`<div class="box" style="padding-bottom:12px"><h3>Daily cleaner entry report · 21:00 · ${esc(C.sites[SITE])}</h3><div style="padding:12px 14px;display:grid;gap:8px;max-width:640px">
+    <label class="muted" style="font-weight:800;font-size:.76rem">To · security supervisor</label>
+    <select id="rPick"><option value="">— pick from the Security team —</option>${r.security.map(u => `<option value="${esc(u.email)}">${esc(u.full_name)}${u.position === "HOS" ? " · Head of Security" : ""}</option>`).join("")}</select>
+    <input id="rTo" value="${esc(c.to.join(", "))}" placeholder="or type the email(s)" style="border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:var(--surface);color:var(--text)">
+    <label class="muted" style="font-weight:800;font-size:.76rem">Cc · operations group email (People &amp; roles)</label><div style="font-weight:700">${esc(r.opsGroup.join(", ") || "not set — add it in People & roles")}</div>
+    <label class="muted" style="font-weight:800;font-size:.76rem">More Cc (optional)</label><input id="rCc" value="${esc(c.cc.join(", "))}" style="border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:var(--surface);color:var(--text)">
+    <label class="muted" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rE" ${c.empty !== false ? "checked" : ""}> Send also when no cleaner entered ("No cleaner entries today")</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${r.canEdit ? `<button class="btn" id="rS">Save</button>` : ""}<button class="btn ghost" id="rT">Send me a test</button></div>
+    <p class="muted" style="font-size:.78rem;line-height:1.5">Sent from the hub's Outlook connection${C.mode !== "hub" ? " — starts on the switch day (until then the old combined email goes out from the sheet)" : ""}.</p></div></div>`);
+  $("#rPick").onchange = e => { if (!e.target.value) return; const cur = $("#rTo").value.split(/[\s,;]+/).filter(Boolean); if (!cur.includes(e.target.value)) cur.push(e.target.value); $("#rTo").value = cur.join(", "); e.target.value = ""; };
+  const s = $("#rS"); if (s) s.onclick = async () => { try { await api("ops/cleaners/report-cfg", { site: SITE, to: $("#rTo").value, cc: $("#rCc").value, empty: $("#rE").checked }); toast("Saved"); } catch (e){ toast(e.message, true); } };
+  $("#rT").onclick = async () => { try { const x = await api("ops/cleaners/report-test", { site: SITE }); toast(x.sent ? "Test sent to your email" : x.why, !x.sent); } catch (e){ toast(e.message, true); } };
+}
+
+/* ---------- migration (administrators) ---------- */
+const SNIPPET = `/* ===== ABC Operations Hub — migration export (paste at the END of the script) ===== */
+function apiHubExport_(p) {
+  const key = PropertiesService.getScriptProperties().getProperty('HUB_KEY');
+  if (!key || p.key !== key) return { ok:false, error:'Not authorised' };
+  if (p.part === 'workers') return { ok:true, data: getSheet_(TAB_WORKERS).getDataRange().getValues().slice(1).filter(r => r[W.ID]).map(r => ({
+    id:r[W.ID], token:r[W.TOKEN], name:r[W.NAME], nationality:r[W.NATIONALITY], company:r[W.COMPANY], companyPhone:r[W.COMPANY_PHONE],
+    tenant:r[W.TENANT], tenantEmail:r[W.TENANT_EMAIL], mall:r[W.MALL], position:r[W.POSITION], phone:r[W.PHONE],
+    status:r[W.STATUS], comment:r[W.COMMENT], registered: r[W.REGISTERED] ? dateToStr_(r[W.REGISTERED]) : '' })) };
+  if (p.part === 'images') return { ok:true, data: { photo: readImage_(p.id, 'photo'), idcopy: readImage_(p.id, 'idcopy') } };
+  if (p.part === 'attendance') return { ok:true, data: attendanceBetween_(p.from, p.to).records };
+  if (p.part === 'count') { const m = {}; attendanceBetween_('2000-01-01', '2100-01-01').records.forEach(r => { m[r.mall] = (m[r.mall] || 0) + 1; }); return { ok:true, data: { byMall: m } }; }
+  if (p.part === 'verifylog') return { ok:true, data: getSheet_(TAB_VERIFYLOG).getDataRange().getValues().slice(1).filter(r => r[0]).map(r => ({
+    at: r[0] instanceof Date ? Utilities.formatDate(r[0], TZ, 'yyyy-MM-dd HH:mm') : String(r[0]), mall:r[1], tenant:r[2], email:r[3], count:r[4], names:r[5] })) };
+  return { ok:false, error:'Unknown part' };
+}`;
+const DOGET = `  if (p.action === 'hubExport') {
+    let res; try { res = apiHubExport_(p); } catch (err) { res = { ok:false, error:String(err && err.message || err) }; }
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  }`;
+async function drawMig(){
+  const ctx = await api("ops/cleaners/context"); C = ctx; const m = C.migrate || {};
+  const st = (ok, n) => `<span class="n ${ok ? "ok" : ""}">${ok ? "✓" : n}</span>`;
+  shell(`<div class="box"><h3>Move Cleaner QR into the hub · now: ${C.mode === "hub" ? "<b style='color:#1E8A4C'>THE HUB</b>" : "the Google sheet"}</h3>
+    <div class="step">${st(false, "0")}<div class="m"><b>Once: add the export to the Apps Script</b><small>Open the sheet "ABC Verdun - Cleaner Control Sheet" → Extensions → Apps Script. (a) Paste the block below at the end. (b) In <code>doGet</code>, right after the <code>hubDay</code> block, paste the 4 lines below it. (c) Deploy → Manage deployments → ✏️ → Version: <b>New version</b> → Deploy (the link stays the same).</small>
+      <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">Show the code</summary><pre class="code">${esc(SNIPPET)}</pre><pre class="code">${esc(DOGET)}</pre><button class="btn ghost small" id="cp1">Copy block</button> <button class="btn ghost small" id="cp2">Copy the 4 lines</button></details></div></div>
+    <div class="step">${st(m.workersDone, 1)}<div class="m"><b>Copy the cleaners</b><small>${m.workersDone ? `${m.sheetWorkers} rows read${m.skipped ? ` · ${m.skipped} skipped (no flagship)` : ""}` : "Every row of the Workers tab, with the tenant emails. Can be run again."}</small></div><button class="btn small" data-m="workers" ${C.mode === "hub" ? "disabled" : ""}>Copy</button></div>
+    <div class="step">${st(m.imagesDone, 2)}<div class="m"><b>Copy the photos and ID copies</b><small id="pi">${m.imagesDone ? "Done" : "Three cleaners at a time — a few minutes; keep this page open."}</small></div><button class="btn small" data-m="images" ${C.mode === "hub" ? "disabled" : ""}>Copy</button></div>
+    <div class="step">${st(m.attDone, 3)}<div class="m"><b>Copy the check-ins</b><small id="pa">${m.attDone ? "Copied until " + esc(m.attUntil) + " — run again any time (nothing is copied twice)" : "One week at a time, since 9 Jul."}</small></div><button class="btn small" data-m="attendance">Copy</button></div>
+    <div class="step">${st(m.logDone, 4)}<div class="m"><b>Copy the verification log</b><small>The monthly emails already sent to tenants.</small></div><button class="btn small" data-m="verifylog" ${C.mode === "hub" ? "disabled" : ""}>Copy</button></div>
+    <div class="step">${st(m.compare && m.compare.ok, 5)}<div class="m"><b>Compare the hub with the sheet</b><small>Cleaners per flagship must match; check-ins in the hub at least as many as the sheet.</small><div id="cmp"></div></div><button class="btn small" data-m="compare">Compare</button></div>
+    <div class="step">${st(C.mode === "hub", 6)}<div class="m"><b>${C.mode === "hub" ? "Switched to the hub" : "Switch to the hub"}</b><small>${C.mode === "hub"
+      ? "The old scan link opens the hub's pass page (no buttons), check-in happens in the Loading Gate app, emails go from Outlook. Then in the Apps Script: Triggers (⏰) → delete <b>sendDailyReport</b> and <b>sendMonthlyVerification</b>. Switch back only if something goes wrong."
+      : "The old scan link starts forwarding to the hub within a minute; the latest check-ins are copied again right after. The sheet stays as it is (backup)."}</small></div>
+      ${C.mode === "hub" ? `<button class="btn ghost small" data-m="back">Switch back</button>` : `<button class="btn small" data-m="switch">Switch</button>`}</div></div>`);
+  $("#cp1").onclick = () => navigator.clipboard.writeText(SNIPPET).then(() => toast("Copied"));
+  $("#cp2").onclick = () => navigator.clipboard.writeText(DOGET).then(() => toast("Copied"));
+  $("#view").querySelectorAll("[data-m]").forEach(b => b.onclick = async () => {
+    const k = b.dataset.m; b.disabled = true;
+    try {
+      if (k === "workers"){ const r = await api("ops/cleaners/migrate", { step: "workers" }); toast(`${r.workers} cleaners copied`); }
+      if (k === "images"){ let r; do { r = await api("ops/cleaners/migrate", { step: "images" }); $("#pi").textContent = `${r.left} cleaners left…`; } while (r.left > 0 && r.done > 0); toast("Photos copied"); }
+      if (k === "attendance"){ let from = "2026-07-01", n = 0, r; do { r = await api("ops/cleaners/migrate", { step: "attendance", from }); n += r.rows; $("#pa").textContent = `Up to ${r.to} · ${n} rows read…`; from = r.next; } while (from); toast(`${n} check-ins read`); }
+      if (k === "verifylog"){ const r = await api("ops/cleaners/migrate", { step: "verifylog" }); toast(`${r.rows} rows copied`); }
+      if (k === "compare"){ const r = await api("ops/cleaners/migrate", { step: "compare" });
+        $("#cmp").innerHTML = `<table class="t" style="margin-top:8px"><tr><th>Flagship</th><th>Sheet cleaners</th><th>Hub cleaners</th><th>Sheet check-ins</th><th>Hub check-ins</th></tr>${r.sites.map(s => `<tr><td>${esc(s.name)}</td><td>${s.sheetWorkers}</td><td style="${s.sheetWorkers === s.hubWorkers ? "" : "color:#B0283C;font-weight:800"}">${s.hubWorkers}</td><td>${s.sheetEntries ?? "?"}</td><td style="${s.sheetEntries == null || s.hubEntries >= s.sheetEntries ? "" : "color:#B0283C;font-weight:800"}">${s.hubEntries}</td></tr>`).join("")}</table>
+          <p style="margin-top:6px;font-weight:800;color:${r.ok ? "#1E8A4C" : "#B0283C"}">${r.ok ? "✓ Everything matches" : "Not matching yet — copy again"} · ${r.photos} photos · ${r.idcopies} ID copies for ${r.total} cleaners</p>`; b.disabled = false; return; }
+      if (k === "switch"){ if (!confirm("Switch Cleaner Access to the hub now? The old pass page forwards to the hub and check-in moves to the Loading Gate app.")) { b.disabled = false; return; }
+        await api("ops/cleaners/migrate", { step: "attendance", from: new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10) });
+        await api("ops/cleaners/mode", { mode: "hub" }); toast("Switched to the hub");
+        setTimeout(() => api("ops/cleaners/migrate", { step: "attendance", from: new Date(Date.now() - 864e5).toISOString().slice(0, 10) }).catch(() => {}), 90000); }
+      if (k === "back"){ if (!confirm("Switch back to the sheet? The old pass page works again; check-ins made in the hub stay in the hub.")) { b.disabled = false; return; }
+        await api("ops/cleaners/mode", { mode: "sheet" }); toast("Back on the sheet"); }
+    } catch (e){ toast(e.message, true); }
+    drawMig();
+  });
+}
+boot().catch(e => { $("#view").innerHTML = `<div class="ban">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

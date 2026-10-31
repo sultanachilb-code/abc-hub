@@ -80,6 +80,14 @@ h2.sec .sp{flex:1}
 .big-btn small{font-size:.9rem;font-weight:700;opacity:.95}
 .big-btn.in{background:var(--in)} .big-btn.out{background:var(--out)}
 .big-btn:active{transform:scale(.98)}
+/* Cleaner Access badges (Oct 2026) */
+.cl-card{margin:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;text-align:center}
+.cl-ph{width:118px;height:118px;border-radius:50%;object-fit:cover;border:4px solid var(--surface);box-shadow:0 6px 18px rgba(42,15,69,.18);background:#E9E3F1;display:block;margin:0 auto 10px}
+.cl-card h3{margin:4px 0 2px;font-size:1.25rem}.cl-id{display:inline-block;border:1.5px solid #C8A24A;border-radius:9px;padding:3px 11px;font-weight:800;letter-spacing:.12em;margin-top:6px}
+.cl-gr{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 14px 0}.cl-gr div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 11px;font-size:.92rem;font-weight:700}
+.cl-gr small{display:block;font-size:.66rem;letter-spacing:.1em;color:var(--muted);font-weight:800}
+.cl-idc{display:block;width:calc(100% - 28px);margin:12px 14px 0;border-radius:12px;border:1px solid var(--line)}
+.cl-done{margin:12px 14px 0;background:rgba(31,138,76,.12);color:var(--in);border-radius:12px;padding:12px;font-weight:900;text-align:center}
 .big-btn.dim{opacity:.55}
 .acts .btn{height:44px}
 
@@ -341,7 +349,49 @@ function typeBox(){
 }
 
 /* ---------- scanned → look up ---------- */
+/* Cleaner Access: a cleaner badge (old link …loading-area-access…/?id=CLN-…&t=… or the hub's /cp?id=…&t=…) */
+function cleanerPass(code){
+  try { const u = new URL(String(code)); const id = u.searchParams.get("id") || "", t = u.searchParams.get("t") || "";
+    if (/^CLN-\d+$/i.test(id) && t && (/loading-area-access/.test(u.hostname) || u.pathname.replace(/\/$/, "") === "/cp")) return { id: id.toUpperCase(), t }; } catch {}
+  return null;
+}
+async function cleanerScan(cp){
+  busy = true; R = { cleaner: true, cp, loading: true }; drawRes();
+  try { const r = await api(`ops/gate/cleaner?site=${site}&id=${encodeURIComponent(cp.id)}&t=${encodeURIComponent(cp.t)}`); R = { ...R, ...r, loading: false }; }
+  catch (e){ R = { ...R, loading: false, error: e.status ? e.message : "No signal — try again when the phone has signal" }; }
+  busy = false; drawRes();
+}
+function drawCleaner(box){
+  const ph = R.photo ? `<img class="cl-ph" src="${R.photo}" alt="">` : `<div class="cl-ph"></div>`;
+  const shut = `<div class="acts"><button class="btn" id="rBack" style="height:54px">Scan again</button></div>`;
+  if (R.error || !R.found){ box.innerHTML = `<div class="res"><div class="vd bad"><div class="ic">✕</div><div><b>${esc(R.error || "Pass not valid")}</b><small class="ar">${R.error ? "" : "البطاقة غير صالحة"}</small></div><button class="x" id="rx">✕</button></div>
+      <div class="scroll"><div class="note info">${R.error ? "" : "This cleaner badge does not exist or was replaced. Do not allow entry."}</div></div>${shut}</div>`;
+    $("#rx").onclick = $("#rBack").onclick = closeRes; buzz([200, 100, 200]); return; }
+  const w = R.worker || {};
+  const facts = [["Tenant", w.tenant], ["Company", w.company], ["Position", w.position], R.here && w.days != null ? ["Days of access", w.days] : null].filter(x => x && x[1] !== "" && x[1] != null);
+  const grid = `<div class="cl-gr">${facts.map(x => `<div><small>${esc(x[0].toUpperCase())}</small>${esc(x[1])}</div>`).join("")}</div>`;
+  if (!R.here){   // another flagship's cleaner: who it is, no access here, nothing recorded
+    box.innerHTML = `<div class="res"><div class="vd bad"><div class="ic">✕</div><div><b>NO ACCESS AT ${esc(String(R.gateSite || "").toUpperCase())}</b><small>Registered at ${esc(R.siteName)} · لا يحق له الدخول هنا</small></div><button class="x" id="rx">✕</button></div>
+      <div class="scroll"><div class="cl-card">${ph}<h3>${esc(w.name)}</h3><span class="cl-id">${esc(w.id)}</span></div>${grid}
+      <div class="note info">This cleaner works at ${esc(R.siteName)}. Do not allow entry here.</div></div>${shut}</div>`;
+    $("#rx").onclick = $("#rBack").onclick = closeRes; buzz([200, 100, 200]); return; }
+  const st = w.status, blk = st === "Blacklist", sus = st !== "Active";
+  const head = blk ? `<div class="vd bad"><div class="ic">✕</div><div><b>ACCESS DENIED — BLACKLISTED</b><small>Do not allow entry · ممنوع الدخول</small></div><button class="x" id="rx">✕</button></div>`
+    : sus ? `<div class="vd early"><div class="ic">!</div><div><b>PASS ${esc(String(st).toUpperCase())}</b><small>No entry until it is renewed · البطاقة موقوفة</small></div><button class="x" id="rx">✕</button></div>`
+    : `<div class="vd valid"><div class="ic">✓</div><div><b>Cleaner pass · Active</b><small>${esc(w.tenant)} · البطاقة سارية</small></div><button class="x" id="rx">✕</button></div>`;
+  const idc = R.idcopy ? `<div class="sec" style="margin:14px 14px 0;font-size:.7rem;letter-spacing:.1em;font-weight:800;color:var(--muted)">ID / PASSPORT COPY</div><img class="cl-idc" src="${R.idcopy}" alt="ID copy">` : "";
+  const done = R.checkedIn ? `<div class="cl-done">✓ CHECKED IN — ${esc(R.checkedIn.time)}<br><small style="font-weight:700">Recorded by ${esc(R.checkedIn.agent)}</small></div>` : "";
+  const note = sus && w.comment ? `<div class="note info">Reason: ${esc(w.comment)}</div>` : "";
+  box.innerHTML = `<div class="res">${head}<div class="scroll"><div class="cl-card">${ph}<h3>${esc(w.name)}</h3><span class="cl-id">${esc(w.id)}</span></div>${grid}${note}${done}${idc}</div>
+    <div class="acts">${!sus && !R.checkedIn ? `<button class="big-btn in" id="clIn">✓ CHECK IN<small class="ar">تسجيل الدخول</small></button>` : ""}<button class="btn ghost" id="rBack">Scan again</button></div></div>`;
+  $("#rx").onclick = $("#rBack").onclick = closeRes;
+  const b = $("#clIn"); if (b) b.onclick = async () => { b.disabled = true;
+    try { const r = await api("ops/gate/cleaner-in", { site, id: R.cp.id, t: R.cp.t }); R.checkedIn = { time: r.time, agent: r.agent }; toast(r.duplicate ? "Already checked in today" : "Checked in"); buzz(80); drawRes(); }
+    catch (e){ b.disabled = false; toast(e.status ? e.message : "No signal — try again", true); } };
+  if (blk || sus) buzz([200, 100, 200]);
+}
 async function scanned(code, visitId){
+  const cp = cleanerPass(code); if (cp) return cleanerScan(cp);   // Cleaner Access
   busy = true;
   R = { code, scannedAt: new Date().toISOString(), loading: true };
   drawRes();
@@ -396,6 +446,7 @@ function drawRes(){
   const box = $("#resBox");
   if (!R){ box.innerHTML = ""; document.body.style.overflow = ""; return; }
   document.body.style.overflow = "hidden";
+  if (R.cleaner && !R.loading) return drawCleaner(box);
   if (R.loading){ box.innerHTML = `<div class="res"><div class="vd unknown"><div class="ic">…</div><div><b>Checking the request…</b><small class="ar">جاري التحقق…</small></div></div></div>`; return; }
   if (R.error){ box.innerHTML = `<div class="res"><div class="vd bad"><div class="ic">✕</div><div><b>${esc(R.error)}</b><small class="ar">رمز غير صالح</small></div><button class="x" id="rx">✕</button></div>
       <div class="scroll"><div class="note info">Ask the contractor for the Tenant Connect pass, or type the request number.</div></div>

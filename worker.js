@@ -8,6 +8,7 @@ export { EmergencyPager } from "./modules/emergency.js";
 import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules/phone.js";   // Hub Phone — see docs/FEATURE-hub-phone.md
 export { PhoneHub } from "./modules/phone.js";
 import { chatSchema, chatRoute, chatDeps, chatSync, chatRun, chatPostTeam } from "./modules/chat.js";
+import { cleanSchema, cleanRoute, cleanPublic, cleanGate, cleanDay, cleanRun, clMode } from "./modules/cleaners.js";   // Cleaner Access (the Cleaner QR system in the hub) — docs/FEATURE-cleaner-access.md
 import { ssoSchema, SSO_APPS, sysAccess, sysSummary, cleanSys, ssoServer, ssoEnd, extAllowed, ssoPolicy, ssoPolicySet, SNAG_ROLES, INC_ROLES, INC_POSITIONS } from "./modules/hubsso.js";   // One hub account for every system — docs/FEATURE-hub-sign-in.md
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
@@ -118,7 +119,8 @@ const TITLES = {
   DOM: { label: "Deputy Operations Manager", slot: "OM", rank: -1 }
 };
 const SLOTS = { MM: "Mall Manager / Senior Mall Manager", OM: "Operations Manager / Deputy Operations Manager" };
-const posLabel = p => (POSITIONS[p] || TITLES[p] || {}).label || "";
+const SEC_POSITIONS = { HOS: { label: "Head of Security" } };   // Security role: the Head of Security sees every flagship
+const posLabel = p => (POSITIONS[p] || TITLES[p] || SEC_POSITIONS[p] || {}).label || "";
 /* Which flagships an account can open */
 function sitesOf(u) {
   if (!u) return [];
@@ -127,6 +129,7 @@ function sitesOf(u) {
     const list = String(u.sites || "").split(",").filter(c => SITES[c]);
     return list.length ? list : (SITES[u.site_code] ? [u.site_code] : []);
   }
+  if (u.role === "SECURITY" && u.position === "HOS") return Object.keys(SITES);   // Head of Security: every flagship (Oct 2026)
   return SITES[u.site_code] ? [u.site_code] : [];
 }
 const canSite = (u, site) => sitesOf(u).includes(site);
@@ -167,7 +170,7 @@ const CONNECTORS = {
     day: "/api/hubday?site={site}&date={date}",
     sso: "/api/sso?token={token}", probe: true   // automatic sign-in once connectors/hub-sso-connector.js is added to that system
   },
-  "cleaner-qr": { base: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev", binding: "CLEANER", sso: "/api/sso?token={token}", probe: true },
+  /* "cleaner-qr" is now inside the hub (tools/cleaners.html) — no connector */
   footfall: { base: "https://footfall-hub.sultanachi-lb-61f.workers.dev", binding: "FOOTFALL", sso: "/api/sso?token={token}", probe: true }
 };
 /* SSO probe: a system answers /api/sso?probe=1 with {"ok":true,"sso":true} once its connector is in place —
@@ -259,7 +262,7 @@ const APP_ACCESS = {
   restroom: ["MM",  "OM",  "LEAD"],
   evacuation: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   incidents: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "cleaner-qr": ["MM",  "OM",  "SMS",  "MS",  "MO"],
+  "cleaner-qr": ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC",  "LEAD"],
   "abc-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "tenant-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   jde: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -413,6 +416,7 @@ async function ensureSchema(env) {
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
   await ssoSchema(env);         // One hub account for every system
+  await cleanSchema(env);       // Cleaner Access
   await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
@@ -544,6 +548,12 @@ export default {
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-cache");
       return new Response(r.body, { status: r.status, headers: h });
     }
+    /* Cleaner Access: a cleaner badge scanned by any phone camera — information card only */
+    if (url.pathname === "/cp" || url.pathname === "/cp/") {
+      const r = await env.ASSETS.fetch(new Request(new URL("/tools/cpass", url), request));
+      const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
+      return new Response(r.body, { status: r.status, headers: h });
+    }
     /* Quick Access Pass: the link sent by WhatsApp opens the pass page with the QR (no hub account) */
     if (/^\/qp\/[A-Za-z0-9]{20,40}\/?$/.test(url.pathname)) {
       const r = await env.ASSETS.fetch(new Request(new URL("/tools/qpass", url), request));
@@ -603,7 +613,8 @@ export default {
       await mbRun(env, MB_DEPS).catch(e => console.error("mailbox", e && e.message));   // Report mailbox: 07:00–08:00 import + 08:05 missing check
       await pushRun(env).catch(e => console.error("push", e && e.message));
       await chatRun(env).catch(e => console.error("chat", e && e.message));
-      await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
+      await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));
+      await cleanRun(env, { SITES, today: beirutToday, hour: beirutHour, opsGroups, outlookSend }).catch(e => console.error("cleaners", e && e.message));   // Cleaner Access: 21:00 reports, monthly verification   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -661,7 +672,10 @@ async function route(request, env, ctx, url) {
   }
   if (path === "inbox/works" && method === "POST") return ok(await worksInbox(env, request, body, { SITES, canSite, now: nowIso, raiseEvent }));   // Tenant Works Forms feature: Gmail inbox script
   if (path.startsWith("gate-ext/")) return ok(await gatePublic(env, request, path.slice(9), method, body, url,   // Loading Gate app (separate link): service binding + GATE_KEY + paired phone
-    { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover }));
+    { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover,
+      cleanGate: (e2, p2, m2, b2, u2, x) => cleanGate(e2, p2, m2, b2, u2, { ...x, SITES, today: beirutToday }) }));   // Cleaner Access: cleaner badges at the gate
+  if (path === "cl-pass" && method === "GET") return json({ ok: true, data: await cleanPublic(env, url, { SITES }) }, 200, { "cache-control": "no-store", "x-robots-tag": "noindex" });   // Cleaner badge scanned by any phone: information only
+  if (path === "cl-mode" && method === "GET") return ok({ mode: await clMode(env) });   // the old Cleaner QR links: forward to the hub once switched
   if (path.startsWith("patrol-ext/")) return ok(await patrolPublic(env, path.slice(11), method, body, { siteName, today: beirutToday, raiseEvent }));   // Security Patrol: the guards' shared link
   if (path === "ext-cfg") { const c = await extCfg(env); return json({ ok: true, data: { theme: c.theme } }, 200, { "cache-control": "no-cache" }); }   // tenant & visitor pages: Light / Dark / Auto (Admin Control)
   if (path.startsWith("mk-ext/")) { const r = await mkPublic(env, path.slice(7), method, body, { siteName, now: nowIso, today: beirutToday }); return r instanceof Response ? r : ok(r); }   // Marketing Participation: the tenant's link
@@ -998,7 +1012,7 @@ async function saveUser(env, me, b) {
     } else if (role === "SUPERVISOR") {
       if (!POSITIONS[pos]) throw fail("Choose the position: Mall Officer, Mall Supervisor, Senior Mall Supervisor or Warehouse");
       position = pos;
-    }
+    } else if (role === "SECURITY") position = SEC_POSITIONS[pos] ? pos : "";
   }
   /* one person per management slot at each flagship */
   if (role === "MANAGER") {
@@ -2013,6 +2027,14 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("patrol/")) return patrolRoute(env, p, method, b, url, { site, me, can, canSite, full: isFull(me), now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Security Patrol
   if (p.startsWith("qp/")) return qpRoute(env, p, method, b, url, { site, me, can, canSite, now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Quick Access Pass
+  if (p.startsWith("cleaners/")) {   // Cleaner Access (modules/cleaners.js)
+    if (isWarehouse(me)) throw fail("Not allowed", 403);
+    return cleanRoute(env, p, method, b, url, { me, SITES, sitesOf, canSite, today: beirutToday, opsGroups, outlookSend, raiseEvent, audit, hubUrl: HUB_URL });
+  }
+  if (p === "gate/cleaner" || p === "gate/cleaner-in") {   // the Loading Gate page inside the hub: a cleaner badge
+    if (!canSite(me, site) || isWarehouse(me)) throw fail("Not allowed", 403);
+    return cleanGate(env, p.slice(5), method, b, url, { site, agent: me.full_name, device: "Hub", SITES, today: beirutToday });
+  }
   if (p.startsWith("gate/")) return gateRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover });   // Loading Gate feature
   if (p.startsWith("con/")) return contractorsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Contractors feature
   if (p.startsWith("proj/")) return projectsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });   // Projects feature
@@ -2824,6 +2846,7 @@ async function pullDay(env, id, site, day) {
 }
 /* Cleaner QR access lives in a Google Sheet: an Apps Script web app returns the day's entries */
 async function cleanerDay(env, site, day) {
+  if ((await clMode(env).catch(() => "sheet")) === "hub") return cleanDay(env, site, day);   // Cleaner Access: switched to the hub
   if (!env.CLEANER_SHEET_URL) return { error: "Not connected yet" };
   try {
     const u = new URL(env.CLEANER_SHEET_URL);

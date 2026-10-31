@@ -95,7 +95,7 @@ window.HUB = {
     "restroom":        ["MM",  "OM",  "LEAD"],
     "evacuation":      ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "incidents":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "cleaner-qr":      ["MM",  "OM",  "SMS",  "MS",  "MO"],
+    "cleaner-qr":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC",  "LEAD"],
     "abc-connect":     ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant-connect":  ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "jde":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -364,13 +364,12 @@ window.HUB = {
     {
       id: "cleaner-qr",
       logo: "/logos/cleaner-qr.png",   /* replace the file in /logos to change the picture */
-      name: "Cleaner QR Access",
-      desc: "Issue and manage loading area cleaner passes",
+      name: "Cleaner Access",
+      desc: "Cleaner passes per flagship — register, badges, check-ins at the Loading Gate, daily report",
       group: "Access and Security",
       icon: "shield",
       color: "#3C4F8A",
-      url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/",
-      sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
+      url: "/tools/cleaners"   /* the Cleaner QR system moved into the hub (Oct 2026) — docs/FEATURE-cleaner-access.md */
     },
     {
       id: "abc-connect",

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Cleaner Pass · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<!-- Cleaner Access: a cleaner badge scanned by any phone camera — information only, no buttons (check-in is only in the Loading Gate app). docs/FEATURE-cleaner-access.md -->
+<style>
+:root{--brand:#4A1F73;--deep:#2A0F45;--gold:#C8A24A;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--line:#E6E0EE;--ok:#1E8A4C;--warn:#B8740F;--bad:#B03A2E}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding-bottom:28px}
+.hd{width:100%;background:linear-gradient(160deg,var(--brand),var(--deep));color:#fff;text-align:center;padding:22px 20px 70px}
+.hd img{height:32px}.hd b{display:block;letter-spacing:.24em;font-size:.82rem;margin-top:10px}.hd small{display:block;color:#E9CF8A;letter-spacing:.2em;font-size:.72rem;margin-top:4px}
+.card{width:min(420px,calc(100% - 28px));background:var(--card);border-radius:24px;margin-top:-52px;box-shadow:0 18px 50px rgba(42,15,69,.16);padding:0 0 18px;text-align:center;overflow:hidden}
+.av{width:128px;height:128px;border-radius:50%;object-fit:cover;border:5px solid #fff;box-shadow:0 8px 22px rgba(42,15,69,.2);background:linear-gradient(160deg,#D9D1E4,#B9AECB);margin:-6px auto 0;display:block;position:relative;top:-0px}
+.top{padding-top:18px}
+.st{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:.8rem;letter-spacing:.1em;padding:5px 13px;border-radius:999px;background:rgba(30,138,76,.12);color:var(--ok);margin-top:12px}
+.st i{width:8px;height:8px;border-radius:50%;background:currentColor}.st.warn{background:rgba(184,116,15,.13);color:var(--warn)}.st.bad{background:rgba(176,58,46,.12);color:var(--bad)}
+h1{font-size:1.45rem;margin:10px 16px 2px}.pos{color:var(--muted)}
+.id{display:inline-block;margin-top:10px;border:1.5px solid var(--gold);border-radius:10px;padding:4px 14px;font-weight:800;letter-spacing:.16em;color:var(--deep)}
+.days{margin:16px 16px 0;background:rgba(200,162,74,.13);border:1px solid rgba(200,162,74,.45);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:14px;padding:10px}
+.days b{font-size:2rem;color:var(--deep)}.days small{color:#8A6418;font-weight:800;letter-spacing:.12em;font-size:.66rem;text-align:left}.days span{font-size:.78rem;color:var(--muted);text-align:left}.days span b{font-size:.9rem;color:var(--text)}
+.gr{display:grid;grid-template-columns:1fr 1fr;margin:14px 16px 0;border:1px solid var(--line);border-radius:16px;overflow:hidden;text-align:left}
+.gr div{padding:11px 13px;border-bottom:1px solid var(--line);font-weight:600}.gr div:nth-child(odd){border-right:1px solid var(--line)}.gr div:nth-last-child(-n+2){border-bottom:0}
+.gr small{display:block;font-size:.64rem;letter-spacing:.12em;color:var(--muted);font-weight:800}
+.foot{color:var(--muted);font-size:.78rem;margin:16px 20px 0;line-height:1.5}
+.bad-card{padding:34px 22px}.bad-card .x{width:66px;height:66px;border-radius:50%;background:rgba(176,58,46,.12);color:var(--bad);display:grid;place-items:center;font-size:2rem;font-weight:900;margin:0 auto 12px}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><b>ABC OPERATIONS</b><small>CLEANER ACCESS PASS</small></div>
+<div class="card" id="c"><div class="bad-card"><p style="color:#6D6479">Loading…</p></div></div>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const P = new URLSearchParams(location.search), C = document.getElementById("c");
+const fmt = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
+fetch(`/api/cl-pass?id=${encodeURIComponent(P.get("id") || "")}&t=${encodeURIComponent(P.get("t") || "")}`).then(r => r.json()).then(j => {
+  const w = j && j.ok && j.data;
+  if (!w || !w.valid){ C.innerHTML = `<div class="bad-card"><div class="x">✕</div><h1 style="margin:0">Pass not valid</h1><p class="foot">This cleaner badge does not exist or was replaced.</p></div>`; return; }
+  const cls = w.status === "Active" ? "" : w.status === "Blacklist" ? "bad" : "warn";
+  C.innerHTML = `<div class="top">${w.photo ? `<img class="av" src="${w.photo}" alt="">` : `<div class="av"></div>`}</div>
+    <span class="st ${cls}"><i></i>${esc(String(w.status).toUpperCase())}</span>
+    <h1>${esc(w.name)}</h1><div class="pos">${esc(w.position || "Cleaner")}</div><span class="id">${esc(w.id)}</span>
+    ${w.days != null ? `<div class="days"><b>${w.days}</b><small>DAYS OF<br>ACCESS</small><span>Registered<br><b>${esc(fmt(w.registered))}</b></span></div>` : ""}
+    <div class="gr"><div><small>TENANT</small>${esc(w.tenant || "—")}</div><div><small>FLAGSHIP</small>${esc(w.siteName)}</div><div><small>COMPANY</small>${esc(w.company || "—")}</div><div><small>POSITION</small>${esc(w.position || "Cleaner")}</div></div>
+    <p class="foot">Entry is checked by the loading area team with the Loading Gate app.</p>`;
+}).catch(() => { C.innerHTML = `<div class="bad-card"><h1 style="margin:0">No connection</h1><p class="foot">Try again in a moment.</p></div>`; });
+</script>
+</body>
+</html>

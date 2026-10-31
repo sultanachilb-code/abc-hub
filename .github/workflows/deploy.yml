@@ -68,6 +68,27 @@ jobs:
           workingDirectory: gate-worker
           command: deploy
 
+      # Cleaner QR: the two old links (badge link + old admin page) — the old pages until the hub's Cleaner Access is switched on, then they forward to the hub
+      - name: Deploy the Cleaner QR badge link (abcv-loading-area-access)
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          workingDirectory: cleaner-forward
+          command: deploy -c wrangler.pass.jsonc
+
+      - name: Deploy the old Cleaner QR admin link (abcv-admin-access)
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          workingDirectory: cleaner-forward
+          command: deploy -c wrangler.admin.jsonc
+
       # Cleaning app: the cleaner supervisors' phones on their own link (worker abc-cleaning) — see docs/FEATURE-cleaning-app.md
       # The hub is already live at this point: a problem here (e.g. R2 not enabled yet) never stops the hub.
       - name: Create the photo bucket for the cleaning app (once; ignored when it exists)
