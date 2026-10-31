@@ -10,9 +10,12 @@ jobs:
       ACC: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          B=70a9d226-4ae9-4758-a751-3dee78622492
-          curl -s -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$ACC/builds/builds/$B" | jq -c '.result | {status, build_outcome, stopped_on, trigger: .trigger.trigger_name}' | sed 's/^/::notice title=build::/' | tr ',' ' '
-          C=""; for n in 1 2 3 4; do
-            curl -s -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$ACC/builds/builds/$B/logs${C:+?cursor=$C}" > l.json
-            jq -r '.result.lines[]? | .[1]' l.json | grep -iv "^$" | grep -iE "error|fail|✘|binding|service|warn" | head -20 | while IFS= read -r l; do echo "::notice title=log$n::${l//,/ }"; done
-            C=$(jq -r '.result.cursor // empty' l.json); T=$(jq -r '.result.truncated' l.json); [ "$T" = "true" ] && [ -n "$C" ] || break; done
+          n(){ echo "::notice title=$1::$(curl -s -m 15 "$2" | head -c 300 | tr ',' ' ')"; }
+          n incidents-signin "https://abc-incident-system.sultanachi-lb-61f.workers.dev/api/hub-signin"
+          n snaglist-signin "https://abc-snaglist.sultanalachi-work.workers.dev/api?hubsignin=1"
+          n restroom-probe "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/sso?probe=1"
+          n restroom-session "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/session"
+          n restroom-data-locked "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/api/report-data?from=2026-10-01&to=2026-10-31"
+          n hub-policy-nokey "https://operations-hub.sultanachi-lb-61f.workers.dev/api/sso/policy?app=snaglist"
+          echo "::notice title=pin-in-page::$(curl -s -m 15 https://abc-restroom-report.sultanachi-lb-61f.workers.dev/ | grep -c "const PIN")"
+          curl -s -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$ACC/workers/scripts/abc-incident-system/schedules" | jq -c '.result' | sed 's/^/::notice title=inc-crons::/' | tr ',' ' '
