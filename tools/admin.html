@@ -17,7 +17,16 @@
 :root[data-adm="dark"] .p-ok{background:rgba(95,208,138,.15);color:#7FDCA0}:root[data-adm="dark"] .p-warn{background:rgba(240,180,76,.15);color:#F0C070}:root[data-adm="dark"] .p-bad{background:rgba(255,122,107,.15);color:#FF9488}:root[data-adm="dark"] .p-mut{background:rgba(255,255,255,.08);color:#C9BEDA}
 *{box-sizing:border-box}
 body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--cbg);color:var(--ctext)}
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.app{min-height:100vh}
+.atb{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--ccard);border-bottom:1px solid var(--cline)}
+.atb-h{display:flex;align-items:center;gap:9px;border:0;background:none;color:var(--ctext);font:inherit;cursor:pointer;padding:2px;text-align:left}
+.atb-lg{width:34px;height:34px;border-radius:10px;background:#2A0F45;display:grid;place-items:center;flex:none}.atb-lg img{height:20px}
+.atb-h b{display:block;font-size:.92rem}.atb-h small{display:block;font-size:.7rem;color:var(--cmut)}
+.atb-cr{font-size:.86rem;font-weight:700;color:var(--cmut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atb-cr button{border:0;background:none;font:inherit;color:#6B3FA0;cursor:pointer;padding:0}
+.atb-sp{flex:1}
+.atb-th{display:flex;gap:2px;background:var(--cpaper);border:1px solid var(--cline);border-radius:10px;padding:2px}.atb-th button{border:0;background:none;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:.85rem}.atb-th button.on{background:var(--ccard);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.atb-b{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--cline);background:var(--ccard);color:var(--ctext);border-radius:10px;padding:7px 11px;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap}.atb-b:hover{border-color:#8A5CC0}
+@media(max-width:620px){.atb{padding:8px 10px}.atb-h small,.atb-b span,.atb-cr{display:none}}
 nav{background:var(--nbg);color:var(--ntext);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--nline)}
 nav .lg{display:flex;gap:10px;align-items:center;padding:0 6px 14px;border-bottom:1px solid var(--nline);margin-bottom:8px}
 nav .lg .lgm{width:38px;height:38px;border-radius:11px;background:rgba(0,0,0,.22);display:grid;place-items:center;flex:none}nav .lg img{height:24px}nav .lg b{display:block;font-size:.98rem}nav .lg small{color:var(--nmut);font-size:.72rem}
@@ -159,10 +168,11 @@ async function boot(){
     $("#vb").onclick = async () => { await fetch("/api/viewas-stop", { method: "POST" }); location.reload(); }; return; }
   if (!ME.admin) { $("#root").innerHTML = `<div class="deny card"><h2>Administrators only</h2><p class="mut">This page is for hub administrators.</p><a class="b" href="/">Back to the hub</a></div>`; return; }
   if (!ME.admin.unlocked) return lockScreen();
-  $("#root").innerHTML = `<div class="app"><nav id="nav"><div class="lg"><span class="lgm"><img src="/icons/abc-logo-white.png" alt="ABC"></span><div><b>Admin Control</b><small>${esc(ME.user.name)}</small></div></div>
-    <div id="navL"></div>
-    <div class="sep">Display</div><div class="thm" id="thm"><button data-th="light">☀️ Light</button><button data-th="dark">🌙 Dark</button></div>
-    <div class="sep">Hub</div><a href="/">🛡 Open the hub as administrator</a><button id="lockB">⎋ Exit administrator mode</button></nav><main id="main"></main></div>`;
+  /* no side menu (Oct 2026): a slim top bar — the landing page (Home) opens every page */
+  $("#root").innerHTML = `<div class="app"><header class="atb" id="nav"><button class="atb-h" data-p="hm" title="Admin Control Center home"><span class="atb-lg"><img src="/icons/abc-logo-white.png" alt="ABC"></span><span><b>Admin Control</b><small>${esc(ME.user.name)}</small></span></button>
+    <span class="atb-cr" id="atbCr"></span><span class="atb-sp"></span>
+    <div class="atb-th" id="thm"><button data-th="light" title="Light">☀️</button><button data-th="dark" title="Dark">🌙</button></div>
+    <a class="atb-b" href="/" title="Open the hub as administrator">🛡 <span>Open the hub</span></a><button class="atb-b" id="lockB" title="Exit administrator mode">⎋ <span>Exit</span></button></header><main id="main"></main></div>`;
   $("#nav").onclick = e => { const x = e.target.closest("[data-x]"); if (x) return openShortcut(x.dataset.x); const b = e.target.closest("[data-p]"); if (!b) return; go(b.dataset.p); };
   await loadLanding(); drawNav();
   $("#lockB").onclick = async () => { await api("admin/lock", {}).catch(() => {}); location.href = "/"; };
@@ -174,7 +184,7 @@ async function boot(){
 }
 function go(p){
   PAGE = p === "hm" || NAV.some(n => n[0] === p) ? p : "hm"; history.replaceState(null, "", "#" + PAGE);
-  document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE));
+  document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE)); if (LAY) drawNav();
   const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
   ({ hm, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
@@ -236,6 +246,7 @@ function openShortcut(id){
   location.href = u.startsWith("#") ? "/" + u : u;
 }
 function drawNav(){
+  const cr = $("#atbCr"); if (cr){ const i = PAGE !== "hm" && LAY && itemInfo(LAY, PAGE); cr.innerHTML = i ? `› <button data-p="hm">Home</button> › ${esc(i.icon)} ${esc(i.name)}` : ""; }
   const L = LAY, el = $("#navL"); if (!el) return;
   el.innerHTML = `<button data-p="hm">🏠 Home<span class="dt" id="dt-hm"></span></button>` + L.sections.filter(s => s.items.length).map(s => `<div class="sep">${esc(s.name)}</div>` + s.items.map(id => {
     const i = itemInfo(L, id); if (!i) return "";
