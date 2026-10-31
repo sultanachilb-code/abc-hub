@@ -134,7 +134,7 @@ async function api(path, body){
     catch (e){ if (e.status) throw e; if (!GINFO) throw new Error("No signal — open the Loading Gate again when you have signal."); }
     return { site: GINFO.site, siteName: GINFO.siteName, canPickSite: false, sites: {}, today: beirutDay(), me: { name: ls.get(GK.agent) } };
   }
-  const m = base.match(/^ops\/gate\/(lookup|decide|day)$/);
+  const m = base.match(/^ops\/gate\/(lookup|decide|day|cleaner|cleaner-in)$/);
   if (!m) throw new Error("Not available on the Loading Gate link");
   try { return await apiRaw(m[1] + qs, body); }
   catch (e){

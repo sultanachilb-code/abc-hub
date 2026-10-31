@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cleaner Access Pass — ABC Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0F2A4A; --navy-deep:#0A1D33; --gold:#C9A24B; --gold-soft:#EAD9AE;
+    --bg:#E9ECF1; --card:#FFFFFF; --ink:#1A2433; --muted:#6B7686;
+    --line:#E3E7ED; --green:#1E7B4F; --green-bg:#E7F5EE; --red:#B3362B; --red-bg:#FBEAE8;
+    --black:#1C1C1E;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(--ink);
+    min-height:100vh; display:flex; justify-content:center; padding:20px 14px 110px;
+  }
+  .pass{width:100%; max-width:420px}
+
+  .card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(15,42,74,.18)}
+  .band{
+    background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);
+    padding:26px 22px 64px; position:relative; text-align:center;
+  }
+  body.blacklisted .band{background:linear-gradient(160deg,#7A1F16 0%,#3D0F0A 100%)}
+  .punch{width:52px;height:14px;border-radius:8px;background:var(--bg);margin:0 auto 16px;box-shadow:inset 0 2px 4px rgba(0,0,0,.35)}
+  .brand{color:#fff;font-family:'Archivo',sans-serif;font-weight:800;font-size:13px;letter-spacing:.28em;text-transform:uppercase}
+  .brand span{color:var(--gold)}
+  .band .sub{color:#9FB0C6;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
+  body.blacklisted .band .sub{color:#E8B4AD}
+
+  .photo-wrap{display:flex;justify-content:center;margin-top:-52px;position:relative;z-index:2}
+  .photo{
+    width:112px;height:112px;border-radius:50%;object-fit:cover;
+    border:4px solid var(--card);box-shadow:0 4px 14px rgba(15,42,74,.25);background:#D8DEE7;
+  }
+  body.blacklisted .photo{filter:grayscale(1)}
+
+  .status{
+    display:inline-flex;align-items:center;gap:6px;margin-top:12px;
+    font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    padding:5px 14px;border-radius:999px;
+  }
+  .status.active{background:var(--green-bg);color:var(--green)}
+  .status.suspended{background:#FCF3E0;color:#9A6B0F}
+  .status.blacklist{background:var(--black);color:#FF6B5E}
+  .status .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+  .alert{
+    margin:14px 16px 0;border-radius:10px;padding:12px 14px;font-size:13px;font-weight:600;
+    display:none;line-height:1.5;
+  }
+  .alert.show{display:block}
+  .alert.red{background:var(--red-bg);color:var(--red);border:1px solid #EFC5C0}
+
+  .identity{text-align:center;padding:8px 22px 4px}
+  .identity h1{font-family:'Archivo',sans-serif;font-weight:700;font-size:22px;letter-spacing:.01em}
+  .identity .role{color:var(--muted);font-size:13.5px;margin-top:3px}
+  .wid{
+    display:inline-block;margin-top:8px;font-family:'Archivo',sans-serif;font-weight:600;
+    font-size:12px;letter-spacing:.16em;color:var(--navy);
+    border:1px solid var(--gold);border-radius:6px;padding:4px 12px;background:#FBF7EC;
+  }
+
+  /* days-of-access ribbon */
+  .days{
+    display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 16px 0;
+    background:linear-gradient(90deg,#FBF7EC,#F6EDD6);border:1px solid var(--gold-soft);
+    border-radius:12px;padding:10px 14px;
+  }
+  .days .n{font-family:'Archivo',sans-serif;font-weight:800;font-size:24px;color:var(--navy)}
+  .days .l{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:#8A7333;font-weight:700;line-height:1.4;text-align:left}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-top:1px solid var(--line);margin-top:16px}
+  .cell{background:var(--card);padding:13px 16px}
+  .cell.full{grid-column:1/-1}
+  .cell .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .cell .v{font-size:14.5px;font-weight:500;margin-top:3px;word-break:break-word}
+  .cell .v a{color:var(--navy);text-decoration:none;font-weight:600}
+  .callbtn{
+    display:inline-flex;align-items:center;gap:7px;margin-top:5px;
+    background:var(--navy);color:#fff !important;border-radius:9px;padding:8px 14px;
+    font-size:13px;font-weight:600;text-decoration:none;
+  }
+
+  .idcopy{padding:18px 16px 20px;border-top:1px solid var(--line)}
+  .idcopy .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px}
+  .idcopy img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+  .idcopy .none{color:var(--muted);font-size:13px;text-align:center;padding:18px;border:1px dashed var(--line);border-radius:10px}
+
+  .bar{
+    position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);display:flex;justify-content:center;
+  }
+  .bar-inner{width:100%;max-width:420px}
+  .btn{
+    width:100%;border:0;border-radius:12px;padding:16px;cursor:pointer;
+    font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;letter-spacing:.06em;
+    text-transform:uppercase;color:#fff;background:var(--navy);
+    box-shadow:0 4px 14px rgba(15,42,74,.28);transition:transform .08s,opacity .2s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+  .btn.done{background:var(--green)}
+  .btn.denied{background:var(--red);opacity:1}
+  .pinrow{display:flex;gap:8px;margin-bottom:10px}
+  .pinrow input{
+    flex:1;border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;
+    font-size:16px;font-family:'IBM Plex Sans',sans-serif;letter-spacing:.2em;text-align:center;
+  }
+  .pinrow input:focus{outline:none;border-color:var(--navy)}
+  .hint{text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
+
+  .banner{max-width:420px;margin:0 auto 14px;border-radius:12px;padding:13px 16px;font-size:13.5px;font-weight:600;display:none}
+  .banner.ok{display:block;background:var(--green-bg);color:var(--green)}
+  .banner.err{display:block;background:var(--red-bg);color:var(--red)}
+
+  .screen{max-width:420px;width:100%;text-align:center;padding-top:26vh;color:var(--muted)}
+  .spinner{width:38px;height:38px;border:3.5px solid var(--line);border-top-color:var(--gold);border-radius:50%;margin:0 auto 16px;animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .screen h2{font-family:'Archivo',sans-serif;color:var(--ink);font-size:18px;margin-bottom:6px}
+  @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="screen" id="loading">
+  <div class="spinner"></div>
+  <div>Loading pass…</div>
+</div>
+
+<div class="screen" id="errorScreen" style="display:none">
+  <h2>Pass not valid</h2>
+  <div id="errorMsg">This QR code is not recognized.</div>
+</div>
+
+<div class="pass" id="pass" style="display:none">
+  <div class="banner" id="banner"></div>
+
+  <div class="card">
+    <div class="band">
+      <div class="punch"></div>
+      <div class="brand">ABC <span>Operations</span></div>
+      <div class="sub" id="passType">Cleaner Access Pass</div>
+    </div>
+
+    <div class="photo-wrap"><img class="photo" id="photo" alt="Cleaner photo"></div>
+
+    <div class="identity">
+      <div><span class="status" id="status"><span class="dot"></span><span id="statusText"></span></span></div>
+      <h1 id="name" style="margin-top:10px"></h1>
+      <div class="role" id="role"></div>
+      <div class="wid" id="wid"></div>
+    </div>
+
+    <div class="alert red" id="statusAlert"></div>
+
+    <div class="days" id="daysBox">
+      <div class="n" id="daysN">—</div>
+      <div class="l">Days of<br>Access</div>
+      <div style="width:1px;height:30px;background:var(--gold-soft)"></div>
+      <div class="l" style="color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:none">
+        Registered<br><b id="registered" style="color:var(--ink)"></b>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="cell"><div class="k">Tenant</div><div class="v" id="tenant"></div></div>
+      <div class="cell"><div class="k">Mall</div><div class="v" id="mall"></div></div>
+      <div class="cell"><div class="k">Company</div><div class="v" id="company"></div></div>
+      <div class="cell"><div class="k">Nationality</div><div class="v" id="nationality"></div></div>
+      <div class="cell full" id="companyPhoneCell" style="display:none">
+        <div class="k">Company Phone — Emergency</div>
+        <div class="v"><a class="callbtn" id="companyPhoneLink" href="#">&#9742; <span id="companyPhone"></span></a></div>
+      </div>
+    </div>
+
+    <div class="idcopy">
+      <div class="k">ID / Passport Copy</div>
+      <img id="idcopy" alt="ID copy" style="display:none">
+      <div class="none" id="idcopyNone" style="display:none">No ID copy on file</div>
+    </div>
+  </div>
+</div>
+
+<div class="bar" id="bar" style="display:none">
+  <div class="bar-inner">
+    <div class="pinrow" id="pinrow" style="display:none">
+      <input type="tel" id="pin" maxlength="6" placeholder="Agent PIN" inputmode="numeric" autocomplete="off">
+    </div>
+    <button class="btn" id="checkinBtn">Check In for Today</button>
+    <div class="hint" id="hint"></div>
+  </div>
+</div>
+
+<script>
+/* ================== CONFIG ================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec';
+/* ============================================ */
+
+const qs = new URLSearchParams(location.search);
+const workerId = qs.get('id'), token = qs.get('t');
+let workerData = null;
+
+function jsonp(params){
+  return new Promise((resolve, reject)=>{
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    window[cb] = (data)=>{ resolve(data); delete window[cb]; s.remove(); };
+    const s = document.createElement('script');
+    s.src = API_URL + '?' + new URLSearchParams({...params, callback: cb});
+    s.onerror = ()=>{ reject(new Error('Network error')); delete window[cb]; s.remove(); };
+    document.body.appendChild(s);
+  });
+}
+
+const el = id => document.getElementById(id);
+function showError(msg){
+  el('loading').style.display='none'; el('pass').style.display='none'; el('bar').style.display='none';
+  el('errorScreen').style.display='block'; el('errorMsg').textContent = msg;
+}
+
+async function load(){
+  if(!workerId || !token) return showError('Missing pass parameters. Please scan a valid QR code.');
+  try{
+    const res = await jsonp({action:'getWorker', id:workerId, t:token});
+    if(!res.ok) return showError(res.error || 'Pass not found.');
+    workerData = res;
+    render(res);
+  }catch(e){ showError('Could not reach the server. Check your connection and try again.'); }
+}
+
+function render(res){
+  const w = res.worker;
+  el('loading').style.display='none';
+  el('pass').style.display='block';
+  el('bar').style.display='flex';
+
+  el('name').textContent = w.name;
+  el('role').textContent = w.position || 'Cleaner';
+  el('wid').textContent = w.id;
+  el('tenant').textContent = w.tenant || '—';
+  el('mall').textContent = w.mall || '—';
+  el('company').textContent = w.company || '—';
+  el('nationality').textContent = w.nationality || '—';
+  el('registered').textContent = w.registered || '—';
+  el('daysN').textContent = (w.daysOfAccess === null || w.daysOfAccess === undefined) ? '—' : w.daysOfAccess;
+
+  if(w.companyPhone){
+    el('companyPhoneCell').style.display='block';
+    el('companyPhone').textContent = w.companyPhone;
+    el('companyPhoneLink').href = 'tel:' + String(w.companyPhone).replace(/[^\d+]/g,'');
+  }
+
+  if(w.photo) el('photo').src = w.photo;
+  if(w.idCopy){ el('idcopy').src = w.idCopy; el('idcopy').style.display='block'; }
+  else el('idcopyNone').style.display='block';
+
+  const status = String(w.status||'').toLowerCase();
+  const st = el('status');
+  const btn = el('checkinBtn');
+
+  if(status === 'blacklist'){
+    document.body.classList.add('blacklisted');
+    st.className = 'status blacklist';
+    el('statusText').textContent = 'Blacklisted';
+    el('passType').textContent = 'Access Denied';
+    btn.disabled = true; btn.classList.add('denied');
+    btn.textContent = '✕ Access Denied — Blacklisted';
+    el('hint').textContent = 'Do not allow entry. Contact mall operations immediately.';
+    if(w.comment){ el('statusAlert').classList.add('show'); el('statusAlert').textContent = 'Reason: ' + w.comment; }
+    return;
+  }
+
+  if(status === 'suspended'){
+    st.className = 'status suspended';
+    el('statusText').textContent = 'Suspended';
+    btn.disabled = true;
+    btn.textContent = 'Entry Not Allowed — Suspended';
+    el('hint').textContent = 'Access pending tenant verification. Contact mall operations.';
+    if(w.comment){ el('statusAlert').classList.add('show'); el('statusAlert').textContent = 'Note: ' + w.comment; }
+    return;
+  }
+
+  st.className = 'status active';
+  el('statusText').textContent = w.status || 'Active';
+
+  if(res.checkedInToday){
+    setDone(res.checkedInToday.time, res.checkedInToday.agent);
+  } else {
+    if(!localStorage.getItem('agentPin')) el('pinrow').style.display='flex';
+    el('hint').textContent = localStorage.getItem('agentPin')
+      ? '' : 'Enter your agent PIN once — it will be remembered on this device.';
+  }
+}
+
+function setDone(time, agent){
+  const btn = el('checkinBtn');
+  btn.classList.add('done'); btn.disabled = true;
+  btn.textContent = '✓ Checked In — ' + String(time).slice(0,5);
+  el('pinrow').style.display='none';
+  el('hint').textContent = 'Recorded by ' + agent + ' · ' + workerData.serverDate;
+}
+
+function banner(msg, ok){
+  const b = el('banner');
+  b.className = 'banner ' + (ok?'ok':'err');
+  b.textContent = msg;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+el('checkinBtn').addEventListener('click', async ()=>{
+  let pin = localStorage.getItem('agentPin');
+  if(!pin){
+    pin = el('pin').value.trim();
+    if(!pin){ el('pin').focus(); return; }
+  }
+  const btn = el('checkinBtn');
+  btn.disabled = true; btn.textContent = 'Recording…';
+  try{
+    const res = await jsonp({action:'checkIn', id:workerId, t:token, pin:pin});
+    if(!res.ok){
+      localStorage.removeItem('agentPin');
+      btn.disabled = false; btn.textContent = 'Check In for Today';
+      el('pinrow').style.display='flex';
+      return banner(res.error, false);
+    }
+    localStorage.setItem('agentPin', pin);
+    setDone(res.time, res.agent);
+    banner(res.duplicate
+      ? 'Already checked in today at ' + String(res.time).slice(0,5) + '.'
+      : 'Check-in recorded at ' + String(res.time).slice(0,5) + '.', true);
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Check In for Today';
+    banner('Network error — please try again.', false);
+  }
+});
+
+load();
+</script>
+</body>
+</html>

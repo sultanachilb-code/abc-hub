@@ -935,7 +935,8 @@ async function pr(){
   }
   const role = e ? e.role || "SUPERVISOR" : "SUPERVISOR";
   const posF = r => r === "MANAGER" ? `<label>Position</label><select id="uP">${Object.entries(d.titles).map(([c, t]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(t.label)}</option>`).join("")}</select>`
-    : r === "SUPERVISOR" ? `<label>Position</label><select id="uP">${Object.entries(d.positions).map(([c, n]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
+    : r === "SECURITY" ? `<label>Position</label><select id="uP"><option value="">Security</option><option value="HOS" ${e && e.position === "HOS" ? "selected" : ""}>Head of Security · every flagship</option></select>`
+        : r === "SUPERVISOR" ? `<label>Position</label><select id="uP">${Object.entries(d.positions).map(([c, n]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
   const siteF = r => d.multiRoles.includes(r) ? `<label>Flagships</label><div>${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<label class="mut" style="display:flex;gap:6px"><input type="checkbox" class="uS" value="${c}" ${e && (e.sites || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
     : r === "ADVISOR" ? `<p class="mut">All five flagships.</p>` : r === "EXTERNAL" ? `<p class="mut">Not linked to a flagship — the systems below decide what they see.</p>` : `<label>Flagship${r === "ADMIN" ? " (optional)" : ""}</label><select id="uF">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${((e && e.site) || (PTAB !== "LEAD" ? PTAB : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
   const order = ["MANAGER", "SUPERVISOR", "SECURITY", "ADVISOR", "DIRECTOR", "CDSO", "ADMIN", "EXTERNAL"];

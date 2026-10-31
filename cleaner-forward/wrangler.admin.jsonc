@@ -1,0 +1,9 @@
+{
+  /* Cleaner QR old link: abcv-admin-access — see cleaner-forward/worker.js */
+  "name": "abcv-admin-access",
+  "main": "worker.js",
+  "compatibility_date": "2026-07-09",
+  "assets": { "directory": "./admin", "binding": "ASSETS", "run_worker_first": true },
+  "services": [ { "binding": "HUB", "service": "operations-hub" } ],
+  "vars": { "KIND": "admin" }
+}

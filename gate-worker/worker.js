@@ -13,7 +13,7 @@ const SEC = {
 };
 const withSec = (r, extra = {}) => { const h = new Headers(r.headers); for (const [k, v] of Object.entries({ ...SEC, ...extra })) h.set(k, v); return new Response(r.body, { status: r.status, headers: h }); };
 const jsonErr = (msg, status) => withSec(new Response(JSON.stringify({ ok: false, error: msg }), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } }));
-const ALLOWED = /^(login|pair|me|lookup|decide|day)$/;
+const ALLOWED = /^(login|pair|me|lookup|decide|day|cleaner|cleaner-in)$/;   // cleaner / cleaner-in: Cleaner Access badges (Oct 2026)
 /* the sign-in is also kept in a cookie set by this link (HttpOnly, 90 days, renewed on use): iPhone keeps it even when
    the page's own storage is cleared, so the guards are not asked to sign in again */
 const CK = "gate_t", CK_AGE = 90 * 86400;

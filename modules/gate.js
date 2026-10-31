@@ -408,6 +408,8 @@ export async function gatePublic(env, request, p, method, b, url, deps) {
     await env.DB.prepare("UPDATE gate_devices SET last_seen = ?, expires = CASE WHEN account_id > 0 THEN ? ELSE expires END, last_agent = CASE WHEN ? != '' THEN ? ELSE last_agent END WHERE id = ?")
       .bind(nowIso, expIso(), agent, agent, dev.id).run().catch(() => {});   // 90 days from the last use
   if (p === "me") return { site: dev.site, siteName: deps.siteName(dev.site), device: dev.name, today: deps.today(), agent };
+  if ((p === "cleaner" || p === "cleaner-in") && deps.cleanGate)   // Cleaner Access: a cleaner badge scanned at this flagship's gate
+    return deps.cleanGate(env, p, method, b, url, { site: dev.site, agent, device: dev.name });
   if (!["lookup", "decide", "day"].includes(p)) throw err("Unknown request", 404);
   if (p === "decide" && !agent) throw err("Write your name first", 400);
   const me = { full_name: agent ? `${agent} · ${dev.name}` : dev.name, email: "", role: "SECURITY", position: "" };
