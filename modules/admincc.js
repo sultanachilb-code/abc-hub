@@ -258,6 +258,13 @@ export async function admRoute(env, a, method, b, url, d) {
     return { ...sys, secrets: SECRETS.map(([k, use, req]) => ({ name: k, use, required: req, set: !!env[k] })), jobs: await jobs(env, d) };
   }
   /* Landing page of the Admin Control Center: one arrangement shared by every administrator (Oct 2026) */
+  /* Hub sign-in (Oct 2026): which systems accept the hub account, and "Hub sign-in only" per system */
+  if (a === "cc/sso" && method === "GET") {
+    const S = d.ssoAdmin, pol = await S.policy(env);
+    const apps = await Promise.all(Object.entries(S.apps).map(async ([id, v]) => ({ id, name: v.name, hubOnly: !!(pol[id] && pol[id].hubOnly), since: (pol[id] && pol[id].at) || "", ready: await S.ready(id).catch(() => false) })));
+    const ext = Number((await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE active = 1 AND role = 'EXTERNAL'").first()).n) || 0;
+    return { apps, external: ext };
+  }
   if (a === "cc/landing" && method === "GET") return { layout: await metaJson(env, "admin:landing") };
   if (a === "cc/tools" && method === "GET") {
     const cfg = await toolsCfg(env), since = new Date(Date.now() - 7 * 864e5).toISOString();
@@ -296,6 +303,12 @@ export async function admRoute(env, a, method, b, url, d) {
     if (u.email === me.email) throw err("That is you");
     await log("view as", `Viewed the hub as ${u.full_name}`, u.email);
     return { cookie: await d.viewAsCookie(env, me.email, u.email), name: u.full_name };
+  }
+  if (a === "cc/sso") {
+    const app = String(b.app || ""), on = !!b.hubOnly;
+    await d.ssoAdmin.set(env, app, on);
+    await log("hub sign-in", `${(d.ssoAdmin.apps[app] || {}).name || app}: ${on ? "hub sign-in only — its own passwords switched off" : "own passwords allowed again"}`, app);
+    return { done: true };
   }
   if (a === "cc/landing") {
     if (b.reset) { await env.DB.prepare("DELETE FROM meta WHERE k = 'admin:landing'").run(); await log("landing", "Admin Control landing page reset to the standard arrangement"); return { layout: null }; }

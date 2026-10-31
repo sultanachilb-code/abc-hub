@@ -1329,7 +1329,37 @@ async function boot(){
   SITES = ME.sites; ROLES = ME.roles;
   if (ME.user.mustChange) return authScreen("change");
   if (ME.user.twofa && ME.user.twofa.setupNeeded) return twofaSetupScreen();   // Two-step login feature: required for this role
+  /* "Sign in with ABC Hub" from Snaglist / Incidents / Restroom: signed in → straight back to that system */
+  const ssoTo = new URLSearchParams(location.search).get("sso");
+  if (ssoTo && /^[a-z-]{2,30}$/.test(ssoTo)) return location.replace("/sso?app=" + encodeURIComponent(ssoTo));
+  if (ME.user.role === "EXTERNAL") return externalHome();   // External accounts: only their systems
   startHub();
+}
+/* ---------- External accounts (Oct 2026): a small home with only the systems given to them ---------- */
+function externalHome(){
+  const S = ME.user.sys || {}, apps = ALL_APPS.filter(a => S[a.id]);
+  document.body.innerHTML = `<style>
+    .xh{min-height:100vh;background:var(--bg,#F5F3F8);color:var(--text,#221A2E);font-family:inherit}
+    .xh header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#2A0F45;color:#fff}.xh header img{height:26px}.xh header b{flex:1}
+    .xh header button,.xh .xb{border:1px solid rgba(255,255,255,.3);background:none;color:#fff;border-radius:10px;padding:7px 11px;font:inherit;font-weight:700;cursor:pointer}
+    .xh main{max-width:720px;margin:0 auto;padding:22px 16px}.xh h1{font-size:1.35rem;margin:0 0 4px}.xh p{color:var(--muted,#6D6479);margin:0 0 18px}
+    .xh .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    .xh .t{display:flex;gap:12px;align-items:center;background:var(--card,#fff);border:1px solid var(--line,#E6E0EE);border-radius:16px;padding:16px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+    .xh .t:hover{border-color:#8A5CC0}.xh .t i{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-style:normal;color:#fff;font-weight:800;font-size:1.1rem;flex:none}
+    .xf{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;background:#fff}.xf.on{display:flex}
+    .xf .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#2A0F45;color:#fff}.xf .bar b{flex:1;font-size:.92rem}.xf iframe{flex:1;border:0;width:100%}
+  </style><div class="xh"><header><img src="icons/abc-logo-white.png" alt="ABC"><b>ABC Operations Hub</b><button id="xPw">Password</button><button id="xOut">Sign out</button></header>
+    <main><h1>Hello ${esc(ME.user.name.split(" ")[0])}</h1><p>Your systems — they open signed in with your hub account.</p>
+    <div class="g">${apps.map(a => `<button class="t" data-x="${esc(a.id)}"><i style="background:${esc(a.color || "#4A1F73")}">${esc(a.name[0])}</i><span><b>${esc(a.name)}</b><br><small style="color:var(--muted,#6D6479)">${esc(a.desc || "")}</small></span></button>`).join("") || `<p>No system has been given to this account yet — contact the hub administrator.</p>`}</div></main></div>
+    <div class="xf" id="xf"><div class="bar"><button class="xb" id="xBack">‹ Hub</button><b id="xT"></b><button class="xb" id="xExt" title="Open in its own tab">↗</button></div><iframe id="xFr" allow="camera; microphone; geolocation; clipboard-write; fullscreen"></iframe></div>`;
+  let cur = null;
+  document.querySelector(".g").onclick = async e => { const b = e.target.closest("[data-x]"); if (!b) return; const a = apps.find(x => x.id === b.dataset.x); cur = a;
+    $("#xT").textContent = a.name; $("#xf").classList.add("on"); $("#xFr").src = "about:blank";
+    try { const d = await api("sso?app=" + encodeURIComponent(a.id)); $("#xFr").src = d.url; } catch (er){ $("#xf").classList.remove("on"); toast(er.message, true); } };
+  $("#xBack").onclick = () => { $("#xf").classList.remove("on"); $("#xFr").src = "about:blank"; };
+  $("#xExt").onclick = async () => { if (!cur) return; try { const d = await api("sso?app=" + encodeURIComponent(cur.id)); window.open(d.url, "_blank", "noopener"); } catch (er){ toast(er.message, true); } };
+  $("#xOut").onclick = async () => { await api("logout", {}).catch(() => {}); location.replace("/"); };
+  $("#xPw").onclick = () => authScreen("change");
 }
 function authClock(){
   const t = $("#authTime"); if (!t || $("#auth").classList.contains("hidden")) return;
@@ -1342,7 +1372,7 @@ function authScreen(mode, errText){
   show("auth"); authClock();
   const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
   const forms = {
-    login: `${logo}<h1>ABC Operations Hub</h1><p class="sub">Sign in to reach every operational system in one place.</p>
+    login: `${logo}<h1>ABC Operations Hub</h1><p class="sub">${(() => { const t = new URLSearchParams(location.search).get("sso"), n = { snaglist: "Snaglist Manager", incidents: "the Incident Report System", restroom: "the Restroom dashboard" }[t]; return n ? `Sign in with your hub account to continue to <b>${n}</b>.` : "Sign in to reach every operational system in one place."; })()}</p>
       <div id="aMsg"></div>
       <label class="field"><span>Email</span><input id="aEmail" type="email" autocomplete="username" required></label>
       <label class="field"><span>Password</span><input id="aPass" type="password" autocomplete="current-password" required></label>
@@ -1418,6 +1448,7 @@ function startHub(){
   const TC = ME.tools || {};   // Admin Control → Tools control: switched off · other folder · who sees it · new name
   APPS = ALL_APPS.map(a => TC[a.id] ? Object.assign({}, a, TC[a.id].group ? { group: TC[a.id].group } : {}, TC[a.id].name ? { name: TC[a.id].name } : {}) : a)
     .filter(a => !(H.ADMIN_GROUPS || []).includes(a.group) || role === "ADMIN")   // the "OFF" folder: administrator only
+    .filter(a => role === "ADMIN" || !(ME.user.sys && a.id in ME.user.sys && !ME.user.sys[a.id]))   // Hub sign-in: no access to that system (People & roles → Systems)
     .filter(a => { const c = TC[a.id];
       if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role
       if (c && c.off) return false;                     // Tools control: switched off

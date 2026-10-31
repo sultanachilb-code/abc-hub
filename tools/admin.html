@@ -147,7 +147,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#hm").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
-  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["tl", "🧩", "Tools control"], ["ws", "🎚", "Who sees what"], ["bk", "💾", "Data & backup"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["tl", "🧩", "Tools control"], ["ws", "🎚", "Who sees what"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
@@ -187,7 +187,7 @@ function go(p){
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE)); if (LAY) drawNav();
   const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ hm, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ hm, ss, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, pc, tl, bk, ex, an, fc, se, mm })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -210,7 +210,7 @@ let LAY = null, OV = null, EDIT = null, LQ = "", OPEN = {}, LDRAG = null;
 const PG = () => Object.fromEntries(NAV.filter(n => n[0] !== "sep").map(n => [n[0], { icon: n[1], name: n[2] }]));
 const SEC_ICON = { People: "👥", Platform: "⚙️", Content: "📣" };
 const PDESC = { ov: "Today at a glance", pr: "Positions, roles and flagships", us: "Accounts, sign-in and access", ur: "Who uses which tool", sec: "Sign-ins and two-step", hi: "Every change, by whom",
-  al: "Free-plan allowances", db: "Tables and file storage", sy: "Connected systems and automatic jobs", mb: "Emails imported from IT reports", pc: "Projects and repositories", tl: "Switch tools on / off, folders",
+  al: "Free-plan allowances", db: "Tables and file storage", sy: "Connected systems and automatic jobs", mb: "Emails imported from IT reports", pc: "Projects and repositories", ss: "One hub account for Snaglist, Incidents, Restroom", tl: "Switch tools on / off, folders",
   ws: "Which positions see each tool", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
 function defaultLayout(){
   const sections = []; let cur = { id: "s-glance", name: "At a glance", icon: "🏠", size: "card", closed: false, items: [] };
@@ -447,6 +447,30 @@ function shortcutDialog(){
     const c = { id: "x" + Date.now().toString(36), kind, ref, name: (d.querySelector("#dNm").value.trim() || (a ? a.name : ref.replace(/^https:\/\/(www\.)?/, "").split("/")[0])).slice(0, 50), icon: d.querySelector("#dIc").value.trim().slice(0, 8) || "🔗" };
     W.shortcuts.push(c); (W.sections.find(s => s.id === d.querySelector("#dSec").value) || W.sections[0]).items.push(c.id);
     d.close(); hm(); toast("Shortcut added — Save to keep it");
+  };
+}
+
+/* ---------- Hub sign-in (Oct 2026): one hub account for Snaglist, Incidents and Restroom ---------- */
+async function ss(){
+  const S = await api("admin/cc/sso");
+  V(head("Hub sign-in", "People open these systems from the hub with no password; on the systems' own websites they can use “Sign in with ABC Hub”. Signing out of the hub signs them out of these systems too.", `<button class="b g" data-go2="pr">👥 People &amp; roles</button>`) +
+    `<div class="sec">Systems</div><div class="tw"><table style="min-width:620px"><thead><tr><th>System</th><th>Hub sign-in</th><th>Its own passwords</th><th style="width:120px">Hub sign-in only</th></tr></thead><tbody>${S.apps.map(a => `<tr>
+      <td><b>${esc(a.name)}</b></td><td>${a.ready ? pill("ok", "Connected") : pill("warn", "Waiting for the system update")}</td>
+      <td>${a.hubOnly ? pill("mut", "Switched off" + (a.since ? " · " + esc(ago(a.since)) : "")) : pill("ok", "Still work")}</td>
+      <td><button class="sw ${a.hubOnly ? "on" : ""}" data-sso="${a.id}" data-on="${a.hubOnly ? 1 : 0}" aria-label="Hub sign-in only for ${esc(a.name)}"></button></td></tr>`).join("")}</tbody></table></div>
+    <p class="mut" style="line-height:1.6;margin-top:10px">“Hub sign-in only” switches off the system's own email + password form for <b>everyone</b> — internal and external. Before switching it on, give the people outside operations (Audit, Site Visit, Head, Security Manager…) an <b>external account</b> in People &amp; roles · External accounts (${S.external} today).</p>
+    <div class="sec">Who gets which account (Auto)</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div class="card"><h3>Snaglist</h3><div class="sub" style="line-height:1.7">Admin → Admin<br>Property Advisor → Full Access, all flagships<br>Mall Director · CDSO → Full Access, their flagships<br>Managers → Manager, their flagship<br>Senior Mall Supervisor · Mall Supervisor · Mall Officer → Supervisor<br>Warehouse · Security → no access</div></div>
+      <div class="card"><h3>Incident Report</h3><div class="sub" style="line-height:1.7">Admin → Admin, all flagships<br>Property Advisor → Property Advisor, all<br>Mall Director · CDSO → Mall Director, their flagships<br>Managers → Mall Manager, their flagship<br>Operations team · Security → Supervisor, their flagship<br>Warehouse → no access · email position left empty</div></div>
+      <div class="card"><h3>Restroom dashboard</h3><div class="sub" style="line-height:1.7">Everyone in the hub except Warehouse.<br>The inspection form stays open (no sign-in) for the teams on the floor.</div></div></div>
+    <p class="mut" style="margin-top:10px">A missing account is created in the system the first time the person opens it from the hub. Change one person in People &amp; roles → Edit → Systems.</p>`);
+  $("#main").onclick = async e => {
+    const g = e.target.closest("[data-go2]"); if (g) return go(g.dataset.go2);
+    const b = e.target.closest("[data-sso]"); if (!b) return;
+    const on = b.dataset.on !== "1", a = S.apps.find(x => x.id === b.dataset.sso);
+    if (on && !(await confirmBox("Hub sign-in only", `${esc(a.name)}: its own email + password stop working for everyone. People sign in from the hub or with “Sign in with ABC Hub”. Continue?`, "Switch on"))) return;
+    try { await api("admin/cc/sso", { app: a.id, hubOnly: on }); toast(`${a.name}: ${on ? "hub sign-in only" : "own passwords allowed again"}`); ss(); } catch (er){ toast(er.message, true); }
   };
 }
 
@@ -870,7 +894,7 @@ async function mm(){ embed("Message of the moment", "Friendly lines above Day to
 
 /* ---------- people & roles (moved from Hub administration) ---------- */
 const FLAGS = [["VRM", "ABC Verdun Mall"], ["ACM", "ABC Achrafieh Mall"], ["DBS", "Dbayeh"], ["VRS", "Verdun DS"], ["ACS", "Achrafieh DS"], ["LEAD", "Leadership & admins"]];
-const ACCESS_NOTE = { MANAGER: "Everything at the flagship.", SUPERVISOR: "Operations Tools, Property Overview & Info and the budget. Cannot change reminders, upload the budget, change property details or see the Executive Report.",
+const ACCESS_NOTE = { EXTERNAL: "Outside operations (for example Audit, Site Visit, the Security Manager). Sees only the systems given below — nothing else of the hub.", MANAGER: "Everything at the flagship.", SUPERVISOR: "Operations Tools, Property Overview & Info and the budget. Cannot change reminders, upload the budget, change property details or see the Executive Report.",
   SECURITY: "Security systems and the tools open to everyone at the flagship.", ADVISOR: "Every flagship, full access.", DIRECTOR: "Full access to the flagships ticked.", CDSO: "Full access to the flagships ticked.",
   ADMIN: "Administrator only (no flagship role). To give someone a real role and administrator access, choose their role and tick “Hub administrator”." };
 let PTAB = "VRM", PED = null;
@@ -879,13 +903,15 @@ async function pr(){
   const U = d.users, e = PED || null;
   const badge2 = u => tf.on[u.email] ? pill("ok", "2-step on") : tf.roles.includes(u.role) ? pill("warn", "2-step not set") : "";
   const row = u => `<div class="cs-r" style="${u.active ? "" : "opacity:.55"}"><div class="who" style="flex:1;min-width:220px"><span class="av">${esc(ini(u.name))}</span><div><b>${esc(u.name)}</b> ${u.active ? pill("mut", esc(u.positionLabel || u.roleLabel)) : pill("bad", "Switched off")} ${u.ext ? pill("mut", "☎ " + esc(u.ext)) : ""} ${u.isAdmin ? pill("warn", "🛡 Admin") : ""} ${badge2(u)}
-      <span class="mut" style="display:block">${esc(u.email)}${d.multiRoles.includes(u.role) ? " · " + esc(u.sitesLabel || "no flagship ticked") : ""} · ${u.lastLoginAt ? "last in " + esc(dt(u.lastLoginAt)) : "never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</span></div></div>
+      <span class="mut" style="display:block">${u.role === "EXTERNAL" && u.sys ? Object.entries(u.sys).filter(([, a]) => a).map(([k]) => "🔑 " + esc((d.ssoApps || {})[k] || k)).join(" · ") + " · " : ""}${esc(u.email)}${d.multiRoles.includes(u.role) ? " · " + esc(u.sitesLabel || "no flagship ticked") : ""} · ${u.lastLoginAt ? "last in " + esc(dt(u.lastLoginAt)) : "never signed in"}${u.morningEligible ? (u.morningEmail ? " · ✉ morning email" : " · morning email off") : ""}</span></div></div>
     <div class="lks"><button class="b g" data-ed="${esc(u.email)}">Edit</button><button class="b g" data-pw="${esc(u.email)}">Password</button>${u.active ? `<button class="b g" data-wel="${esc(u.email)}" title="Send the welcoming email again">✉ Welcome</button>` : ""}${tf.on[u.email] ? `<button class="b g" data-tf="${esc(u.email)}">Reset 2-step</button>` : ""}
       ${u.email !== ME.user.email ? `<button class="b g" data-ac="${esc(u.email)}" data-on="${u.active ? 0 : 1}">${u.active ? "Switch off" : "Switch on"}</button>` : ""}</div></div>`;
   const vac = (label, pre) => `<div class="cs-r" style="border-style:dashed"><div style="flex:1"><b class="mut">Vacant</b><small>${esc(label)}</small></div><button class="b" data-new='${esc(JSON.stringify(pre))}'>Assign</button></div>`;
   const grp = (title, list, note, pre) => `<div class="fg"><h4>${title} <small>${list.length}</small>${pre ? `<button class="b g" style="margin-left:auto" data-new='${esc(JSON.stringify(pre))}'>＋ Add</button>` : ""}</h4>${note ? `<p class="mut" style="margin:-2px 0 8px">${note}</p>` : ""}${list.map(row).join("") || `<p class="mut">Nobody yet.</p>`}</div>`;
   let main = "";
-  if (PTAB === "LEAD") {
+  if (PTAB === "EXT") {   // External accounts (Oct 2026): people outside operations who use some of the systems
+    main = grp("External accounts", U.filter(u => u.role === "EXTERNAL"), ACCESS_NOTE.EXTERNAL + " Until every system is on “Hub sign-in only”, they can still use their own passwords on those systems' websites.", { role: "EXTERNAL" });
+  } else if (PTAB === "LEAD") {
     const by = r => U.filter(u => u.role === r);
     main = grp("Property Advisor", by("ADVISOR"), ACCESS_NOTE.ADVISOR, { role: "ADVISOR" }) + grp("Mall Directors", by("DIRECTOR"), ACCESS_NOTE.DIRECTOR, { role: "DIRECTOR" })
       + grp("Chief Department Store Operations Officer", by("CDSO"), ACCESS_NOTE.CDSO, { role: "CDSO" })
@@ -911,18 +937,42 @@ async function pr(){
   const posF = r => r === "MANAGER" ? `<label>Position</label><select id="uP">${Object.entries(d.titles).map(([c, t]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(t.label)}</option>`).join("")}</select>`
     : r === "SUPERVISOR" ? `<label>Position</label><select id="uP">${Object.entries(d.positions).map(([c, n]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
   const siteF = r => d.multiRoles.includes(r) ? `<label>Flagships</label><div>${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<label class="mut" style="display:flex;gap:6px"><input type="checkbox" class="uS" value="${c}" ${e && (e.sites || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
-    : r === "ADVISOR" ? `<p class="mut">All five flagships.</p>` : `<label>Flagship${r === "ADMIN" ? " (optional)" : ""}</label><select id="uF">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${((e && e.site) || (PTAB !== "LEAD" ? PTAB : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
-  const order = ["MANAGER", "SUPERVISOR", "SECURITY", "ADVISOR", "DIRECTOR", "CDSO", "ADMIN"];
+    : r === "ADVISOR" ? `<p class="mut">All five flagships.</p>` : r === "EXTERNAL" ? `<p class="mut">Not linked to a flagship — the systems below decide what they see.</p>` : `<label>Flagship${r === "ADMIN" ? " (optional)" : ""}</label><select id="uF">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${((e && e.site) || (PTAB !== "LEAD" ? PTAB : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
+  const order = ["MANAGER", "SUPERVISOR", "SECURITY", "ADVISOR", "DIRECTOR", "CDSO", "ADMIN", "EXTERNAL"];
+  /* Systems (Oct 2026): the account each person gets in Snaglist, Incidents and Restroom when they open them from the hub */
+  const SN = d.snagRoles || {}, SITE_OPTS = sel => FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${sel === c ? "selected" : ""}>${esc(n)}</option>`).join("");
+  const siteChecks = (cls, list) => `<div style="display:flex;flex-wrap:wrap;gap:4px 10px">${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<label class="mut" style="display:flex;gap:5px"><input type="checkbox" class="${cls}" value="${c}" ${(list || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`;
+  const autoTxt = (k, r) => { const a = e && e.email && e.role === r && e.sys ? e.sys[k] : undefined;
+    if (r === "EXTERNAL") return "No access";
+    if (a === undefined) return "Follows the role";
+    if (!a) return "No access";
+    if (k === "snaglist") return (SN[a.role] || a.role) + (a.site ? " · " + a.site : a.sites && a.sites.length ? " · " + a.sites.join(", ") : a.role === "FULL_ACCESS" ? " · all flagships" : "");
+    if (k === "incidents") return a.role + " · " + (a.scope === "ALL" ? "all flagships" : a.scope);
+    return "Dashboard"; };
+  const sysRow = (k, r) => { const c = (e && e.sysCfg && e.sysCfg[k]) || {}, m = c.m || (r === "EXTERNAL" ? "none" : "auto");
+    const det = k === "snaglist" ? `<div class="sysD" ${m === "set" ? "" : "hidden"} style="display:grid;gap:5px;margin-top:5px"><select class="sR" data-k="${k}">${Object.entries(SN).map(([v, n]) => `<option value="${v}" ${c.role === v ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+        <select class="sF"><option value="">Flagship (Manager, Supervisor, Audit)</option>${SITE_OPTS(c.site)}</select><span class="mut">Full Access: flagships (none ticked = all)</span>${siteChecks("sFS", c.sites)}</div>`
+      : k === "incidents" ? `<div class="sysD" ${m === "set" ? "" : "hidden"} style="display:grid;gap:5px;margin-top:5px"><select class="sR">${(d.incRoles || []).map(v => `<option ${c.role === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+        <label class="mut" style="display:flex;gap:5px"><input type="checkbox" class="sAll" ${(c.sites || []).includes("ALL") ? "checked" : ""}> All flagships</label>${siteChecks("sFS", c.sites)}
+        <select class="sPo"><option value="">Email position: none</option>${(d.incPositions || []).map(v => `<option ${c.position === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></div>` : "";
+    return `<div class="sysB" data-k="${k}" style="border-top:1px solid var(--cline);padding-top:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:.82rem">${esc((d.ssoApps || {})[k] || k)}</b>
+      <select class="sM" style="width:auto">${r === "EXTERNAL" ? "" : `<option value="auto" ${m === "auto" ? "selected" : ""}>Auto · ${esc(autoTxt(k, r))}</option>`}<option value="set" ${m === "set" ? "selected" : ""}>${k === "restroom" ? "Dashboard" : "Choose the role"}</option><option value="none" ${m === "none" ? "selected" : ""}>No access</option></select></div>${det}</div>`; };
+  const sysF = r => `<div style="border:1px solid var(--cline);border-radius:12px;padding:10px 12px;display:grid;gap:6px"><b style="font-size:.84rem">Systems · opened from the hub with no password</b>${Object.keys(d.ssoApps || {}).map(k => sysRow(k, r)).join("")}</div>`;
+  const readSys = () => Object.fromEntries([...document.querySelectorAll("#uSys .sysB")].map(b => { const k = b.dataset.k, m = b.querySelector(".sM").value, o = { m };
+    if (m === "set" && k !== "restroom"){ o.role = b.querySelector(".sR").value; const fs = [...b.querySelectorAll(".sFS:checked")].map(i => i.value);
+      if (k === "snaglist"){ o.site = b.querySelector(".sF").value; o.sites = fs; } else { o.sites = b.querySelector(".sAll").checked ? ["ALL"] : fs; o.position = b.querySelector(".sPo").value; } }
+    return [k, o]; }));
+  const wireSys = () => { const box = $("#uSys"); if (box) box.onchange = ev => { const m = ev.target.closest(".sM"); if (m){ const det = m.closest(".sysB").querySelector(".sysD"); if (det) det.hidden = m.value !== "set"; } }; };
   V(head("People &amp; roles", "Add people, roles, flagships, administrator access, two-step and the morning email", `<button class="b" data-new='${esc(JSON.stringify({ role: PTAB === "LEAD" ? "ADVISOR" : "SUPERVISOR", site: PTAB !== "LEAD" ? PTAB : "", position: "MO" }))}'>＋ Add a person</button><button class="b g" id="welBulk">✉ Welcoming email to existing people</button>`) +
     `<div class="flt">${FLAGS.map(([c, n]) => { const k = c === "LEAD" ? U.filter(u => u.active && (d.multiRoles.includes(u.role) || d.allSiteRoles.includes(u.role) || u.isAdmin)).length : U.filter(u => u.active && u.site === c && !d.multiRoles.includes(u.role) && !d.allSiteRoles.includes(u.role) && u.role !== "ADMIN").length;
-      return `<span data-pt="${c}" class="${PTAB === c ? "on" : ""}">${esc(n)} · ${k}</span>`; }).join("")}</div>
+      return `<span data-pt="${c}" class="${PTAB === c ? "on" : ""}">${esc(n)} · ${k}</span>`; }).join("")}<span data-pt="EXT" class="${PTAB === "EXT" ? "on" : ""}">External accounts · ${U.filter(u => u.active && u.role === "EXTERNAL").length}</span></div>
     <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start" class="prg"><div>${main}</div>
     <div style="display:grid;gap:12px;position:sticky;top:12px">
       <form class="card" id="uForm" style="display:grid;gap:6px"><h3>${e && e.email ? "Edit " + esc(e.name) : "Add a person"}</h3>
         <label>Full name</label><input id="uN" value="${esc(e ? e.name || "" : "")}" required><label>Email</label><input id="uE" type="email" value="${esc(e ? e.email || "" : "")}" ${e && e.email ? "readonly" : ""} required>
         <label>Hub Phone extension</label><input id="uExt" inputmode="numeric" maxlength="4" placeholder="Automatic (e.g. 104)" value="${esc(e ? e.ext || "" : "")}">
         <label>Role</label><select id="uR">${order.map(c => `<option value="${c}" ${role === c ? "selected" : ""}>${esc(d.roles[c])}</option>`).join("")}</select><p class="mut" id="uNote" style="margin:0">${esc(ACCESS_NOTE[role])}</p>
-        <div id="uPB" style="display:grid;gap:6px">${posF(role)}</div><div id="uSB" style="display:grid;gap:6px">${siteF(role)}</div>
+        <div id="uPB" style="display:grid;gap:6px">${posF(role)}</div><div id="uSB" style="display:grid;gap:6px">${siteF(role)}</div><div id="uSys">${sysF(role)}</div>
         ${e && e.email ? "" : `<label>First password (8+)</label><input id="uW" autocomplete="off" value="Abc@2026">
         <div style="border:1px solid var(--cline);border-radius:12px;padding:10px 12px;margin-top:4px"><b style="font-size:.84rem">Welcoming email</b>
           <label class="mut" style="display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="radio" name="uWel" value="1" checked> <span><b style="color:var(--ctext)">Send welcoming email</b><br>To the person's email, signed by you, with this first password.</span></label>
@@ -935,7 +985,8 @@ async function pr(){
       <div class="card"><h3>Morning email · 08:00</h3><div class="sub">${ms && ms.last ? `Last sent ${esc(dt(ms.last.at))} to ${ms.last.sent} people${ms.last.failed ? ` · <b class="t-bad">${ms.last.failed} failed</b>` : ""}` : "Not sent yet"}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="b g" id="mT">Send me a test</button><button class="b g" id="eT">End of Day test</button></div></div></div></div>`);
   const R = () => $("#uR").value; let RES = null;
-  $("#uR").onchange = () => { $("#uNote").textContent = ACCESS_NOTE[R()]; $("#uPB").innerHTML = posF(R()); $("#uSB").innerHTML = siteF(R()); if (R() === "ADMIN") $("#uA").checked = true; };
+  $("#uR").onchange = () => { $("#uNote").textContent = ACCESS_NOTE[R()]; $("#uPB").innerHTML = posF(R()); $("#uSB").innerHTML = siteF(R()); $("#uSys").innerHTML = sysF(R()); wireSys(); if (R() === "ADMIN") $("#uA").checked = true; if (R() === "EXTERNAL") $("#uM").checked = false; };
+  wireSys();
   $("#main").querySelectorAll("[data-pt]").forEach(x => x.onclick = () => { PTAB = x.dataset.pt; PED = null; pr(); });
   $("#main").querySelectorAll("[data-new]").forEach(x => x.onclick = () => { PED = JSON.parse(x.dataset.new); pr().then(() => { $("#uN").focus(); }); });
   $("#main").querySelectorAll("[data-ed]").forEach(x => x.onclick = () => { PED = U.find(u => u.email === x.dataset.ed); pr().then(() => $("#uForm").scrollIntoView({ behavior: "smooth" })); });
@@ -979,9 +1030,9 @@ async function pr(){
     x.disabled = true; try { const r = await api("admin/users/welcome", { email: x.dataset.wel }); toast("Welcoming email sent to " + r.to); } catch (er){ toast(er.message, true); } x.disabled = false; });
   $("#uForm").onsubmit = async ev => { ev.preventDefault(); const r = R();
     try { await api("admin/users", { isNew: !(e && e.email), name: $("#uN").value, email: $("#uE").value, role: r, site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(x => x.value),
-        position: $("#uP") ? $("#uP").value : "", password: $("#uW") ? $("#uW").value : "", morningEmail: $("#uM").checked, isAdmin: $("#uA").checked, ext: $("#uExt").value.trim(),
+        position: $("#uP") ? $("#uP").value : "", password: $("#uW") ? $("#uW").value : "", morningEmail: $("#uM").checked, isAdmin: $("#uA").checked, ext: $("#uExt").value.trim(), sys: readSys(),
         welcome: !document.querySelector('[name="uWel"]') || document.querySelector('[name="uWel"]:checked').value === "1" }).then(x => { RES = x; });
-      const W = RES && RES.welcome; toast(!W ? "Saved" : W.sent ? `Added · welcoming email sent to ${W.to}` : W.skipped ? "Added · no welcoming email" : `Added · welcoming email not sent: ${W.error}`, !!(W && W.error)); PED = null; const st = $("#uF") ? $("#uF").value : ""; PTAB = ["ADVISOR", "DIRECTOR", "CDSO"].includes(r) || (r === "ADMIN" && !st) ? "LEAD" : (st || PTAB); pr(); } catch (er){ toast(er.message, true); } };
+      const W = RES && RES.welcome; toast(!W ? "Saved" : W.sent ? `Added · welcoming email sent to ${W.to}` : W.skipped ? "Added · no welcoming email" : `Added · welcoming email not sent: ${W.error}`, !!(W && W.error)); PED = null; const st = $("#uF") ? $("#uF").value : ""; PTAB = r === "EXTERNAL" ? "EXT" : ["ADVISOR", "DIRECTOR", "CDSO"].includes(r) || (r === "ADMIN" && !st) ? "LEAD" : (st || PTAB); pr(); } catch (er){ toast(er.message, true); } };
   $("#tfS").onclick = async () => { try { await api("admin/2fa/policy", { roles: [...document.querySelectorAll(".tfR:checked")].map(i => i.value) }); toast("Two-step policy saved"); } catch (er){ toast(er.message, true); } };
   $("#mT").onclick = async () => { try { const r = await api("admin/morning-test", {}); toast("Test sent to " + r.to); } catch (er){ toast(er.message, true); } };
   $("#eT").onclick = async () => { try { const r = await api("admin/eod-test", { site: PTAB !== "LEAD" ? PTAB : "" }); toast("End of Day test sent to " + r.to); } catch (er){ toast(er.message, true); } };

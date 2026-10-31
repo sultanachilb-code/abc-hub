@@ -8,6 +8,7 @@ export { EmergencyPager } from "./modules/emergency.js";
 import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules/phone.js";   // Hub Phone — see docs/FEATURE-hub-phone.md
 export { PhoneHub } from "./modules/phone.js";
 import { chatSchema, chatRoute, chatDeps, chatSync, chatRun, chatPostTeam } from "./modules/chat.js";
+import { ssoSchema, SSO_APPS, sysAccess, sysSummary, cleanSys, ssoServer, ssoEnd, extAllowed, ssoPolicy, ssoPolicySet, SNAG_ROLES, INC_ROLES, INC_POSITIONS } from "./modules/hubsso.js";   // One hub account for every system — docs/FEATURE-hub-sign-in.md
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
@@ -95,7 +96,8 @@ const ROLES = {
   CDSO: "Chief Department Store Operations Officer",
   MANAGER: "Flagship Management",
   SUPERVISOR: "Operations Team",
-  SECURITY: "Security"
+  SECURITY: "Security",
+  EXTERNAL: "External account"   // outside operations: sees and opens only the systems given to them (Oct 2026)
 };
 const FULL_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];   // full access at the flagships they can reach
 const MULTI_ROLES = ["DIRECTOR", "CDSO"];                                 // flagships chosen with check boxes
@@ -410,6 +412,7 @@ async function ensureSchema(env) {
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
+  await ssoSchema(env);         // One hub account for every system
   await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
@@ -478,6 +481,7 @@ async function readSession(request, env) {
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(p.e).first();
   if (!u || !u.active) return null;
   if (u.signout_at && (Number(p.i) || 0) < Number(u.signout_at)) return null;   // Admin Control: "sign out everywhere"
+  u._sid = String(p.i || "");   // hub session: the systems opened from it ask whether it is still signed in
   const isAdm = u.role === "ADMIN" || !!u.is_admin;   // Admin Control: an administrator may also have a real role (e.g. Mall Supervisor)
   if (isAdm) u._admUnlocked = await admUnlocked(request, env, u.email);
   /* Admin Control: "View as" — an administrator sees the hub as another person, read-only */
@@ -546,6 +550,8 @@ export default {
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
       return new Response(r.body, { status: r.status, headers: h });
     }
+    /* "Sign in with ABC Hub" from a system's own website: signed in → straight back with a pass; otherwise the hub's sign-in first */
+    if (url.pathname === "/sso") return ssoPage(request, env, url);
     /* Admin Control Center */
     if (url.pathname === "/admin" || url.pathname === "/admin/") return env.ASSETS.fetch(new Request(new URL("/tools/admin", url), request));
     /* Marketing Participation: the tenant's answer page (no hub account) */
@@ -633,7 +639,14 @@ async function route(request, env, ctx, url) {
   /* ----- public routes ----- */
   if (path === "login" && method === "POST") return login(env, body, request);
   if (path.startsWith("login/2fa/")) { const r = await twofaPublic(env, twofaDeps, path, method, body, request); return r instanceof Response ? r : json(r); }   // Two-step login feature
-  if (path === "logout" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
+  if (path === "logout" && method === "POST") {   // the systems opened from this hub session are signed out too
+    const s = await readSession(request, env).catch(() => null); if (s && s._sid && !s._viewAs) await ssoEnd(env, s.email, s._sid);
+    return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
+  }
+  if (path === "sso/alive" || path === "sso/policy") {   // asked by Snaglist / Incidents / Restroom, server to server
+    if (!env.HUB_KEY || !same(request.headers.get("x-hub-key") || "", env.HUB_KEY)) throw fail("Not authorised", 403);
+    return ok(await ssoServer(env, path, url, ssoDeps));
+  }
   if (path === "viewas-stop" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": "hub_viewas=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" });   // Admin Control: back to my admin
   if (path === "setup" && method === "POST") return setup(env, body);
   if (path === "inbox/mail" && method === "POST") return ok(await mailInbox(env, request, body, { SITES, canSite, isFull, now: nowIso, today: beirutToday, raiseEvent, audit }));   // Email inbox: MOM · calendar · contracts report
@@ -671,11 +684,12 @@ async function route(request, env, ctx, url) {
 
   /* ----- signed-in routes ----- */
   await toolsCfg(env).catch(() => {});   // Admin Control: tools switched off / moved / limited (kept 60 s in memory)
+  if (me.role === "EXTERNAL" && !extAllowed(path)) throw fail("External accounts open only the systems given to them", 403);
   if (me._viewAs && (method !== "GET" || path === "sso")) throw fail(`View as ${me.full_name} is read-only — press “Back to my admin” to make changes`, 403);
   if (path === "me") {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     const effRole = me._real ? me._real.role : me.role;   // administrator mode: two-step follows the person's real role
-    return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on } }, sites: SITES, roles: ROLES,
+    return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on }, sys: sysSummary(me, ssoDeps) }, sites: SITES, roles: ROLES,
       tools: toolsCfgNow(), viewAs: me._viewAs || null,
       admin: isAdminUser(me) ? { mode: !!me._adminMode || (me.role === "ADMIN" && !!me._admUnlocked), unlocked: !!me._admUnlocked, real: me._real || null, split: !!me.is_admin && (me._real ? me._real.role : me.role) !== "ADMIN" } : null });
   }
@@ -801,7 +815,7 @@ async function route(request, env, ctx, url) {
     }
     if (a.startsWith("cc/mailbox")) return ok(await mbRoute(env, a, method, body, me, { ...MB_DEPS, hubUrl: HUB_URL }));   // Report mailbox
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
-      const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie,
+      const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie, ssoAdmin: { apps: SSO_APPS, policy: ssoPolicy, set: ssoPolicySet, ready: id => ssoReady(env, id, CONNECTORS[id]) },
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
         outlookRun: e => outlookRun(e, { today: beirutToday, notifyAdmins, fallback: relayScript }) });
       if (r && r.cookie) return json({ ok: true, data: { name: r.name } }, 200, { "set-cookie": r.cookie });
@@ -946,12 +960,13 @@ async function changePassword(env, me, b) {
 async function listUsers(env) {
   await extEnsure(env).catch(() => {});   // Hub Phone: everyone has an extension
   const { results } = await env.DB.prepare(
-    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position, is_admin, ext FROM users ORDER BY role, full_name").all();
+    "SELECT email, full_name, role, site_code, sites, active, must_change, last_login_at, morning_email, position, is_admin, ext, sys FROM users ORDER BY role, full_name").all();
   const W = new Map(((await env.DB.prepare("SELECT k, v FROM meta WHERE k LIKE 'welcome:%'").all().catch(() => ({ results: [] }))).results || [])
     .map(r => { try { return [r.k.slice(8), JSON.parse(r.v)]; } catch { return [r.k.slice(8), {}]; } }));
   return {
     users: (results || []).map(u => ({ ...userOut(u), ext: u.ext || "", active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin, welcomed: W.get(u.email) || null,
-      morningEmail: !!u.morning_email, morningEligible: isFull(u) })),
+      morningEmail: !!u.morning_email, morningEligible: isFull(u), sysCfg: (() => { try { return JSON.parse(u.sys || "{}"); } catch { return {}; } })(), sys: sysSummary(u, ssoDeps) })),
+    ssoApps: Object.fromEntries(Object.entries(SSO_APPS).map(([k, v]) => [k, v.name])), snagRoles: SNAG_ROLES, incRoles: INC_ROLES, incPositions: INC_POSITIONS,
     sites: SITES, roles: ROLES,
     positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
     titles: Object.fromEntries(Object.entries(TITLES).map(([k, v]) => [k, { label: v.label, slot: v.slot }])),
@@ -969,7 +984,7 @@ async function saveUser(env, me, b) {
   const pos = String(b.position || "").toUpperCase();
   let position = "", sites = "";
   if (role === "ADMIN") { if (!SITES[site]) site = ""; }
-  else if (role === "ADVISOR") { site = ""; }
+  else if (role === "ADVISOR" || role === "EXTERNAL") { site = ""; }
   else if (MULTI_ROLES.includes(role)) {
     const list = [...new Set((Array.isArray(b.sites) ? b.sites : []).map(x => String(x).toUpperCase()).filter(c => SITES[c]))];
     if (!list.length) throw fail(`Tick the flagships the ${ROLES[role]} looks after`);
@@ -997,15 +1012,16 @@ async function saveUser(env, me, b) {
   if (ext) { if (!/^\d{3,4}$/.test(ext)) throw fail("The extension is 3 or 4 digits, e.g. 104");
     const t = await env.DB.prepare("SELECT full_name FROM users WHERE ext = ? AND email <> ?").bind(ext, email).first();
     if (t) throw fail(`Extension ${ext} is already ${t.full_name}'s`); }
-  const exists = await env.DB.prepare("SELECT email FROM users WHERE email = ?").bind(email).first();
-  const morning = b.morningEmail === false ? 0 : 1;
+  const exists = await env.DB.prepare("SELECT email, sys FROM users WHERE email = ?").bind(email).first();
+  const morning = b.morningEmail === false || role === "EXTERNAL" ? 0 : 1;
+  const sys = "sys" in b || role === "EXTERNAL" ? cleanSys(b.sys || (exists ? JSON.parse(exists.sys || "{}") : {}), role, SITES) : null;   // the "Systems" part of the user window
   if (exists) {
     if (b.isNew) throw fail("That email already has an account");
     const adminFlag = "isAdmin" in b ? (b.isAdmin || role === "ADMIN" ? 1 : 0) : null;
     if (email === me.email && role !== "ADMIN" && adminFlag === 0) throw fail("You cannot remove your own administrator access");
     if (email === me.email && role !== "ADMIN" && adminFlag === null && !(await env.DB.prepare("SELECT is_admin FROM users WHERE email = ?").bind(email).first()).is_admin) throw fail("You cannot remove your own administrator access — tick “Hub administrator”");
-    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=?, is_admin = COALESCE(?, is_admin) WHERE email=?")
-      .bind(name, role, site || null, sites, morning, position, adminFlag, email).run();
+    await env.DB.prepare("UPDATE users SET full_name=?, role=?, site_code=?, sites=?, morning_email=?, position=?, is_admin = COALESCE(?, is_admin), sys = COALESCE(?, sys) WHERE email=?")
+      .bind(name, role, site || null, sites, morning, position, adminFlag, sys, email).run();
     if (ext) await extSet(env, email, ext);
     await chatSync(env, { SITES }, true).catch(() => {});   // Hub Chat: groups follow the new role / flagship
     return { email, created: false };
@@ -1013,8 +1029,8 @@ async function saveUser(env, me, b) {
   const password = String(b.password || "") || DEFAULT_PASSWORD;
   if (password.length < 8) throw fail("Set a temporary password of at least 8 characters");
   const h = await hashFor(password);
-  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position, is_admin)
-    VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position, b.isAdmin || role === "ADMIN" ? 1 : 0).run();
+  await env.DB.prepare(`INSERT INTO users (email, full_name, role, site_code, sites, salt, hash, iterations, must_change, active, created_at, morning_email, position, is_admin, sys)
+    VALUES (?,?,?,?,?,?,?,?,1,1,?,?,?,?,?)`).bind(email, name, role, site || null, sites, h.salt, h.hash, h.iterations, nowIso(), morning, position, b.isAdmin || role === "ADMIN" ? 1 : 0, sys || "").run();
   if (ext) await extSet(env, email, ext); else await extEnsure(env).catch(() => {});
   await chatSync(env, { SITES }, true).catch(() => {});   // Hub Chat: the new person joins their flagship's groups
   if (b.welcome !== false) {   // Welcoming email (default on)
@@ -1032,7 +1048,8 @@ const WELCOME_TOOLS = {
   ADVISOR: "the dashboards, reports and Tenant 360 of the five flagships",
   DIRECTOR: "the dashboards, reports and Tenant 360 of your flagships",
   CDSO: "the dashboards, reports and Tenant 360 of your department stores",
-  ADMIN: "every tool of the hub and the Admin Control Center"
+  ADMIN: "every tool of the hub and the Admin Control Center",
+  EXTERNAL: "the systems given to you (Snaglist, Incidents or the Restroom dashboard) — they open with this account, no other password"
 };
 const DEFAULT_PASSWORD = "Abc@2026";   // the first password of new accounts (changed at the first sign-in)
 function welcomeMail(u, by, pw = "") {
@@ -1185,12 +1202,34 @@ async function ssoLink(env, me, appId) {
   const c = CONNECTORS[String(appId || "")];
   if (!c || !c.sso) throw fail("This system does not support hub sign-in yet", 404);
   if (!env.HUB_KEY) throw fail("HUB_KEY is not set on the hub", 500);
+  const acc = SSO_APPS[appId] ? sysAccess(me, appId, ssoDeps) : { acct: null, force: false };
+  if (!acc) throw fail(`Your hub account has no access to ${SSO_APPS[appId].name} — ask the administrator`, 403);
   if (!(await ssoReady(env, String(appId), c))) throw fail("This system does not accept hub sign-in yet — opening its own sign-in page", 404);
   const payload = { e: me.email, n: me.full_name, aud: appId, site: me.site_code || "", iat: Date.now(),
-    exp: Date.now() + SSO_SECONDS * 1000, nonce: randomId(9) };
+    exp: Date.now() + SSO_SECONDS * 1000, nonce: randomId(9),
+    sid: me._sid || "", sx: me._sid ? Number(me._sid) + SESSION_HOURS * 3600e3 : 0, acct: acc.acct, force: acc.force, hub: HUB_URL };
   const body = b64url(enc.encode(JSON.stringify(payload)));
   const token = `${body}.${await hmac(env.HUB_KEY, body)}`;
   return { url: c.base + c.sso.replace("{token}", encodeURIComponent(token)) };
+}
+
+const ssoDeps = { sitesOf, posLabel, sessionMs: SESSION_HOURS * 3600e3 };
+/* "Sign in with ABC Hub": /sso?app=snaglist — the browser comes from the system's own sign-in page */
+async function ssoPage(request, env, url) {
+  const app = String(url.searchParams.get("app") || "");
+  if (!SSO_APPS[app]) return Response.redirect(new URL("/", url).toString(), 302);
+  const me = await readSession(request, env).catch(() => null);
+  if (!me || me._viewAs || me.must_change) return Response.redirect(new URL("/?sso=" + encodeURIComponent(app), url).toString(), 302);
+  if ((await requiredRoles(env).catch(() => [])).includes(me.role) && !(await twofaOn(env, me.email).catch(() => false)))
+    return Response.redirect(new URL("/?sso=" + encodeURIComponent(app), url).toString(), 302);   // two-step to set up first
+  try { const r = await ssoLink(env, me, app); return new Response(null, { status: 302, headers: { location: r.url, "cache-control": "no-store", "referrer-policy": "no-referrer" } }); }
+  catch (e) {
+    return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ABC Hub</title>
+<body style="font-family:Segoe UI,system-ui,sans-serif;background:#F5F3F8;color:#221A2E;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px">
+<div style="background:#fff;border-radius:18px;padding:26px;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(42,15,69,.12)">
+<div style="width:56px;height:56px;border-radius:16px;background:#2A0F45;display:grid;place-items:center;margin:0 auto 12px"><img src="/icons/abc-logo-white.png" alt="ABC" style="height:32px"></div>
+<b>${String(e.message).replace(/[<>&]/g, "")}</b><p><a href="/" style="color:#4A1F73;font-weight:700">Open the hub</a></p></div>`, { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  }
 }
 
 /* ---------- health dots ---------- */
