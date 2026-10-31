@@ -11,6 +11,5 @@ jobs:
     steps:
       - run: |
           q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" | jq -r '.[0].results[] | tojson' | while read -r l; do echo "::notice title=$2::${l//,/ ·}"; done; }
-          q "SELECT site, form, item_id, data, updated_at FROM form_triggers" "triggers" || true
-          q "SELECT site, form, day, item_id, item_text, by_name, at, result FROM form_trig_log ORDER BY id DESC LIMIT 20" "log" || true
-          q "SELECT id, site, form, day, status, updated_at, issues FROM form_runs WHERE day >= date('now','-1 day') ORDER BY id DESC LIMIT 15" "todays AM/PM" || true
+          q "SELECT e.id, e.at, e.app, e.tone, e.email, u.role, u.site_code, (SELECT COUNT(*) FROM push_subs p WHERE p.email = e.email) AS phones, (SELECT GROUP_CONCAT(level) FROM push_subs p WHERE p.email = e.email) AS lvl, u.notif_read_at FROM hub_events e LEFT JOIN users u ON u.email = e.email WHERE e.title LIKE '%⚡%' ORDER BY e.id DESC LIMIT 20" "events"
+          q "SELECT v FROM meta WHERE k = 'push:wm'" "push watermark"
