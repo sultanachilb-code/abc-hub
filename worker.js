@@ -535,9 +535,42 @@ const userOut = u => {
 };
 
 /* ---------- entry ---------- */
+/* ===== Sultan's Head Office: read-only summary =====
+   GET /hq/summary?key=<HQ_KEY>[&tenants=VRM]
+   Storage/usage figures for the Hub Admin agent, plus the active GLA units of
+   one flagship (brand, unit, level, area, status) for the Records Officer.
+   No users' names, emails or passwords leave here.                         */
+async function hqSummary(request, env, url) {
+  const key = request.headers.get("X-HQ-Key") || url.searchParams.get("key") || "";
+  if (!env.HQ_KEY || key !== env.HQ_KEY) return new Response("Forbidden", { status: 403 });
+  const size = async db => { try { const r = await db.prepare("SELECT 1").run(); return Number(r.meta?.size_after || 0); } catch (e) { return null; } };
+  const count = async (db, t) => { try { return Number((await db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).first()).n || 0); } catch (e) { return null; } };
+  const out = { generated: new Date().toISOString(), d1: {}, r2: null, rows: {}, tenants: [] };
+  out.d1.hub = await size(env.DB);
+  if (env.INC_DB) out.d1.incidents = await size(env.INC_DB);
+  if (env.RR_DB) out.d1.restroom = await size(env.RR_DB);
+  for (const t of ["users", "gla_units", "handovers", "form_runs", "tenant_feedback", "mom_meetings", "tm_announcements"]) out.rows[t] = await count(env.DB, t);
+  if (env.FILES) {
+    let bytes = 0, objects = 0, cursor, pages = 0, truncated = true;
+    while (truncated && pages < 20) {
+      const l = await env.FILES.list({ cursor, limit: 1000 });
+      for (const o of l.objects) { bytes += o.size; objects++; }
+      truncated = l.truncated; cursor = l.cursor; pages++;
+    }
+    out.r2 = { bytes, objects, complete: !truncated };
+  }
+  const site = String(url.searchParams.get("tenants") || "").toUpperCase();
+  if (site) {
+    const r = await env.DB.prepare("SELECT code, level, brand, status, section, dept, area FROM gla_units WHERE site = ? AND active = 1 ORDER BY seq, id").bind(site).all();
+    out.tenants = r.results || [];
+  }
+  return new Response(JSON.stringify(out), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/hq/summary") return hqSummary(request, env, url);   // Sultan's Head Office (read-only)
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
       try { return await route(request, env, ctx, url); }
       catch (e) { return json({ ok: false, error: e.message || String(e), ...(e.extra || {}) }, e.status || 500); }
