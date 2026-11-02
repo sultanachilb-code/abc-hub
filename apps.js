@@ -96,6 +96,7 @@ window.HUB = {
     "evacuation":      ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "incidents":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "cleaner-qr":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC",  "LEAD"],
+    "footfall":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "abc-connect":     ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant-connect":  ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "jde":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -437,7 +438,16 @@ window.HUB = {
       embed: false
     },
     { id: "sign-in-help", name: "Sign-in help", desc: "Save company passwords safely in your browser — one-tap sign-in", group: "ABC Platforms", icon: "shield", color: "#5A3E8A", url: "/tools/sign-in-help" },
-    /* Footfall Hub (footfall-hub worker) removed 2 Nov 2026 — a new Footfall object is to be built inside the hub */
+    /* Footfall Hub (footfall-hub worker) removed 2 Nov 2026 — replaced by the Footfall object inside the hub */
+    {
+      id: "footfall",
+      name: "Footfall",
+      desc: "Daily car counts from Liban Park per flagship — daily import, monthly report, analysis",
+      group: "Reports",
+      icon: "footfall",
+      color: "#4A1F73",
+      url: "/tools/footfall"   /* docs/FEATURE-footfall.md */
+    },
     /* Policies & Procedures — the three systems are placeholders until their content is built */
     /* Training & induction tracker (see docs/FEATURE-training.md) */
     { id: "training", name: "Training Tracker", desc: "Who completed which training, what expires, what is still needed", group: "OFF", icon: "book", color: "#2E6B4F", url: "/tools/training" },
