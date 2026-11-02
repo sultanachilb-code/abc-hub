@@ -170,8 +170,7 @@ const CONNECTORS = {
     day: "/api/hubday?site={site}&date={date}",
     sso: "/api/sso?token={token}", probe: true   // automatic sign-in once connectors/hub-sso-connector.js is added to that system
   },
-  /* "cleaner-qr" is now inside the hub (tools/cleaners.html) — no connector */
-  footfall: { base: "https://footfall-hub.sultanachi-lb-61f.workers.dev", binding: "FOOTFALL", sso: "/api/sso?token={token}", probe: true }
+  /* "cleaner-qr" is now inside the hub (tools/cleaners.html) — no connector; Footfall Hub removed 2 Nov 2026 */
 };
 /* SSO probe: a system answers /api/sso?probe=1 with {"ok":true,"sso":true} once its connector is in place —
    until then the tile simply opens the system's own sign-in page. Cached 10 minutes. */
@@ -199,7 +198,6 @@ const HEALTH = {
   restroom:       { name: "Restroom Inspection Dashboard", url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/", binding: "RESTROOM" },
   incidents:      { name: "Incident Report System", url: "https://abc-incident-system.sultanachi-lb-61f.workers.dev/", binding: "INCIDENTS" },
   "cleaner-qr":   { name: "Cleaner QR Access", url: "https://abcv-admin-access.sultanachi-lb-61f.workers.dev/", binding: "CLEANER" },
-  footfall:       { name: "Footfall Hub", url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/", binding: "FOOTFALL" },
   "abc-connect":  { name: "ABC Connect", url: "https://abclebanon.my.site.com/abcemployee/s/" },
   successfactors: { name: "SAP SuccessFactors", url: "https://performancemanager8.successfactors.com/login" },
   jde:            { name: "JD Edwards", internal: true },
@@ -272,7 +270,6 @@ const APP_ACCESS = {
   "sign-in-help": [],
   pack: ["MM",  "OM",  "LEAD"],
   downloads: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  footfall: [],
   policies: ["MM", "OM", "SMS", "MS", "MO", "WH", "SEC", "LEAD"],
   "form-am": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -1461,7 +1458,6 @@ const SEED = [
   ["Incident Report System", "Systems", wd("abc-incident-system"), GH_OWNER + "abc-incident-system", cfWorker("abc-incident-system"), "incidents", ""],
   ["Restroom Inspection Dashboard", "Systems", wd("abc-restroom-report"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-restroom-report"), "restroom", "Deployed as env: report"],
   ["Cleaner QR Access", "Systems", wd("abcv-admin-access"), "", cfWorker("abcv-admin-access"), "cleaner-qr", ""],
-  ["Footfall Hub", "Systems", wd("footfall-hub"), "", cfWorker("footfall-hub"), "footfall", ""],
   ["Restroom QR · Verdun Mall", "Restroom QR apps", wd("abcv-digital-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abcv-digital-restroom-inspection"), "", "env: verdun_mall"],
   ["Restroom QR · Verdun DS", "Restroom QR apps", wd("abc-vds-digital-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-vds-digital-restroom-inspection"), "", "env: verdun_ds"],
   ["Restroom QR · Achrafieh Mall", "Restroom QR apps", wd("abc-ach-mall-restroom-inspection"), GH_OWNER + "abc-restroom-inspection", cfWorker("abc-ach-mall-restroom-inspection"), "", "env: achrafieh_mall"],

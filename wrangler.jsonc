@@ -15,8 +15,7 @@
   "services": [
     { "binding": "INCIDENTS", "service": "abc-incident-system" },
     { "binding": "RESTROOM", "service": "abc-restroom-report" },
-    { "binding": "CLEANER", "service": "abcv-admin-access" },
-    { "binding": "FOOTFALL", "service": "footfall-hub" }
+    { "binding": "CLEANER", "service": "abcv-admin-access" }
   ],
   /* Mail relay (Google Apps Script). The URL is not secret, so it lives here and survives every deploy.
      MAIL_RELAY_KEY stays a Secret in the Cloudflare dashboard — never put it in this file. */
