@@ -7,11 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          n(){ echo "::notice title=$1::$2"; }
-          n pass-title "$(curl -s -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8' | grep -o '<title>[^<]*')"
-          n pass-status "$(curl -s -o /dev/null -m 20 -w '%{http_code} %{redirect_url}' 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8')"
-          n admin-title "$(curl -s -m 20 'https://abcv-admin-access.sultanachi-lb-61f.workers.dev/' | grep -o '<title>[^<]*')"
+          n(){ echo "::notice title=$1::$(echo "$2" | tr ',' ' ' | head -c 600)"; }
           n mode "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-mode')"
-          n cp-page "$(curl -s -m 20 -o /dev/null -w '%{http_code}' 'https://operations-hub.sultanachi-lb-61f.workers.dev/cp?id=x&t=y')"
-          n cl-pass "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-pass?id=CLN-0005&t=bad')"
-          n gate-cleaner "$(curl -s -m 20 'https://abc-loading-gate.sultanachi-lb-61f.workers.dev/api/cleaner?id=CLN-0005&t=x' | head -c 200)"
+          n old-link "$(curl -s -m 20 -o /dev/null -w '%{http_code} %{redirect_url}' 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8')"
+          n old-title "$(curl -sL -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8' | grep -o '<title>[^<]*')"
+          n hub-pass "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-pass?id=CLN-0005&t=JKNz9bAgi8' | head -c 300)"
+          U='https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec'
+          n script-getWorker "$(curl -sL -m 30 "$U?action=getWorker&id=CLN-0005&t=JKNz9bAgi8&callback=cb" | head -c 200)"
+          n old-page-api "$(curl -sL -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/' | grep -o "script.google.com/macros/s/[A-Za-z0-9_-]*" | head -1)"
+          n old-page-params "$(curl -sL -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/' | grep -o "searchParams.get([^)]*)\|get('[a-z]*')" | sort -u | tr '\n' ' ')"
