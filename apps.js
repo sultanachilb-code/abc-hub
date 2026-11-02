@@ -105,7 +105,6 @@ window.HUB = {
     "sign-in-help":    [],
     "pack":            ["MM",  "OM",  "LEAD"],
     "downloads":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "footfall":        [],
     "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "SEC", "LEAD"],
     "form-am":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-pm":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -438,17 +437,7 @@ window.HUB = {
       embed: false
     },
     { id: "sign-in-help", name: "Sign-in help", desc: "Save company passwords safely in your browser — one-tap sign-in", group: "ABC Platforms", icon: "shield", color: "#5A3E8A", url: "/tools/sign-in-help" },
-    {
-      id: "footfall",
-      logo: "/logos/footfall.png",   /* replace the file in /logos to change the picture */
-      name: "Footfall Hub",
-      desc: "Daily visitors and vehicles, year on year",
-      group: "Hub Applications",
-      icon: "footfall",
-      color: "#8A5A1F",
-      url: "https://footfall-hub.sultanachi-lb-61f.workers.dev/",
-      sso: true   /* signs in with the hub account once connectors/hub-sso-connector.js is in that system; until then its own sign-in page opens */
-    },
+    /* Footfall Hub (footfall-hub worker) removed 2 Nov 2026 — a new Footfall object is to be built inside the hub */
     /* Policies & Procedures — the three systems are placeholders until their content is built */
     /* Training & induction tracker (see docs/FEATURE-training.md) */
     { id: "training", name: "Training Tracker", desc: "Who completed which training, what expires, what is still needed", group: "OFF", icon: "book", color: "#2E6B4F", url: "/tools/training" },
