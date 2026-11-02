@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footfall · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Footfall (Nov 2026) — Liban Park daily car counts, monthly report, analysis — docs/FEATURE-footfall.md */
+.w2{max-width:1150px;margin:0 auto;display:grid;gap:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:99px;padding:7px 12px;font-size:.8rem;font-weight:700;cursor:pointer;background:var(--surface);user-select:none}
+.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.ctabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}.ctabs button{border:0;background:none;padding:10px 13px;font:inherit;font-weight:800;font-size:.86rem;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+.ctabs button.on{color:var(--brand);border-bottom-color:#C8A24A}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.box h3{margin:0;padding:12px 14px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pad{padding:12px 14px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.k{background:var(--surface);border:1px solid var(--line);border-top:3px solid #C8A24A;border-radius:14px;padding:12px 14px}
+.k b{display:block;font-size:1.55rem;line-height:1.2}.k span{font-size:.72rem;color:var(--muted);font-weight:700;letter-spacing:.04em}.k em{display:block;font-style:normal;font-size:.76rem;font-weight:700;margin-top:2px}
+.up{color:var(--ok,#1E8A4C)}.dn{color:var(--alert,#B03A2E)}
+.pill{font-size:.68rem;font-weight:800;border-radius:99px;padding:3px 9px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.p-in{background:rgba(30,138,76,.13);color:#1E7A4F}.p-wait{background:rgba(184,116,15,.15);color:#8A5A00}.p-miss{background:rgba(194,40,60,.13);color:#B0283C}.p-off{background:rgba(120,120,120,.15);color:var(--muted)}
+.badge{display:inline-block;background:rgba(200,162,74,.16);border:1px solid rgba(200,162,74,.55);color:#8A6418;font-weight:800;font-size:.74rem;padding:4px 10px;border-radius:10px;white-space:nowrap}
+table.t{width:100%;border-collapse:collapse;font-size:.84rem}table.t th{text-align:left;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;background:var(--paper);border-bottom:1px solid var(--line)}
+table.t td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}.tw{overflow-x:auto}table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer}tr.click:hover td{background:rgba(138,92,192,.06)}
+.ban{border-radius:14px;padding:12px 14px;font-weight:700;font-size:.86rem;line-height:1.5;background:rgba(200,162,74,.16);border:1px solid rgba(200,162,74,.5)}
+.ban.bad{background:rgba(194,40,60,.08);border-color:rgba(194,40,60,.35)}
+.sc{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:14px;display:grid;gap:8px}
+.sc .row{display:flex;justify-content:space-between;align-items:center;gap:8px}.sc b.nm{font-size:1rem}
+.tl{display:flex;gap:5px;flex-wrap:wrap}.tl span{font-size:.7rem;border:1px solid var(--line);border-radius:8px;padding:3px 7px;color:var(--muted)}.tl span.d{background:var(--brand);color:#fff;border-color:var(--brand)}
+.chart{display:flex;align-items:flex-end;gap:3px;height:180px;border-bottom:1px solid var(--line);margin:10px 14px 0;position:relative}
+.b{flex:1;height:100%;display:flex;align-items:flex-end;gap:1px;position:relative;min-width:0}.b i{flex:1;border-radius:3px 3px 0 0;min-height:1px}
+.b i.miss{background:repeating-linear-gradient(45deg,rgba(194,40,60,.18) 0 4px,transparent 4px 8px)!important;border:1px dashed rgba(194,40,60,.6);height:100%!important}
+.b s{position:absolute;bottom:-18px;left:-4px;right:-4px;text-align:center;font-size:.6rem;color:var(--muted);text-decoration:none}
+.b:hover i{filter:brightness(1.15)}
+.lg{display:flex;gap:14px;font-size:.75rem;padding:26px 14px 12px;flex-wrap:wrap}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.bar{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:.82rem;padding:5px 14px}.bar b{text-align:right;font-variant-numeric:tabular-nums}
+.mini{height:8px;background:rgba(138,92,192,.13);border-radius:9px;overflow:hidden}.mini i{display:block;height:100%;background:var(--brand);border-radius:9px}
+.sw{width:44px;height:26px;border-radius:99px;background:#CFC7D9;position:relative;cursor:pointer;flex:none;border:0}.sw:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--brand)}.sw.on:after{left:21px}.sw[disabled]{cursor:default;opacity:.8}
+dialog.dd{border:0;border-radius:20px;padding:0;width:min(620px,calc(100% - 20px));max-height:92dvh;background:var(--surface);color:var(--text)}
+.dd .h{padding:16px 18px 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.dd .h b{font-size:1.05rem}.dd .bd{padding:6px 18px 14px;display:grid;gap:10px;max-height:70dvh;overflow:auto}.dd .f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.fl label,.dd label{font-size:.7rem;font-weight:800;color:var(--muted);display:block;margin-bottom:3px;letter-spacing:.04em}
+.fl input,.fl select,.fl textarea,.dd input,.dd select,.dd textarea{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--surface);color:var(--text);width:100%}
+.gin{display:grid;gap:6px;grid-template-columns:repeat(var(--n,3),1fr)}.gbox{border:1px solid var(--line);border-radius:12px;padding:9px}.gbox b{font-size:.84rem;display:flex;justify-content:space-between;margin-bottom:6px}
+.grow{display:grid;grid-template-columns:1fr 90px 140px 34px;gap:6px;align-items:center;margin-bottom:6px}
+.x{border:1px solid var(--line);background:var(--surface);border-radius:9px;height:34px;cursor:pointer;color:var(--muted)}
+.log{font-size:.78rem;color:var(--muted);line-height:1.6}
+.empty{border:2px dashed var(--line);border-radius:16px;padding:16px;color:var(--muted);font-size:.84rem;line-height:1.6}
+.dd .kpi{grid-template-columns:repeat(2,1fr)}.dd .k b{font-size:1.25rem}
+@media (max-width:560px){.bar{grid-template-columns:80px 1fr 60px}.grow{grid-template-columns:1fr 80px 34px}.grow select.kind{grid-column:1/3}}
+</style>
+</head>
+<body>
+<div class="top"><h1>👣 Footfall <small id="sub"></small></h1></div>
+<div class="wrap"><div class="w2" id="view"><p class="muted">Loading…</p></div></div>
+<dialog class="dd" id="dlg"></dialog>
+<script src="common.js"></script>
+<script>
+let C = null, SITE = "", TAB = "imp", MONTH = "", YEAR = "", CACHE = {}, ST = null;
+const KL = { t: "Tickets", c: "Cards", e: "Employees", u: "Users", p: "Passes" }, KINDS = { tce: ["t", "c", "e"], users: ["u"], passes: ["p"] };
+const KIND_NAMES = { tce: "Tickets · Cards · Employees", users: "Users", passes: "Passes" };
+const COLORS = ["#4A1F73", "#C8A24A", "#2E8B8B"];
+const N = v => v == null ? "—" : Number(v).toLocaleString("en-US");
+const pct = (a, b) => b ? (a - b) / b * 100 : null;
+const delta = (a, b, lbl) => { const p = pct(a, b); return p == null ? "" : `<em class="${p >= 0 ? "up" : "dn"}">${p >= 0 ? "▲" : "▼"} ${Math.abs(p).toFixed(1)}% ${lbl}</em>`; };
+const monthDays = m => new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate();
+const mLabel = m => D.parse(m + "-15").toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+const mShort = m => D.parse(m + "-15").toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+const prevM = m => { const [y, x] = m.split("-").map(Number); return x === 1 ? `${y - 1}-12` : `${y}-${String(x - 1).padStart(2, "0")}`; };
+const nextM = m => { const [y, x] = m.split("-").map(Number); return x === 12 ? `${y + 1}-01` : `${y}-${String(x + 1).padStart(2, "0")}`; };
+const sitesOn = () => Object.keys(C.sites).filter(s => C.on[s]);
+const shown = () => SITE === "ALL" ? sitesOn() : [SITE];
+const canEdit = s => !!C.canEdit[s];
+const pill = st => ({ in: `<span class="pill p-in"><i></i>RECEIVED</span>`, wait: `<span class="pill p-wait"><i></i>WAITING</span>`, miss: `<span class="pill p-miss"><i></i>MISSING</span>` }[st]);
+const time = iso => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }) : "";
+
+async function boot(){
+  C = await api("ops/ff/context");
+  const keys = Object.keys(C.sites);
+  if (!keys.length) return shell(`<div class="ban">No flagship is set up for Footfall on your account.</div>`);
+  MONTH = C.today.slice(0, 7); YEAR = C.today.slice(0, 4);
+  const on = sitesOn();
+  SITE = on.length > 1 ? "ALL" : (on[0] || keys[0]);
+  draw();
+}
+function shell(inner){
+  const on = sitesOn();
+  const tabs = [["imp", "Daily import"], ["rep", "Monthly report"], ["ana", "Analysis"], ...(C.settings ? [["set", "Settings"], ["hist", "History import"]] : [])];
+  const chips = TAB === "set" || TAB === "hist" ? "" : on.length > 1 || (TAB === "imp" && Object.keys(C.sites).length > 1)
+    ? `<div class="chips">${on.length > 1 ? `<span class="chip ${SITE === "ALL" ? "on" : ""}" data-s="ALL">All flagships</span>` : ""}${on.map(s => `<span class="chip ${SITE === s ? "on" : ""}" data-s="${s}">${esc(C.sites[s])}</span>`).join("")}</div>` : "";
+  $("#sub").textContent = SITE === "ALL" ? "· All flagships" : C.sites[SITE] ? "· " + C.sites[SITE] : "";
+  $("#view").innerHTML = `<div class="ctabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${TAB === k ? "on" : ""}">${n}</button>`).join("")}</div>` + chips + (inner || "");
+  $("#view").querySelectorAll("[data-s]").forEach(x => x.onclick = () => { SITE = x.dataset.s; draw(); });
+  $("#view").querySelectorAll("[data-tab]").forEach(x => x.onclick = () => { TAB = x.dataset.tab; draw(); });
+}
+async function draw(){
+  shell(`<p class="muted">Loading…</p>`);
+  try {
+    if (TAB === "imp") return drawImport(ST = await api("ops/ff/status"));
+    if (TAB === "rep") return drawReport();
+    if (TAB === "ana") return drawAnalysis();
+    if (TAB === "set") return drawSettings(await api("ops/ff/settings"));
+    if (TAB === "hist") return drawHistory();
+  } catch (e){ shell(`<div class="ban bad">${esc(e.message)}</div>`); }
+}
+
+/* ---------- 1. Daily import ---------- */
+function drawImport(o){
+  const list = SITE === "ALL" ? Object.keys(o.sites).filter(s => o.sites[s].on) : [SITE];
+  const all = Object.keys(o.sites);
+  const yday = D.add(o.today, -1), hr = o.hour;
+  const slots = [9, 10, 11, 12, 13, 14];
+  const cards = all.map(s => { const x = o.sites[s], y = x.list[0];
+    const sent = y.sentAt ? `${time(y.sentAt)} email` : "";
+    return `<div class="sc"><div class="row"><b class="nm">${esc(C.sites[s])}</b><span class="sw ${x.on ? "on" : ""}" disabled title="Switch on / off in Settings"></span></div>
+      ${!x.on ? `<span class="pill p-off"><i></i>SWITCHED OFF</span><span class="muted" style="font-size:.8rem">No emails, no reminders, not in the report.</span>`
+      : `<div>${pill(y.status)}${y.status === "wait" && y.reminders ? ` <span class="pill p-wait">REMINDER ${y.reminders}</span>` : ""}</div>
+        <div class="muted" style="font-size:.8rem">${D.long(yday)}${y.status === "in" ? ` · <b style="color:var(--text)">${N(y.entries)}</b> entries · ${y.source === "liban" ? "Liban Park" : esc(y.by)} at ${time(y.at)}` : ""}</div>
+        ${y.status !== "in" ? `<div class="tl">${slots.map(h => `<span class="${h <= hr ? "d" : ""}">${String(h).padStart(2, "0")}:00${h === 9 ? " link" : h === 14 ? " last" : ""}</span>`).join("")}</div>` : ""}
+        ${!x.contacts ? `<div class="ban bad" style="font-size:.78rem;padding:8px 10px">No Liban Park email set — no emails go out. ${C.settings ? "Settings → add it." : ""}</div>` : ""}
+        <div class="muted" style="font-size:.78rem">Parking duration ${esc(mLabel(x.durLast.month))}: ${x.durLast.done ? "<b class='up'>received</b>" : "<b>not received</b>"}${canEdit(s) ? ` · <a href="#" data-dur="${s}">${x.durLast.done ? "open" : "enter / send link"}</a>` : ""}</div>`}
+    </div>`; }).join("");
+  const rows = (s) => o.sites[s].list.map(d => `<tr class="click" data-day="${d.day}" data-site="${s}"><td>${esc(D.fmt(d.day, { weekday: "short", year: "numeric" }))}</td>
+    <td>${pill(d.status)}</td><td class="n">${N(d.entries)}</td><td class="n">${N(d.exits)}</td><td>${d.status === "in" ? `${d.source === "liban" ? "Liban Park" : d.source === "import" ? "History import" : esc(d.by)} · ${time(d.at)}` : d.sentAt ? `Link sent ${time(d.sentAt)}${d.reminders ? ` · ${d.reminders} reminder${d.reminders > 1 ? "s" : ""}` : ""}` : "—"}</td></tr>`).join("");
+  shell(`<div class="grid">${cards}</div>
+    <div class="muted" style="font-size:.8rem">Liban Park gets the link at <b>09:00</b> for yesterday, then a reminder every hour until <b>14:00</b>. A day still missing at 15:00 is flagged to the operations team. Click a day to see the figures${C.settings ? ", correct them, or send the link again" : ""}.</div>
+    ${list.map(s => `<div class="box"><h3>${esc(C.sites[s])} · last 14 days</h3><div class="tw"><table class="t"><tr><th>Day</th><th>Status</th><th class="n">Entries</th><th class="n">Exits</th><th>Details</th></tr>${rows(s)}</table></div></div>`).join("")}`);
+  $("#view").querySelectorAll("[data-day]").forEach(x => x.onclick = () => openDay(x.dataset.site, x.dataset.day));
+  $("#view").querySelectorAll("[data-dur]").forEach(x => x.onclick = e => { e.preventDefault(); openDur(x.dataset.dur, ST.sites[x.dataset.dur].durLast.month); });
+}
+function gateInputs(gates, cur, ro){
+  const box = g => { const ks = KINDS[g.kind], v = (cur && cur.g && cur.g[g.id]) || {};
+    return `<div class="gbox"><b>${esc(g.name)} <span class="muted" data-sum="${g.id}"></span></b><div class="gin" style="--n:${ks.length}">${ks.map(k => `<div><label>${KL[k]}</label>${ro ? `<div style="font-weight:800">${N(v[k] || 0)}</div>` : `<input inputmode="numeric" data-g="${g.id}" data-k="${k}" value="${v[k] || ""}">`}</div>`).join("")}</div></div>`; };
+  const ins = gates.filter(g => g.dir === "in"), outs = gates.filter(g => g.dir === "out");
+  return `<label>CAR ENTRIES</label>${ins.map(box).join("")}${outs.length ? `<label>CAR EXITS</label>${outs.map(box).join("")}` : ""}`;
+}
+async function openDay(site, day){
+  const d = $("#dlg"); d.innerHTML = `<div class="h"><b>Loading…</b></div>`; d.showModal();
+  let r; try { r = await api(`ops/ff/day?site=${site}&day=${day}`); } catch (e){ d.close(); return toast(e.message, true); }
+  const x = r.day, ed = canEdit(site);
+  const view = () => {
+    d.innerHTML = `<div class="h"><b>${esc(C.sites[site])}</b><span class="badge">${esc(D.long(day))}</span>${x ? pill("in") : pill(day === D.add(C.today, -1) && C.hour <= 14 ? "wait" : "miss")}</div>
+      <div class="bd">${x ? `<div class="kpi"><div class="k"><b>${N(x.entries)}</b><span>ENTRIES</span></div><div class="k"><b>${N(x.noemp)}</b><span>WITHOUT EMPLOYEES</span></div>${x.detail ? `<div class="k"><b>${N(x.exits)}</b><span>EXITS</span></div><div class="k"><b>${N(x.free)}</b><span>FREE TICKETS</span></div>` : ""}</div>
+        ${x.detail ? gateInputs(r.gates, x, true) : `<div class="muted">Imported as a total only (no gate details).</div>`}
+        ${C.revenue && x.detail ? `<div class="muted">Membership <b>${N(x.membership)} LBP</b> · Total balance <b>${N(x.balance)} LBP</b></div>` : ""}`
+        : `<div class="ban">Not received.${r.sentAt ? ` Link sent at ${time(r.sentAt)}${r.reminders ? ` · ${r.reminders} reminder(s)` : ""}.` : ""}</div>`}
+        ${r.log.length ? `<div class="log">${r.log.map(l => `${esc(new Date(l.at).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))} · ${esc(l.what)} · ${esc(l.by_name)}`).join("<br>")}</div>` : ""}
+      </div>
+      <div class="f">${ed && day < C.today ? `${!x ? `<button class="btn ghost" id="snd">✉ Send the link to Liban Park</button>` : ""}${r.link ? `<button class="btn ghost" id="cpy">Copy link</button>` : ""}<button class="btn ghost" id="edt">${x ? "Correct" : "Enter the figures"}</button>` : ""}<button class="btn" id="cl">Close</button></div>`;
+    $("#cl").onclick = () => d.close();
+    const s = $("#snd"); if (s) s.onclick = async () => { s.disabled = true; try { const o = await api("ops/ff/send", { site, kind: "day", period: day }); toast(`Sent to ${o.to.join(", ")}`); d.close(); draw(); } catch (e){ toast(e.message, true); s.disabled = false; } };
+    const c = $("#cpy"); if (c) c.onclick = () => { navigator.clipboard.writeText(r.link).then(() => toast("Link copied")); };
+    const e = $("#edt"); if (e) e.onclick = edit;
+  };
+  const edit = () => {
+    const det = x && x.detail ? x : null;
+    d.innerHTML = `<div class="h"><b>${x ? "Correct" : "Enter"} · ${esc(C.sites[site])}</b><span class="badge">${esc(D.long(day))}</span></div>
+      <div class="bd fl">${gateInputs(r.gates, det, false)}
+        <div class="gin" style="--n:${C.revenue ? 3 : 1}"><div><label>FREE TICKETS</label><input inputmode="numeric" id="free" value="${det ? det.free || "" : ""}"></div>
+        ${C.revenue ? `<div><label>MEMBERSHIP (LBP)</label><input inputmode="numeric" id="membership" value="${det ? det.membership || "" : ""}"></div><div><label>TOTAL BALANCE (LBP)</label><input inputmode="numeric" id="balance" value="${det ? det.balance || "" : ""}"></div>` : ""}</div>
+        <div class="ban" id="tot" style="font-size:.84rem"></div>
+        ${x ? `<div><label>REASON FOR THE CORRECTION</label><input id="note" maxlength="200" placeholder="e.g. Liban Park sent a corrected figure"></div>` : ""}</div>
+      <div class="f"><button class="btn ghost" id="bk">Back</button><button class="btn" id="sv">Save</button></div>`;
+    const num = v => Math.max(0, Math.round(Number(String(v || "").replace(/[,\s]/g, ""))) || 0);
+    const coll = () => { const g = {}; d.querySelectorAll("[data-g]").forEach(i => (g[i.dataset.g] = g[i.dataset.g] || {})[i.dataset.k] = num(i.value));
+      const v = id => { const el = d.querySelector("#" + id); return el ? num(el.value) : 0; };
+      return { g, free: v("free"), membership: v("membership"), balance: v("balance") }; };
+    const sums = () => { const c = coll(); let tin = 0, tout = 0; for (const gt of r.gates){ const s = Object.values(c.g[gt.id] || {}).reduce((a, b) => a + b, 0); d.querySelector(`[data-sum="${gt.id}"]`).textContent = "= " + N(s); gt.dir === "in" ? tin += s : tout += s; }
+      $("#tot").innerHTML = `Entries <b>${N(tin)}</b> · Exits <b>${N(tout)}</b>`; };
+    d.querySelectorAll("input[data-g]").forEach(i => i.oninput = sums); sums();
+    $("#bk").onclick = view;
+    $("#sv").onclick = async () => { const b = $("#sv"); b.disabled = true;
+      try { await api("ops/ff/day", { site, day, ...coll(), note: x ? ($("#note").value || "") : "" }); toast("Saved"); CACHE = {}; d.close(); draw(); } catch (e){ toast(e.message, true); b.disabled = false; } };
+  };
+  view();
+}
+async function openDur(site, month){
+  const d = $("#dlg"); d.innerHTML = `<div class="h"><b>Loading…</b></div>`; d.showModal();
+  let r; try { r = await api(`ops/ff/dur?site=${site}&from=${month}&to=${month}`); } catch (e){ d.close(); return toast(e.message, true); }
+  const cur = r.months[0];
+  d.innerHTML = `<div class="h"><b>Parking duration · ${esc(C.sites[site])}</b><span class="badge">${esc(mLabel(month))}</span>${cur ? pill("in") : ""}</div>
+    <div class="bd fl"><div class="gin" style="--n:2">${r.buckets.map((b, i) => `<div><label>${esc(b.toUpperCase())}</label><input inputmode="numeric" data-i="${i}" value="${cur ? cur.data[i] || "" : ""}"></div>`).join("")}</div>
+    ${cur ? `<div class="muted" style="font-size:.78rem">Sent by ${cur.source === "liban" ? "Liban Park" : esc(cur.by)} · ${esc(new Date(cur.at).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}</div>` : ""}</div>
+    <div class="f">${!cur ? `<button class="btn ghost" id="snd">✉ Send the link to Liban Park</button>` : ""}<button class="btn ghost" id="cl">Close</button><button class="btn" id="sv">Save</button></div>`;
+  $("#cl").onclick = () => d.close();
+  const s = $("#snd"); if (s) s.onclick = async () => { s.disabled = true; try { const o = await api("ops/ff/send", { site, kind: "dur", period: month }); toast(`Sent to ${o.to.join(", ")}`); d.close(); } catch (e){ toast(e.message, true); s.disabled = false; } };
+  $("#sv").onclick = async () => { const dur = [...d.querySelectorAll("[data-i]")].map(i => Math.max(0, Math.round(Number(String(i.value || "").replace(/[,\s]/g, ""))) || 0));
+    try { await api("ops/ff/dur", { site, month, dur }); toast("Saved"); CACHE = {}; d.close(); draw(); } catch (e){ toast(e.message, true); } };
+}
+
+/* ---------- data (one calendar year + last December, per flagship) ---------- */
+async function yearDays(site, y){
+  const k = site + y; if (CACHE[k]) return CACHE[k];
+  const r = await api(`ops/ff/days?site=${site}&from=${y - 1}-12-01&to=${y}-12-31`);
+  const by = {}; for (const x of r.days) by[x.day] = x;
+  return CACHE[k] = { by, gates: r.gates, revenue: r.revenue };
+}
+const daysOf = (Y, m) => Object.values(Y.by).filter(x => x.day.startsWith(m)).sort((a, b) => a.day < b.day ? -1 : 1);
+const sum = (l, k) => l.reduce((a, x) => a + (x[k] || 0), 0);
+function coverage(list, m){
+  const last = m === C.today.slice(0, 7) ? D.add(C.today, -1) : `${m}-${String(monthDays(m)).padStart(2, "0")}`;
+  const N_ = m === C.today.slice(0, 7) ? Math.max(0, +last.slice(8)) : monthDays(m), have = new Set(list.map(x => x.day));
+  const missing = []; for (let i = 1; i <= N_; i++){ const d = `${m}-${String(i).padStart(2, "0")}`; if (!have.has(d)) missing.push(d); }
+  return { from: list.length ? list[0].day : "", to: list.length ? list[list.length - 1].day : "", n: list.length, total: monthDays(m), elapsed: N_, missing, current: m === C.today.slice(0, 7) };
+}
+const badgeOf = cv => !cv.n ? `<span class="badge">No figures yet</span>`
+  : `<span class="badge">${esc(D.fmt(cv.from))} – ${esc(D.fmt(cv.to, { year: "numeric" }))} · ${cv.n} of ${cv.total} days</span>`;
+
+/* ---------- 2. Monthly report ---------- */
+async function drawReport(){
+  const sites = shown(); if (!sites.length) return shell(`<div class="ban">No flagship is switched on.</div>`);
+  const y = MONTH.slice(0, 4), py = prevM(MONTH).slice(0, 4);
+  const Y = {}, P = {};
+  for (const s of sites){ Y[s] = await yearDays(s, y); P[s] = py === y ? Y[s] : await yearDays(s, py); }
+  const cur = Object.fromEntries(sites.map(s => [s, daysOf(Y[s], MONTH)])), prev = Object.fromEntries(sites.map(s => [s, daysOf(P[s], prevM(MONTH))]));
+  const cov = Object.fromEntries(sites.map(s => [s, coverage(cur[s], MONTH)]));
+  const all = sites.flatMap(s => cur[s]), allP = sites.flatMap(s => prev[s]);
+  const ent = sum(all, "entries"), noe = sum(all, "noemp"), entP = sum(allP, "entries"), noeP = sum(allP, "noemp");
+  const nDays = Math.max(...sites.map(s => cov[s].n), 0);
+  /* daily average per flagship (its own received days), added up — a missing day does not pull the average down */
+  const avgOf = L => sites.reduce((a, s) => a + (L[s].length ? sum(L[s], "entries") / L[s].length : 0), 0);
+  const avg = avgOf(cur), avgP = avgOf(prev);
+  const missN = sites.reduce((a, s) => a + cov[s].missing.length, 0), isCur = cov[sites[0]].current;
+  const byDay = {}; for (const x of all) byDay[x.day] = (byDay[x.day] || 0) + x.entries;
+  const best = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
+  const partial = cov[sites[0]].current || sites.some(s => cov[s].missing.length);
+  /* chart */
+  const nd = monthDays(MONTH), mx = Math.max(1, ...sites.flatMap(s => cur[s].map(x => x.entries)));
+  const bars = Array.from({ length: nd }, (_, i) => { const day = `${MONTH}-${String(i + 1).padStart(2, "0")}`, fut = day >= C.today;
+    return `<div class="b" title="${esc(D.fmt(day, { weekday: "short" }))}${sites.map(s => ` · ${C.sites[s]}: ${Y[s].by[day] ? N(Y[s].by[day].entries) : "—"}`).join("")}">${sites.map((s, j) => { const x = Y[s].by[day];
+      return x ? `<i style="height:${(x.entries / mx * 100).toFixed(1)}%;background:${COLORS[j]}"></i>` : fut ? `<i style="height:0"></i>` : `<i class="miss"></i>`; }).join("")}<s>${i === 0 || (i + 1) % 5 === 0 ? i + 1 : ""}</s></div>`; }).join("");
+  /* gates (days with gate details) */
+  const gateBlock = sites.length === 1 ? (() => { const s = sites[0], det = cur[s].filter(x => x.detail); if (!det.length) return "";
+    const ins = Y[s].gates.filter(g => g.dir === "in").map(g => [g.name, det.reduce((a, x) => a + Object.values(x.g[g.id] || {}).reduce((p, q) => p + q, 0), 0)]).sort((a, b) => b[1] - a[1]);
+    const mxg = Math.max(1, ...ins.map(x => x[1])), emp = sum(det, "employees"), tot = sum(det, "entries");
+    return `<div class="box"><h3>Entries by gate${det.length < cur[s].length ? ` · ${det.length} days with gate details` : ""}</h3><div style="padding:8px 0">${ins.map(([n, v]) => `<div class="bar"><span>${esc(n)}</span><span class="mini"><i style="width:${v / mxg * 100}%"></i></span><b>${N(v)}</b></div>`).join("")}</div>
+      <div class="muted pad" style="font-size:.78rem;padding-top:0">Employees: ${N(emp)} (${tot ? (emp / tot * 100).toFixed(1) : 0}% of entries)</div></div>`; })() : "";
+  const tick = sites.length === 1 ? (() => { const det = cur[sites[0]].filter(x => x.detail); if (!det.length) return "";
+    return `<div class="box"><h3>Exits &amp; tickets</h3><table class="t"><tr><td>Total exits</td><td class="n"><b>${N(sum(det, "exits"))}</b></td></tr><tr><td>Free tickets</td><td class="n"><b>${N(sum(det, "free"))}</b></td></tr>
+      ${C.revenue ? `<tr><td>Membership</td><td class="n"><b>${N(sum(det, "membership"))} LBP</b></td></tr><tr><td>Total balance</td><td class="n"><b>${N(sum(det, "balance"))} LBP</b></td></tr>` : ""}</table></div>`; })() : "";
+  /* year table */
+  const months = []; for (let m = `${y}-01`; m <= `${y}-12` && m <= C.today.slice(0, 7); m = nextM(m)) months.push(m);
+  const yrows = months.map(m => { const v = sites.map(s => daysOf(Y[s], m)); const t = v.reduce((a, l) => a + sum(l, "entries"), 0);
+    return `<tr class="click" data-m="${m}" ${m === MONTH ? `style="background:rgba(200,162,74,.1)"` : ""}><td>${esc(mShort(m))} ${y}</td>${v.map((l, i) => `<td class="n">${l.length ? N(sum(l, "entries")) : "—"}${l.length && l.length < (m === C.today.slice(0, 7) ? coverage(l, m).elapsed : monthDays(m)) ? ` <small class="muted">(${l.length}d)</small>` : ""}</td>`).join("")}${sites.length > 1 ? `<td class="n"><b>${t ? N(t) : "—"}</b></td>` : ""}</tr>`; }).join("");
+  shell(`<div class="box"><div class="pad" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn ghost small" id="pm">◀</button><b style="font-size:1.05rem">${esc(mLabel(MONTH))}</b><button class="btn ghost small" id="nm" ${MONTH >= C.today.slice(0, 7) ? "disabled" : ""}>▶</button>
+      <span style="flex:1"></span>${partial ? `<span class="pill p-wait">${cov[sites[0]].current ? "MONTH IN PROGRESS" : "DAYS MISSING"}</span>` : `<span class="pill p-in">COMPLETE</span>`}</div>
+      <div class="tw"><table class="t">${sites.map(s => `<tr><td><b>${esc(C.sites[s])}</b></td><td>${badgeOf(cov[s])}</td><td>${cov[s].missing.length ? `<span class="pill p-miss">${cov[s].missing.length} missing: ${esc(cov[s].missing.slice(0, 6).map(d => +d.slice(8)).join(", "))}${cov[s].missing.length > 6 ? "…" : ""}</span>` : cov[s].n ? `<span class="pill p-in">ALL DAYS</span>` : ""}</td></tr>`).join("")}</table></div></div>
+    <div class="kpi"><div class="k"><span>CAR ENTRIES${sites.length > 1 ? " · ALL" : ""}</span><b>${N(ent)}</b>${isCur ? `<em class="muted">${nDays} day${nDays === 1 ? "" : "s"} so far</em>` : missN ? `<em class="dn">${missN} missing day${missN === 1 ? "" : "s"} — not comparable</em>` : delta(ent, entP, "vs " + mShort(prevM(MONTH)))}</div>
+      <div class="k"><span>WITHOUT EMPLOYEES</span><b>${N(noe)}</b>${partial ? "" : delta(noe, noeP, "vs " + mShort(prevM(MONTH)))}</div>
+      <div class="k"><span>DAILY AVERAGE</span><b>${N(Math.round(avg))}</b>${delta(avg, avgP, "vs " + mShort(prevM(MONTH)) + " avg")}</div>
+      <div class="k"><span>BUSIEST DAY</span><b>${best ? N(best[1]) : "—"}</b><em class="muted">${best ? esc(D.fmt(best[0], { weekday: "short" })) : ""}</em></div></div>
+    ${sites.length > 1 ? `<div class="kpi">${sites.map((s, j) => { const l = cur[s], lp = prev[s]; return `<div class="k" style="border-top-color:${COLORS[j]}"><span>${esc(C.sites[s]).toUpperCase()}</span><b>${N(sum(l, "entries"))}</b>${isCur || cov[s].missing.length ? `<em class="muted">${l.length} of ${cov[s].elapsed} days</em>` : delta(sum(l, "entries"), sum(lp, "entries"), "vs " + mShort(prevM(MONTH)))}</div>`; }).join("")}</div>` : ""}
+    <div class="box"><h3>Car entries · day by day</h3><div class="chart">${bars}</div>
+      <div class="lg">${sites.map((s, j) => `<span style="--c:${COLORS[j]}">${esc(C.sites[s])}</span>`).join("")}<span style="--c:rgba(194,40,60,.35)">Missing day</span></div></div>
+    ${gateBlock || tick ? `<div class="grid">${gateBlock}${tick}</div>` : ""}
+    <div class="box"><h3>${y} by month <span class="muted" style="text-transform:none;letter-spacing:0">· (Nd) = month not complete</span></h3><div class="tw"><table class="t"><tr><th>Month</th>${sites.map(s => `<th class="n">${esc(C.sites[s])}</th>`).join("")}${sites.length > 1 ? `<th class="n">Total</th>` : ""}</tr>${yrows}</table></div></div>
+    <div class="box"><h3>Days · ${esc(mLabel(MONTH))}</h3><div class="tw"><table class="t"><tr><th>Day</th>${sites.map(s => `<th class="n">${esc(C.sites[s])}</th>`).join("")}${sites.length === 1 ? `<th class="n">Without empl.</th><th class="n">Exits</th>` : ""}</tr>
+      ${Array.from({ length: nd }, (_, i) => `${MONTH}-${String(i + 1).padStart(2, "0")}`).filter(d => d < C.today).map(d => `<tr class="click" data-d="${d}"><td>${esc(D.fmt(d, { weekday: "short" }))}</td>${sites.map(s => `<td class="n">${Y[s].by[d] ? N(Y[s].by[d].entries) : `<span class="pill p-miss">MISSING</span>`}</td>`).join("")}${sites.length === 1 ? `<td class="n">${Y[sites[0]].by[d] ? N(Y[sites[0]].by[d].noemp) : ""}</td><td class="n">${Y[sites[0]].by[d] && Y[sites[0]].by[d].detail ? N(Y[sites[0]].by[d].exits) : ""}</td>` : ""}</tr>`).join("")}
+      <tr><td><b>Total</b></td>${sites.map(s => `<td class="n"><b>${N(sum(cur[s], "entries"))}</b></td>`).join("")}${sites.length === 1 ? `<td class="n"><b>${N(sum(cur[sites[0]], "noemp"))}</b></td><td class="n"><b>${N(sum(cur[sites[0]].filter(x => x.detail), "exits"))}</b></td>` : ""}</tr></table></div></div>`);
+  $("#pm").onclick = () => { MONTH = prevM(MONTH); draw(); };
+  $("#nm").onclick = () => { if (MONTH < C.today.slice(0, 7)){ MONTH = nextM(MONTH); draw(); } };
+  $("#view").querySelectorAll("[data-m]").forEach(x => x.onclick = () => { MONTH = x.dataset.m; draw(); });
+  $("#view").querySelectorAll("[data-d]").forEach(x => x.onclick = () => openDay(sites.length === 1 ? sites[0] : sites.find(s => Y[s].by[x.dataset.d]) || sites[0], x.dataset.d));
+}
+
+/* ---------- 3. Analysis ---------- */
+async function drawAnalysis(){
+  const sites = shown(); if (!sites.length) return shell(`<div class="ban">No flagship is switched on.</div>`);
+  const y = YEAR, Y = {}, DU = {};
+  for (const s of sites){ Y[s] = await yearDays(s, +y); DU[s] = await api(`ops/ff/dur?site=${s}&from=${y}-01&to=${y}-12`); }
+  const yl = s => Object.values(Y[s].by).filter(x => x.day.startsWith(y));
+  /* weekday pattern */
+  const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const wd = sites.map(s => { const a = WD.map(() => [0, 0]); for (const x of yl(s)){ const k = (D.parse(x.day).getUTCDay() + 6) % 7; a[k][0] += x.entries; a[k][1]++; } return a.map(([t, n]) => n ? t / n : 0); });
+  const wmx = Math.max(1, ...wd.flat());
+  const wdBlock = `<div class="box"><h3>Average car entries by weekday · ${y}</h3><div style="padding:8px 0">${WD.map((n, i) => `<div class="bar"><span>${n}</span><span style="display:grid;gap:3px">${sites.map((s, j) => `<span class="mini"><i style="width:${wd[j][i] / wmx * 100}%;background:${COLORS[j]}"></i></span>`).join("")}</span><b>${sites.map((s, j) => N(Math.round(wd[j][i]))).join("<br>")}</b></div>`).join("")}</div>
+    ${sites.length > 1 ? `<div class="lg" style="padding-top:4px">${sites.map((s, j) => `<span style="--c:${COLORS[j]}">${esc(C.sites[s])}</span>`).join("")}</div>` : ""}</div>`;
+  /* parking duration */
+  const durBlock = sites.map((s, j) => { const ms = DU[s].months; if (!ms.length) return `<div class="box"><h3>Parking duration · ${esc(C.sites[s])} · ${y}</h3><div class="pad muted">No parking duration for ${y} yet. Liban Park sends it on the 1st of each month${C.settings ? " — older years: History import" : ""}.</div></div>`;
+    const tot = DU[s].buckets.map((_, i) => ms.reduce((a, m) => a + (m.data[i] || 0), 0)), all = tot.reduce((a, b) => a + b, 0), mx = Math.max(1, ...tot);
+    const groups = [["Up to 15 min", [0]], ["1 hour", [1]], ["2 hours", [2]], ["3 hours", [3]], ["4 hours", [4]], ["5 hours", [5]], ["6 hours +", [6, 7, 8, 9, 10, 11, 12]]];
+    const gv = groups.map(([n, ix]) => [n, ix.reduce((a, i) => a + tot[i], 0)]), gmx = Math.max(1, ...gv.map(x => x[1]));
+    const one2 = all ? (tot[1] + tot[2]) / all * 100 : 0;
+    return `<div class="box"><h3>Parking duration · ${esc(C.sites[s])} · ${y} <span class="muted" style="text-transform:none;letter-spacing:0">· ${ms.length} month${ms.length > 1 ? "s" : ""}, ${N(all)} cars</span></h3>
+      <div style="padding:8px 0">${gv.map(([n, v]) => `<div class="bar"><span>${n}</span><span class="mini"><i style="width:${v / gmx * 100}%;background:${COLORS[j]}"></i></span><b>${all ? (v / all * 100).toFixed(1) : 0}%</b></div>`).join("")}</div>
+      <div class="muted pad" style="font-size:.8rem;padding-top:0">${one2.toFixed(0)}% of cars stay 1–2 hours.</div></div>`; }).join("");
+  /* employees share and gates */
+  const shares = sites.map(s => { const l = yl(s).filter(x => x.detail); const t = sum(l, "entries"); return { s, emp: t ? sum(l, "employees") / t * 100 : null, days: l.length }; });
+  const years = []; for (let k = +C.today.slice(0, 4); k >= 2023; k--) years.push(String(k));
+  shell(`<div class="box"><div class="pad" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>Year</b><select class="sel" id="yr">${years.map(k => `<option ${k === y ? "selected" : ""}>${k}</option>`).join("")}</select>
+      <span class="muted" style="font-size:.8rem">${sites.map(s => `${esc(C.sites[s])}: ${yl(s).length} days`).join(" · ")}</span></div></div>
+    <div class="grid">${wdBlock}${durBlock}</div>
+    <div class="box"><h3>Employee cars · share of entries · ${y}</h3><div class="tw"><table class="t">${shares.map(x => `<tr><td>${esc(C.sites[x.s])}</td><td class="n"><b>${x.emp == null ? "—" : x.emp.toFixed(1) + "%"}</b></td><td class="muted">${x.days} days with gate details</td></tr>`).join("")}</table></div></div>
+    <div class="empty"><b>More analysis is added as needed</b> — for example the same month last year, peaks around events and campaigns, gate trends, or revenue per car (when revenue is on). Ask and it is added here.</div>`);
+  $("#yr").onchange = e => { YEAR = e.target.value; draw(); };
+}
+
+/* ---------- Settings ---------- */
+function drawSettings(o){
+  const S = JSON.parse(JSON.stringify(o.sites));
+  const gateRow = (s, g, i) => `<div class="grow"><input value="${esc(g.name)}" data-gn="${s}:${i}" maxlength="30"><select data-gd="${s}:${i}"><option value="in" ${g.dir === "in" ? "selected" : ""}>Entry</option><option value="out" ${g.dir === "out" ? "selected" : ""}>Exit</option></select>
+    <select class="kind" data-gk="${s}:${i}">${Object.entries(KIND_NAMES).map(([k, n]) => `<option value="${k}" ${g.kind === k ? "selected" : ""}>${n}</option>`).join("")}</select><button class="x" data-gx="${s}:${i}" title="Remove">✕</button></div>`;
+  const render = () => {
+    shell(`<div class="box"><h3>Revenue</h3><div class="pad" style="display:flex;gap:12px;align-items:center"><button class="sw ${o.revenue ? "on" : ""}" id="rev"></button>
+        <div><b>${o.revenue ? "ON" : "OFF"}</b><div class="muted" style="font-size:.8rem">${o.revenue ? "Liban Park also types Membership and Total balance (LBP); shown in the report." : "Membership and Total balance are not asked for and not kept. Switching off removes the amounts already kept."}</div></div></div></div>
+      ${Object.entries(S).map(([s, x]) => `<div class="box"><h3>${esc(x.name)}<span style="flex:1"></span><button class="sw ${x.on ? "on" : ""}" data-on="${s}"></button><b style="color:var(--text)">${x.on ? "ON" : "OFF"}</b></h3>
+        <div class="pad fl" style="display:grid;gap:10px">
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div><label>LIBAN PARK EMAIL (TO)</label><input data-to="${s}" value="${esc(x.to.join(", "))}" placeholder="name@libanpark.com"></div>
+          <div><label>CC</label><input data-cc="${s}" value="${esc(x.cc.join(", "))}" placeholder="separate several with commas"></div></div>
+          <div><label>GATES (THE FORM LIBAN PARK FILLS IN)</label>${x.gates.map((g, i) => gateRow(s, g, i)).join("")}<button class="btn ghost small" data-ga="${s}">＋ Add a gate</button></div>
+        </div></div>`).join("")}
+      <div class="box"><h3>Schedule</h3><div class="pad muted" style="font-size:.84rem">Link at <b>${String(o.schedule.start).padStart(2, "0")}:00</b> for yesterday · reminders every hour until <b>${o.schedule.last}:00</b> · a day still missing is flagged to the operations team at ${o.schedule.last + 1}:00 · on the 1st the email also asks for last month's parking duration. Sent from the hub's Outlook connection.</div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><span class="muted" style="font-size:.78rem;margin-right:auto">${o.updatedAt ? `Last saved by ${esc(o.updatedBy)} · ${esc(new Date(o.updatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}` : ""}</span>
+        <button class="btn ghost" id="tst">✉ Send me a test email</button><button class="btn" id="sv">Save settings</button></div>`);
+    const v = $("#view");
+    $("#rev").onclick = () => { o.revenue = !o.revenue; render(); };
+    v.querySelectorAll("[data-on]").forEach(b => b.onclick = () => { read(); S[b.dataset.on].on = !S[b.dataset.on].on; render(); });
+    v.querySelectorAll("[data-ga]").forEach(b => b.onclick = () => { read(); S[b.dataset.ga].gates.push({ id: "", name: "", dir: "in", kind: "tce" }); render(); });
+    v.querySelectorAll("[data-gx]").forEach(b => b.onclick = () => { read(); const [s, i] = b.dataset.gx.split(":"); S[s].gates.splice(+i, 1); render(); });
+    $("#sv").onclick = save;
+    $("#tst").onclick = async () => { const s = Object.keys(S).find(k => S[k].on && canEdit(k)); if (!s) return toast("Switch a flagship on first", true);
+      try { const r = await api("ops/ff/send", { site: s, kind: "day", period: D.add(C.today, -1), again: true, testTo: true }); toast(`Test sent to ${r.to.join(", ")}`); } catch (e){ toast(e.message, true); } };
+  };
+  const read = () => { const v = $("#view");
+    for (const s of Object.keys(S)){ const t = v.querySelector(`[data-to="${s}"]`); if (!t) continue; S[s].to = t.value; S[s].cc = v.querySelector(`[data-cc="${s}"]`).value;
+      S[s].gates.forEach((g, i) => { g.name = v.querySelector(`[data-gn="${s}:${i}"]`).value; g.dir = v.querySelector(`[data-gd="${s}:${i}"]`).value; g.kind = v.querySelector(`[data-gk="${s}:${i}"]`).value; }); } };
+  const save = async () => { read();
+    if (o.revenue !== o._rev0 && !await confirmBox("Revenue", o.revenue ? "Switch revenue ON? Liban Park will be asked for Membership and Total balance." : "Switch revenue OFF? The amounts already kept are removed.", "Yes")) return;
+    try { await api("ops/ff/settings", { sites: Object.fromEntries(Object.entries(S).map(([s, x]) => [s, { on: x.on, to: x.to, cc: x.cc, gates: x.gates }])), revenue: o.revenue });
+      toast("Settings saved"); C = await api("ops/ff/context"); CACHE = {}; o._rev0 = o.revenue; draw(); } catch (e){ toast(e.message, true); } };
+  o._rev0 = o.revenue;
+  render();
+}
+
+/* ---------- History import (Liban Park monthly workbook / parking duration workbook) ---------- */
+const lc = v => String(v == null ? "" : v).replace(/\s+/g, " ").trim().toLowerCase();
+const isoOf = v => { if (v instanceof Date && !isNaN(v)){ v = new Date(v.getTime() + 12 * 3600e3);   /* noon: clock changes (e.g. 29 Mar in Beirut) never shift the day */ return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`; }
+  if (typeof v === "number" && v > 30000 && v < 80000){ const d = new Date(Date.UTC(1899, 11, 30) + v * 864e5); return d.toISOString().slice(0, 10); } return ""; };
+const SITE_WORDS = { verdun: "VRM", achrafieh: "ACM", dbayeh: "DBS" };
+const subKey = s => { s = lc(s); return s.startsWith("ticket") ? "t" : s.startsWith("card") ? "c" : s.startsWith("emp") ? "e" : s.startsWith("user") ? "u" : s.startsWith("pas") ? "p" : ""; };
+function parseDaily(wb){
+  const days = [], others = {}, gatesSeen = new Map(), notes = [];
+  for (const name of wb.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
+    const r2i = rows.findIndex(r => r && r.some(c => /^(?!total).+\s(entry|exit)$/i.test(String(c || "").trim())));
+    if (r2i < 1) { notes.push(`${name}: not a footfall sheet — skipped`); continue; }
+    const r1 = rows[r2i - 1] || [], r2 = rows[r2i], r3 = rows[r2i + 1] || [];
+    const exitCol = r1.findIndex(c => /cars per exit/i.test(String(c || "")));
+    const cols = [];   // {col, gate, dir, key}
+    let free = -1, mem = -1, bal = -1; const tots = [];
+    r2.forEach((c, j) => { const t = String(c || "").trim(); if (!t) return;
+      if (/^free$/i.test(t)) free = j; else if (/^membership/i.test(t)) mem = j; else if (/^total balance/i.test(t)) bal = j;
+      else if (/^(the )?difference|^without|^total|^car entrances|^day$|^date$|^abc /i.test(t)) return;
+      else { const m = /^(.+?)\s+(entry|exit)$/i.exec(t), gname = m ? m[1].trim() : t, dir = m ? (lc(m[2]) === "exit" ? "out" : "in") : (exitCol >= 0 && j >= exitCol ? "out" : "in");
+        for (let k = j; k < Math.min(r3.length, j + 4); k++){ if (k > j && String(r2[k] || "").trim()) break; const key = subKey(r3[k]); if (key) cols.push({ col: k, gate: gname, dir, key }); } } });
+    for (let j = 0; j < Math.max(r1.length, r2.length); j++){   // "ABC Achrafieh — Total Entries" (row 1 or row 2 label)
+      const t = [r1[j], r2[j], r3[j]].map(lc).join(" "), m = /abc (verdun|achrafieh|dbayeh)/.exec(t);
+      if (m && /total entries/.test(t) && !/exit/.test(t)) tots.push({ col: j, site: SITE_WORDS[m[1]] }); }
+    for (const c of cols){ const k = c.gate.toLowerCase() + "|" + c.dir; if (!gatesSeen.has(k)) gatesSeen.set(k, { name: c.gate, dir: c.dir, keys: new Set() }); gatesSeen.get(k).keys.add(c.key); }
+    for (let i = r2i + 2; i < rows.length; i++){
+      const r = rows[i]; if (!r) continue; if (r.some(c => /^total$/i.test(String(c || "").trim()))) break;
+      const day = r.map(isoOf).find(Boolean); if (!day) continue;
+      const g = {}; for (const c of cols){ ((g[c.gate.toLowerCase() + "|" + c.dir]) = g[c.gate.toLowerCase() + "|" + c.dir] || {})[c.key] = Number(r[c.col]) || 0; }
+      days.push({ day, g, free: free >= 0 ? Number(r[free]) || 0 : 0, membership: mem >= 0 ? Number(r[mem]) || 0 : 0, balance: bal >= 0 ? Number(r[bal]) || 0 : 0 });
+      for (const t of tots){ const v = Number(r[t.col]) || 0; (others[t.site] = others[t.site] || []).push({ day, total: v }); }
+    }
+  }
+  return { days, others, gates: [...gatesSeen.entries()].map(([k, v]) => ({ k, name: v.name, dir: v.dir, keys: [...v.keys] })), notes };
+}
+function parseDur(wb){
+  const months = [], MN = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  for (const name of wb.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
+    const yr = (/(20\d\d)/.exec(name) || /(20\d\d)/.exec(String((rows[0] || [])[0] || "")) || [])[1]; if (!yr) continue;
+    const h = rows.findIndex(r => r && lc(r[0]) === "duration"); if (h < 0) continue;
+    for (let i = h + 1; i < rows.length; i++){ const r = rows[i] || [], mi = MN.indexOf(lc(r[0])); if (mi < 0) continue;
+      const data = Array.from({ length: 13 }, (_, k) => Math.round(Number(r[k + 1]) || 0)); if (!data.some(Boolean)) continue;
+      months.push({ month: `${yr}-${String(mi + 1).padStart(2, "0")}`, data }); }
+  }
+  return months;
+}
+function drawHistory(){
+  const ed = Object.keys(C.sites).filter(canEdit);
+  shell(`<div class="box"><h3>History import</h3><div class="pad fl" style="display:grid;gap:12px">
+      <div class="muted" style="font-size:.84rem;line-height:1.55">Upload Liban Park's Excel files to load past months. Two kinds are read:<br>
+        <b>• Daily footfall workbook</b> — one sheet per month (Day · Date · Free · Membership · Total balance · gates Entry/Exit with Tickets, Cards, Employees…). The gate columns go to the flagship you choose; columns like "ABC Achrafieh — Total Entries" are loaded as day totals for that flagship.<br>
+        <b>• Parking duration workbook</b> — one sheet per year, months × 15 min … 12 hours.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><div><label>THE GATE COLUMNS BELONG TO</label><select id="hs">${ed.map(s => `<option value="${s}">${esc(C.sites[s])}</option>`).join("")}</select></div>
+        <div><label>EXCEL FILE</label><input type="file" id="hf" accept=".xlsx,.xls,.xlsm"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:.84rem;color:var(--text)"><input type="checkbox" id="ho" style="width:auto"> Replace days already in the hub (otherwise they are kept)</label>
+      <div id="hp"></div></div></div>`);
+  $("#hf").onchange = async e => { const f = e.target.files[0]; if (!f) return; $("#hp").innerHTML = `<p class="muted">Reading…</p>`;
+    try { await xlsxReady(); const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true }); preview(wb); } catch (er){ $("#hp").innerHTML = `<div class="ban bad">${esc(er.message)}</div>`; } };
+}
+function preview(wb){
+  const site = $("#hs").value, gates = C.gates[site] || [];
+  const dur = parseDur(wb);
+  if (dur.length){
+    $("#hp").innerHTML = `<div class="ban">Parking duration: <b>${dur.length} months</b> (${esc(dur[0].month)} → ${esc(dur[dur.length - 1].month)}) → ${esc(C.sites[site])}</div><button class="btn" id="hi">Import</button>`;
+    $("#hi").onclick = async () => { try { const r = await api("ops/ff/import", { site, kind: "dur", months: dur, overwrite: $("#ho").checked }); toast(`${r.imported} months imported`); CACHE = {}; $("#hp").innerHTML = `<div class="ban">✓ ${r.imported} months imported.</div>`; } catch (e){ toast(e.message, true); } };
+    return;
+  }
+  const p = parseDaily(wb);
+  if (!p.days.length) return $("#hp").innerHTML = `<div class="ban bad">No footfall or parking duration found in this file.</div>`;
+  const map = {}, miss = [];
+  for (const g of p.gates){ const m = gates.find(x => lc(x.name) === lc(g.name) && x.dir === g.dir); if (m) map[g.k] = m.id; else miss.push(`${g.name} (${g.dir === "in" ? "entry" : "exit"})`); }
+  const rows = p.days.map(d => { const g = {}; for (const [k, v] of Object.entries(d.g)) if (map[k]) g[map[k]] = v; return { day: d.day, g, free: d.free, membership: d.membership, balance: d.balance }; })
+    .filter(r => Object.values(r.g).some(o => Object.values(o).some(Boolean)));
+  const oth = Object.entries(p.others).filter(([s]) => s !== site && C.sites[s] && canEdit(s)).map(([s, l]) => [s, l.filter(x => x.total > 0)]);
+  const skippedOther = Object.keys(p.others).filter(s => s !== site && !(C.sites[s] && canEdit(s)));
+  const span = l => l.length ? `${esc(D.fmt(l[0].day, { year: "numeric" }))} → ${esc(D.fmt(l[l.length - 1].day, { year: "numeric" }))}` : "";
+  $("#hp").innerHTML = `<div class="tw"><table class="t"><tr><th>Flagship</th><th>What</th><th class="n">Days</th><th>Dates</th><th></th></tr>
+    <tr><td><b>${esc(C.sites[site])}</b></td><td>Gate details</td><td class="n">${rows.length}</td><td>${span(rows)}</td><td><input type="checkbox" id="h_main" checked style="width:auto"></td></tr>
+    ${oth.map(([s, l]) => `<tr><td><b>${esc(C.sites[s])}</b></td><td>Day total only</td><td class="n">${l.length}</td><td>${span(l)}</td><td><input type="checkbox" data-oth="${s}" checked style="width:auto"></td></tr>`).join("")}</table></div>
+    ${miss.length ? `<div class="ban bad" style="font-size:.82rem">Gates in the file not found in ${esc(C.sites[site])}'s settings (not imported): ${esc(miss.join(", "))}. Add or rename them in Settings → Gates, then choose the file again.</div>` : ""}
+    ${skippedOther.length ? `<div class="muted" style="font-size:.8rem">Day totals for ${esc(skippedOther.join(", "))} are skipped (switched off in Footfall or not your flagship).</div>` : ""}
+    ${p.notes.length ? `<div class="muted" style="font-size:.78rem">${esc(p.notes.join(" · "))}</div>` : ""}
+    <div class="muted" style="font-size:.8rem">Days with all zeros are skipped (treated as missing).${C.revenue ? "" : " Revenue is OFF — amounts in the file are not kept."}</div>
+    <button class="btn" id="hi">Import</button>`;
+  $("#hi").onclick = async () => { const b = $("#hi"); b.disabled = true; let tot = 0, sk = 0;
+    try {
+      const send = async (s, list) => { for (let i = 0; i < list.length; i += 300){ const r = await api("ops/ff/import", { site: s, rows: list.slice(i, i + 300), overwrite: $("#ho").checked }); tot += r.imported; sk += r.skipped; } };
+      if ($("#h_main").checked) await send(site, rows);
+      for (const [s, l] of oth) if ($(`[data-oth="${s}"]`).checked) await send(s, l);
+      CACHE = {}; $("#hp").innerHTML = `<div class="ban">✓ ${tot} days imported${sk ? ` · ${sk} skipped (already in the hub, empty, or today)` : ""}. Open the Monthly report to check.</div>`;
+    } catch (e){ toast(e.message, true); b.disabled = false; }
+  };
+}
+
+boot().catch(e => $("#view").innerHTML = `<div class="ban bad">${esc(e.message)}</div>`);
+</script>
+</body>
+</html>

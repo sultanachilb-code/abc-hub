@@ -9,6 +9,7 @@ import { phoneSchema, phoneRoute, phoneDeps, extEnsure, extSet } from "./modules
 export { PhoneHub } from "./modules/phone.js";
 import { chatSchema, chatRoute, chatDeps, chatSync, chatRun, chatPostTeam } from "./modules/chat.js";
 import { cleanSchema, cleanRoute, cleanPublic, cleanGate, cleanDay, cleanRun, clMode } from "./modules/cleaners.js";   // Cleaner Access (the Cleaner QR system in the hub) — docs/FEATURE-cleaner-access.md
+import { ffSchema, ffRoute, ffPublic, ffRun } from "./modules/footfall.js";   // Footfall: Liban Park daily car counts per flagship — docs/FEATURE-footfall.md
 import { ssoSchema, SSO_APPS, sysAccess, sysSummary, cleanSys, ssoServer, ssoEnd, extAllowed, ssoPolicy, ssoPolicySet, SNAG_ROLES, INC_ROLES, INC_POSITIONS } from "./modules/hubsso.js";   // One hub account for every system — docs/FEATURE-hub-sign-in.md
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
@@ -261,6 +262,8 @@ const APP_ACCESS = {
   evacuation: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   incidents: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "cleaner-qr": ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC",  "LEAD"],
+  footfall: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Footfall: operations team + Directors
+  "ff-ops": ["MM", "OM", "SMS", "MS", "MO"],   // Footfall: "day missing" notices → operations team
   "abc-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "tenant-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   jde: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -414,6 +417,7 @@ async function ensureSchema(env) {
   await twofaSchema(env);       // Two-step login feature
   await ssoSchema(env);         // One hub account for every system
   await cleanSchema(env);       // Cleaner Access
+  await ffSchema(env);          // Footfall
   await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
@@ -551,6 +555,12 @@ export default {
       const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
       return new Response(r.body, { status: r.status, headers: h });
     }
+    /* Footfall: the Liban Park daily link opens the figures form (no hub account) */
+    if (/^\/ff\/[A-Za-z0-9]{24}\/?$/.test(url.pathname)) {
+      const r = await env.ASSETS.fetch(new Request(new URL("/tools/ffentry", url), request));
+      const h = new Headers(r.headers); h.set("x-robots-tag", "noindex"); h.set("referrer-policy", "no-referrer"); h.set("cache-control", "no-store");
+      return new Response(r.body, { status: r.status, headers: h });
+    }
     /* Quick Access Pass: the link sent by WhatsApp opens the pass page with the QR (no hub account) */
     if (/^\/qp\/[A-Za-z0-9]{20,40}\/?$/.test(url.pathname)) {
       const r = await env.ASSETS.fetch(new Request(new URL("/tools/qpass", url), request));
@@ -611,6 +621,7 @@ export default {
       await pushRun(env).catch(e => console.error("push", e && e.message));
       await chatRun(env).catch(e => console.error("chat", e && e.message));
       await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));
+      await ffRun(env, { SITES, today: beirutToday, hour: beirutHour, outlookSend, raiseEvent, hubUrl: HUB_URL }).catch(e => console.error("footfall", e && e.message));   // Footfall: Liban Park emails 09:00 → 14:00
       await cleanRun(env, { SITES, today: beirutToday, hour: beirutHour, opsGroups, outlookSend }).catch(e => console.error("cleaners", e && e.message));   // Cleaner Access: 21:00 reports, monthly verification   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
@@ -672,6 +683,7 @@ async function route(request, env, ctx, url) {
     { siteName, now: nowIso, today: beirutToday, raiseEvent, markHandover: gateMarkHandover,
       cleanGate: (e2, p2, m2, b2, u2, x) => cleanGate(e2, p2, m2, b2, u2, { ...x, SITES, today: beirutToday }) }));   // Cleaner Access: cleaner badges at the gate
   if (path === "cl-pass" && method === "GET") return json({ ok: true, data: await cleanPublic(env, url, { SITES }) }, 200, { "cache-control": "no-store", "x-robots-tag": "noindex" });   // Cleaner badge scanned by any phone: information only
+  if (path.startsWith("ff-ext/")) return json({ ok: true, data: await ffPublic(env, path.slice(7), method, body, { SITES, today: beirutToday }) }, 200, { "cache-control": "no-store", "x-robots-tag": "noindex" });   // Footfall: Liban Park's link
   if (path === "cl-mode" && method === "GET") return ok({ mode: await clMode(env) });   // the old Cleaner QR links: forward to the hub once switched
   if (path.startsWith("patrol-ext/")) return ok(await patrolPublic(env, path.slice(11), method, body, { siteName, today: beirutToday, raiseEvent }));   // Security Patrol: the guards' shared link
   if (path === "ext-cfg") { const c = await extCfg(env); return json({ ok: true, data: { theme: c.theme } }, 200, { "cache-control": "no-cache" }); }   // tenant & visitor pages: Light / Dark / Auto (Admin Control)
@@ -1548,7 +1560,7 @@ async function notificationsFor(env, me) {
   }
   const mySites = sitesOf(me);
   events = events.filter(e => (!e.to || e.to === me.email) && (!multi || !e.site || mySites.includes(e.site))
-    && (!["keybox-late", "pm-ops", "mkt-ops"].includes(e.app) || roleAllows(me, e.app))).slice(0, 80);   // Key Box late keys: operations team only
+    && (!["keybox-late", "pm-ops", "mkt-ops", "ff-ops"].includes(e.app) || roleAllows(me, e.app))).slice(0, 80);   // Key Box late keys: operations team only
   return { events, readAt: me.notif_read_at || "" };
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
@@ -1660,7 +1672,7 @@ async function pushRun(env) {
   if (!events.length) return;
   const newest = events.reduce((m, e) => (e.at > m ? e.at : m), wm);
   await env.DB.prepare("UPDATE meta SET v = ? WHERE k = 'push:wm'").bind(newest).run();
-  const names = { followup: "🚩 Follow-up", "keybox-late": "🔑 Key Box", "pm-ops": "🛠 Preventive Maintenance", "mkt-ops": "📣 Marketing Participation", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning" };
+  const names = { followup: "🚩 Follow-up", "keybox-late": "🔑 Key Box", "pm-ops": "🛠 Preventive Maintenance", "mkt-ops": "📣 Marketing Participation", snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", schedule: "Schedule", mom: "MOM", handover: "Handover", feedback: "Tenant Feedback", gla: "GLA", reminders: "Reminder", forms: "Checklist", emergency: "Emergency", tenants: "Tenants", works: "Tenant Works", calendar: "Calendar", evacuation: "Evacuation", contractors: "Contractors", gate: "Loading Gate", projects: "Projects", contracts: "Contracts", malfunctions: "Malfunction", quickpass: "Quick Pass", patrol: "Security Patrol", cleanctl: "Cleaning", "ff-ops": "👣 Footfall" };
   for (const sub of subs) {
     const mine = events.filter(e =>
       (!e.to || e.to === sub.email) &&
@@ -2023,6 +2035,10 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("patrol/")) return patrolRoute(env, p, method, b, url, { site, me, can, canSite, full: isFull(me), now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Security Patrol
   if (p.startsWith("qp/")) return qpRoute(env, p, method, b, url, { site, me, can, canSite, now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Quick Access Pass
+  if (p.startsWith("ff/")) {   // Footfall (modules/footfall.js)
+    if (isWarehouse(me) || me.role === "SECURITY" || !roleAllows(me, "footfall")) throw fail("Not allowed", 403);
+    return ffRoute(env, p, method, b, url, { me, SITES, sitesOf, today: beirutToday, hour: beirutHour, outlookSend, raiseEvent, audit, hubUrl: HUB_URL });
+  }
   if (p.startsWith("cleaners/")) {   // Cleaner Access (modules/cleaners.js)
     if (isWarehouse(me)) throw fail("Not allowed", 403);
     return cleanRoute(env, p, method, b, url, { me, SITES, sitesOf, canSite, today: beirutToday, opsGroups, outlookSend, raiseEvent, audit, hubUrl: HUB_URL });

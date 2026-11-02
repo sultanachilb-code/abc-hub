@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Parking Figures · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<!-- Footfall: the Liban Park daily link (no hub account) — docs/FEATURE-footfall.md -->
+<style>
+:root{--brand:#4A1F73;--deep:#2A0F45;--gold:#C8A24A;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--line:#E6E0EE;--ok:#1E8A4C;--bad:#B03A2E}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;padding-bottom:40px}
+.hd{background:linear-gradient(160deg,var(--brand),var(--deep));color:#fff;text-align:center;padding:20px 16px 56px}
+.hd img{height:30px}.hd small{display:block;color:#E9CF8A;letter-spacing:.2em;font-size:.7rem;margin-top:8px}.hd h1{font-size:1.3rem;margin-top:6px}
+.dt{display:inline-block;margin-top:8px;background:#E9CF8A;color:var(--deep);font-weight:800;font-size:.84rem;border-radius:10px;padding:4px 12px}
+.card{width:min(520px,calc(100% - 24px));margin:-40px auto 0;background:var(--card);border-radius:22px;box-shadow:0 18px 50px rgba(42,15,69,.14);padding:16px}
+h3{font-size:.95rem;color:var(--deep);margin:6px 0 10px}
+.gate{border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:10px}
+.gate h4{font-size:.86rem;margin-bottom:8px;display:flex;justify-content:space-between}.gate h4 span{color:var(--brand)}
+.fg{display:grid;gap:8px;grid-template-columns:repeat(var(--n,3),1fr)}
+label{display:block;font-size:.66rem;font-weight:800;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;text-transform:uppercase}
+input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-weight:700;font-size:1rem;background:#FBFAFD;color:var(--text)}
+input:focus{outline:2px solid #8A5CC0;border-color:transparent}
+.tot{background:var(--deep);color:#fff;border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:6px}
+.tot b{display:block;font-size:1.2rem;color:#E9CF8A}.tot small{font-size:.62rem;letter-spacing:.1em;opacity:.85}
+.btn{display:block;width:100%;background:var(--brand);color:#fff;border:0;border-radius:12px;padding:14px;font:inherit;font-weight:800;font-size:1rem;margin-top:14px;cursor:pointer}
+.btn:disabled{opacity:.6}
+.msg{border-radius:12px;padding:10px 12px;font-size:.86rem;margin-top:10px}.msg.bad{background:rgba(176,58,46,.1);color:var(--bad)}.msg.warn{background:#FFF7E0;color:#6B5014}
+.done{text-align:center;padding:26px 10px}.done .x{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:2rem;margin:0 auto 12px;background:rgba(30,138,76,.12);color:var(--ok)}
+.done.no .x{background:rgba(176,58,46,.12);color:var(--bad)}
+.mut{color:var(--muted);font-size:.8rem;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><small>ABC OPERATIONS · PARKING FIGURES</small><h1 id="nm">…</h1><span class="dt" id="dt"></span></div>
+<div class="card" id="c"><p class="mut">Loading…</p></div>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TOKEN = (location.pathname.match(/\/ff\/([A-Za-z0-9]{24})/) || [])[1] || "";
+const C = document.getElementById("c"), n = v => Math.max(0, Math.round(Number(String(v || "").replace(/[,\s]/g, ""))) || 0), fmt = v => Number(v || 0).toLocaleString("en-US");
+const KL = { t: "Tickets", c: "Cards", e: "Employees", u: "Users", p: "Passes" }, KINDS = { tce: ["t", "c", "e"], users: ["u"], passes: ["p"] };
+let F = null;
+const fail = (t, m) => { C.innerHTML = `<div class="done no"><div class="x">✕</div><h3>${esc(t)}</h3><p class="mut">${esc(m || "")}</p></div>`; };
+async function call(method, body){
+  const r = await fetch(`/api/ff-ext/${TOKEN}`, { method, headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => null);
+  if (!j || !j.ok) throw new Error((j && j.error) || "No connection — try again");
+  return j.data;
+}
+const dayLabel = d => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const monthLabel = m => new Date(m + "-15T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+
+function gateBox(g){
+  const ks = KINDS[g.kind], cur = F.current && F.current.g && F.current.g[g.id] || {};
+  return `<div class="gate"><h4>${esc(g.name)} <span id="s_${g.id}">0</span></h4><div class="fg" style="--n:${ks.length}">${ks.map(k =>
+    `<div><label>${KL[k]}</label><input inputmode="numeric" data-g="${g.id}" data-k="${k}" value="${cur[k] != null && cur[k] !== 0 ? cur[k] : ""}" autocomplete="off"></div>`).join("")}</div></div>`;
+}
+function drawDay(){
+  const cur = F.current || {};
+  const ins = F.gates.filter(g => g.dir === "in"), outs = F.gates.filter(g => g.dir === "out");
+  C.innerHTML = `${F.current ? `<div class="msg warn">These figures were already sent — you can correct them and send again.</div>` : ""}
+    <h3>🚗 Car entries</h3>${ins.map(gateBox).join("")}
+    ${outs.length ? `<h3>Car exits</h3>${outs.map(gateBox).join("")}` : ""}
+    <h3>Tickets${F.revenue ? " &amp; revenue" : ""}</h3>
+    <div class="fg" style="--n:${F.revenue ? 3 : 1}"><div><label>Free tickets</label><input inputmode="numeric" id="free" value="${cur.free || ""}"></div>
+    ${F.revenue ? `<div><label>Membership (LBP)</label><input inputmode="numeric" id="membership" value="${cur.membership || ""}"></div><div><label>Total balance (LBP)</label><input inputmode="numeric" id="balance" value="${cur.balance || ""}"></div>` : ""}</div>
+    <div class="tot"><div><small>TOTAL ENTRIES</small><b id="tIn">0</b></div><div><small>WITHOUT EMPL.</small><b id="tNo">0</b></div>${outs.length ? `<div><small>TOTAL EXITS</small><b id="tOut">0</b></div><div><small>DIFFERENCE</small><b id="tDif">0</b></div>` : ""}</div>
+    <div id="m"></div><button class="btn" id="go">Send to ABC</button>
+    <p class="mut" style="margin-top:10px;text-align:center">Type only the numbers — totals are worked out for you.</p>`;
+  C.querySelectorAll("input").forEach(i => i.oninput = sums);
+  sums();
+  document.getElementById("go").onclick = send;
+}
+function collect(){
+  const g = {};
+  C.querySelectorAll("[data-g]").forEach(i => { (g[i.dataset.g] = g[i.dataset.g] || {})[i.dataset.k] = n(i.value); });
+  const v = id => { const e = document.getElementById(id); return e ? n(e.value) : 0; };
+  return { g, free: v("free"), membership: v("membership"), balance: v("balance") };
+}
+function sums(){
+  const x = collect(); let tin = 0, tno = 0, tout = 0;
+  for (const gt of F.gates){ const o = x.g[gt.id] || {}, s = Object.values(o).reduce((a, b) => a + b, 0);
+    document.getElementById("s_" + gt.id).textContent = "= " + fmt(s);
+    if (gt.dir === "in"){ tin += s; tno += s - (o.e || 0); } else tout += s; }
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = fmt(v); };
+  set("tIn", tin); set("tNo", tno); set("tOut", tout); const d = document.getElementById("tDif"); if (d) d.textContent = (tout - tin > 0 ? "+" : "") + fmt(tout - tin);
+  return { tin, tout };
+}
+function drawDur(){
+  const cur = (F.current && F.current.dur) || [];
+  C.innerHTML = `${F.current ? `<div class="msg warn">Already sent — you can correct and send again.</div>` : ""}
+    <h3>⏱ Parking duration — number of cars per duration</h3>
+    <div class="fg" style="--n:2">${F.buckets.map((b, i) => `<div><label>${esc(b)}</label><input inputmode="numeric" data-i="${i}" value="${cur[i] || ""}"></div>`).join("")}</div>
+    <div class="tot"><div><small>TOTAL CARS</small><b id="tD">0</b></div></div><div id="m"></div><button class="btn" id="go">Send to ABC</button>`;
+  const upd = () => { let t = 0; C.querySelectorAll("[data-i]").forEach(i => t += n(i.value)); document.getElementById("tD").textContent = fmt(t); return t; };
+  C.querySelectorAll("input").forEach(i => i.oninput = upd); upd();
+  document.getElementById("go").onclick = async () => {
+    const dur = [...C.querySelectorAll("[data-i]")].map(i => n(i.value));
+    if (!upd()) return note("Please type the figures first.");
+    go(true); try { const r = await call("POST", { dur }); ok(`${fmt(r.total)} cars — parking duration for ${monthLabel(F.period)} received.`); } catch (e){ note(e.message); go(false); }
+  };
+}
+const note = (t, w) => { document.getElementById("m").innerHTML = `<div class="msg ${w ? "warn" : "bad"}">${esc(t)}</div>`; };
+const go = b => { const x = document.getElementById("go"); x.disabled = b; x.textContent = b ? "Sending…" : "Send to ABC"; };
+const ok = t => { C.innerHTML = `<div class="done"><div class="x">✓</div><h3>Thank you — received</h3><p class="mut">${esc(t)}</p><p class="mut" style="margin-top:10px">You can open the link again to correct the figures.</p></div>`; };
+let confirmGap = false;
+async function send(){
+  const { tin, tout } = sums();
+  if (!tin) return note("Please type the figures first.");
+  if (tout && Math.abs(tout - tin) > Math.max(150, tin * 0.05) && !confirmGap){ confirmGap = true; return note(`Entries (${fmt(tin)}) and exits (${fmt(tout)}) differ by ${fmt(Math.abs(tout - tin))}. Please double-check, then press Send again.`, true); }
+  go(true);
+  try { const r = await call("POST", collect()); ok(`${fmt(r.entries)} entries${F.gates.some(g => g.dir === "out") ? ` · ${fmt(r.exits)} exits` : ""} — ${F.siteName}, ${dayLabel(F.period)}.`); }
+  catch (e){ note(e.message); go(false); }
+}
+(async () => {
+  if (!TOKEN) return fail("This link is not valid");
+  try { F = await call("GET"); } catch (e){ document.getElementById("nm").textContent = "ABC"; return fail("Link not available", e.message); }
+  document.getElementById("nm").textContent = F.siteName;
+  document.getElementById("dt").textContent = F.kind === "day" ? dayLabel(F.period) : "Parking duration · " + monthLabel(F.period);
+  F.kind === "day" ? drawDay() : drawDur();
+})();
+</script>
+</body>
+</html>
