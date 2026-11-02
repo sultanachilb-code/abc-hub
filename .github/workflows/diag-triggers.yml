@@ -7,5 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          n(){ echo "::notice title=$1::$(echo "$2" | tr ',' ' ' | head -c 600)"; }
-          for x in CLN-0004:tkBEAGfiqQ CLN-0006:ggyekxpgkv CLN-0007:xbEyCYyRLp CLN-0008:q4rBULPqHr CLN-0009:znA6dJ3rRC CLN-0010:RtuLrFEQeg CLN-0011:L6ET2BQ9gG CLN-0012:AF6qMdBTPh CLN-0013:vk9ucULN4W CLN-0014:RJRR784SnQ CLN-0015:S2FBaQqgnA CLN-0016:MfK4aFxv3G CLN-0017:n6Nu8VjKiT CLN-0018:dcgWisrPqF; do id=${x%%:*}; t=${x#*:}; r=$(curl -sL -m 20 "https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=$id&t=$t" -o /dev/null -w '%{url_effective}'); v=$(curl -s -m 20 "https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-pass?id=$id&t=$t" | grep -o '"valid":[a-z]*'); echo "::notice title=$id::$v $r"; done
+          H=https://operations-hub.sultanachi-lb-61f.workers.dev
+          U='https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec'
+          for x in CLN-0269:bSRN6CapBT CLN-0268:krXs5kMCkJ; do id=${x%%:*}; t=${x#*:}
+            echo "::notice title=hub $id::$(curl -s -m 20 "$H/api/cl-pass?id=$id&t=$t" | python3 -c "import json,sys;d=json.load(sys.stdin)['data'];d.pop('photo',None);print(d)" | tr ',' ' ')"
+            echo "::notice title=sheet $id::$(curl -sL -m 30 "$U?action=getWorker&id=$id&t=$t&callback=cb" | sed 's/^cb(//;s/)$//' | python3 -c "import json,sys;d=json.load(sys.stdin);w=d.get('worker') or {};print(d.get('ok'),d.get('error'),w.get('id'),w.get('name'),w.get('tenant'),w.get('registered'))" | tr ',' ' ')"
+          done
