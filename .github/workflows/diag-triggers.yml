@@ -1,15 +1,16 @@
-name: Diag triggers
+name: diag-triggers
 on:
   push:
     branches: [diag-triggers]
 jobs:
-  q:
+  check:
     runs-on: ubuntu-latest
     steps:
       - run: |
           H=https://operations-hub.sultanachi-lb-61f.workers.dev
-          U='https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec'
-          for x in CLN-0269:bSRN6CapBT CLN-0268:krXs5kMCkJ; do id=${x%%:*}; t=${x#*:}
-            echo "::notice title=hub $id::$(curl -s -m 20 "$H/api/cl-pass?id=$id&t=$t" | python3 -c "import json,sys;d=json.load(sys.stdin)['data'];d.pop('photo',None);print(d)" | tr ',' ' ')"
-            echo "::notice title=sheet $id::$(curl -sL -m 30 "$U?action=getWorker&id=$id&t=$t&callback=cb" | sed 's/^cb(//;s/)$//' | python3 -c "import json,sys;d=json.load(sys.stdin);w=d.get('worker') or {};print(d.get('ok'),d.get('error'),w.get('id'),w.get('name'),w.get('tenant'),w.get('registered'))" | tr ',' ' ')"
-          done
+          echo "::notice title=page::$(curl -s -o /dev/null -w '%{http_code}' $H/tools/footfall)"
+          echo "::notice title=form::$(curl -s -o /dev/null -w '%{http_code}' $H/ff/AAAAAAAAAAAAAAAAAAAAAAAA)"
+          echo "::notice title=ext::$(curl -s $H/api/ff-ext/AAAAAAAAAAAAAAAAAAAAAAAA)"
+          echo "::notice title=ctx::$(curl -s $H/api/ops/ff/context)"
+          echo "::notice title=apps::$(curl -s $H/apps.js | grep -c 'tools/footfall')"
+          echo "::notice title=old::$(curl -s -o /dev/null -w '%{http_code}' https://footfall-hub.sultanachi-lb-61f.workers.dev/)"
