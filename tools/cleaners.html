@@ -111,7 +111,7 @@ function drawList(){
   const counts = s => L.filter(w => w.status === s).length;
   shell(`<div class="box"><div class="flt"><input id="q" placeholder="Search name, pass, tenant, company…" value="${esc(Q)}" style="flex:1;min-width:200px">
       <select id="fs"><option value="">All · ${L.length}</option>${C.statuses.map(s => `<option ${FS === s ? "selected" : ""}>${s}</option>`).join("")}</select>
-      <button class="btn ghost small" id="selAll">Tick shown</button><button class="btn ghost small" id="prt" ${SEL.size ? "" : "disabled"}>🖨 Badges (${SEL.size})</button>
+      <button class="btn ghost small" id="selAll">Tick shown</button><button class="btn small" id="prt">🖨 ${SEL.size ? `Print ${SEL.size} badge${SEL.size === 1 ? "" : "s"}` : `Print badges · ${list.length} shown`}</button>
       ${canEdit(SITE) ? `<button class="btn small" id="reg">＋ Register</button>` : ""}</div>
     <div class="muted" style="padding:8px 14px 0;font-size:.78rem">${counts("Active")} active · ${counts("Suspended")} suspended · ${counts("Blacklist")} blacklisted · showing ${list.length}</div>
     <div class="cw">${list.slice(0, 400).map(w => `<div class="cr" data-w="${esc(w.id)}"><input type="checkbox" data-sel="${esc(w.id)}" ${SEL.has(w.id) ? "checked" : ""}>${w.photo ? img(w.id, "photo") : `<span class="th"></span>`}
@@ -119,9 +119,10 @@ function drawList(){
   wireCommon();
   const qi = $("#q"); qi.oninput = () => { Q = qi.value; const p = qi.selectionStart; drawList(); const n = $("#q"); n.focus(); n.setSelectionRange(p, p); };
   $("#fs").onchange = e => { FS = e.target.value; drawList(); };
-  $("#view").querySelectorAll("[data-sel]").forEach(x => x.onchange = () => { x.checked ? SEL.add(x.dataset.sel) : SEL.delete(x.dataset.sel); const b = $("#prt"); b.disabled = !SEL.size; b.textContent = `🖨 Badges (${SEL.size})`; });
+  $("#view").querySelectorAll("[data-sel]").forEach(x => x.onchange = () => { x.checked ? SEL.add(x.dataset.sel) : SEL.delete(x.dataset.sel); const b = $("#prt"); b.textContent = SEL.size ? `🖨 Print ${SEL.size} badge${SEL.size === 1 ? "" : "s"}` : `🖨 Print badges · ${list.length} shown`; });
   $("#selAll").onclick = () => { list.forEach(w => SEL.add(w.id)); drawList(); };
-  $("#prt").onclick = printBadges;
+  $("#prt").onclick = () => { if (!SEL.size){ if (!list.length) return; if (list.length > 12 && !confirm(`Print the ${list.length} badges shown? (Tick cleaners to print only some.)`)) return; }
+    printBadges(SEL.size ? null : list); };
 }
 async function openWorker(id){
   const d = $("#dlg"); d.innerHTML = `<div class="h"><b>Loading…</b></div>`; d.showModal();
@@ -187,12 +188,22 @@ function editWorker(w){
       toast(isNew ? `Registered · ${r.id} — print the badge` : "Saved"); L = null; d.close(); if (isNew){ SEL = new Set([r.id]); TAB = "cleaners"; await draw(); printBadges(); } else draw(); }
     catch (er){ e.target.disabled = false; toast(er.message, true); } };
 }
-async function printBadges(){
-  const ids = [...SEL]; if (!ids.length) return;
-  const ws = await Promise.all(ids.slice(0, 60).map(id => api(`ops/cleaners/get?id=${encodeURIComponent(id)}`).then(r => r.worker).catch(() => null)));
+/* badges: from the list already loaded (it carries each pass's QR code for the people who manage that flagship); otherwise one by one */
+async function printBadges(rows){
+  const ids = rows ? rows.map(w => w.id) : [...SEL]; if (!ids.length) return;
+  toast(`Preparing ${ids.length} badge${ids.length === 1 ? "" : "s"}…`);
+  const known = new Map((L || []).filter(w => w.token).map(w => [w.id, w]));
+  const ws = [];
+  for (let i = 0; i < ids.length; i += 8) ws.push(...await Promise.all(ids.slice(i, i + 8).map(id => known.has(id)
+    ? { ...known.get(id), passUrl: `${location.origin}/cp?id=${encodeURIComponent(id)}&t=${encodeURIComponent(known.get(id).token)}` }
+    : api(`ops/cleaners/get?id=${encodeURIComponent(id)}`).then(r => r.worker).catch(() => null))));
+  if (ws.some(w => w && !w.passUrl)) toast("Some badges cannot be printed with your access", true);
   $("#printArea").innerHTML = ws.filter(Boolean).map(w => `<div class="bdg"><div class="tp">${esc(String(C.sites[w.site] || "").toUpperCase())}<small>CLEANER ACCESS PASS</small></div>
     ${w.photo ? img(w.id, "photo", "ph") : ""}<b>${esc(w.name)}</b><div>${esc(w.id)} · ${esc(w.tenant)}</div>${qrSvg(w.passUrl, 3)}<div style="font-size:7pt;color:#666;padding-bottom:4px">Scan at the loading area</div></div>`).join("");
-  setTimeout(() => window.print(), 700);
+  /* wait for the photos, then print */
+  const imgs = [...$("#printArea").querySelectorAll("img")], t0 = Date.now();
+  await Promise.all(imgs.map(i => i.complete ? 0 : new Promise(ok => { i.loading = "eager"; i.onload = i.onerror = ok; setTimeout(ok, 15000); })));
+  setTimeout(() => window.print(), Math.max(300, 700 - (Date.now() - t0)));
 }
 
 /* ---------- attendance ---------- */
