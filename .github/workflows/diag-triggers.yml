@@ -8,11 +8,4 @@ jobs:
     steps:
       - run: |
           n(){ echo "::notice title=$1::$(echo "$2" | tr ',' ' ' | head -c 600)"; }
-          n mode "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-mode')"
-          n old-link "$(curl -s -m 20 -o /dev/null -w '%{http_code} %{redirect_url}' 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8')"
-          n old-title "$(curl -sL -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=CLN-0005&t=JKNz9bAgi8' | grep -o '<title>[^<]*')"
-          n hub-pass "$(curl -s -m 20 'https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-pass?id=CLN-0005&t=JKNz9bAgi8' | head -c 300)"
-          U='https://script.google.com/macros/s/AKfycbyTIgrRoCRLi2WO53CPuUwKoEvlOLTZK48To9cFUWKygnS3-8X17vRO0RsvF4QqF4xMmQ/exec'
-          n script-getWorker "$(curl -sL -m 30 "$U?action=getWorker&id=CLN-0005&t=JKNz9bAgi8&callback=cb" | head -c 200)"
-          n old-page-api "$(curl -sL -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/' | grep -o "script.google.com/macros/s/[A-Za-z0-9_-]*" | head -1)"
-          n old-page-params "$(curl -sL -m 20 'https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/' | grep -o "searchParams.get([^)]*)\|get('[a-z]*')" | sort -u | tr '\n' ' ')"
+          for x in CLN-0004:tkBEAGfiqQ CLN-0006:ggyekxpgkv CLN-0007:xbEyCYyRLp CLN-0008:q4rBULPqHr CLN-0009:znA6dJ3rRC CLN-0010:RtuLrFEQeg CLN-0011:L6ET2BQ9gG CLN-0012:AF6qMdBTPh CLN-0013:vk9ucULN4W CLN-0014:RJRR784SnQ CLN-0015:S2FBaQqgnA CLN-0016:MfK4aFxv3G CLN-0017:n6Nu8VjKiT CLN-0018:dcgWisrPqF; do id=${x%%:*}; t=${x#*:}; r=$(curl -sL -m 20 "https://abcv-loading-area-access.sultanachi-lb-61f.workers.dev/?id=$id&t=$t" -o /dev/null -w '%{url_effective}'); v=$(curl -s -m 20 "https://operations-hub.sultanachi-lb-61f.workers.dev/api/cl-pass?id=$id&t=$t" | grep -o '"valid":[a-z]*'); echo "::notice title=$id::$v $r"; done
