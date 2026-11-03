@@ -9,6 +9,7 @@
    Routes : /api/ops/evac/*      Page : /tools/evacuation
    ===================================================================== */
 
+import { EVAC_SEED } from "../data/evac-seed.js";
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
 const LVL = ["B6", "B5", "B4", "B3", "B2", "B1", "BA", "LG", "LGF", "L0", "GF", "L1", "L2", "L3", "L4", "L5", "L6", "Roof"];
@@ -22,6 +23,27 @@ export async function evacSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS evac_assign (site TEXT NOT NULL, unit_id INTEGER NOT NULL, corridor_id INTEGER NOT NULL DEFAULT 0,
       assembly_id INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', updated_at TEXT, updated_name TEXT, PRIMARY KEY (site, unit_id))`)
   ]);
+}
+
+/* first assembly points from the flagship's workbook (data/evac-seed.js) — once, when the GLA is there */
+async function seedOnce(env, site) {
+  const S = EVAC_SEED[site]; if (!S) return;
+  const { results: units } = await env.DB.prepare("SELECT id, code, brand FROM gla_units WHERE site = ? AND active = 1").bind(site).all();
+  if (!(units || []).length) return;
+  const c = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind("evacseed:" + site, new Date().toISOString()).run();
+  if (!c.meta || c.meta.changes !== 1) return;
+  const { results: have } = await env.DB.prepare("SELECT id, name FROM evac_routes WHERE site = ? AND kind = 'assembly' AND active = 1").bind(site).all();
+  const ids = new Map((have || []).map(r => [r.name.toLowerCase(), r.id]));
+  for (const [i, name] of S.assembly.entries()) if (!ids.has(name.toLowerCase())) {
+    const r = await env.DB.prepare("INSERT INTO evac_routes (site, kind, name, level, note, seq, active) VALUES (?, 'assembly', ?, '', '', ?, 1)").bind(site, name, (i + 1) * 10).run();
+    ids.set(name.toLowerCase(), r.meta.last_row_id);
+  }
+  const key = (code, brand) => code + "|" + String(brand || "").toLowerCase();
+  const U = new Map((units || []).map(u => [key(u.code, u.brand), u.id]));
+  const at = new Date().toISOString(), ops = [];
+  for (const [code, brand, point] of S.assign) { const uid = U.get(key(code, brand)), aid = ids.get(point.toLowerCase());
+    if (uid && aid) ops.push(env.DB.prepare("INSERT OR IGNORE INTO evac_assign (site, unit_id, corridor_id, assembly_id, note, updated_at, updated_name) VALUES (?,?,0,?,'',?,?)").bind(site, uid, aid, at, "Evacuation workbook")); }
+  for (let i = 0; i < ops.length; i += 90) await env.DB.batch(ops.slice(i, i + 90));
 }
 
 async function state(env, site) {
@@ -44,7 +66,7 @@ async function state(env, site) {
 export async function evacRoute(env, p, method, b, url, d) {
   const { site, me } = d;
   const team = d.canSite(me, site) && (d.full || (me.role === "SUPERVISOR" && me.position !== "WH"));
-  if (p === "evac/get") return { ...(await state(env, site)), can: { edit: team } };
+  if (p === "evac/get") { if (d.glaSeed) await d.glaSeed(site).catch(() => {}); await seedOnce(env, site).catch(e => console.error("evac seed", e && e.message)); return { ...(await state(env, site)), can: { edit: team } }; }
   if (method !== "POST") throw err("Unknown request", 404);
   if (!team) throw err("Only the operations team can change the evacuation plan", 403);
 

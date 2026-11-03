@@ -2024,7 +2024,7 @@ async function opsRoute(env, me, p, method, b, url) {
   /* ----- Operations Calendar · Evacuation Plan · Change history (modules/calendar.js, evac.js, history.js) ----- */
   const auditMe = (e, x) => audit(e, { me, ...x });
   if (p.startsWith("cal/")) return calendarRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, raiseEvent, audit: auditMe });
-  if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe });
+  if (p.startsWith("evac/")) return evacRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, audit: auditMe, glaSeed: s => glaSeed(env, s) });
   if (p.startsWith("schedmail/")) return schedMailRoute(env, p, method, b, url, { site, me, canSite, isFull, siteStaff, schedStaff, POSITIONS, SHIFT_CODES, posLabel, ROLES, siteName,
     relay, raiseEvent, now: nowIso, today: beirutToday, audit: auditMe });   // Weekly schedule email
   if (p === "snag/report") {   // Snaglist consolidated report (all flagships)
