@@ -63,7 +63,7 @@ async function seed(env, site, now) {
   if (await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k).first()) return;
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, now()).run();
   const ops = S.rows.map((r, i) => env.DB.prepare(`INSERT INTO crm_rows (site, seq, cont, floor, sheet_name, sku, crm, status, delivery_date, serial, model, connection, crm_user, crm_password, stamp, updated_by, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'CRM_2026_Sheet.xlsx',?)`).bind(site, i + 1, ...r, now()));
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(site, i + 1, ...r, S.source || "CRM_2026_Sheet.xlsx", now()));
   S.retrieved.forEach((r, i) => ops.push(env.DB.prepare(`INSERT INTO crm_retrieved (site, seq, tenant, sku, crm, hh_status, retrieved_date, serial, model, connection, given_to, updated_by, updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,'CRM_2026_Sheet.xlsx',?)`).bind(site, i + 1, ...r, now())));
   for (let i = 0; i < ops.length; i += 50) await env.DB.batch(ops.slice(i, i + 50));
