@@ -8,6 +8,7 @@
    Route: GET /api/brief/role?as=&site=&period=today|7d|month · POST /api/brief/settings (admin)
    ===================================================================== */
 import { DEADLINES } from "./today.js";
+import { lpKeyOf, layoutFor, landingData, LP_POSITIONS, LP_USER, LEGACY } from "./landing.js";   // Landing pages by position (Nov 2026)
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const rows = async q => { try { return (await q.all()).results || []; } catch (e) { console.error("rolebrief", e && e.message); return []; } };
 const one = async q => { try { return await q.first(); } catch { return null; } };
@@ -41,7 +42,7 @@ export async function briefConfig(env) {
 const audienceOf = me => me.role === "MANAGER" ? "manager" : me.role === "ADVISOR" ? "advisor" : me.role === "DIRECTOR" ? "director" : me.role === "CDSO" ? "cdso" : me.role === "ADMIN" ? "admin" : "none";
 
 /* ================= MANAGER: action brief for one flagship, today ================= */
-async function managerBrief(env, site, d, cfg) {
+export async function managerBrief(env, site, d, cfg) {
   const day = d.today(), now = nowHM(), tiles = [], todo = [];
   const T = (key, t) => { if (cfg[key]) tiles.push({ key, app: t.app || key, ...t }); };
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
@@ -290,7 +291,7 @@ async function contractsEnding(env, site, day) {
   const r = await one(env.DB.prepare("SELECT COUNT(*) AS n FROM contracts_ending WHERE site = ? AND active = 1 AND COALESCE(NULLIF(departure_day,''), end_day) BETWEEN ? AND ?").bind(site, day, dayAdd(day, 60))); return (r && r.n) || 0;
 }
 
-async function kpiBrief(env, sites, period, d, cfg) {
+export async function kpiBrief(env, sites, period, d, cfg) {
   const day = d.today(), R = rangeOf(period, day), P = prevRange(R);
   const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}:r2`;
   try { const c = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(ck))) || {}).v || "null"); if (c && Date.now() - c.t < 30 * 60e3) return c.data; } catch {}
@@ -349,9 +350,23 @@ export async function roleBriefRoute(env, p, method, b, url, d) {
   if (p !== "brief/role") throw err("Unknown request", 404);
   let aud = audienceOf(me);
   const q = k => url.searchParams.get(k) || "";
-  if (aud === "admin") aud = AUDIENCES[q("as")] ? q("as") : "advisor";   // Admin: preview as…
-  if (aud === "none") return { kind: "none" };
   const mine = d.sitesOf(me);
+  /* Landing pages (Nov 2026): the position's page built in Admin Control → Landing pages */
+  const OLD = { manager: "MM", advisor: "ADVISOR", director: "DIRECTOR", cdso: "CDSO" };
+  const asKey = me.role === "ADMIN" ? (LP_POSITIONS[q("as")] ? q("as") : OLD[q("as")] || "ADVISOR") : lpKeyOf(me);
+  const layout = await layoutFor(env, asKey);
+  if (layout) {
+    const fake = me.role === "ADMIN" ? LP_USER[asKey] : me;
+    const lpSites = me.role === "ADMIN" ? (asKey === "DIRECTOR" ? MALL_SITES : asKey === "CDSO" ? DS_SITES : mine) : mine;
+    const site = lpSites.includes(q("site")) ? q("site") : (me.site_code && lpSites.includes(me.site_code) ? me.site_code : lpSites[0]);
+    if (!site) return { kind: "none" };
+    const period = ["today", "7d", "month"].includes(q("period")) ? q("period") : "month";
+    const kpiSites = me.role === "ADMIN" && ["MM", "OM", "SMS", "MS", "MO", "SEC", "SECM"].includes(asKey) ? [site] : lpSites;
+    return { audience: asKey, as: asKey, sites: lpSites.length > 1 ? lpSites : [],
+      ...(await landingData(env, layout, { key: asKey, site, sites: kpiSites, period, d, allows: app => d.allows(fake, app) })) };
+  }
+  if (me.role === "ADMIN") aud = LEGACY[asKey] || "none";   // Admin: preview as… (positions without a page: the old brief, or nothing)
+  if (aud === "none") return { kind: "none", as: asKey };
   if (aud === "manager") {
     const site = me.role === "ADMIN" ? (mine.includes(q("site")) ? q("site") : mine[0]) : (mine.includes(q("site")) ? q("site") : (me.site_code && mine.includes(me.site_code) ? me.site_code : mine[0]));
     return { audience: aud, ...(await managerBrief(env, site, d, cfgAll.manager)), sites: me.role === "ADMIN" || mine.length > 1 ? mine : [] };

@@ -57,7 +57,8 @@ import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, pass
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
-import { roleBriefRoute } from "./modules/rolebrief.js";   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
+import { roleBriefRoute } from "./modules/rolebrief.js";
+import { lpAdmin, hasLanding } from "./modules/landing.js";   // Landing pages by position (Admin Control → Landing pages) — docs/FEATURE-landing-pages.md   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
@@ -120,7 +121,7 @@ const TITLES = {
   DOM: { label: "Deputy Operations Manager", slot: "OM", rank: -1 }
 };
 const SLOTS = { MM: "Mall Manager / Senior Mall Manager", OM: "Operations Manager / Deputy Operations Manager" };
-const SEC_POSITIONS = { HOS: { label: "Head of Security" } };   // Security role: the Head of Security sees every flagship
+const SEC_POSITIONS = { SM: { label: "Security Manager" }, HOS: { label: "Head of Security" } };   // Nov 2026: Security Manager (one flagship) · Head of Security (every flagship)   // Security role: the Head of Security sees every flagship
 const posLabel = p => (POSITIONS[p] || TITLES[p] || SEC_POSITIONS[p] || {}).label || "";
 /* Which flagships an account can open */
 function sitesOf(u) {
@@ -216,18 +217,18 @@ const APP_ACCESS = {
   schedule: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
   mom: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
   handover: ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
-  contractors: ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
-  gate: ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
-  "contractor-access": ["OM", "SMS", "MS", "MO", "SEC", "LEAD"],
+  contractors: ["OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],
+  gate: ["OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],
+  "contractor-access": ["OM", "SMS", "MS", "MO", "SEC","SECM", "HOS", "LEAD"],
   "schedule-calendar": ["MM", "OM", "SMS", "MS", "MO", "WH", "LEAD"],
   "projects-budget": ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   quickpass: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
-  patrol: ["MM", "OM", "SMS", "MS", "MO", "SEC", "LEAD"],   // push only: "Quick Pass to approve" goes to the operations team (anyone can open the tile and ask)
+  patrol: ["MM", "OM", "SMS", "MS", "MO", "SEC","SECM", "HOS", "LEAD"],   // push only: "Quick Pass to approve" goes to the operations team (anyone can open the tile and ask)
   leadership: ["LEAD"],
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  emergency: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  reminders: ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],   // each title has its own reminder list (modules/reminders.js)
+  emergency: ["MM",  "OM",  "SMS",  "MS",  "MO", "SECM", "HOS"],
+  reminders: ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],   // each title has its own reminder list (modules/reminders.js)
   calendar: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   tenants: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   feedback: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -260,8 +261,8 @@ const APP_ACCESS = {
   snagreport: ["MM", "OM", "SMS", "LEAD"],
   restroom: ["MM",  "OM",  "LEAD"],
   evacuation: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  incidents: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "cleaner-qr": ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC",  "LEAD"],
+  incidents: ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD", "SECM", "HOS"],
+  "cleaner-qr": ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS",  "LEAD"],
   footfall: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Footfall: operations team + Directors
   "ff-ops": ["MM", "OM", "SMS", "MS", "MO"],   // Footfall: "day missing" notices → operations team
   "abc-connect": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -273,7 +274,7 @@ const APP_ACCESS = {
   "sign-in-help": [],
   pack: ["MM",  "OM",  "LEAD"],
   downloads: ["MM",  "OM",  "SMS",  "MS",  "MO"],
-  policies: ["MM", "OM", "SMS", "MS", "MO", "WH", "SEC", "LEAD"],
+  policies: ["MM", "OM", "SMS", "MS", "MO", "WH", "SEC","SECM", "HOS", "LEAD"],
   "form-am": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-dbank": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -283,7 +284,7 @@ const APP_ACCESS = {
 const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
   : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
   : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : "MO")
-  : u.role === "SECURITY" ? "SEC" : u.role;
+  : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : "SEC") : u.role;
 
 /* Morning email */
 const MB_DEPS = { get SITES() { return SITES; }, canSite: (...a) => canSite(...a), isFull: (...a) => isFull(...a), now: () => nowIso(), today: () => beirutToday(),
@@ -746,7 +747,7 @@ async function route(request, env, ctx, url) {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     const effRole = me._real ? me._real.role : me.role;   // administrator mode: two-step follows the person's real role
     return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on }, sys: sysSummary(me, ssoDeps) }, sites: SITES, roles: ROLES,
-      tools: toolsCfgNow(), viewAs: me._viewAs || null,
+      tools: toolsCfgNow(), viewAs: me._viewAs || null, landing: await hasLanding(env, me).catch(() => false),
       admin: isAdminUser(me) ? { mode: !!me._adminMode || (me.role === "ADMIN" && !!me._admUnlocked), unlocked: !!me._admUnlocked, real: me._real || null, split: !!me.is_admin && (me._real ? me._real.role : me.role) !== "ADMIN" } : null });
   }
   if (path.startsWith("fu/")) return ok(await followupRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, { today: beirutToday, now: nowIso }));   // Follow-ups
@@ -809,7 +810,8 @@ async function route(request, env, ctx, url) {
   if (path.startsWith("brief/")) return ok(await roleBriefRoute(env, path, method, body, url, { me, today: beirutToday, siteName, sitesOf,
     system: async (id, s2) => CONNECTORS[id] && CONNECTORS[id].stats ? pull(env, id, CONNECTORS[id], s2) : null,
     snagReport: (from, to) => snagReport(env, CONNECTORS.snaglist.base, from, to),
-    dayList: (s2, day) => conDayList(env, s2, day, day), ccDay: (s2, day) => ccDay(env, s2, day) }));
+    dayList: (s2, day) => conDayList(env, s2, day, day), ccDay: (s2, day) => ccDay(env, s2, day),
+    allows: (u, app) => roleAllows(u, app), cleanersCount: (e2, s2, day) => cleanersCount(e2, s2, day) }));
   if (path === "sso") return ok(await ssoLink(env, me, url.searchParams.get("app")));
   if (path === "health") return ok(await health(env));
   if (path === "notifications") return ok(await notificationsFor(env, me));
@@ -870,6 +872,7 @@ async function route(request, env, ctx, url) {
       return new Response(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#F1EEF4"><div style="font:12px Segoe UI,Arial;color:#6D6479;padding:10px 14px;background:#fff;border-bottom:1px solid #E6E1EC"><b>Subject:</b> ${m.subject.replace(/</g, "&lt;")}</div>${m.html}</body>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
     }
     if (a.startsWith("cc/mailbox")) return ok(await mbRoute(env, a, method, body, me, { ...MB_DEPS, hubUrl: HUB_URL }));   // Report mailbox
+    if (a === "cc/lp") return ok(await lpAdmin(env, method, body, me, { allows: (u, app) => roleAllows(u, app) }));   // Landing pages by position
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie, ssoAdmin: { apps: SSO_APPS, policy: ssoPolicy, set: ssoPolicySet, ready: id => ssoReady(env, id, CONNECTORS[id]) },
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
