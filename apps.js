@@ -52,19 +52,19 @@ window.HUB = {
     "schedule":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
     "mom":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
     "handover":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],
-    "contractors":     ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
-    "gate":            ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
-    "contractor-access": ["OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
+    "contractors":     ["OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],
+    "gate":            ["OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],
+    "contractor-access": ["OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],
     "schedule-calendar": ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "LEAD"],   /* Schedule + Calendar in one tile */
     "projects-budget": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],   /* Operations Projects + Budget in one tile */
-    "patrol":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],
+    "patrol":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],
     "moments":         [],   /* Admin only */
     "seasons":         [],   /* Admin only */
     "leadership":      ["LEAD"],
     "eod":             ["MM",  "OM"],
     "forms":           ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "emergency":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "reminders":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC", "LEAD"],   // each title has its own reminder list
+    "emergency":       ["MM",  "OM",  "SMS",  "MS",  "MO", "SECM", "HOS"],
+    "reminders":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS", "LEAD"],   // each title has its own reminder list
     "calendar":        ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "tenants":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "feedback":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -94,8 +94,8 @@ window.HUB = {
     "snaglist":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "restroom":        ["MM",  "OM",  "LEAD"],
     "evacuation":      ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "incidents":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "cleaner-qr":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC",  "LEAD"],
+    "incidents":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD", "SECM", "HOS"],
+    "cleaner-qr":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "SEC","SECM", "HOS",  "LEAD"],
     "footfall":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "abc-connect":     ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant-connect":  ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -106,7 +106,7 @@ window.HUB = {
     "sign-in-help":    [],
     "pack":            ["MM",  "OM",  "LEAD"],
     "downloads":       ["MM",  "OM",  "SMS",  "MS",  "MO"],
-    "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "SEC", "LEAD"],
+    "policies":        ["MM",  "OM",  "SMS",  "MS",  "MO",  "WH",  "SEC","SECM", "HOS", "LEAD"],
     "form-am":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-pm":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],

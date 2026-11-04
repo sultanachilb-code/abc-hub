@@ -66,10 +66,17 @@ let TCFG = null, TCFG_AT = 0;
 export async function toolsCfg(env) {
   if (TCFG && Date.now() - TCFG_AT < 60000) return TCFG;
   const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'tools:cfg'").first().catch(() => null);
-  try { TCFG = r ? JSON.parse(r.v) : {}; } catch { TCFG = {}; } TCFG_AT = Date.now(); return TCFG;
+  try { TCFG = r ? JSON.parse(r.v) : {}; } catch { TCFG = {}; } TCFG_AT = Date.now();
+  /* Nov 2026: Security Manager (SECM) and Head of Security (HOS) split from Security — once, they keep what Security had */
+  const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('tools:secsplit', ?)").bind(new Date().toISOString()).run().catch(() => null);
+  if (claim && claim.meta && claim.meta.changes === 1) {
+    for (const c of Object.values(TCFG)) if (c && Array.isArray(c.access) && c.access.includes("SEC")) for (const k of ["SECM", "HOS"]) if (!c.access.includes(k)) c.access.push(k);
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('tools:cfg', ?)").bind(JSON.stringify(TCFG)).run().catch(() => {});
+  }
+  return TCFG;
 }
 export const toolsCfgNow = () => TCFG || {};   // for the synchronous access check (loaded at the start of each signed-in request)
-export const ACCESS_KEYS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse", SEC: "Security", LEAD: "Leadership (Advisor, Director, CDSO)" };
+export const ACCESS_KEYS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse", SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", LEAD: "Leadership (Advisor, Director, CDSO)" };
 
 /* ---------- helpers ---------- */
 const metaGet = async (env, k) => { const r = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k).first().catch(() => null); return r ? r.v : null; };

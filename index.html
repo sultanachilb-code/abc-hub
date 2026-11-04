@@ -399,6 +399,10 @@ body.hl-docked main{padding-bottom:110px}
 .cr-phone .cr-tray .cr-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 4px}.cr-phone .cr-tray .hl-app{width:auto}
 @media (max-width:380px){.cr-phone .cr-tray .cr-g{grid-template-columns:repeat(3,1fr)}}
 @media (prefers-reduced-motion:reduce){.hx,.bk,.bk-pg.r,.sh-store,.cr-tray .hl-app{animation:none}.cr-ring,.sh-shut,.cr-strip .cr-p{transition:none}}
+/* ---------- landing pages by position (Nov 2026) ---------- */
+.lp-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.lp-s2{grid-column:span 2}.lp-s4{grid-column:1/-1}
+.lp-w.rb-tile{min-width:0}div.lp-w{border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:var(--surface);min-width:0}.lp-t{font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px}
+@media (max-width:900px){.lp-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* ---------- brief by role ---------- */
 .rb-admin{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 14px;padding:8px 10px;border-radius:12px;background:var(--paper);font-size:.76rem;font-weight:700;color:var(--muted)}
 .rb-admin button{border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-weight:800;font-size:.76rem;background:var(--surface);color:var(--text)}.rb-admin button.on{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -1303,7 +1307,7 @@ let HIDDEN_AT = 0, FRESH_AT = Date.now(), HUB_VER = "";
 function refreshHome(){
   if (!ME || !ME.user) return;
   FRESH_AT = Date.now();
-  loadBrief(); if (seniorView()) loadRoleBrief(); loadFollowups();
+  loadBrief(); if (briefOn()) loadRoleBrief(); loadFollowups();
   loadHealth(); loadNotifications(); loadToolSummary(); loadToday(); loadAnnouncements(); checkApprovals();
   paintFoot(); hubVersion();
 }
@@ -1416,7 +1420,7 @@ function accessKey(u){
   if (["ADVISOR", "DIRECTOR", "CDSO"].includes(r)) return "LEAD";
   if (r === "MANAGER") return ["OM", "DOM"].includes(p) ? "OM" : "MM";
   if (r === "SUPERVISOR") return ["SMS", "MS", "MO", "WH"].includes(p) ? p : "MO";
-  if (r === "SECURITY") return "SEC";
+  if (r === "SECURITY") return p === "SM" ? "SECM" : p === "HOS" ? "HOS" : "SEC";
   return r;
 }
 /* Admin Control Center: the ABC logo (administrators) asks for the admin password, then opens /admin */
@@ -1501,7 +1505,7 @@ function startHub(){
   addEventListener("online", () => refreshHome());                          // the connection is back
   checkApprovals();
   route();
-  setInterval(() => { if (!document.hidden){ loadBrief(); if (seniorView()) loadRoleBrief(); } }, 5 * 60 * 1000);
+  setInterval(() => { if (!document.hidden){ loadBrief(); if (briefOn()) loadRoleBrief(); } }, 5 * 60 * 1000);
   setTimeout(() => { if (!welcomeSeen()) welcomeSheet(); else offerPasskey(); }, 900);   // Welcome feature: first sign-in on this device
 }
 
@@ -2573,6 +2577,9 @@ async function loadBrief(fresh){
 /* Home by level: management and leadership see the brief; the operations team sees the Day to Day timeline instead */
 const SENIOR_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];
 const seniorView = () => !!(ME && ME.user && SENIOR_ROLES.includes(ME.user.role));
+const briefOn = () => seniorView() || !!(ME && ME.landing);   // Landing pages by position (Nov 2026): any position with a page built in Admin Control
+const LP_NAMES = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
+const LP_OLD = { manager: "MM", advisor: "ADVISOR", director: "DIRECTOR", cdso: "CDSO" };
 const showD2D = () => !!(ME && ME.user) && (ME.user.role === "ADMIN" || !seniorView());   // Admin sees both the brief and the timeline
 /* ---------- Brief by role (Oct 2026, docs/FEATURE-brief-by-role.md) ----------
    Manager → action brief for his flagship (tiles + follow-ups) · Advisor / Mall Director / CDSO → KPI brief for the flagships ticked on their account.
@@ -2590,12 +2597,14 @@ function renderRoleBrief(){
   const box = $("#brief"); if (!box) return;
   const admin = ME.user.role === "ADMIN", folded = admin && store.get("hub.briefFold", false);   // Admin: fold the brief away (▾ on the Preview-as bar)
   const fold = admin ? `<button data-rbfold class="rb-fold" title="${folded ? "Show the brief" : "Hide the brief"}" aria-label="${folded ? "Show the brief" : "Hide the brief"}" aria-expanded="${!folded}">${folded ? "▾" : "▴"}</button>` : "";
-  if (folded){ box.innerHTML = `<section class="brief rb rb-folded"><div class="rb-admin" style="margin:0"><span>Preview as</span><b style="color:var(--text)">${esc({ manager: "Manager", advisor: "Advisor", director: "Director", cdso: "CDSO" }[RB.as] || RB.as)}</b><span style="flex:1"></span><span>Brief hidden</span>${fold}</div></section>`; return; }
+  if (folded){ box.innerHTML = `<section class="brief rb rb-folded"><div class="rb-admin" style="margin:0"><span>Preview as</span><b style="color:var(--text)">${esc(LP_NAMES[LP_OLD[RB.as] || RB.as] || RB.as)}</b><span style="flex:1"></span><span>Brief hidden</span>${fold}</div></section>`; return; }
   if (!RB.data && !RB.busy && !RB.err){ loadRoleBrief(); return; }
   const D = RB.data || {}, hr = new Date().getHours(), part = hr < 12 ? "Morning" : hr < 18 ? "Afternoon" : "Evening";
   if (D.kind === "none" && !admin){ box.innerHTML = ""; return; }
+  if (D.kind === "none" && admin && RB.data){ box.innerHTML = `<section class="brief rb">${adminBar}<p class="brief-empty">${esc(LP_NAMES[D.as] || "This position")} has no landing page yet — build one in Admin Control → Landing pages.</p></section>`; return; }
   const first = esc((ME.user.name || "").split(" ")[0]);
-  const adminBar = admin ? `<div class="rb-admin"><span>Preview as</span>${Object.entries({ manager: "Manager", advisor: "Advisor", director: "Director", cdso: "CDSO" }).map(([k, n]) => `<button data-rbas="${k}" class="${RB.as === k ? "on" : ""}">${n}</button>`).join("")}<span style="flex:1"></span><button data-rbset class="gh">⚙ Brief settings</button>${fold}</div>` : "";
+  const asK = LP_OLD[RB.as] || RB.as;
+  const adminBar = admin ? `<div class="rb-admin"><span>Preview as</span><select class="rb-site" data-rbas2>${Object.entries(LP_NAMES).map(([k, n]) => `<option value="${k}" ${asK === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><span style="flex:1"></span><button data-rblp class="gh">🧩 Landing pages</button><button data-rbset class="gh">⚙ Brief settings</button>${fold}</div>` : "";
   const refresh = `<button class="refresh ${RB.busy ? "spin" : ""}" data-rbref aria-label="Refresh" title="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>`;
   let body = "";
   if (!RB.data) body = RB.err ? `<p class="brief-empty">${esc(RB.err)}</p>` : `<div class="sk"></div><div class="sk"></div>`;
@@ -2605,6 +2614,7 @@ function renderRoleBrief(){
         ${D.need ? `<span class="rb-need">${D.need} need action</span>` : `<span class="rb-need ok">All under control</span>`}${refresh}</div></div>
       <div class="rb-tiles">${D.tiles.map(t => `<button class="rb-tile t-${t.tone || "n"}" data-rbapp="${esc(t.app)}" data-rbsite2="${esc(D.site)}"><b>${esc(t.title)}</b><strong>${esc(t.value)}</strong><small>${esc(t.note || "")}</small></button>`).join("")}</div>
       ${D.todo.length ? `<div class="rb-sec">Your follow-ups</div><div class="rb-todo">${D.todo.map(x => `<button class="rb-do" data-rbapp="${esc(x.app)}" data-rbsite2="${esc(D.site)}"><i class="d-${x.tone}"></i><span><b>${esc(x.text)}</b><small>${esc(x.sub || "")}</small></span><em>Open ›</em></button>`).join("")}</div>` : ""}`;
+  } else if (D.kind === "landing"){ body = landingHtml(D, part, first, refresh);
   } else if (D.kind === "kpi"){
     const per = { today: "Today", "7d": "7 days", month: "Month" };
     const cell = (row, c) => c.v == null ? `<span class="rb-c">—</span>` : `<span class="rb-c ${c.tone ? "c-" + c.tone : ""}"${c.hint ? ` title="${esc(c.hint)}"` : ""}>${c.pct ? c.v + "%" : c.v.toLocaleString("en-US")}</span>${c.delta ? `<span class="rb-d ${c.delta > 0 ? "up" : "down"}">${c.delta > 0 ? "▲" : "▼"}${Math.abs(c.delta)}</span>` : ""}${c.sub ? `<small class="rb-cs">${esc(c.sub)}</small>` : ""}`;
@@ -2620,13 +2630,39 @@ function renderRoleBrief(){
 $("#brief").addEventListener("click", async e => {
   const t = e.target;
   const as = t.closest("[data-rbas]"); if (as){ RB.as = as.dataset.rbas; store.set("hub.briefAs", RB.as); RB.data = null; return loadRoleBrief(); }
+  if (t.closest("[data-rblp]")){ location.href = "/admin#lp"; return; }
   const pr = t.closest("[data-rbper]"); if (pr){ RB.period = pr.dataset.rbper; store.set("hub.briefPeriod", RB.period); return loadRoleBrief(); }
   if (t.closest("[data-rbref]")) return loadRoleBrief();
   if (t.closest("[data-rbfold]")){ store.set("hub.briefFold", !store.get("hub.briefFold", false)); return renderRoleBrief(); }
   if (t.closest("[data-rbset]")) return briefSettings();
   const ap = t.closest("[data-rbapp]"); if (ap){ const a = byId(ap.dataset.rbapp); if (a) launch(a, ap.dataset.rbsite2 || undefined); }
 });
-$("#brief").addEventListener("change", e => { if (e.target.matches("[data-rbsite]")){ RB.site = e.target.value; store.set("hub.briefSite", RB.site); loadRoleBrief(); } });
+$("#brief").addEventListener("change", e => { if (e.target.matches("[data-rbas2]")){ RB.as = e.target.value; store.set("hub.briefAs", RB.as); RB.data = null; RB.site = ""; return loadRoleBrief(); }
+  if (e.target.matches("[data-rbsite]")){ RB.site = e.target.value; store.set("hub.briefSite", RB.site); loadRoleBrief(); } });
+/* Landing pages by position (Nov 2026): the sections and objects Admin arranged for the position */
+function landingKpi(K){
+  if (!K) return `<p class="brief-empty">KPI figures unavailable right now.</p>`;
+  const cell = c => c.v == null ? `<span class="rb-c">—</span>` : `<span class="rb-c ${c.tone ? "c-" + c.tone : ""}"${c.hint ? ` title="${esc(c.hint)}"` : ""}>${c.pct ? c.v + "%" : Number(c.v).toLocaleString("en-US")}</span>${c.delta ? `<span class="rb-d ${c.delta > 0 ? "up" : "down"}">${c.delta > 0 ? "▲" : "▼"}${Math.abs(c.delta)}</span>` : ""}${c.sub ? `<span class="rb-cs">${esc(c.sub)}</span>` : ""}`;
+  return `<div class="rb-tw"><table class="rb-kt"><thead><tr><th>KPI</th>${K.sites.map(s => `<th>${esc(s.name)}</th>`).join("")}</tr></thead>
+    <tbody>${K.rows.map(r => `<tr><td>${esc(r.label)}</td>${r.cells.map(c => `<td><button data-rbapp="${esc(RB_APP[r.key === "cleaning" ? "cleaningk" : r.key] || r.key)}" data-rbsite2="${esc(c.site)}">${cell(c)}</button></td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <p class="rb-leg"><i class="c-g"></i>90 % and above <i class="c-a"></i>75–89 % <i class="c-r"></i>below 75 % · ${esc(K.range ? K.range.label : "")}</p>`;
+}
+function landingHtml(D, part, first, refresh){
+  const per = { today: "Today", "7d": "7 days", month: "Month" }, hasKpi = D.sections.some(s => s.items.some(i => i.kind === "kpi"));
+  const w = i => {
+    const span = i.size === 4 ? "lp-s4" : i.size === 2 ? "lp-s2" : "";
+    if (i.kind === "kpi") return `<div class="lp-w lp-s4">${landingKpi(D.kpi)}</div>`;
+    if (i.kind === "todo") return `<div class="lp-w ${span}"><b class="lp-t">${i.icon} Your follow-ups</b>${D.todo.length ? `<div class="rb-todo">${D.todo.map(x => `<button class="rb-do" data-rbapp="${esc(x.app || "")}" data-rbsite2="${esc(D.site)}"><i class="d-${x.tone}"></i><span><b>${esc(x.text)}</b><small>${esc(x.sub || "")}</small></span><em>Open ›</em></button>`).join("")}</div>` : `<p class="brief-empty" style="margin:6px 0 0">Nothing waiting — all under control.</p>`}</div>`;
+    if (i.kind === "shortcut"){ const a = byId(i.app); if (!a) return ""; return `<button class="rb-tile lp-w ${span}" data-rbapp="${esc(a.id)}" data-rbsite2="${esc(D.site)}"><b>⭐ Shortcut</b><strong style="font-size:1.05rem">${esc(a.name)}</strong><small>${esc(a.desc || "")}</small></button>`; }
+    if (i.value == null) return "";
+    return `<button class="rb-tile lp-w ${span} t-${i.tone || "n"}" data-rbapp="${esc(i.app || "")}" data-rbsite2="${esc(D.site)}"><b>${i.icon} ${esc(i.title || i.name)}</b><strong>${esc(i.value)}</strong><small>${esc(i.note || "")}</small></button>`;
+  };
+  return `<div class="brief-h"><div><h2>${part} brief · ${esc(D.siteName)}</h2><p>Good ${part.toLowerCase()}, ${first} — ${esc(D.position)}</p></div><div class="brief-actions">
+      ${D.sites && D.sites.length > 1 ? `<select class="rb-site" data-rbsite>${D.sites.map(c => `<option value="${c}" ${c === D.site ? "selected" : ""}>${esc((SITES || {})[c] || c)}</option>`).join("")}</select>` : ""}
+      ${hasKpi ? `<div class="rb-per">${Object.entries(per).map(([k, n]) => `<button data-rbper="${k}" class="${D.period === k ? "on" : ""}">${n}</button>`).join("")}</div>` : ""}
+      ${D.need ? `<span class="rb-need">${D.need} need action</span>` : `<span class="rb-need ok">All under control</span>`}${refresh}</div></div>
+    ${D.sections.map(s => `<div class="rb-sec">${esc(s.name)}</div><div class="lp-g">${s.items.map(w).join("")}</div>`).join("") || `<p class="brief-empty">No object on this page can be opened by this position.</p>`}`;
+}
 async function briefSettings(){
   let S; try { S = await api("brief/settings"); } catch (e){ return alert(e.message); }
   const aud = Object.keys(S.audiences), items = [...Object.entries(S.mgrItems).map(([k, n]) => ["manager", k, n]), ...Object.entries(S.kpiItems).map(([k, n]) => ["kpi", k, n])];
@@ -2646,7 +2682,7 @@ async function briefSettings(){
 }
 function renderBrief(loading){
   const box = $("#brief");
-  if (!seniorView()){ box.innerHTML = ""; return; }   // operations team: no brief panel (its figures still feed the tile badges)
+  if (!briefOn()){ box.innerHTML = ""; return; }   // operations team: no brief panel unless Admin built a landing page for the position (its figures still feed the tile badges)
   return renderRoleBrief();   // Brief by role (Oct 2026): Manager action brief · Advisor / Director / CDSO KPI brief
   const ids = APPS.filter(a => BRIEF ? BRIEF.systems && BRIEF.systems[a.id] : false).map(a => a.id);
   if (!loading && !ids.length){
