@@ -58,7 +58,8 @@ import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   //
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";
-import { lpAdmin, hasLanding } from "./modules/landing.js";   // Landing pages by position (Admin Control → Landing pages) — docs/FEATURE-landing-pages.md   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
+import { lpAdmin, hasLanding } from "./modules/landing.js";
+import { rpSchema, rpRoute, rpRun } from "./modules/reports.js";   // Report builder — docs/FEATURE-reports.md   // Landing pages by position (Admin Control → Landing pages) — docs/FEATURE-landing-pages.md   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
 import { seasonsFor, seasonsAdmin } from "./modules/seasons.js";   // Seasonal decorations (admin) — see docs/FEATURE-seasons.md
@@ -419,6 +420,7 @@ async function ensureSchema(env) {
   await ssoSchema(env);         // One hub account for every system
   await cleanSchema(env);       // Cleaner Access
   await ffSchema(env);          // Footfall
+  await rpSchema(env);          // Report builder
   await automationSchema(env); // Automation feature
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS hub_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL,
@@ -655,6 +657,7 @@ export default {
       await pushRun(env).catch(e => console.error("push", e && e.message));
       await chatRun(env).catch(e => console.error("chat", e && e.message));
       await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));
+      await rpRun(env, { SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend, hubUrl: HUB_URL }).catch(e => console.error("reports", e && e.message));   // Report builder: scheduled reports
       await ffRun(env, { SITES, today: beirutToday, hour: beirutHour, outlookSend, raiseEvent, hubUrl: HUB_URL }).catch(e => console.error("footfall", e && e.message));   // Footfall: Liban Park emails 09:00 → 14:00
       await cleanRun(env, { SITES, today: beirutToday, hour: beirutHour, opsGroups, outlookSend }).catch(e => console.error("cleaners", e && e.message));   // Cleaner Access: 21:00 reports, monthly verification   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
@@ -807,6 +810,10 @@ async function route(request, env, ctx, url) {
   if (path === "seasons") return ok(await seasonsFor(env, me));   // Seasonal decorations (admin only)
   if (path === "moment") return ok({ moment: await momentFor(env, me, beirutHM()) });   // Message of the moment (operations team)
   if (path === "brief") return ok(await brief(env, me, url.searchParams.get("fresh") === "1"));
+  if (path.startsWith("rp/")) {   // Report builder (modules/reports.js): Admin builds; people with access subscribe and open the runs
+    if (me.role === "EXTERNAL") throw fail("Not allowed", 403);
+    return ok(await rpRoute(env, path, method, body, url, { me, isAdmin: isAdminUser, SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend, hubUrl: HUB_URL }));
+  }
   if (path.startsWith("brief/")) return ok(await roleBriefRoute(env, path, method, body, url, { me, today: beirutToday, siteName, sitesOf,
     system: async (id, s2) => CONNECTORS[id] && CONNECTORS[id].stats ? pull(env, id, CONNECTORS[id], s2) : null,
     snagReport: (from, to) => snagReport(env, CONNECTORS.snaglist.base, from, to),

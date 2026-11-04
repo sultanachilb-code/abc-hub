@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reports · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Report builder (Nov 2026) — docs/FEATURE-reports.md · Admin: Reports · Builder · Explore · everyone with access: subscribe + kept runs */
+.w2{max-width:1400px;margin:0 auto;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}.w2>*{min-width:0}
+.ctabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}.ctabs button{border:0;background:none;padding:10px 13px;font:inherit;font-weight:800;font-size:.86rem;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+.ctabs button.on{color:var(--brand);border-bottom-color:#C8A24A}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px}.pad{padding:12px 14px}
+.box h3{margin:0;padding:11px 14px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr))}
+.tpl{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:14px;display:grid;gap:7px;align-content:start}
+.tpl .hd{display:flex;gap:10px;align-items:center}.tpl .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(74,31,115,.1);font-size:1.2rem;flex:none}
+.tpl small{color:var(--muted);font-size:.76rem;line-height:1.45}.acts{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:.64rem;font-weight:800;border-radius:99px;padding:3px 9px;background:rgba(74,31,115,.1);color:var(--brand);white-space:nowrap}.pill.g{background:rgba(30,138,76,.13);color:#1E7A4F}.pill.r{background:rgba(194,40,60,.12);color:#B0283C}
+table.t{width:100%;border-collapse:collapse;font-size:.82rem}table.t th{text-align:left;font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:7px 9px;background:var(--paper);border-bottom:1px solid var(--line)}
+table.t td{padding:7px 9px;border-bottom:1px solid var(--line)}table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}.tw{overflow-x:auto}
+.bw{display:grid;grid-template-columns:210px minmax(0,1fr) 320px;gap:12px;align-items:start}
+.lib{position:sticky;top:64px}.lib .li{display:flex;gap:8px;align-items:center;border:1px dashed var(--line);border-radius:10px;padding:7px 9px;margin:0 10px 6px;font-size:.8rem;font-weight:700;cursor:grab;background:var(--surface)}
+.lib .li span{width:24px;text-align:center}
+.pgx{border:2px dashed transparent;border-radius:14px;padding:10px;margin-bottom:12px;background:var(--surface);box-shadow:0 4px 14px rgba(42,15,69,.05)}.pgx.over{border-color:#C8A24A}
+.pgh{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}.pgh input[type=text]{flex:1;min-width:120px;border:0;background:none;font:inherit;font-weight:800;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
+.mini{border:0;background:rgba(74,31,115,.08);border-radius:7px;min-width:24px;height:24px;cursor:pointer;color:inherit;font-size:.72rem;padding:0 6px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;min-height:50px}
+.bk{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);cursor:pointer;min-width:0}.bk.s2{grid-column:span 2}.bk.s4{grid-column:1/-1}.bk.sel{outline:2px solid #C8A24A}.bk.drag{opacity:.4}
+.bk b{display:block;font-size:.78rem}.bk small{display:block;color:var(--muted);font-size:.7rem;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk .bt{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}.drop{grid-column:1/-1;border:2px dashed var(--line);border-radius:10px;color:var(--muted);font-size:.76rem;display:grid;place-items:center;min-height:48px}
+.fl label{display:block;font-size:.64rem;font-weight:800;letter-spacing:.06em;color:var(--muted);margin:10px 0 3px;text-transform:uppercase}
+.fl input,.fl select,.fl textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:7px 9px;font:inherit;font-size:.82rem;background:var(--surface);color:var(--text)}
+.chips{display:flex;gap:5px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer;background:var(--surface);user-select:none}.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.rc{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:99px;padding:3px 4px 3px 10px;font-size:.74rem;font-weight:700;margin:0 4px 4px 0;background:var(--paper)}.rc button{border:0;background:none;cursor:pointer;color:var(--muted)}
+.ban{border-radius:12px;padding:10px 12px;font-size:.84rem;line-height:1.5;background:rgba(200,162,74,.14);border:1px solid rgba(200,162,74,.45)}.ban.bad{background:rgba(194,40,60,.08);border-color:rgba(194,40,60,.3)}
+.ex{display:grid;grid-template-columns:300px minmax(0,1fr);gap:12px;align-items:start}
+/* report as rendered */
+.rpt{background:#fff;color:#221A2E;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:1000px;margin:0 auto}
+.rh{background:#2A0F45;color:#fff;padding:18px 22px}.rh b{display:block;letter-spacing:.14em;font-size:.76rem}.rh small{color:#E9CF8A;letter-spacing:.1em;font-size:.68rem;display:block}.rh h2{color:#fff;margin:6px 0 2px;font-size:1.25rem}
+.rb{padding:6px 22px 20px}.rp{border-bottom:2px solid #C8A24A;font-weight:800;color:#2A0F45;padding:14px 0 4px;margin-bottom:8px;font-size:.95rem}
+.rg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.rk{border:1px solid #EEE8F4;border-top:3px solid #C8A24A;border-radius:10px;padding:9px 11px}.rk span{font-size:.64rem;color:#6D6479;font-weight:800;letter-spacing:.06em;text-transform:uppercase;display:block}.rk b{font-size:1.35rem;display:block}.rk em{font-style:normal;font-size:.72rem;font-weight:800}
+.up{color:#1E8A4C}.dn{color:#B0283C}.rw.s2{grid-column:span 2}.rw.s4,.rw.s1x{grid-column:1/-1}.rw h4{font-size:.78rem;color:#4A1F73;margin:6px 0 6px}
+.rw table.t{color:#221A2E}.rw table.t th{background:#F6F4F9}.rw table.t td{border-color:#EEE8F4}
+.bdg{display:inline-block;background:#FBF4E2;border:1px solid #E5CF94;color:#7A5A12;border-radius:8px;padding:5px 10px;font-size:.76rem;font-weight:800;margin:0 6px 6px 0}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:.72rem;margin-top:4px}.lg span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.phs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}.phs figure{margin:0;border:1px solid #EEE8F4;border-radius:10px;overflow:hidden}.phs img{width:100%;height:120px;object-fit:cover;display:block}.phs figcaption{font-size:.7rem;padding:5px 7px;color:#6D6479}
+td.cl{cursor:pointer}td.cl:hover{background:rgba(138,92,192,.1)}
+dialog.dd{border:0;border-radius:18px;padding:0;width:min(760px,calc(100% - 20px));max-height:90dvh;background:var(--surface);color:var(--text)}.dd .h{padding:14px 16px;font-weight:800}.dd .b{padding:0 16px 14px;max-height:70dvh;overflow:auto}.dd .f{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+@media (max-width:1100px){.bw{grid-template-columns:1fr}.lib{position:static}.lib .lis{display:flex;flex-wrap:wrap;padding:0 6px}.lib .li{margin:0 4px 6px}}
+@media (max-width:760px){.ex{grid-template-columns:1fr}.g4,.rg{grid-template-columns:1fr 1fr}.rw.s2{grid-column:1/-1}}
+@media print{body>*:not(#printArea){display:none!important}#printArea{display:block!important}.rpt{border:0;max-width:none}.rh,.rk,.bdg,table.t th{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rw{break-inside:avoid}.rp{break-before:auto}}
+#printArea{display:none}
+</style>
+</head>
+<body>
+<div class="top"><h1>📑 Reports <small id="sub"></small></h1></div>
+<div class="wrap"><div class="w2" id="view"><p class="muted">Loading…</p></div></div>
+<dialog class="dd" id="dlg"></dialog>
+<div id="printArea"></div>
+<script src="common.js"></script>
+<script>
+let META = null, LIST = null, TAB = "list", ED = null, SEL = null, EXQ = null, DRAG = null;
+const UP = new URLSearchParams(location.search);
+const COLORS = ["#4A1F73", "#C8A24A", "#2E8B8B", "#C2185B", "#3C4F8A", "#8A5A1F", "#1E8A4C", "#7B4BB0"];
+const N = (v, pct) => v == null ? "—" : pct ? `${v}%` : Number(v).toLocaleString("en-US");
+const per = p => p && p.label ? p.label : "";
+const posName = k => (META.positions || {})[k] || k;
+const recName = e => e === "ops" ? "Operations group emails" : /^pos:/.test(e) ? posName(e.slice(4)) + " (position)" : e;
+const blockIcon = { kpi: "🔢", table: "📋", bar: "📊", line: "📈", pie: "🥧", badge: "🏷", text: "📝", photos: "📷" };
+const fmtAt = iso => iso ? new Date(iso).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+const schedTxt = s => !s || !s.on ? "" : s.freq === "daily" ? `Every day · ${s.time}` : s.freq === "weekly" ? `Every ${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][s.dow || 0]} · ${s.time}` : `Every month · on the ${s.dom || 1}${["th", "st", "nd", "rd"][((s.dom || 1) % 10 > 3 || [11, 12, 13].includes(s.dom)) ? 0 : (s.dom || 1) % 10] || "th"} · ${s.time}`;
+
+async function boot(){
+  META = await api("rp/meta");
+  if (UP.get("run")) return viewRun(UP.get("run"));
+  TAB = META.admin ? (UP.get("tab") || "list") : "list";
+  draw();
+}
+function shell(inner){
+  $("#sub").textContent = META.admin ? "· Admin" : "";
+  const tabs = META.admin ? [["list", "Reports"], ["build", "Builder"], ["explore", "Explore"]] : [];
+  $("#view").innerHTML = (tabs.length ? `<div class="ctabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${TAB === k ? "on" : ""}">${n}</button>`).join("")}</div>` : "") + inner;
+  $("#view").querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { if (b.dataset.tab === "build" && !ED) ED = blankReport(); TAB = b.dataset.tab; draw(); });
+}
+async function draw(){
+  try {
+    if (TAB === "list"){ LIST = await api("rp/list"); return drawList(); }
+    if (TAB === "build") return drawBuild();
+    if (TAB === "explore") return drawExplore();
+  } catch (e){ shell(`<div class="ban bad">${esc(e.message)}</div>`); }
+}
+
+/* ================= list ================= */
+function drawList(){
+  const R = LIST.reports, A = META.admin;
+  shell(`${A ? `<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost small" data-goex>🔎 Explore data</button><button class="btn small" data-new>＋ New report</button></div>` : `<div class="ban">Subscribe to the reports you want — they arrive by email when they are sent. Open a past report below.</div>`}
+    <div class="grid">${R.map(r => { const d = r.def || {}, sc = schedTxt(d.schedule);
+      return `<div class="tpl"><div class="hd"><span class="ic">${esc(r.icon)}</span><div style="min-width:0"><b>${esc(r.name)}</b><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">${sc ? `<span class="pill g">⏰ ${esc(sc)}</span>` : `<span class="pill">On demand</span>`}${d.subs && d.subs.on ? `<span class="pill">${r.subs} subscriber${r.subs === 1 ? "" : "s"}</span>` : ""}</div></div></div>
+        ${A ? `<small>${esc(META.periods[(d.period || {}).kind] || "")} · ${Array.isArray(d.sites) ? esc(d.sites.map(s => META.sites[s] || s).join(", ")) : "all flagships"} · ${(d.pages || []).reduce((a, p) => a + p.blocks.length, 0)} blocks</small>
+          <small>${d.to && d.to.length ? "To: " + esc(d.to.map(recName).join(", ")) : "No recipients yet"}${d.cc && d.cc.length ? " · Cc: " + esc(d.cc.map(recName).join(", ")) : ""}</small>` : ""}
+        <div class="acts">${A ? `<button class="btn ghost small" data-run="${r.id}">▶ Run</button><button class="btn ghost small" data-edit="${r.id}">✎ Edit</button><button class="btn ghost small" data-send="${r.id}">✉ Send now</button>` : ""}
+          ${d.subs && d.subs.on ? `<button class="btn ${r.subscribed ? "" : "ghost"} small" data-sub="${r.id}" data-on="${r.subscribed ? 0 : 1}">${r.subscribed ? "✓ Subscribed" : "＋ Subscribe"}</button>` : ""}</div></div>`; }).join("") || `<p class="muted">No report yet.</p>`}</div>
+    <div class="box"><h3>Last reports</h3><div class="tw"><table class="t"><tr><th>Report</th><th>Period</th><th>Flagships</th><th>How</th>${A ? "<th>Sent to</th>" : ""}<th>When</th><th></th></tr>
+      ${LIST.runs.map(x => `<tr><td><b>${esc(x.name)}</b></td><td>${esc(per(x.period))}</td><td>${esc(String(x.sites).split(",").map(s => META.sites[s] || s).join(", "))}</td><td>${esc(x.how)}${x.status && x.status !== "viewed" && x.status !== "sent" ? ` <span class="pill r">${esc(x.status)}</span>` : ""}</td>${A ? `<td style="max-width:240px;font-size:.74rem">${esc(x.sent_to || "—")}</td>` : ""}<td>${esc(fmtAt(x.at))}</td><td><a href="?run=${x.id}" target="_blank">Open ›</a></td></tr>`).join("") || `<tr><td colspan="7" class="muted">Nothing yet.</td></tr>`}</table></div></div>`);
+  const v = $("#view");
+  const n = v.querySelector("[data-new]"); if (n) n.onclick = () => { ED = blankReport(); SEL = null; TAB = "build"; draw(); };
+  const gx = v.querySelector("[data-goex]"); if (gx) gx.onclick = () => { TAB = "explore"; draw(); };
+  v.querySelectorAll("[data-edit]").forEach(b => b.onclick = async () => { const r = await api("rp/get?id=" + b.dataset.edit); ED = { id: r.report.id, name: r.report.name, icon: r.report.icon, def: r.report.def, subscribers: r.subscribers }; SEL = null; TAB = "build"; draw(); });
+  v.querySelectorAll("[data-run]").forEach(b => b.onclick = () => runDialog(R.find(r => r.id == b.dataset.run), false));
+  v.querySelectorAll("[data-send]").forEach(b => b.onclick = () => runDialog(R.find(r => r.id == b.dataset.send), true));
+  v.querySelectorAll("[data-sub]").forEach(b => b.onclick = async () => { try { await api("rp/subscribe", { id: +b.dataset.sub, on: b.dataset.on === "1" }); toast(b.dataset.on === "1" ? "Subscribed — it comes to your email" : "Unsubscribed"); draw(); } catch (e){ toast(e.message, true); } });
+}
+function runDialog(r, send){
+  const d = $("#dlg"), def = r.def || {}, sites = Array.isArray(def.sites) ? def.sites : Object.keys(META.sites);
+  d.innerHTML = `<div class="h">${send ? "✉ Send" : "▶ Run"} · ${esc(r.name)}</div><div class="b fl">
+    <label>Period</label><select id="rPer">${Object.entries(META.periods).map(([k, n]) => `<option value="${k}" ${k === ((def.period || {}).kind || "last_month") ? "selected" : ""}>${n}</option>`).join("")}</select>
+    <div id="rCus" style="display:none;gap:8px;grid-template-columns:1fr 1fr"><div><label>From</label><input type="date" id="rF"></div><div><label>To</label><input type="date" id="rT"></div></div>
+    <label>Flagships</label><div class="chips">${Object.entries(META.sites).map(([c, n]) => `<span class="chip ${sites.includes(c) ? "on" : ""}" data-c="${c}">${esc(n)}</span>`).join("")}</div>
+    ${send ? `<p class="muted" style="margin-top:10px">To: ${esc((def.to || []).map(recName).join(", ") || "—")}${def.cc && def.cc.length ? " · Cc: " + esc(def.cc.map(recName).join(", ")) : ""}${def.subs && def.subs.on ? ` · + ${r.subs} subscriber(s)` : ""}</p>` : ""}</div>
+    <div class="f"><button class="btn ghost" data-x>Cancel</button>${send ? `<button class="btn ghost" data-test>Test to me</button>` : ""}<button class="btn" data-go>${send ? "Send" : "Run"}</button></div>`;
+  d.showModal();
+  d.querySelectorAll("[data-c]").forEach(c => c.onclick = () => c.classList.toggle("on"));
+  const ps = d.querySelector("#rPer"); ps.onchange = () => { d.querySelector("#rCus").style.display = ps.value === "custom" ? "grid" : "none"; };
+  d.querySelector("[data-x]").onclick = () => d.close();
+  const go = async test => { const body = { id: r.id, period: { kind: ps.value, from: d.querySelector("#rF").value, to: d.querySelector("#rT").value }, sites: [...d.querySelectorAll("[data-c].on")].map(c => c.dataset.c), send: send, test };
+    const b = d.querySelector("[data-go]"); b.disabled = true; b.textContent = "Working…";
+    try { const o = await api("rp/run", body); d.close(); if (send) toast(`Sent to ${o.sent.length} recipient${o.sent.length === 1 ? "" : "s"}`); if (o.runId) open("?run=" + o.runId, "_blank"); else showResult(r.name, o.result); if (TAB === "list") draw(); }
+    catch (e){ toast(e.message, true); b.disabled = false; b.textContent = send ? "Send" : "Run"; } };
+  d.querySelector("[data-go]").onclick = () => go(false);
+  const t = d.querySelector("[data-test]"); if (t) t.onclick = () => go(true);
+}
+
+/* ================= render a report (screen · print / PDF · Excel) ================= */
+function svgBar(D, line, half){
+  const rows = D.rows.slice(0, 40), series = D.series || [D.measure], W = half ? 460 : 900, H = half ? 220 : 240, pl = 46, pb = 46, pt = 10, iw = W - pl - 10, ih = H - pb - pt;
+  const vals = rows.map(r => D.series ? r.slice(1, 1 + series.length) : [r[1]]), mx = Math.max(1, ...vals.flat().map(v => Number(v) || 0));
+  const ticks = [0, .25, .5, .75, 1].map(f => `<line x1="${pl}" x2="${W - 10}" y1="${pt + ih - f * ih}" y2="${pt + ih - f * ih}" stroke="#EEE8F4"/><text x="${pl - 6}" y="${pt + ih - f * ih + 4}" font-size="10" text-anchor="end" fill="#6D6479">${N(Math.round(mx * f), D.pct)}</text>`).join("");
+  const bw = iw / Math.max(1, rows.length), lbl = (r, i) => (rows.length <= 16 || i % Math.ceil(rows.length / 16) === 0) ? `<text x="${pl + bw * i + bw / 2}" y="${H - pb + 14}" font-size="10" text-anchor="middle" fill="#6D6479">${esc(String(r[0]).slice(0, 14))}</text>` : "";
+  let body = "";
+  if (!line) body = rows.map((r, i) => vals[i].map((v, j) => { const w = Math.max(1, bw * .8 / series.length), h = (Number(v) || 0) / mx * ih;
+    return `<rect x="${pl + bw * i + bw * .1 + j * w}" y="${pt + ih - h}" width="${w - 1}" height="${h}" rx="2" fill="${COLORS[j % COLORS.length]}"><title>${esc(r[0])} · ${esc(series[j])}: ${N(v, D.pct)}</title></rect>`; }).join("") + lbl(r, i)).join("");
+  else body = series.map((s, j) => `<polyline fill="none" stroke="${COLORS[j % COLORS.length]}" stroke-width="2.5" points="${rows.map((r, i) => `${pl + bw * i + bw / 2},${pt + ih - (Number(vals[i][j]) || 0) / mx * ih}`).join(" ")}"/>` +
+    rows.map((r, i) => `<circle cx="${pl + bw * i + bw / 2}" cy="${pt + ih - (Number(vals[i][j]) || 0) / mx * ih}" r="3" fill="${COLORS[j % COLORS.length]}"><title>${esc(r[0])} · ${esc(s)}: ${N(vals[i][j], D.pct)}</title></circle>`).join("")).join("") + rows.map(lbl).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">${ticks}${body}</svg>${series.length > 1 ? `<div class="lg">${series.map((s, j) => `<span style="--c:${COLORS[j % COLORS.length]}">${esc(s)}</span>`).join("")}</div>` : ""}`;
+}
+function svgPie(D){
+  const rows = D.rows.filter(r => Number(r[1]) > 0).slice(0, 12), t = rows.reduce((a, r) => a + Number(r[1]), 0) || 1;
+  let a0 = -Math.PI / 2; const arcs = rows.map((r, i) => { const a1 = a0 + Number(r[1]) / t * Math.PI * 2, L = a1 - a0 > Math.PI ? 1 : 0;
+    const p = `M100 100 L${100 + 90 * Math.cos(a0)} ${100 + 90 * Math.sin(a0)} A90 90 0 ${L} 1 ${100 + 90 * Math.cos(a1)} ${100 + 90 * Math.sin(a1)} Z`; a0 = a1;
+    return `<path d="${p}" fill="${COLORS[i % COLORS.length]}" stroke="#fff" stroke-width="1.5"><title>${esc(r[0])}: ${N(r[1], D.pct)}</title></path>`; }).join("");
+  return `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><svg viewBox="0 0 200 200" width="170" height="170">${arcs}<circle cx="100" cy="100" r="46" fill="#fff"/></svg>
+    <div class="lg" style="display:grid;gap:4px">${rows.map((r, i) => `<span style="--c:${COLORS[i % COLORS.length]}">${esc(r[0])} · <b>${N(r[1], D.pct)}</b> (${Math.round(Number(r[1]) / t * 1000) / 10}%)</span>`).join("")}</div></div>`;
+}
+function blockHtml(b){
+  const D = b.data || {}, sz = b.type === "kpi" ? "" : b.size === 2 ? "s2" : b.size === 1 ? "s1x" : "s4";
+  if (D.error) return `<div class="rw s4"><h4>${esc(b.title)}</h4><div class="dn" style="font-size:.8rem">${esc(D.error)}</div></div>`;
+  if (b.type === "kpi"){ const dl = D.value == null || D.prev == null || !D.prev ? null : Math.round((D.value - D.prev) / Math.abs(D.prev) * 1000) / 10, good = dl == null ? null : (dl >= 0) === (D.good !== "down");
+    return `<div class="rk ${b.size === 2 ? "rw s2" : b.size === 4 ? "rw s4" : ""}"><span>${esc(b.title)}</span><b>${N(D.value, D.pct)}</b>${dl != null ? `<em class="${good ? "up" : "dn"}">${dl >= 0 ? "▲" : "▼"} ${Math.abs(dl)}% vs ${D.compare === "year" ? "last year" : "previous period"}</em>` : D.compare !== "none" && D.prev == null ? `<em style="color:#6D6479">no figure to compare</em>` : ""}</div>`; }
+  if (b.type === "text") return D.text ? `<div class="rw s4" style="white-space:pre-wrap;font-size:.86rem;line-height:1.55">${esc(D.text)}</div>` : "";
+  if (b.type === "badge") return `<div class="rw s4">${D.badges.map(x => `<span class="bdg">${esc(x.name)} · ${x.n ? `${D2(x.from)} – ${D2(x.to, 1)} · ${x.n} of ${x.of} days` : "no figures"}${x.n && x.missing.length ? ` · ${x.missing.length} missing` : ""}</span>`).join("")}</div>`;
+  if (b.type === "photos") return `<div class="rw s4"><h4>${esc(b.title)}</h4>${D.photos.length ? `<div class="phs">${D.photos.map(p => `<figure>${p.src ? `<img src="${esc(p.src)}" alt="">` : ""}<figcaption>${esc(p.site)} · ${esc(p.day)}<br>${esc(p.issues || p.note)}</figcaption></figure>`).join("")}</div>` : `<p class="muted" style="font-size:.8rem">No patrol issue with a photo in this period.</p>`}</div>`;
+  if (!D.rows) return `<div class="rk"><span>${esc(b.title)}</span><b>${N(D.value, D.pct)}</b></div>`;
+  if (!D.rows.length) return `<div class="rw ${sz}"><h4>${esc(b.title)}</h4><p class="muted" style="font-size:.8rem">No data in this period.</p></div>`;
+  if (b.type === "pie") return `<div class="rw ${sz}"><h4>${esc(b.title)}</h4>${svgPie(D)}</div>`;
+  if (b.type === "bar" || b.type === "line") return `<div class="rw ${sz}"><h4>${esc(b.title)}</h4>${svgBar(D, b.type === "line", b.size === 2)}</div>`;
+  return `<div class="rw ${sz}"><h4>${esc(b.title)}</h4><div class="tw"><table class="t"><tr>${D.cols.map((c, i) => `<th class="${i ? "n" : ""}">${esc(c)}</th>`).join("")}</tr>
+    ${D.rows.map(r => `<tr><td>${esc(r[0])}</td>${r.slice(1, D.cols.length).map((v, i) => `<td class="n" ${i === D.cols.length - 2 && D.series ? 'style="font-weight:800"' : ""}>${N(v, D.pct)}</td>`).join("")}</tr>`).join("")}
+    ${D.total != null && !D.pct && !D.series ? `<tr><td><b>Total</b></td><td class="n"><b>${N(D.total)}</b></td></tr>` : ""}</table></div></div>`;
+}
+const D2 = (d, y) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(y ? { year: "numeric" } : {}), timeZone: "UTC" }) : "";
+function reportHtml(name, R){
+  if (R.tooBig) return `<div class="ban bad">This report was too big to keep — run it again.</div>`;
+  return `<div class="rpt"><div class="rh"><b>ABC OPERATIONS</b><small>${esc(name).toUpperCase()}</small><h2>${esc(R.period.label)}</h2><small style="color:#D8CCE6;letter-spacing:0">${esc(R.sites.map(s => s.name).join(" · "))}</small></div>
+    <div class="rb">${R.pages.map(p => `<div class="rp">${esc(p.title)}</div><div class="rg">${p.blocks.map(blockHtml).join("")}</div>`).join("")}<p class="muted" style="font-size:.7rem;margin-top:16px">Generated by ABC Operations Hub · ${esc(fmtAt(new Date().toISOString()))}</p></div></div>`;
+}
+async function excelOf(name, R){
+  await xlsxReady(); const wb = XLSX.utils.book_new(), used = new Set();
+  const sn = t => { let n = String(t).replace(/[\\/?*[\]:]/g, " ").slice(0, 28) || "Sheet", k = n, i = 2; while (used.has(k)) k = n.slice(0, 25) + " " + i++; used.add(k); return k; };
+  const sum = [[name], [R.period.label], [R.sites.map(s => s.name).join(", ")], []];
+  R.pages.forEach(p => p.blocks.filter(b => b.type === "kpi").forEach(b => sum.push([p.title, b.title, b.data.value, b.data.prev ?? ""])));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), sn("Summary"));
+  R.pages.forEach(p => p.blocks.forEach(b => { if (b.data && b.data.rows) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([b.data.cols, ...b.data.rows.map(r => r.slice(0, b.data.cols.length))]), sn(b.title)); }));
+  XLSX.writeFile(wb, `${name} ${R.period.label}.xlsx`.replace(/[^\w\-. ]+/g, " "));
+}
+function printIt(name, R){ $("#printArea").innerHTML = reportHtml(name, R); setTimeout(() => print(), 300); }
+async function viewRun(id){
+  let r; try { r = await api("rp/run-get?id=" + encodeURIComponent(id)); } catch (e){ $("#view").innerHTML = `<div class="ban bad">${esc(e.message)}</div>`; return; }
+  showResult(r.name, r.result, `Kept ${fmtAt(r.at)} · ${r.how}`);
+}
+function showResult(name, R, note){
+  $("#sub").textContent = "· " + name;
+  $("#view").innerHTML = `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn ghost small" id="vPdf">⤓ PDF / Print</button><button class="btn ghost small" id="vXls">⤓ Excel</button>${note ? `<span class="muted" style="align-self:center;font-size:.78rem">${esc(note)}</span>` : ""}${UP.get("run") ? "" : `<button class="btn small" id="vBack">‹ Back</button>`}</div>${reportHtml(name, R)}`;
+  $("#vPdf").onclick = () => printIt(name, R); $("#vXls").onclick = () => excelOf(name, R).catch(e => toast(e.message, true));
+  const bk = $("#vBack"); if (bk) bk.onclick = () => draw();
+}
+
+/* ================= builder ================= */
+function blankReport(){ return { id: 0, name: "New report", icon: "📑", def: { period: { kind: "last_month" }, sites: "ALL", to: [], cc: [], excel: true, schedule: { on: false, freq: "monthly", dom: 1, time: "09:00" }, subs: { on: false, positions: [] },
+  pages: [{ title: "Summary", perSite: false, blocks: [] }] }, subscribers: [] }; }
+const newBlock = t => ({ type: t, size: t === "kpi" ? 1 : t === "text" || t === "badge" || t === "photos" ? 4 : 2,
+  cfg: t === "text" ? { title: "Comment", text: "" } : t === "badge" ? { title: "Dates covered" } : t === "photos" ? { title: "Patrol issues", limit: 6 } : { title: BLOCK_NAME(t), source: "footfall", measure: "entries", dims: t === "kpi" ? [] : [t === "line" ? "day" : "flagship"], compare: "prev" } });
+const BLOCK_NAME = t => META.blocks[t];
+function blkSub(b){
+  const c = b.cfg || {}, S = META.sources[c.source];
+  if (b.type === "text") return c.text ? c.text.slice(0, 60) : "Text written here, shown as it is";
+  if (b.type === "badge") return "Footfall: from – to · n of N days per flagship";
+  if (b.type === "photos") return `Up to ${c.limit || 6} patrol issue photos`;
+  if (!S) return "Choose the data";
+  return `${S.name} · ${S.measures[c.measure] || ""}${(c.dims || []).length ? " by " + c.dims.map(x => S.dims[x]).join(" × ") : ""}${b.type === "kpi" && c.compare !== "none" ? (c.compare === "year" ? " · vs last year" : " · vs previous") : ""}`;
+}
+function drawBuild(){
+  const R = ED, D = R.def;
+  if (SEL && !(D.pages[SEL[0]] && D.pages[SEL[0]].blocks[SEL[1]])) SEL = null;
+  shell(`<div class="box pad" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="eIcon" value="${esc(R.icon)}" maxlength="4" style="width:52px;text-align:center;border:1px solid var(--line);border-radius:9px;padding:7px;font-size:1.1rem;background:var(--surface)">
+      <input id="eName" value="${esc(R.name)}" maxlength="80" style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font:inherit;font-weight:800;background:var(--surface);color:var(--text)">
+      <select class="sel" id="ePer">${Object.entries(META.periods).map(([k, n]) => `<option value="${k}" ${k === D.period.kind ? "selected" : ""}>${n}</option>`).join("")}</select>
+      ${D.period.kind === "custom" ? `<input type="date" class="inp" id="eFrom" value="${esc(D.period.from || "")}"><input type="date" class="inp" id="eTo" value="${esc(D.period.to || "")}">` : ""}
+      <button class="btn ghost small" id="ePrev">👁 Preview</button><button class="btn ghost small" id="eSend" ${R.id ? "" : "disabled"}>✉ Send now</button><button class="btn small" id="eSave">Save</button>${R.id ? `<button class="btn ghost small" id="eDel" style="color:var(--alert)">🗑</button>` : ""}</div>
+    <div class="box pad"><div class="fl" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b style="font-size:.72rem;color:var(--muted);letter-spacing:.06em">FLAGSHIPS</b>
+      <span class="chip ${D.sites === "ALL" ? "on" : ""}" data-sall>All flagships</span>${Object.entries(META.sites).map(([c, n]) => `<span class="chip ${Array.isArray(D.sites) && D.sites.includes(c) ? "on" : ""}" data-site="${c}">${esc(n)}</span>`).join("")}</div></div>
+    <div class="bw"><div class="box lib"><h3>Blocks</h3><div class="lis" style="padding-top:8px">${Object.entries(META.blocks).map(([k, n]) => `<div class="li" draggable="true" data-nb="${k}"><span>${blockIcon[k]}</span>${esc(n)}</div>`).join("")}</div><p class="muted" style="font-size:.72rem;padding:0 12px 12px">Drag into a page, or click to add to the selected page.</p></div>
+      <div>${D.pages.map((p, pi) => `<div class="pgx" data-pg="${pi}"><div class="pgh"><input type="text" value="${esc(p.title)}" data-pt="${pi}" maxlength="80">
+          <label class="muted" style="font-size:.74rem;display:flex;gap:5px;align-items:center"><input type="checkbox" data-ps="${pi}" ${p.perSite ? "checked" : ""}> one page per flagship</label>
+          <button class="mini" data-pu="${pi}">▲</button><button class="mini" data-pd="${pi}">▼</button><button class="mini" data-pr="${pi}">✕</button></div>
+        <div class="g4">${p.blocks.map((b, bi) => `<div class="bk ${b.size === 4 ? "s4" : b.size === 2 ? "s2" : ""} ${SEL && SEL[0] === pi && SEL[1] === bi ? "sel" : ""}" draggable="true" data-b="${pi}:${bi}"><b>${blockIcon[b.type]} ${esc(b.cfg.title || BLOCK_NAME(b.type))}</b><small>${esc(blkSub(b))}</small>
+          <div class="bt"><button class="mini" data-mv="-1">◀</button><button class="mini" data-mv="1">▶</button><button class="mini" data-sz>⇔ ${b.size === 4 ? "full" : b.size === 2 ? "half" : "small"}</button><button class="mini" data-cp title="Duplicate">⧉</button><button class="mini" data-rm>✕</button></div></div>`).join("")}
+          ${p.blocks.length ? "" : `<div class="drop">Drag blocks here</div>`}</div></div>`).join("")}
+        <button class="btn ghost small" id="eAddPg">＋ Page</button></div>
+      <div id="side">${SEL ? blockPanel() : deliveryPanel()}</div></div>`);
+  wireBuild();
+}
+function blockPanel(){
+  const [pi, bi] = SEL, b = ED.def.pages[pi].blocks[bi], c = b.cfg, S = META.sources[c.source];
+  const srcSel = `<select data-f="source">${Object.entries(META.sources).sort((a, z) => a[1].group.localeCompare(z[1].group)).map(([k, s]) => `<option value="${k}" ${k === c.source ? "selected" : ""}>${esc(s.group)} · ${esc(s.name)}</option>`).join("")}</select>`;
+  const dimSel = (i, none) => `<select data-dim="${i}"><option value="">${none}</option>${S ? Object.entries(S.dims).map(([k, n]) => `<option value="${k}" ${(c.dims || [])[i] === k ? "selected" : ""}>${esc(n)}</option>`).join("") : ""}</select>`;
+  let body = `<label>Title</label><input data-f="title" value="${esc(c.title || "")}" maxlength="80">`;
+  if (b.type === "text") body += `<label>Text</label><textarea data-f="text" rows="7" maxlength="4000">${esc(c.text || "")}</textarea>`;
+  else if (b.type === "photos") body += `<label>How many photos</label><input type="number" data-f="limit" min="1" max="12" value="${c.limit || 6}">`;
+  else if (b.type === "badge") body += `<p class="muted" style="font-size:.78rem;margin-top:8px">Shows for each flagship the first and last day of footfall received in the period, n of N days and the missing days.</p>`;
+  else {
+    body += `<label>Data</label>${srcSel}<label>Measure</label><select data-f="measure">${S ? Object.entries(S.measures).map(([k, n]) => `<option value="${k}" ${k === c.measure ? "selected" : ""}>${esc(n)}</option>`).join("") : ""}</select>`;
+    if (b.type !== "kpi") body += `<label>Group by</label>${dimSel(0, "— choose —")}<label>${b.type === "table" ? "Then by (columns)" : b.type === "pie" ? "—" : "Series (colours)"}</label>${b.type === "pie" ? `<p class="muted" style="font-size:.74rem">A pie uses one grouping.</p>` : dimSel(1, "— none —")}
+      <label>Show at most</label><input type="number" data-f="limit" min="1" max="200" value="${c.limit || ""}" placeholder="${b.type === "table" ? 50 : 40} rows">`;
+    else body += `<label>Compare with</label><select data-f="compare">${[["prev", "Previous period"], ["year", "Same period last year"], ["none", "No comparison"]].map(([k, n]) => `<option value="${k}" ${c.compare === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <label>Good when</label><select data-f="good"><option value="up" ${c.good !== "down" ? "selected" : ""}>It goes up (green ▲)</option><option value="down" ${c.good === "down" ? "selected" : ""}>It goes down (green ▼)</option></select>`;
+    const F = c.filter || {};
+    body += `<label>Filters</label><div>${Object.entries(F).map(([k, v]) => `<span class="rc">${esc(S && S.dims[k] || k)}: ${esc(v.join(", "))}<button data-rf="${k}">✕</button></span>`).join("") || `<span class="muted" style="font-size:.76rem">None</span>`}</div>
+      <div style="display:flex;gap:6px;margin-top:6px"><select id="fDim" style="flex:1"><option value="">＋ Filter on…</option>${S ? Object.entries(S.dims).filter(([k]) => !["day", "week"].includes(k)).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("") : ""}</select></div><div id="fVals"></div>
+      <p style="margin-top:12px"><a href="#" id="toEx">🔎 Open this block in Explore</a></p>`;
+  }
+  return `<div class="box fl"><h3>⚙ ${esc(BLOCK_NAME(b.type))}<span style="flex:1"></span><button class="mini" id="bDone">Done</button></h3><div class="pad">${body}</div></div>`;
+}
+function deliveryPanel(){
+  const D = ED.def, sc = D.schedule, sb = D.subs;
+  const recs = k => (D[k] || []).map((e, i) => `<span class="rc">${esc(recName(e))}<button data-rr="${k}:${i}">✕</button></span>`).join("") || `<span class="muted" style="font-size:.76rem">None</span>`;
+  const adder = k => `<div style="display:flex;gap:6px;margin-top:6px"><input id="ra-${k}" placeholder="email, or choose…" style="flex:1"><select id="rp-${k}" style="width:130px"><option value="">Add…</option><option value="ops">Operations group emails</option>${Object.entries(META.positions).map(([p, n]) => `<option value="pos:${p}">${esc(n)}</option>`).join("")}</select><button class="mini" data-radd="${k}">＋</button></div>`;
+  return `<div class="box fl"><h3>✉ Recipients &amp; delivery</h3><div class="pad">
+    <label>To</label><div>${recs("to")}</div>${adder("to")}
+    <label>Cc</label><div>${recs("cc")}</div>${adder("cc")}
+    <p class="muted" style="font-size:.72rem;margin-top:6px">A position sends to every active person of that position at the report's flagships. Operations group emails = each flagship's group email.</p>
+    <label style="display:flex;gap:7px;align-items:center;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--text)"><input type="checkbox" id="dXls" style="width:auto" ${D.excel !== false ? "checked" : ""}> Attach the Excel file</label>
+    <label>⏰ Schedule</label><label style="display:flex;gap:7px;align-items:center;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--text);margin-top:0"><input type="checkbox" id="sOn" style="width:auto" ${sc.on ? "checked" : ""}> Send it automatically</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;${sc.on ? "" : "opacity:.5"}"><select id="sFreq">${[["monthly", "Every month"], ["weekly", "Every week"], ["daily", "Every day"]].map(([k, n]) => `<option value="${k}" ${sc.freq === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+      ${sc.freq === "monthly" ? `<select id="sDom">${Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}" ${sc.dom === i + 1 ? "selected" : ""}>on day ${i + 1}</option>`).join("")}</select>` : sc.freq === "weekly" ? `<select id="sDow">${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((n, i) => `<option value="${i}" ${sc.dow === i ? "selected" : ""}>${n}</option>`).join("")}</select>` : "<span></span>"}
+      <input type="time" id="sTime" value="${esc(sc.time)}"></div>
+    <p class="muted" style="font-size:.72rem;margin-top:4px">The period is worked out on the day it is sent (e.g. "Last month" on the 1st = the month that just ended). Sent from the hub's Outlook connection.</p>
+    <label>Subscriptions</label><label style="display:flex;gap:7px;align-items:center;text-transform:none;letter-spacing:0;font-size:.82rem;color:var(--text);margin-top:0"><input type="checkbox" id="bOn" style="width:auto" ${sb.on ? "checked" : ""}> People can subscribe (Reports tile in the hub)</label>
+    <div class="chips" style="${sb.on ? "" : "opacity:.5"}">${Object.entries(META.positions).map(([k, n]) => `<span class="chip ${sb.positions.includes(k) ? "on" : ""}" data-bp="${k}">${esc(n)}</span>`).join("")}</div>
+    ${ED.subscribers && ED.subscribers.length ? `<p class="muted" style="font-size:.74rem;margin-top:8px"><b>${ED.subscribers.length} subscribed:</b> ${esc(ED.subscribers.map(s => s.full_name || s.email).join(", "))}</p>` : ""}
+    <p class="muted" style="font-size:.72rem;margin-top:8px">Subscribers receive the report when it is sent (on the schedule, or with ✉ Send now).</p></div></div>`;
+}
+function wireBuild(){
+  const v = $("#view"), D = ED.def;
+  $("#eName").oninput = e => ED.name = e.target.value; $("#eIcon").oninput = e => ED.icon = e.target.value;
+  $("#ePer").onchange = e => { D.period.kind = e.target.value; drawBuild(); };
+  const ef = $("#eFrom"), et = $("#eTo"); if (ef) ef.onchange = () => D.period.from = ef.value; if (et) et.onchange = () => D.period.to = et.value;
+  v.querySelector("[data-sall]").onclick = () => { D.sites = "ALL"; drawBuild(); };
+  v.querySelectorAll("[data-site]").forEach(c => c.onclick = () => { const s = c.dataset.site; let L = Array.isArray(D.sites) ? D.sites.slice() : []; L.includes(s) ? L = L.filter(x => x !== s) : L.push(s); D.sites = L.length ? L : "ALL"; drawBuild(); });
+  const addTo = (t, pi, at) => { const P = D.pages[pi == null ? (SEL ? SEL[0] : D.pages.length - 1) : pi]; if (!P) return; const i = at == null ? P.blocks.length : at; P.blocks.splice(i, 0, newBlock(t)); SEL = [D.pages.indexOf(P), i]; drawBuild(); };
+  v.querySelectorAll("[data-nb]").forEach(e => { e.onclick = () => addTo(e.dataset.nb); e.ondragstart = ev => { DRAG = { nb: e.dataset.nb }; ev.dataTransfer.setData("text/plain", "n"); }; });
+  v.querySelectorAll("[data-b]").forEach(e => { const [pi, bi] = e.dataset.b.split(":").map(Number), B = D.pages[pi].blocks;
+    e.onclick = ev => { if (ev.target.closest("button")) return; SEL = [pi, bi]; drawBuild(); };
+    e.ondragstart = ev => { DRAG = { from: [pi, bi] }; e.classList.add("drag"); ev.dataTransfer.setData("text/plain", "m"); ev.stopPropagation(); };
+    e.ondragend = () => e.classList.remove("drag"); e.ondragover = ev => ev.preventDefault();
+    e.ondrop = ev => { ev.preventDefault(); ev.stopPropagation(); drop(pi, bi); };
+    e.querySelector("[data-rm]").onclick = () => { B.splice(bi, 1); SEL = null; drawBuild(); };
+    e.querySelector("[data-cp]").onclick = () => { B.splice(bi + 1, 0, JSON.parse(JSON.stringify(B[bi]))); SEL = [pi, bi + 1]; drawBuild(); };
+    e.querySelector("[data-sz]").onclick = () => { const b = B[bi]; b.size = b.size === 1 ? 2 : b.size === 2 ? 4 : 1; drawBuild(); };
+    e.querySelectorAll("[data-mv]").forEach(x => x.onclick = () => { const j = bi + Number(x.dataset.mv); if (j < 0 || j >= B.length) return; [B[bi], B[j]] = [B[j], B[bi]]; SEL = [pi, j]; drawBuild(); }); });
+  const drop = (pi, at) => { const g = DRAG; DRAG = null; if (!g) return; if (g.nb) return addTo(g.nb, pi, at);
+    const [fp, fb] = g.from, it = D.pages[fp].blocks.splice(fb, 1)[0]; if (fp === pi && fb < at) at--; D.pages[pi].blocks.splice(at, 0, it); SEL = [pi, at]; drawBuild(); };
+  v.querySelectorAll("[data-pg]").forEach(e => { const pi = +e.dataset.pg;
+    e.ondragover = ev => { ev.preventDefault(); e.classList.add("over"); }; e.ondragleave = () => e.classList.remove("over");
+    e.ondrop = ev => { ev.preventDefault(); e.classList.remove("over"); drop(pi, D.pages[pi].blocks.length); }; });
+  v.querySelectorAll("[data-pt]").forEach(i => i.oninput = () => D.pages[+i.dataset.pt].title = i.value);
+  v.querySelectorAll("[data-ps]").forEach(i => i.onchange = () => D.pages[+i.dataset.ps].perSite = i.checked);
+  v.querySelectorAll("[data-pu]").forEach(b => b.onclick = () => { const i = +b.dataset.pu; if (i){ [D.pages[i - 1], D.pages[i]] = [D.pages[i], D.pages[i - 1]]; SEL = null; drawBuild(); } });
+  v.querySelectorAll("[data-pd]").forEach(b => b.onclick = () => { const i = +b.dataset.pd; if (i < D.pages.length - 1){ [D.pages[i + 1], D.pages[i]] = [D.pages[i], D.pages[i + 1]]; SEL = null; drawBuild(); } });
+  v.querySelectorAll("[data-pr]").forEach(b => b.onclick = () => { const i = +b.dataset.pr; if (D.pages[i].blocks.length && !confirm("Remove this page and its blocks?")) return; D.pages.splice(i, 1); if (!D.pages.length) D.pages.push({ title: "Page", blocks: [] }); SEL = null; drawBuild(); });
+  $("#eAddPg").onclick = () => { D.pages.push({ title: "Page " + (D.pages.length + 1), perSite: false, blocks: [] }); drawBuild(); };
+  $("#eSave").onclick = async () => { try { const r = await api("rp/save", { id: ED.id || undefined, name: ED.name, icon: ED.icon, def: D }); ED.id = r.id; toast("Report saved"); drawBuild(); } catch (e){ toast(e.message, true); } };
+  $("#ePrev").onclick = async () => { const b = $("#ePrev"); b.disabled = true; b.textContent = "Working…";
+    try { const o = await api("rp/run", { id: ED.id || undefined, name: ED.name, def: D }); showResult(ED.name + " · preview", o.result, "Preview of the report as it is in the builder"); }
+    catch (e){ toast(e.message, true); b.disabled = false; b.textContent = "👁 Preview"; } };
+  $("#eSend").onclick = async () => { if (!ED.id) return; try { await api("rp/save", { id: ED.id, name: ED.name, icon: ED.icon, def: D }); } catch (e){ return toast(e.message, true); }
+    LIST = LIST || await api("rp/list"); const r = (await api("rp/list")).reports.find(x => x.id === ED.id); runDialog(r, true); };
+  const del = $("#eDel"); if (del) del.onclick = async () => { if (!confirm(`Delete the report “${ED.name}”?`)) return; try { await api("rp/delete", { id: ED.id }); ED = null; TAB = "list"; draw(); toast("Deleted"); } catch (e){ toast(e.message, true); } };
+  /* side panel */
+  if (SEL){ const [pi, bi] = SEL, b = D.pages[pi].blocks[bi], c = b.cfg;
+    $("#bDone").onclick = () => { SEL = null; drawBuild(); };
+    v.querySelectorAll("#side [data-f]").forEach(i => i.oninput = i.onchange = ev => {
+      const k = i.dataset.f; c[k] = i.type === "number" ? (Number(i.value) || undefined) : i.value;
+      if (k === "source"){ const S = META.sources[c.source]; c.measure = Object.keys(S.measures)[0]; c.dims = (c.dims || []).filter(x => S.dims[x]); if (b.type !== "kpi" && !c.dims.length) c.dims = [S.dims.flagship ? "flagship" : Object.keys(S.dims)[0]]; c.filter = {}; }
+      if (ev.type === "change" || k === "source") drawBuild(); else { const t = v.querySelector(`[data-b="${pi}:${bi}"] small`); if (t) t.textContent = blkSub(b); if (k === "title"){ const h = v.querySelector(`[data-b="${pi}:${bi}"] b`); if (h) h.textContent = blockIcon[b.type] + " " + (c.title || ""); } } });
+    v.querySelectorAll("#side [data-dim]").forEach(s => s.onchange = () => { const d = (c.dims || []).slice(); d[+s.dataset.dim] = s.value; c.dims = d.filter(Boolean); drawBuild(); });
+    v.querySelectorAll("#side [data-rf]").forEach(x => x.onclick = () => { delete c.filter[x.dataset.rf]; drawBuild(); });
+    const fd = $("#fDim"); if (fd) fd.onchange = async () => { const dim = fd.value; if (!dim) return; $("#fVals").innerHTML = `<p class="muted" style="font-size:.74rem">Loading the values…</p>`;
+      try { const r = await api("rp/values", { source: c.source, dim, period: D.period, sites: Array.isArray(D.sites) ? D.sites : [] }); const cur = (c.filter || {})[dim] || [];
+        $("#fVals").innerHTML = `<div class="chips" style="margin-top:6px">${r.values.map(x => `<span class="chip ${cur.includes(x) ? "on" : ""}" data-fv="${esc(x)}">${esc(x)}</span>`).join("") || `<span class="muted" style="font-size:.74rem">No values in this period.</span>`}</div><button class="btn small" id="fOk" style="margin-top:6px">Apply filter</button>`;
+        $("#fVals").querySelectorAll("[data-fv]").forEach(x => x.onclick = () => x.classList.toggle("on"));
+        $("#fOk").onclick = () => { const on = [...$("#fVals").querySelectorAll("[data-fv].on")].map(x => x.dataset.fv); c.filter = c.filter || {}; if (on.length) c.filter[dim] = on; else delete c.filter[dim]; drawBuild(); };
+      } catch (e){ $("#fVals").innerHTML = `<p class="muted">${esc(e.message)}</p>`; } };
+    const tx = $("#toEx"); if (tx) tx.onclick = e => { e.preventDefault(); EXQ = { source: c.source, measure: c.measure, dims: c.dims && c.dims.length ? c.dims.slice() : ["flagship"], filter: c.filter || {}, period: { ...D.period }, sites: Array.isArray(D.sites) ? D.sites.slice() : [], view: b.type === "kpi" ? "table" : b.type }; TAB = "explore"; draw(); };
+  } else {
+    v.querySelectorAll("[data-rr]").forEach(x => x.onclick = () => { const [k, i] = x.dataset.rr.split(":"); D[k].splice(+i, 1); drawBuild(); });
+    v.querySelectorAll("[data-radd]").forEach(x => x.onclick = () => { const k = x.dataset.radd, e = $("#ra-" + k).value.trim(), sel = $("#rp-" + k).value;
+      const add = val => { if (!D[k].includes(val)) D[k].push(val); };
+      if (sel) add(sel); if (e){ e.split(/[\s,;]+/).filter(Boolean).forEach(m => { if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)) add(m.toLowerCase()); else toast(`Not an email: ${m}`, true); }); }
+      drawBuild(); });
+    v.querySelectorAll("[id^=rp-]").forEach(s => s.onchange = () => { if (s.value) v.querySelector(`[data-radd="${s.id.slice(3)}"]`).click(); });
+    $("#dXls").onchange = e => D.excel = e.target.checked;
+    $("#sOn").onchange = e => { D.schedule.on = e.target.checked; drawBuild(); };
+    $("#sFreq").onchange = e => { D.schedule.freq = e.target.value; drawBuild(); };
+    const dm = $("#sDom"); if (dm) dm.onchange = () => D.schedule.dom = +dm.value; const dw = $("#sDow"); if (dw) dw.onchange = () => D.schedule.dow = +dw.value;
+    $("#sTime").onchange = e => D.schedule.time = e.target.value;
+    $("#bOn").onchange = e => { D.subs.on = e.target.checked; drawBuild(); };
+    v.querySelectorAll("[data-bp]").forEach(c => c.onclick = () => { const k = c.dataset.bp, L = D.subs.positions; L.includes(k) ? L.splice(L.indexOf(k), 1) : L.push(k); drawBuild(); });
+  }
+}
+
+/* ================= explore (C) ================= */
+function drawExplore(){
+  const Q = EXQ = EXQ || { source: "footfall", measure: "entries", dims: ["month", "flagship"], filter: {}, period: { kind: "ytd" }, sites: [], view: "table" };
+  const S = META.sources[Q.source];
+  const dimSel = (i, none) => `<select data-xd="${i}"><option value="">${none}</option>${Object.entries(S.dims).map(([k, n]) => `<option value="${k}" ${Q.dims[i] === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
+  shell(`<div class="ex"><div class="box fl"><h3>🔎 Explore</h3><div class="pad">
+      <label>Data</label><select data-x="source">${Object.entries(META.sources).sort((a, z) => a[1].group.localeCompare(z[1].group)).map(([k, s]) => `<option value="${k}" ${k === Q.source ? "selected" : ""}>${esc(s.group)} · ${esc(s.name)}</option>`).join("")}</select>
+      <label>Period</label><select data-x="period">${Object.entries(META.periods).map(([k, n]) => `<option value="${k}" ${k === Q.period.kind ? "selected" : ""}>${n}</option>`).join("")}</select>
+      ${Q.period.kind === "custom" ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><input type="date" id="xF" value="${esc(Q.period.from || "")}"><input type="date" id="xT" value="${esc(Q.period.to || "")}"></div>` : ""}
+      <label>Flagships</label><div class="chips">${Object.entries(META.sites).map(([c, n]) => `<span class="chip ${!Q.sites.length || Q.sites.includes(c) ? "on" : ""}" data-xs="${c}">${esc(n)}</span>`).join("")}</div>
+      <label>Group by</label>${dimSel(0, "— total only —")}<label>Then by</label>${dimSel(1, "— none —")}
+      <label>Measure</label><select data-x="measure">${Object.entries(S.measures).map(([k, n]) => `<option value="${k}" ${k === Q.measure ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+      <label>Show as</label><div class="chips">${[["table", "Table"], ["bar", "Bar"], ["line", "Line"], ["pie", "Pie"]].map(([k, n]) => `<span class="chip ${Q.view === k ? "on" : ""}" data-xv="${k}">${n}</span>`).join("")}</div>
+      ${Object.keys(Q.filter || {}).length ? `<label>Filters</label>${Object.entries(Q.filter).map(([k, v]) => `<span class="rc">${esc(S.dims[k] || k)}: ${esc(v.join(", "))}<button data-xrf="${k}">✕</button></span>`).join("")}` : ""}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px"><button class="btn ghost small" id="xXls">⤓ Excel</button><button class="btn small" id="xAdd">＋ Add to a report</button></div></div></div>
+    <div class="box" id="xOut"><div class="pad muted">Working…</div></div></div>`);
+  const v = $("#view");
+  v.querySelectorAll("[data-x]").forEach(s => s.onchange = () => { const k = s.dataset.x;
+    if (k === "source"){ Q.source = s.value; const S2 = META.sources[Q.source]; Q.measure = Object.keys(S2.measures)[0]; Q.dims = Q.dims.filter(x => S2.dims[x]); if (!Q.dims.length) Q.dims = [S2.dims.month ? "month" : Object.keys(S2.dims)[0]]; Q.filter = {}; }
+    else if (k === "period") Q.period = { kind: s.value, from: Q.period.from, to: Q.period.to }; else Q[k] = s.value; drawExplore(); });
+  const xf = $("#xF"), xt = $("#xT"); if (xf) xf.onchange = () => { Q.period.from = xf.value; drawExplore(); }; if (xt) xt.onchange = () => { Q.period.to = xt.value; drawExplore(); };
+  v.querySelectorAll("[data-xd]").forEach(s => s.onchange = () => { const d = Q.dims.slice(); d[+s.dataset.xd] = s.value; Q.dims = d.filter(Boolean); drawExplore(); });
+  v.querySelectorAll("[data-xs]").forEach(c => c.onclick = () => { const all = Object.keys(META.sites); let L = Q.sites.length ? Q.sites.slice() : all.slice(); const s = c.dataset.xs; L.includes(s) ? L = L.filter(x => x !== s) : L.push(s); Q.sites = L.length === all.length || !L.length ? [] : L; drawExplore(); });
+  v.querySelectorAll("[data-xv]").forEach(c => c.onclick = () => { Q.view = c.dataset.xv; drawExplore(); });
+  v.querySelectorAll("[data-xrf]").forEach(x => x.onclick = () => { delete Q.filter[x.dataset.xrf]; drawExplore(); });
+  let OUT = null;
+  api("rp/explore", Q).then(o => { OUT = o;
+    if (!o.rows){ $("#xOut").innerHTML = `<h3>${esc(S.name)} · ${esc(o.period.label)}</h3><div class="pad"><div class="rk" style="max-width:260px"><span>${esc(o.measure)}</span><b>${N(o.value)}</b></div></div>`; return; }
+    const blk = { type: Q.view, size: 4, title: `${o.measure} by ${o.cols[0]}`, data: o };
+    $("#xOut").innerHTML = `<h3>${esc(S.name)} · ${esc(o.period.label)} · ${o.rowsRead} records</h3><div class="pad">${Q.view === "table" ? exploreTable(o) : `<div class="rw s4">${Q.view === "pie" ? svgPie(o) : svgBar(o, Q.view === "line")}</div>`}
+      <p class="muted" style="font-size:.74rem;margin-top:8px">${Q.view === "table" ? "Click a number to see the records behind it." : ""}</p></div>`;
+    $("#xOut").querySelectorAll("td.cl").forEach(td => td.onclick = () => drill(o, td.dataset.r, td.dataset.c));
+  }).catch(e => { $("#xOut").innerHTML = `<div class="pad"><div class="ban bad">${esc(e.message)}</div></div>`; });
+  $("#xXls").onclick = async () => { if (!OUT || !OUT.rows) return; await xlsxReady(); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([OUT.cols, ...OUT.rows.map(r => r.slice(0, OUT.cols.length))]), "Explore"); XLSX.writeFile(wb, `${S.name} ${OUT.period.label}.xlsx`.replace(/[^\w\-. ]+/g, " ")); };
+  $("#xAdd").onclick = () => addToReport(Q);
+  function drill(o, ri, ci){
+    const r = o.rows[+ri], d1v = r[r.length - 1];
+    const body = { ...Q, drill: [Q.dims[0], d1v, ci != null && o.d2 ? Q.dims[1] : null, ci != null && o.d2 ? rawSeries(o, +ci) : null] };
+    api("rp/explore", body).then(x => { const d = $("#dlg"), cols = x.records.length ? Object.keys(x.records[0]) : [];
+      d.innerHTML = `<div class="h">${esc(r[0])}${ci != null && o.series ? " · " + esc(o.series[+ci]) : ""} — ${x.records.length} record${x.records.length === 1 ? "" : "s"}</div><div class="b"><div class="tw"><table class="t"><tr>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr>${x.records.map(rec => `<tr>${cols.map(c => `<td>${esc(rec[c])}</td>`).join("")}</tr>`).join("")}</table></div></div><div class="f"><button class="btn" data-x>Close</button></div>`;
+      d.showModal(); d.querySelector("[data-x]").onclick = () => d.close(); }).catch(e => toast(e.message, true));
+  }
+}
+const rawSeries = (o, i) => (o.seriesRaw || [])[i] ?? o.series[i];
+function exploreTable(o){
+  return `<div class="tw"><table class="t"><tr>${o.cols.map((c, i) => `<th class="${i ? "n" : ""}">${esc(c)}</th>`).join("")}</tr>
+    ${o.rows.map((r, ri) => `<tr><td>${esc(r[0])}</td>${r.slice(1, o.cols.length).map((v, i) => `<td class="n cl" data-r="${ri}" ${o.series && i < o.series.length ? `data-c="${i}"` : ""}>${N(v, o.pct)}</td>`).join("")}</tr>`).join("")}
+    ${o.total != null && !o.pct ? `<tr><td><b>Total</b></td>${o.series ? o.series.map(() => "<td></td>").join("") : ""}<td class="n"><b>${N(o.total)}</b></td></tr>` : ""}</table></div>`;
+}
+async function addToReport(Q){
+  const L = (await api("rp/list")).reports, d = $("#dlg");
+  d.innerHTML = `<div class="h">＋ Add to a report</div><div class="b fl"><label>Report</label><select id="aR">${L.map(r => `<option value="${r.id}">${esc(r.icon)} ${esc(r.name)}</option>`).join("")}<option value="0">＋ New report</option></select>
+    <label>As</label><select id="aT">${[["table", "Table"], ["bar", "Bar chart"], ["line", "Line chart"], ["pie", "Pie chart"]].map(([k, n]) => `<option value="${k}" ${Q.view === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+    <label>Title</label><input id="aN" value="${esc(META.sources[Q.source].measures[Q.measure])} by ${esc(Q.dims.map(x => META.sources[Q.source].dims[x]).join(" × ") || "total")}"></div>
+    <div class="f"><button class="btn ghost" data-x>Cancel</button><button class="btn" data-ok>Add and open the builder</button></div>`;
+  d.showModal(); d.querySelector("[data-x]").onclick = () => d.close();
+  d.querySelector("[data-ok]").onclick = async () => { const id = +$("#aR").value;
+    if (id){ const r = await api("rp/get?id=" + id); ED = { id: r.report.id, name: r.report.name, icon: r.report.icon, def: r.report.def, subscribers: r.subscribers }; } else ED = blankReport();
+    const P = ED.def.pages[ED.def.pages.length - 1];
+    P.blocks.push({ type: $("#aT").value, size: 4, cfg: { title: $("#aN").value, source: Q.source, measure: Q.measure, dims: Q.dims.slice(0, $("#aT").value === "pie" ? 1 : 2), filter: Q.filter || {} } });
+    SEL = [ED.def.pages.length - 1, P.blocks.length - 1]; d.close(); TAB = "build"; draw(); toast("Added — press Save in the builder"); };
+}
+
+boot().catch(e => $("#view").innerHTML = `<div class="ban bad">${esc(e.message)}</div>`);
+</script>
+</body>
+</html>

@@ -438,6 +438,7 @@ window.HUB = {
       embed: false
     },
     { id: "sign-in-help", name: "Sign-in help", desc: "Save company passwords safely in your browser — one-tap sign-in", group: "ABC Platforms", icon: "shield", color: "#5A3E8A", url: "/tools/sign-in-help" },
+    { id: "reports", name: "Reports", desc: "Reports from the hub — subscribe to receive them, open the last ones", group: "Reports", icon: "chart", color: "#2A0F45", url: "/tools/reports" },   /* Report builder (Nov 2026) — docs/FEATURE-reports.md */
     /* Footfall Hub (footfall-hub worker) removed 2 Nov 2026 — replaced by the Footfall object inside the hub */
     {
       id: "footfall",
