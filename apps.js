@@ -451,6 +451,8 @@ window.HUB = {
     /* Policies & Procedures — the three systems are placeholders until their content is built */
     /* Training & induction tracker (see docs/FEATURE-training.md) */
     { id: "training", name: "Training Tracker", desc: "Who completed which training, what expires, what is still needed", group: "OFF", icon: "book", color: "#2E6B4F", url: "/tools/training" },
+    /* Hub Guidebooks — step-by-step flip-books of the hub, one per audience, with check questions and progress (see docs/FEATURE-guide.md) */
+    { id: "guide", name: "Hub Guidebooks", desc: "Step-by-step guide of the hub for your title — pictures, videos, check questions and your progress", group: "Upcoming - Testing", icon: "book", color: "#4A1F73", url: "/tools/guide" },
     { id: "policies", name: "Policies & Procedures", desc: "Owner, Assist, ABC General policies and the Verdun Tenant Manual — searchable, and ABCON answers from them", group: "Property Overview & Info", icon: "scale", color: "#4A1F73", url: "/tools/policies" }
 
     /* Next system goes here — add a comma after the } above, then paste:
