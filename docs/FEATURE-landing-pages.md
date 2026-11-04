@@ -16,3 +16,8 @@ Storage: `meta landing:pos`. Code: `modules/landing.js` (objects, ready pages, f
 Role Security has three positions: **Security staff**, **Security Manager** (one flagship) and **Head of Security** (every flagship).
 Access keys SEC · SECM · HOS — "Who sees what" has a column for Security Manager and for Head of Security.
 At the switch, both new positions received everything Security had (defaults and the tools changed in Tools control), plus Incidents and the Emergency Alert.
+
+## Settings merged (Nov 2026): 7 → 5
+* **Tools & access** (`/admin#ws`) replaces *Tools control* and *Who sees what*: per tool a master ON / OFF, the five group switches, and ⋯ More (name on the tile, folder, exact positions, usage, ↺ default). Folder rows: ON / OFF for everyone + one switch per group. Filters: folder, switched off, changed here, not home tiles. `#tl` opens it.
+* **Brief settings** moved into Landing pages: at the switch, the old Manager action brief (Mall Manager, Operations Manager) and KPI brief (Advisor, Director, CDSO) were saved as pages with the items that were ticked (`meta landing:migrated`). The KPI table has ⚙ KPIs (rows + opening period); new object **Weakest this period**. The ⚙ Brief settings button on the home page is gone.
+* ↺ Default in the builder loads the starting page (save to keep it); pressed again it removes the saved page.
