@@ -714,10 +714,30 @@ async function ws(){
   const draw = () => {
     const L = list.filter(a => !q || ((cfg[a.id] && cfg[a.id].name) || a.name).toLowerCase().includes(q));
     $("#wsBody").innerHTML = groups.map(g => { const G = L.filter(a => ((cfg[a.id] && cfg[a.id].group) || a.group) === g); if (!G.length) return "";
-      return `<tr class="fh"><td colspan="4">${esc(g)}</td></tr>` + G.map(a => { const acc = accOf(a);
+      const fsw = WS_GROUPS.map(([k, , keys]) => { const n = G.filter(a => { const acc = accOf(a); return keys.every(x => acc.includes(x)); }).length, any = G.some(a => keys.some(x => accOf(a).includes(x)));
+        const st = n === G.length ? "on" : any ? "part" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="${st === "on" ? "Whole folder shown — tap to hide every tool in it" : st ? "Some tools of the folder shown — tap to show them all" : "Folder hidden — tap to show every tool in it"}" aria-label="${esc(g)} folder"></button></td>`; }).join("");
+      return `<tr class="fh"><td>${esc(g)} <small style="text-transform:none;letter-spacing:0;font-weight:600">· whole folder</small></td>${fsw}</tr>` + G.map(a => { const acc = accOf(a);
         return `<tr data-id="${a.id}"><td><b>${esc((cfg[a.id] && cfg[a.id].name) || a.name)}</b>${cfg[a.id] && Array.isArray(cfg[a.id].access) ? `<small>changed here</small>` : ""}</td>${WS_GROUPS.map(([k, , keys]) => {
           const n = keys.filter(x => acc.includes(x)).length, st = n === keys.length ? "on" : n ? "part" : "";
-          return `<td><button class="sw ${st}" data-g="${k}" title="${st === "on" ? "Sees it" : st ? "Some positions see it — tap to give all" : "Hidden"}" aria-label="${esc(a.name)}"></button></td>`; }).join("")}</tr>`; }).join(""); }).join("") || `<tr><td colspan="4" class="mut">No tool matches.</td></tr>`;
+          return `<td><button class="sw ${st}" data-g="${k}" title="${st === "on" ? "Sees it" : st ? "Some positions see it — tap to give all" : "Hidden"}" aria-label="${esc(a.name)}"></button></td>`; }).join("")}</tr>`; }).join(""); }).join("") || `<tr><td colspan="${WS_GROUPS.length + 1}" class="mut">No tool matches.</td></tr>`;
+    /* the folder row: one switch turns every tool of the folder on / off for that group (Nov 2026) */
+    $("#wsBody").querySelectorAll("[data-fg]").forEach(b => b.onclick = async () => {
+      const g = b.dataset.fold, grpRow = WS_GROUPS.find(x => x[0] === b.dataset.fg), grp = grpRow[2], turnOn = !b.classList.contains("on");
+      const G = list.filter(a => ((cfg[a.id] && cfg[a.id].group) || a.group) === g);
+      if (!turnOn && !confirm(`Hide all ${G.length} tools of “${g}” from ${grpRow[1]}?`)) return;
+      $("#wsBody").querySelectorAll("button").forEach(x => x.disabled = true);
+      let done = 0;
+      try {
+        for (const a of G){
+          const cur = new Set(accOf(a)); grp.forEach(k => turnOn ? cur.add(k) : cur.delete(k));
+          const next = ALL.filter(k => cur.has(k)), def = defAcc(a), same = next.length === def.length && next.every(k => def.includes(k));
+          const was = accOf(a); if (next.length === was.length && next.every(k => was.includes(k))) continue;
+          const r = await api("admin/cc/tools", { id: a.id, access: same ? null : next }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg); done++;
+        }
+        toast(`${g}: ${turnOn ? "shown to" : "hidden from"} ${grpRow[1]}${done ? ` · ${done} tool${done === 1 ? "" : "s"} changed` : ""}`);
+      } catch (e){ toast(e.message, true); }
+      draw();
+    });
     $("#wsBody").querySelectorAll("[data-g]").forEach(b => b.onclick = async () => {
       const id = b.closest("tr").dataset.id, a = APPS.find(x => x.id === id), grp = WS_GROUPS.find(x => x[0] === b.dataset.g)[2];
       const cur = new Set(accOf(a)), turnOn = !b.classList.contains("on");
