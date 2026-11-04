@@ -106,6 +106,10 @@ td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
 @media (max-width:860px){.lp-wrap{grid-template-columns:1fr}.lp-lib{position:static;max-height:none}.lp-g2{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ws-t{width:100%;border-collapse:collapse;font-size:.88rem}.ws-t th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cmut);padding:8px;text-align:center;border-bottom:1px solid var(--cline)}
 .ws-t th:first-child,.ws-t td:first-child{text-align:left}.ws-t td{padding:8px;border-bottom:1px solid var(--cline);text-align:center}.ws-t td .sw{display:inline-block}
+.ws-t tr.wsoff td{opacity:.55}.ws-t tr.wsoff td:first-child,.ws-t tr.wsoff td:nth-child(2),.ws-t tr.wsoff td:last-child{opacity:1}
+.ws-t tr.wsdet td{background:rgba(123,75,176,.04);text-align:left}.wsd{display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;padding:4px 2px}.wsd label{display:block;font-size:.64rem;font-weight:800;letter-spacing:.06em;color:var(--cmut);margin-bottom:3px}
+.wsd input{width:100%;border:1px solid var(--cline);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem;background:var(--ccard);color:inherit}
+@media (max-width:760px){.wsd{grid-template-columns:1fr}.wsd>div{grid-column:auto!important}}
 .ws-t tr.fh td{background:var(--cbg2,rgba(123,75,176,.07));font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--cmut)}
 .ws-t td small{display:block;color:var(--cmut);font-size:.72rem}
 .sel2{border:1px solid var(--cline);border-radius:8px;padding:6px 8px;font:inherit;font-size:.78rem;background:var(--ccard);color:var(--ctext);max-width:100%}
@@ -163,7 +167,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#hm").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
-  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["tl", "🧩", "Tools control"], ["ws", "🎚", "Who sees what"], ["lp", "🧱", "Landing pages"], ["bk", "💾", "Data & backup"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["ws", "🎚", "Tools & access"], ["lp", "🧱", "Landing pages"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
@@ -199,6 +203,7 @@ async function boot(){
   go(PAGE);
 }
 function go(p){
+  if (p === "tl") p = "ws";   // Tools control is part of Tools & access (Nov 2026)
   PAGE = p === "hm" || NAV.some(n => n[0] === p) ? p : "hm"; history.replaceState(null, "", "#" + PAGE);
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE)); if (LAY) drawNav();
   const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
@@ -227,7 +232,7 @@ const PG = () => Object.fromEntries(NAV.filter(n => n[0] !== "sep").map(n => [n[
 const SEC_ICON = { People: "👥", Platform: "⚙️", Content: "📣" };
 const PDESC = { ov: "Today at a glance", pr: "Positions, roles and flagships", us: "Accounts, sign-in and access", ur: "Who uses which tool", sec: "Sign-ins and two-step", hi: "Every change, by whom",
   al: "Free-plan allowances", db: "Tables and file storage", sy: "Connected systems and automatic jobs", mb: "Emails imported from IT reports", pc: "Projects and repositories", ss: "One hub account for Snaglist, Incidents, Restroom", tl: "Switch tools on / off, folders",
-  ws: "Which positions see each tool", lp: "Home page of each position — drag the objects", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
+  ws: "Each tool on / off and who sees it", lp: "Home page of each position — drag the objects", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
 function defaultLayout(){
   const sections = []; let cur = { id: "s-glance", name: "At a glance", icon: "🏠", size: "card", closed: false, items: [] };
   for (const n of NAV){ if (n[0] === "sep"){ if (cur.items.length) sections.push(cur); cur = { id: "s-" + n[1].toLowerCase().replace(/[^a-z]+/g, ""), name: n[1], icon: SEC_ICON[n[1]] || "", size: "card", closed: false, items: [] }; } else cur.items.push(n[0]); }
@@ -698,61 +703,82 @@ async function mb(){
   $("#mbR").onclick = async () => { $("#mbR").disabled = true; $("#mbOut").innerHTML = `<p class="mut">Importing…</p>`; try { const r = await api("admin/cc/mailbox/run", {}); show(r, false); toast(`${r.items.filter(x => x.ok).length} imported`); } catch (e){ $("#mbOut").innerHTML = `<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`; } $("#mbR").disabled = false; };
 }
 
-/* ---------- who sees what: 3 switches per tool (Operations team · Management · Leadership), one setting for all flagships ----------
-   Saved as the tool's access list (Tools control); the server applies it too. Administrators always see everything. */
+/* ---------- Tools & access (Nov 2026): Tools control + Who sees what in one page ----------
+   One row per tool: master ON / OFF, then who sees it by group; ⋯ More = name, folder, exact positions, usage, ↺ default.
+   Folder rows switch the whole folder. Saved as the tool's entry in meta tools:cfg (applied in /me and roleAllows). Administrators always see everything. */
 const WS_GROUPS = [["ops", "Operations team", ["SMS", "MS", "MO", "WH", "SEC"], "Senior Mall Supervisor · Mall Supervisor · Mall Officer · Warehouse · Security staff"],
   ["secm", "Security Manager", ["SECM"], "one per flagship — sees his flagship"], ["hos", "Head of Security", ["HOS"], "all security in ABC — every flagship"],
   ["mgmt", "Management", ["MM", "OM"], "Mall Manager / Senior · Operations Manager / Deputy"], ["lead", "Leadership", ["LEAD"], "Property Advisor · Mall Director · CDSO"]];
+let WSQ = "", WSF = "", WSS = "", WSO = new Set();
+async function tl(){ PAGE = "ws"; history.replaceState(null, "", "#ws"); return ws(); }   // the old "Tools control" link opens Tools & access
 async function ws(){
   const T = await api("admin/cc/tools"), cfg = T.cfg, H = window.HUB || {}, APPS = H.APPS || [], ACC = H.ACCESS || {}, ALL = Object.keys(T.keys);
-  const adminGroups = H.ADMIN_GROUPS || [], testAdmin = H.TESTING_ADMIN_ONLY || [];
-  const list = APPS.filter(a => !a.hidden && !adminGroups.includes(a.group) && !(cfg[a.id] && cfg[a.id].off));
+  const testAdmin = H.TESTING_ADMIN_ONLY || [];
   const defAcc = a => a.group === "Upcoming - Testing" && !testAdmin.includes(a.id) ? ALL : (ACC[a.id] && ACC[a.id].length ? ACC[a.id] : ALL);
   const accOf = a => (cfg[a.id] && Array.isArray(cfg[a.id].access)) ? cfg[a.id].access : defAcc(a);
-  const order = H.GROUPS || [], groups = [...new Set(list.map(a => (cfg[a.id] && cfg[a.id].group) || a.group))].sort((x, y) => ((order.indexOf(x) + 1) || 99) - ((order.indexOf(y) + 1) || 99));
-  let q = "";
+  const grpOf = a => (cfg[a.id] && cfg[a.id].group) || a.group;
+  const order = H.GROUPS || [];
+  const folders = () => [...new Set(APPS.map(grpOf))].sort((x, y) => ((order.indexOf(x) + 1) || 99) - ((order.indexOf(y) + 1) || 99));
+  const same = (x, y) => x.length === y.length && x.every(k => y.includes(k));
+  const save = async (id, body, msg) => { const r = await api("admin/cc/tools", { id, ...body }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg); if (msg) toast(msg); };
+  const swOf = (acc, keys) => { const n = keys.filter(x => acc.includes(x)).length; return n === keys.length ? "on" : n ? "part" : ""; };
   const draw = () => {
-    const L = list.filter(a => !q || ((cfg[a.id] && cfg[a.id].name) || a.name).toLowerCase().includes(q));
-    $("#wsBody").innerHTML = groups.map(g => { const G = L.filter(a => ((cfg[a.id] && cfg[a.id].group) || a.group) === g); if (!G.length) return "";
-      const fsw = WS_GROUPS.map(([k, , keys]) => { const n = G.filter(a => { const acc = accOf(a); return keys.every(x => acc.includes(x)); }).length, any = G.some(a => keys.some(x => accOf(a).includes(x)));
-        const st = n === G.length ? "on" : any ? "part" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="${st === "on" ? "Whole folder shown — tap to hide every tool in it" : st ? "Some tools of the folder shown — tap to show them all" : "Folder hidden — tap to show every tool in it"}" aria-label="${esc(g)} folder"></button></td>`; }).join("");
-      return `<tr class="fh"><td>${esc(g)} <small style="text-transform:none;letter-spacing:0;font-weight:600">· whole folder</small></td>${fsw}</tr>` + G.map(a => { const acc = accOf(a);
-        return `<tr data-id="${a.id}"><td><b>${esc((cfg[a.id] && cfg[a.id].name) || a.name)}</b>${cfg[a.id] && Array.isArray(cfg[a.id].access) ? `<small>changed here</small>` : ""}</td>${WS_GROUPS.map(([k, , keys]) => {
-          const n = keys.filter(x => acc.includes(x)).length, st = n === keys.length ? "on" : n ? "part" : "";
-          return `<td><button class="sw ${st}" data-g="${k}" title="${st === "on" ? "Sees it" : st ? "Some positions see it — tap to give all" : "Hidden"}" aria-label="${esc(a.name)}"></button></td>`; }).join("")}</tr>`; }).join(""); }).join("") || `<tr><td colspan="${WS_GROUPS.length + 1}" class="mut">No tool matches.</td></tr>`;
-    /* the folder row: one switch turns every tool of the folder on / off for that group (Nov 2026) */
-    $("#wsBody").querySelectorAll("[data-fg]").forEach(b => b.onclick = async () => {
-      const g = b.dataset.fold, grpRow = WS_GROUPS.find(x => x[0] === b.dataset.fg), grp = grpRow[2], turnOn = !b.classList.contains("on");
-      const G = list.filter(a => ((cfg[a.id] && cfg[a.id].group) || a.group) === g);
-      if (!turnOn && !confirm(`Hide all ${G.length} tools of “${g}” from ${grpRow[1]}?`)) return;
-      $("#wsBody").querySelectorAll("button").forEach(x => x.disabled = true);
-      let done = 0;
-      try {
-        for (const a of G){
-          const cur = new Set(accOf(a)); grp.forEach(k => turnOn ? cur.add(k) : cur.delete(k));
-          const next = ALL.filter(k => cur.has(k)), def = defAcc(a), same = next.length === def.length && next.every(k => def.includes(k));
-          const was = accOf(a); if (next.length === was.length && next.every(k => was.includes(k))) continue;
-          const r = await api("admin/cc/tools", { id: a.id, access: same ? null : next }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg); done++;
-        }
-        toast(`${g}: ${turnOn ? "shown to" : "hidden from"} ${grpRow[1]}${done ? ` · ${done} tool${done === 1 ? "" : "s"} changed` : ""}`);
-      } catch (e){ toast(e.message, true); }
-      draw();
-    });
-    $("#wsBody").querySelectorAll("[data-g]").forEach(b => b.onclick = async () => {
-      const id = b.closest("tr").dataset.id, a = APPS.find(x => x.id === id), grp = WS_GROUPS.find(x => x[0] === b.dataset.g)[2];
-      const cur = new Set(accOf(a)), turnOn = !b.classList.contains("on");
-      grp.forEach(k => turnOn ? cur.add(k) : cur.delete(k));
-      const next = ALL.filter(k => cur.has(k)), def = defAcc(a), same = next.length === def.length && next.every(k => def.includes(k));
-      b.disabled = true;
-      try { const r = await api("admin/cc/tools", { id, access: same ? null : next }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg);
-        toast(`${a.name}: ${turnOn ? "shown to" : "hidden from"} ${WS_GROUPS.find(x => x[0] === b.dataset.g)[1]}`); draw(); }
-      catch (e){ toast(e.message, true); b.disabled = false; } });
+    const L = APPS.filter(a => { const c = cfg[a.id] || {}, nm = (c.name || a.name) + " " + a.id;
+      return (!WSQ || nm.toLowerCase().includes(WSQ)) && (!WSF || grpOf(a) === WSF) && (!WSS || (WSS === "off" ? c.off : WSS === "changed" ? Object.keys(c).length : WSS === "hidden" ? a.hidden : true)); });
+    const rows = folders().map(g => { const G = L.filter(a => grpOf(a) === g); if (!G.length) return "";
+      const on = G.filter(a => !(cfg[a.id] && cfg[a.id].off));
+      const fsw = WS_GROUPS.map(([k, , keys]) => { const live = on.length ? on : G, n = live.filter(a => keys.every(x => accOf(a).includes(x))).length, any = live.some(a => keys.some(x => accOf(a).includes(x)));
+        const st = n === live.length ? "on" : any ? "part" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="Whole folder for this group"></button></td>`; }).join("");
+      const fon = on.length === G.length ? "on" : on.length ? "part" : "";
+      return `<tr class="fh"><td>${esc(g)} <small style="text-transform:none;letter-spacing:0;font-weight:600">· whole folder${(H.ADMIN_GROUPS || []).includes(g) ? " · administrators only" : ""}</small></td><td><button class="sw ${fon}" data-foff="${esc(g)}" title="Switch the whole folder on / off for everyone"></button></td>${fsw}<td></td></tr>` +
+        G.map(a => { const c = cfg[a.id] || {}, acc = accOf(a), u = T.usage[a.id] || {}, open = WSO.has(a.id);
+          const tag = c.off ? `<small style="color:var(--cbad)">switched off for everyone</small>` : `<small>${c.access ? "changed here" : a.group === "Upcoming - Testing" ? "testing: open to everyone" : "default access"}${a.hidden ? " · not a home tile" : ""} · ${u.n || 0} opens · 7 days</small>`;
+          return `<tr data-id="${a.id}" class="${c.off ? "wsoff" : ""}"><td><b>${esc(c.name || a.name)}</b>${tag}</td><td><button class="sw ${c.off ? "" : "on"}" data-off title="${c.off ? "Switched off — tap to switch on" : "On — tap to switch off for everyone"}"></button></td>
+            ${WS_GROUPS.map(([k, , keys]) => { const st = swOf(acc, keys); return `<td><button class="sw ${st}" data-g="${k}" title="${st === "on" ? "Sees it" : st ? "Some positions see it — tap to give all" : "Hidden"}"></button></td>`; }).join("")}
+            <td><button class="b g" data-more style="padding:4px 9px">${open ? "▴ Less" : "⋯ More"}</button></td></tr>` +
+            (open ? `<tr class="wsdet" data-det="${a.id}"><td colspan="${WS_GROUPS.length + 3}"><div class="wsd">
+              <div><label>NAME ON THE TILE</label><input data-nm value="${esc(c.name || "")}" placeholder="${esc(a.name)}" maxlength="60"></div>
+              <div><label>FOLDER</label><select class="sel2" data-fo>${folders().concat(c.group && !folders().includes(c.group) ? [c.group] : []).map(x => `<option ${x === grpOf(a) ? "selected" : ""}>${esc(x)}</option>`).join("")}<option value="__new">＋ New folder…</option></select></div>
+              <div style="grid-column:span 2"><label>EXACT POSITIONS</label><div class="acc" data-acc>${Object.entries(T.keys).map(([k, n]) => `<span data-k="${k}" class="${acc.includes(k) ? "on" : ""}" title="${esc(n)}">${esc(n)}</span>`).join("")}</div></div>
+              <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${u.n || 0} opens · ${u.people || 0} people in 7 days · id ${esc(a.id)}${c.group ? ` · moved from ${esc(a.group)}` : ""}</span><span style="flex:1"></span>${Object.keys(c).length ? `<button class="b r" data-reset>↺ Default (everything)</button>` : ""}</div>
+            </div></td></tr>` : ""); }).join(""); }).join("");
+    $("#wsBody").innerHTML = rows || `<tr><td colspan="${WS_GROUPS.length + 3}" class="mut">No tool matches.</td></tr>`;
+    const busy = on => $("#wsBody").querySelectorAll("button,input,select").forEach(x => x.disabled = on);
+    const run = async f => { busy(true); try { await f(); } catch (e){ toast(e.message, true); } draw(); };
+    $("#wsBody").querySelectorAll("tr[data-id]").forEach(tr => { const id = tr.dataset.id, a = APPS.find(x => x.id === id);
+      tr.querySelector("[data-more]").onclick = () => { WSO.has(id) ? WSO.delete(id) : WSO.add(id); draw(); };
+      tr.querySelector("[data-off]").onclick = () => run(() => save(id, { off: !(cfg[id] && cfg[id].off) }, `${a.name}: ${cfg[id] && cfg[id].off ? "switched on" : "switched off for everyone"}`));
+      tr.querySelectorAll("[data-g]").forEach(b => b.onclick = () => run(async () => {
+        const grp = WS_GROUPS.find(x => x[0] === b.dataset.g), cur = new Set(accOf(a)), turnOn = !b.classList.contains("on");
+        grp[2].forEach(k => turnOn ? cur.add(k) : cur.delete(k));
+        const next = ALL.filter(k => cur.has(k));
+        await save(id, { access: same(next, defAcc(a)) ? null : next }, `${a.name}: ${turnOn ? "shown to" : "hidden from"} ${grp[1]}`); })); });
+    $("#wsBody").querySelectorAll("tr[data-det]").forEach(tr => { const id = tr.dataset.det, a = APPS.find(x => x.id === id);
+      const nm = tr.querySelector("[data-nm]"); nm.onchange = () => run(() => save(id, { name: nm.value.trim() === a.name ? "" : nm.value.trim() }, "Name saved"));
+      tr.querySelector("[data-fo]").onchange = e => { let v = e.target.value; if (v === "__new"){ v = prompt("Name of the new folder"); if (!v) return draw(); }
+        run(() => save(id, { group: v === a.group ? "" : v }, `Moved to ${v}`)); };
+      tr.querySelector("[data-acc]").onclick = e => { const k = e.target.closest("[data-k]"); if (!k) return; k.classList.toggle("on");
+        const on = [...tr.querySelectorAll("[data-k].on")].map(x => x.dataset.k); run(() => save(id, { access: same(on, defAcc(a)) ? null : on }, "Saved")); };
+      const rs = tr.querySelector("[data-reset]"); if (rs) rs.onclick = () => run(() => save(id, { off: false, group: "", access: null, name: "" }, "Back to the default")); });
+    /* folder row: ON / OFF for everyone, and one switch per group */
+    $("#wsBody").querySelectorAll("[data-foff]").forEach(b => b.onclick = () => { const g = b.dataset.foff, G = APPS.filter(a => grpOf(a) === g), turnOn = !b.classList.contains("on");
+      if (!turnOn && !confirm(`Switch off all ${G.length} tools of “${g}” for everyone?`)) return;
+      run(async () => { let n = 0; for (const a of G){ if (!!(cfg[a.id] && cfg[a.id].off) === !turnOn) continue; await save(a.id, { off: !turnOn }); n++; } toast(`${g}: ${turnOn ? "switched on" : "switched off"} · ${n} tool${n === 1 ? "" : "s"}`); }); });
+    $("#wsBody").querySelectorAll("[data-fg]").forEach(b => b.onclick = () => {
+      const g = b.dataset.fold, grp = WS_GROUPS.find(x => x[0] === b.dataset.fg), turnOn = !b.classList.contains("on"), G = APPS.filter(a => grpOf(a) === g);
+      if (!turnOn && !confirm(`Hide all ${G.length} tools of “${g}” from ${grp[1]}?`)) return;
+      run(async () => { let n = 0; for (const a of G){ const was = accOf(a), cur = new Set(was); grp[2].forEach(k => turnOn ? cur.add(k) : cur.delete(k));
+          const next = ALL.filter(k => cur.has(k)); if (same(next, was)) continue; await save(a.id, { access: same(next, defAcc(a)) ? null : next }); n++; }
+        toast(`${g}: ${turnOn ? "shown to" : "hidden from"} ${grp[1]}${n ? ` · ${n} tool${n === 1 ? "" : "s"} changed` : ""}`); }); });
   };
-  V(head("Who sees what", "Turn each tool on or off for the operations team, management and leadership — one setting for all five flagships. Administrators always see everything.") +
-    `<div class="flt"><input id="wsQ" placeholder="Search tools…"></div>
-    <p class="mut" style="margin:0 0 10px;line-height:1.6">${WS_GROUPS.map(([, n, , who]) => `<b>${n}</b>: ${esc(who)}`).join("<br>")}<br><span class="sw part" style="display:inline-block;vertical-align:middle;transform:scale(.75)"></span> = some positions of the group see it (set in Tools control) — tap to give it to the whole group.</p>
-    <div class="card" style="padding:4px 8px"><div class="tw"><table class="ws-t"><thead><tr><th>Tool</th>${WS_GROUPS.map(([, n]) => `<th>${n}</th>`).join("")}</tr></thead><tbody id="wsBody"></tbody></table></div></div>`);
-  $("#wsQ").oninput = e => { q = e.target.value.toLowerCase(); draw(); };
+  V(head("Tools &amp; access", "Each tool: ON / OFF for everyone, who sees it by group, and ⋯ More for its name, folder and exact positions — one setting for all five flagships. Administrators always see everything.") +
+    `<div class="flt"><input id="wsQ" placeholder="Search tools…" value="${esc(WSQ)}"><select class="sel2" id="wsF"><option value="">All folders</option>${folders().map(g => `<option ${g === WSF ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
+      <select class="sel2" id="wsS"><option value="">All tools</option><option value="off" ${WSS === "off" ? "selected" : ""}>Switched off</option><option value="changed" ${WSS === "changed" ? "selected" : ""}>Changed here</option><option value="hidden" ${WSS === "hidden" ? "selected" : ""}>Not home tiles</option></select></div>
+    <p class="mut" style="margin:0 0 10px;line-height:1.6">${WS_GROUPS.map(([, n, , who]) => `<b>${n}</b>: ${esc(who)}`).join("<br>")}<br><span class="sw part" style="display:inline-block;vertical-align:middle;transform:scale(.75)"></span> = some positions of the group see it — set them in ⋯ More, or tap to give it to the whole group.</p>
+    <div class="card" style="padding:4px 8px"><div class="tw"><table class="ws-t"><thead><tr><th>Tool</th><th>On / off</th>${WS_GROUPS.map(([, n]) => `<th>${n}</th>`).join("")}<th></th></tr></thead><tbody id="wsBody"></tbody></table></div></div>`);
+  $("#wsQ").oninput = e => { WSQ = e.target.value.toLowerCase(); draw(); };
+  $("#wsF").onchange = e => { WSF = e.target.value; draw(); };
+  $("#wsS").onchange = e => { WSS = e.target.value; draw(); };
   draw();
 }
 
@@ -779,7 +805,8 @@ function lpDraw(){
   const itemHtml = (it, si, ii) => { const w = W[it.w], no = w.app && !ok[it.w], sz = it.size || w.size || 1;
     return `<div class="lp-it ${sz === 4 ? "s4" : sz === 2 ? "s2" : ""} ${no ? "no" : ""}" draggable="true" data-s="${si}" data-i="${ii}"><b>${w.icon} ${esc(it.w === "shortcut" ? "Shortcut · " + appName(it.app) : w.name)}</b>
       <small>${no ? "Hidden — this position can't open the tool (Who sees what)" : w.kind === "kpi" ? "KPI table of the person's flagships" : w.kind === "todo" ? "Red / amber items to act on" : w.kind === "shortcut" ? "Opens the tool" : "Live figure of the person's flagship"}</small>
-      <div class="tl2"><button data-mv="-1" title="Move left">◀</button><button data-mv="1" title="Move right">▶</button><button data-sz title="Size: small · half · full">⇔ ${sz === 4 ? "full" : sz === 2 ? "half" : "small"}</button><button data-del title="Remove">✕</button></div></div>`; };
+      ${it.w === "kpi" ? `<small style="color:#6B3FA0">${(it.opts && it.opts.rows ? it.opts.rows.length : Object.keys(LPD.kpiItems).length)} of ${Object.keys(LPD.kpiItems).length} KPIs · opens on ${({ today: "Today", "7d": "7 days", month: "Month" })[(it.opts && it.opts.period) || "month"]}</small>` : ""}
+      <div class="tl2">${it.w === "kpi" ? `<button data-kopt title="Rows and period">⚙ KPIs</button>` : ""}<button data-mv="-1" title="Move left">◀</button><button data-mv="1" title="Move right">▶</button><button data-sz title="Size: small · half · full">⇔ ${sz === 4 ? "full" : sz === 2 ? "half" : "small"}</button><button data-del title="Remove">✕</button></div></div>`; };
   V(head("Landing pages", "The home page of each position — the same for all flagships, every person sees his own flagship's figures",
       `<button class="b g" id="lpPrev">👁 Preview</button><select class="sel2" id="lpCopy"><option value="">Copy from…</option>${Object.entries(LPD.positions).filter(([k]) => k !== LPP).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select><button class="b g" id="lpDef">↺ Default</button><button class="b" id="lpSave">Save for ${esc(LPD.positions[LPP])}</button>`) +
     `<div class="lp-pos">${Object.entries(LPD.positions).map(([k, n]) => `<button data-p="${k}" class="${k === LPP ? "on" : ""}">${esc(n)}${LPD.layouts[k] ? "<i title='Saved'></i>" : ""}</button>`).join("")}</div>
@@ -812,6 +839,17 @@ function lpDraw(){
     e.ondragover = ev => ev.preventDefault();
     e.ondrop = ev => { ev.preventDefault(); ev.stopPropagation(); drop(si, ii); };
     e.querySelector("[data-del]").onclick = () => { S.items.splice(ii, 1); lpDraw(); };
+    const ko = e.querySelector("[data-kopt]"); if (ko) ko.onclick = () => {   /* the KPI table's rows and opening period (was ⚙ Brief settings) */
+      const it = S.items[ii], o = it.opts || {}, rows = o.rows || Object.keys(LPD.kpiItems);
+      const d = document.createElement("dialog"); d.style.cssText = "border:0;border-radius:18px;padding:16px;width:min(420px,calc(100% - 24px))";
+      d.innerHTML = `<b>KPI table · ${esc(LPD.positions[LPP])}</b><p class="mut" style="margin:4px 0 10px">Which rows the table shows, and the period it opens on.</p>
+        ${Object.entries(LPD.kpiItems).map(([k, n]) => `<label style="display:flex;gap:8px;align-items:center;font-size:.84rem;padding:3px 0"><input type="checkbox" value="${k}" ${rows.includes(k) ? "checked" : ""}> ${esc(n)}</label>`).join("")}
+        <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:.84rem"><b>Opens on</b><select class="sel2" id="kPer">${[["month", "Month"], ["7d", "7 days"], ["today", "Today"]].map(([v, n]) => `<option value="${v}" ${(o.period || "month") === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="b g" data-x>Cancel</button><button class="b" data-ok>Apply</button></div>`;
+      document.body.append(d); d.showModal();
+      d.querySelector("[data-x]").onclick = () => d.remove();
+      d.querySelector("[data-ok]").onclick = () => { const r = [...d.querySelectorAll("input[type=checkbox]:checked")].map(x => x.value); if (!r.length) return toast("Tick at least one KPI", true);
+        it.opts = { rows: r, period: d.querySelector("#kPer").value }; d.remove(); lpDraw(); toast("Applied — press Save to keep it"); }; };
     e.querySelector("[data-sz]").onclick = () => { const it = S.items[ii]; it.size = it.size === 4 ? 1 : it.size === 2 ? 4 : 2; lpDraw(); };
     e.querySelectorAll("[data-mv]").forEach(b => b.onclick = () => { const j = ii + Number(b.dataset.mv); if (j < 0 || j >= S.items.length) return; [S.items[ii], S.items[j]] = [S.items[j], S.items[ii]]; lpDraw(); }); });
   v.querySelectorAll(".lp-sec").forEach(e => { const si = +e.dataset.sec;
@@ -824,6 +862,7 @@ function lpDraw(){
   $("#lpSec").onclick = () => { L.sections.push({ name: "New section", items: [] }); lpDraw(); };
   $("#lpCopy").onchange = e => { const k = e.target.value; if (!k) return; LPW[LPP] = lpCopy(LPW[k] || LPD.layouts[k] || LPD.starters[k] || { sections: [] }); toast(`Copied from ${LPD.positions[k]} — press Save to keep it`); lpDraw(); };
   $("#lpDef").onclick = async () => {
+    if (LPD.starters[LPP] && LPD.layouts[LPP] && JSON.stringify(LPW[LPP] && LPW[LPP].sections) !== JSON.stringify(LPD.starters[LPP].sections)){ LPW[LPP] = lpCopy(LPD.starters[LPP]); lpDraw(); return toast("The starting page is loaded — Save to keep it, or ↺ again to remove the saved page"); }
     if (!LPD.layouts[LPP]){ delete LPW[LPP]; lpDraw(); return toast("Back to the default"); }
     if (!confirm(`Remove the saved page of ${LPD.positions[LPP]}? ${LPD.builtIn.includes(LPP) ? "It goes back to the ready page." : LPD.legacy[LPP] ? "It goes back to the old brief." : "The position will have no brief again."}`)) return;
     try { const r = await api("admin/cc/lp", { key: LPP, layout: null }); LPD.layouts = r.layouts; delete LPW[LPP]; toast("Back to the default"); lpDraw(); } catch (e){ toast(e.message, true); } };
@@ -833,35 +872,6 @@ function lpDraw(){
   $("#lpPrev").onclick = () => { try { localStorage.setItem("hub.briefAs", JSON.stringify(LPP)); localStorage.setItem("hub.briefFold", "false"); } catch {}
     if (LPW[LPP] && JSON.stringify(LPW[LPP]) !== JSON.stringify(LPD.layouts[LPP])) toast("Preview shows the SAVED page — save first to see your changes");
     window.open("/", "_blank"); };
-}
-
-/* ---------- tools control ---------- */
-async function tl(){
-  const T = await api("admin/cc/tools"), cfg = T.cfg, APPS = (window.HUB && window.HUB.APPS) || [], ACC = (window.HUB && window.HUB.ACCESS) || {};
-  const groups = [...new Set(APPS.map(a => a.group).concat(Object.values(cfg).map(c => c.group).filter(Boolean)))];
-  let fq = "", fg = "";
-  const draw = () => {
-    const list = APPS.filter(a => (!fq || (a.name + " " + a.id).toLowerCase().includes(fq)) && (!fg || (cfg[a.id] && cfg[a.id].group || a.group) === fg));
-    $("#tlist").innerHTML = list.map(a => { const c = cfg[a.id] || {}, u = T.usage[a.id] || {}, acc = c.access || ACC[a.id] || null, g = c.group || a.group;
-      return `<div class="tl ${c.off ? "off" : ""}" data-id="${a.id}"><div class="t"><b>${esc(c.name || a.name)}</b><button class="sw ${c.off ? "" : "on"}" data-sw title="${c.off ? "Switched off" : "On"}"></button></div>
-        <select class="sel2" data-g>${groups.map(x => `<option ${x === g ? "selected" : ""}>${esc(x)}</option>`).join("")}<option value="__new">＋ New folder…</option></select>
-        <div class="acc" data-acc>${Object.entries(T.keys).map(([k, n]) => `<span data-k="${k}" class="${!acc || acc.includes(k) ? "on" : ""}" title="${esc(n)}">${k}</span>`).join("")}</div>
-        <div class="chips"><span>${c.access ? "custom access" : g === "Upcoming - Testing" ? "testing: open to everyone" : acc ? "default access" : "everyone"}</span><span>${u.n || 0} opens · ${u.people || 0} people · 7 days</span>${c.group ? `<span>moved from ${esc(a.group)}</span>` : ""}
-          ${Object.keys(c).length ? `<span style="cursor:pointer;color:#B0283C" data-reset>↺ default</span>` : ""}</div></div>`; }).join("") || `<p class="mut">No tool matches.</p>`;
-    $("#tlist").querySelectorAll(".tl").forEach(el => { const id = el.dataset.id, a = APPS.find(x => x.id === id);
-      const save = async body => { try { const r = await api("admin/cc/tools", { id, ...body }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg); toast("Saved — people see it at their next refresh"); draw(); } catch (e){ toast(e.message, true); } };
-      el.querySelector("[data-sw]").onclick = () => save({ off: !(cfg[id] && cfg[id].off) });
-      el.querySelector("[data-g]").onchange = e => { let v = e.target.value; if (v === "__new") { v = prompt("Name of the new folder"); if (!v) return draw(); groups.push(v); } save({ group: v === a.group ? "" : v }); };
-      el.querySelector("[data-acc]").onclick = e => { const s = e.target.closest("[data-k]"); if (!s) return; s.classList.toggle("on"); const on = [...el.querySelectorAll("[data-k].on")].map(x => x.dataset.k);
-        save({ access: on.length === Object.keys(T.keys).length ? null : on }); };
-      const rs = el.querySelector("[data-reset]"); if (rs) rs.onclick = () => save({ off: false, group: "", access: null, name: "" }); });
-  };
-  V(head("Tools control", "Switch a tool off, move it to another folder, choose who sees it — no code change. Administrators always see every tool.") +
-    `<div class="flt"><input id="tq" placeholder="Search tools…"><select class="sel2" id="tg"><option value="">All folders</option>${groups.map(g => `<option>${esc(g)}</option>`).join("")}</select></div>
-    <p class="mut" style="margin:0 0 10px">Who sees it: ${Object.entries(T.keys).map(([k, n]) => `<b>${k}</b> ${esc(n)}`).join(" · ")}. All ticked = the tool's default access.</p>
-    <div class="tools" id="tlist"></div>`);
-  $("#tq").oninput = e => { fq = e.target.value.toLowerCase(); draw(); }; $("#tg").onchange = e => { fg = e.target.value; draw(); };
-  draw();
 }
 
 /* ---------- data & backup ---------- */

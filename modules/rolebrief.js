@@ -360,7 +360,7 @@ export async function roleBriefRoute(env, p, method, b, url, d) {
     const lpSites = me.role === "ADMIN" ? (asKey === "DIRECTOR" ? MALL_SITES : asKey === "CDSO" ? DS_SITES : mine) : mine;
     const site = lpSites.includes(q("site")) ? q("site") : (me.site_code && lpSites.includes(me.site_code) ? me.site_code : lpSites[0]);
     if (!site) return { kind: "none" };
-    const period = ["today", "7d", "month"].includes(q("period")) ? q("period") : "month";
+    const period = ["today", "7d", "month"].includes(q("period")) ? q("period") : "";
     const kpiSites = me.role === "ADMIN" && ["MM", "OM", "SMS", "MS", "MO", "SEC", "SECM"].includes(asKey) ? [site] : lpSites;
     return { audience: asKey, as: asKey, sites: lpSites.length > 1 ? lpSites : [],
       ...(await landingData(env, layout, { key: asKey, site, sites: kpiSites, period, d, allows: app => d.allows(fake, app) })) };

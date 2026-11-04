@@ -7,7 +7,7 @@
    • An object shows only if the position can open the tool behind it (Who sees what).
    Stored in meta 'landing:pos' = { KEY: { sections: [{ name, items: [{ w, size, app? }] }], at, by } }
    ===================================================================== */
-import { managerBrief, kpiBrief, KPI_ITEMS, MGR_ITEMS } from "./rolebrief.js";
+import { managerBrief, kpiBrief, KPI_ITEMS, MGR_ITEMS, briefConfig } from "./rolebrief.js";
 import { patrolDay } from "./patrol.js";
 
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
@@ -39,6 +39,7 @@ export const WIDGETS = {
   fitout: M("Fit-outs", "🏗", "Tenants", "fitout"), gla: M("GLA occupancy", "🏬", "Tenants", "gla"),
   footfall: M("Footfall · this month", "👣", "Reports", "footfall"),
   kpi: { name: "KPI table · flagships", icon: "📊", group: "Reports", kind: "kpi", app: "", size: 4 },
+  worst: { name: "Weakest this period", icon: "⬇", group: "Reports", kind: "worst", app: "", size: 2 },
   todo: { name: "Your follow-ups", icon: "🚩", group: "Reports", kind: "todo", app: "", size: 2 },
   shortcut: { name: "Shortcut to a tool", icon: "⭐", group: "Other", kind: "shortcut", app: "", many: true }
 };
@@ -60,6 +61,19 @@ let CACHE = null, CACHE_AT = 0;
 export async function lpAll(env) {
   if (CACHE && Date.now() - CACHE_AT < 60000) return CACHE;
   let v = {}; try { v = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'landing:pos'"))) || {}).v || "{}"); } catch {}
+  /* Nov 2026: Brief settings moved into Landing pages — once, the old briefs become saved pages, exactly as they were */
+  const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('landing:migrated', ?)").bind(new Date().toISOString()).run().catch(() => null);
+  if (claim && claim.meta && claim.meta.changes === 1) {
+    const c = await briefConfig(env).catch(() => null);
+    if (c) {
+      const at = new Date().toISOString(), by = "Brief settings (moved)";
+      const mgr = { sections: [S("Today", ...Object.keys(MGR_ITEMS).filter(k => c.manager[k])), S("Follow-ups", { w: "todo", size: 2 })], at, by };
+      for (const k of ["MM", "OM"]) if (!v[k]) v[k] = mgr;
+      for (const [k, a] of [["ADVISOR", "advisor"], ["DIRECTOR", "director"], ["CDSO", "cdso"]]) if (!v[k])
+        v[k] = { sections: [S("Operations KPIs", { w: "kpi", size: 4, opts: { rows: Object.keys(KPI_ITEMS).filter(x => c[a][x]), period: "month" } }), S("Weakest this period", { w: "worst", size: 2 })], at, by };
+      await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('landing:pos', ?)").bind(JSON.stringify(v)).run().catch(() => {});
+    }
+  }
   CACHE = v; CACHE_AT = Date.now(); return v;
 }
 export async function layoutFor(env, key) {
@@ -72,7 +86,8 @@ function clean(layout, apps) {
   const secs = (Array.isArray(layout && layout.sections) ? layout.sections : []).slice(0, 12).map(s => ({
     name: String(s.name || "").replace(/\s+/g, " ").trim().slice(0, 40) || "Section",
     items: (Array.isArray(s.items) ? s.items : []).slice(0, 24).filter(i => WIDGETS[i.w] && (i.w !== "shortcut" || /^[a-z0-9-]{2,40}$/.test(String(i.app || ""))))
-      .map(i => ({ w: i.w, size: [1, 2, 4].includes(Number(i.size)) ? Number(i.size) : (WIDGETS[i.w].size || 1), ...(i.w === "shortcut" ? { app: i.app } : {}) }))
+      .map(i => ({ w: i.w, size: [1, 2, 4].includes(Number(i.size)) ? Number(i.size) : (WIDGETS[i.w].size || 1), ...(i.w === "shortcut" ? { app: i.app } : {}),
+        ...(i.w === "kpi" && i.opts ? { opts: { rows: (Array.isArray(i.opts.rows) ? i.opts.rows : Object.keys(KPI_ITEMS)).filter(k => KPI_ITEMS[k]), period: ["today", "7d", "month"].includes(i.opts.period) ? i.opts.period : "month" } } : {}) }))
   }));
   const seen = new Set();
   for (const s of secs) s.items = s.items.filter(i => i.w === "shortcut" || (seen.has(i.w) ? false : (seen.add(i.w), true)));
@@ -91,7 +106,7 @@ export async function lpAdmin(env, method, b, me, d) {
     return { saved: true, layouts: all };
   }
   const allows = Object.fromEntries(Object.keys(LP_POSITIONS).map(k => [k, Object.fromEntries(Object.entries(WIDGETS).map(([w, x]) => [w, !x.app || d.allows(LP_USER[k], x.app)]))]));
-  return { positions: LP_POSITIONS, widgets: WIDGETS, layouts: await lpAll(env), starters: STARTERS, builtIn: BUILT_IN, legacy: LEGACY, allows };
+  return { positions: LP_POSITIONS, widgets: WIDGETS, layouts: await lpAll(env), starters: STARTERS, builtIn: BUILT_IN, legacy: LEGACY, allows, kpiItems: KPI_ITEMS };
 }
 
 /* ---------- the figures ---------- */
@@ -157,7 +172,7 @@ async function extraTile(env, w, site, day, d, todo) {
 }
 
 /* the landing page of one person (or Admin's preview of a position) */
-export async function landingData(env, layout, { key, site, sites, period, d, allows }) {
+export async function landingData(env, layout, { key, site, sites, period, d, allows }) {   // period: chosen on the page (empty = the KPI table's own default)
   const items = layout.sections.flatMap(s => s.items).filter(i => !WIDGETS[i.w].app || allows(WIDGETS[i.w].app) || i.w === "shortcut");
   const want = new Set(items.map(i => i.w));
   const todo = [], tiles = {};
@@ -173,7 +188,10 @@ export async function landingData(env, layout, { key, site, sites, period, d, al
     if (t) tiles[w] = { key: w, app: WIDGETS[w].app, title: WIDGETS[w].name.replace(/ · this month$/, ""), ...t };
   }
   let kpi = null;
-  if (want.has("kpi") && sites.length) kpi = await kpiBrief(env, sites, period, d, Object.fromEntries(Object.keys(KPI_ITEMS).map(k => [k, true]))).catch(e => { console.error("landing kpi", e && e.message); return null; });
+  const ko = (items.find(i => i.w === "kpi") || {}).opts || {};
+  const per = period || ko.period || "month", rowsOn = Array.isArray(ko.rows) && ko.rows.length ? ko.rows : Object.keys(KPI_ITEMS);
+  if ((want.has("kpi") || want.has("worst")) && sites.length) kpi = await kpiBrief(env, sites, per, d, Object.fromEntries(Object.keys(KPI_ITEMS).map(k => [k, rowsOn.includes(k)]))).catch(e => { console.error("landing kpi", e && e.message); return null; });
+  period = per;
   const rank = { r: 0, a: 1, g: 2, "": 3 };
   todo.sort((a, b) => rank[a.tone] - rank[b.tone]);
   const sections = layout.sections.map(s => ({ name: s.name, items: s.items.filter(i => items.includes(i)).map(i => ({ ...i, ...(tiles[i.w] || {}), kind: WIDGETS[i.w].kind, icon: WIDGETS[i.w].icon, name: WIDGETS[i.w].name })) })).filter(s => s.items.length);
