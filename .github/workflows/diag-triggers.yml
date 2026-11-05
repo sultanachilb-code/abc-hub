@@ -10,6 +10,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          Q="SELECT (SELECT group_concat(kind || ':' || year || ':' || n, ', ') FROM (SELECT kind, year, COUNT(*) n FROM budget_lines WHERE site='ACM' GROUP BY kind, year)) AS budget"
+          Q="SELECT (SELECT ROUND(SUM(budget)) = 1137520 FROM budget_lines WHERE site='ACM' AND kind='opex' AND year=2026) AS opex_is_bgt26, (SELECT ROUND(SUM(budget)) = 850075 FROM budget_lines WHERE site='ACM' AND kind='capex' AND year=2026) AS capex_is_22_lines, (SELECT COUNT(*) FROM budget_lines WHERE site='ACM' AND kind='capex' AND year=2026 AND notes LIKE 'PR-ST-GF%') AS capex_acm_lines"
           npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
           echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
