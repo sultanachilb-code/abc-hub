@@ -51,3 +51,4 @@ The GLA tables (`gla_units`, `gla_events`) are **not** touched by this feature.
 ## Achrafieh Mall plans (Nov 2026)
 - Unit codes on the Achrafieh Mall plans look like `M-3-009`, `M-B1-003`, `M-DS-001` (same as its GLA) — read too. `A-B3-…` warehouse stands of the department store are skipped.
 - Its plan pages say "PLAN LEVEL 3" / "PLAN LEVEL 0" — read as L3 / GF.
+- Achrafieh Department Store plans: codes `A-3-038`, `A-B3-009`; pages say "LEVEL 4" / "LEVEL 0". One-letter codes (`A-`, `M-`, `D-`) are kept only when the flagship's own GLA uses that letter, so the DS warehouses printed on the mall's B3 plan don't show on the mall.

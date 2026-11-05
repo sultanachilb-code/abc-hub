@@ -12,3 +12,7 @@ Page `tools/keybox.html` · module `modules/keybox.js` · routes `/api/ops/kb/{b
 - **Return**: one tap. Full history per key (who, why, on time / late). Signature and ID photo visible to the operations team only.
 - **Late keys**: alert to the flagship's operations team (hub bell + push, app `keybox-late`: MM, OM, SMS, MS, MO), again every day from 09:00 until the key is back.
 - Every hand-over and return is written to Change history (tool `keybox`).
+
+## Keys kept for leased units (Nov 2026)
+- `kb_units.held = 1` gives a unit a hook even though it is leased (tenants' storage units whose keys stay in the box).
+- Loaded once per flagship from `KB_HELD` in `modules/keybox.js` (meta `kbheld:<site>`). Achrafieh Department Store: 10 storage units from its key box list.
