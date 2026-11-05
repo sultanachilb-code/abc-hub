@@ -108,6 +108,11 @@ td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
 .ws-t th:first-child,.ws-t td:first-child{text-align:left}.ws-t td{padding:8px;border-bottom:1px solid var(--cline);text-align:center}.ws-t td .sw{display:inline-block}
 .wsh{display:flex;gap:10px;align-items:center;padding:10px 6px 6px;flex-wrap:wrap}.wsh b{font-size:.9rem}.wst{width:100%;border:0;background:none;font:inherit;color:inherit;cursor:pointer;text-align:left;padding:10px 6px}
 .ws-t tr.wsfr td small{display:block;color:var(--cmut);font-size:.72rem}.ws-t td small{display:block}
+.hm-r{display:flex;align-items:center;gap:8px;border:1px solid var(--cline);border-radius:12px;padding:9px 10px;margin-bottom:7px;background:var(--card,#fff);cursor:grab}
+.hm-r.off{opacity:.55}.hm-r.drag{opacity:.4}.hm-g{color:var(--cmut);font-size:1.1rem}.hm-n{flex:1;min-width:0}.hm-n small{display:block;color:var(--cmut);font-size:.74rem}
+.hm-mv{border:1px solid var(--cline);background:none;border-radius:8px;width:28px;height:28px;cursor:pointer;color:inherit}
+.hm-l{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 9px 30px}.hm-c{font:inherit;font-size:.76rem;border:1px solid var(--cline);border-radius:99px;padding:4px 10px;background:none;color:var(--cmut);cursor:pointer;text-decoration:line-through}
+.hm-c.on{background:#EFE7F8;border-color:#C9B2E6;color:#4A1D6E;font-weight:700;text-decoration:none}
 .ws-t tr.wsoff td{opacity:.55}.ws-t tr.wsoff td:first-child,.ws-t tr.wsoff td:nth-child(2),.ws-t tr.wsoff td:last-child{opacity:1}
 .ws-t tr.wsdet td{background:rgba(123,75,176,.04);text-align:left}.wsd{display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;padding:4px 2px}.wsd label{display:block;font-size:.64rem;font-weight:800;letter-spacing:.06em;color:var(--cmut);margin-bottom:3px}
 .wsd input{width:100%;border:1px solid var(--cline);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem;background:var(--ccard);color:inherit}
@@ -739,9 +744,9 @@ async function ws(){
               <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${u.n || 0} opens · ${u.people || 0} people in 7 days · id ${esc(a.id)}${c.group ? ` · moved from ${esc(a.group)}` : ""}</span><span style="flex:1"></span>${Object.keys(c).length ? `<button class="b r" data-reset>↺ Default (everything)</button>` : ""}</div>
             </div></td></tr>` : ""); };
     /* folder switches (Folders table at the top): ON / OFF for everyone + one switch per group — built from the folders that exist, so a new folder appears by itself */
-    const folderSw = (g, G) => { const on = G.filter(a => !(cfg[a.id] && cfg[a.id].off)), fon = on.length === G.length ? "on" : on.length ? "part" : "";
+    const folderSw = (g, G) => { const on = G.filter(a => !(cfg[a.id] && cfg[a.id].off)), fon = on.length ? "on" : "";   /* folder switches are ON or OFF only: ON while any tool of the folder is on */
       return `<td><button class="sw ${fon}" data-foff="${esc(g)}" title="Switch the whole folder on / off for everyone"></button></td>` + WS_GROUPS.map(([k, , keys]) => { const live = on.length ? on : G, n = live.filter(a => keys.every(x => accOf(a).includes(x))).length, any = live.some(a => keys.some(x => accOf(a).includes(x)));
-        const st = n === live.length ? "on" : any ? "part" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="Whole folder for this group"></button></td>`; }).join(""); };
+        const st = any ? "on" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="Whole folder for this group"></button></td>`; }).join(""); };
     const FL = folders().filter(g => !WSF || g === WSF);
     const head = first => `<thead><tr><th>${first}</th><th>On / off</th>${WS_GROUPS.map(([, n]) => `<th>${n}</th>`).join("")}<th></th></tr></thead>`;
     const ftable = `<div class="card" style="padding:4px 8px;margin-bottom:14px"><div class="wsh"><b>📁 Folders</b><span class="mut">${FL.length} folder${FL.length === 1 ? "" : "s"} · a switch here changes every tool of the folder</span></div><div class="tw"><table class="ws-t">${head("Folder")}<tbody>` +
@@ -796,10 +801,43 @@ async function ws(){
 
 /* ---------- landing pages by position (Nov 2026): Admin arranges the home page of each position ----------
    Drag an object from the left into a section (or ＋), drag to reorder, ⇔ size, ✕ remove. Saved per position (meta landing:pos). */
-let LPD = null, LPP = "SECM", LPW = {}, LDR = null;
+let LPD = null, LPP = "SECM", LPW = {}, LDR = null, HMD = null, HMP = "SECM", HDR = null;
 async function lp(){
-  LPD = await api("admin/cc/lp"); LPW = {};
+  [LPD, HMD] = await Promise.all([api("admin/cc/lp"), api("admin/cc/home").catch(() => null)]); LPW = {};
   lpDraw();
+}
+/* Home layout (Nov 2026): the order of the home sections, each ON / OFF, and the Day to Day timeline lanes — per position, saved on every change (meta home:pos) */
+const HM_DEF = ["brief", "moment", "d2d", "fu", "tools"];
+const hmCur = () => { const h = (HMD.homes || {})[HMP] || {}, o = (h.order || []).filter(x => HMD.sections[x]); return { order: [...o, ...HM_DEF.filter(x => !o.includes(x))], off: h.off || [], lanesOff: h.lanesOff || [] }; };
+const HM_SUB = { brief: "The landing page built below (KPIs, incidents, patrol…)", moment: "Announcement at the top of the day", d2d: "Shifts, deadlines, patrol rounds, restroom windows + tool tiles", fu: "Flagged Outlook emails to act on", tools: "Folders of tools (style chosen in Profile)" };
+function hmHtml(){
+  if (!HMD) return "";
+  const H = hmCur(), sv = HMD.homes[HMP];
+  return `<div class="card" id="hmCard" style="padding:14px;margin-bottom:16px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:4px"><b style="font-size:.95rem">🏠 Home layout</b>
+      <select class="sel2" id="hmPos" style="width:auto;min-width:200px">${Object.entries(HMD.positions).map(([k, n]) => `<option value="${k}" ${k === HMP ? "selected" : ""}>${esc(n)}${HMD.homes[k] ? " ●" : ""}</option>`).join("")}</select>
+      <button class="b g" id="hmDef" style="margin-left:auto">↺ Default</button></div>
+    <p class="mut" style="margin:0 0 10px">Drag the sections to reorder · switch any section or timeline lane ON / OFF — what is OFF disappears from the home page. ${sv ? `Saved by ${esc(sv.by || "")} · ${esc(dt(sv.at))}` : "Not changed — this position sees the standard home page."}</p>
+    ${H.order.map((k, i) => { const on = !H.off.includes(k);
+      return `<div class="hm-r ${on ? "" : "off"}" draggable="true" data-hi="${i}"><span class="hm-g">⠿</span><span class="hm-n"><b>${esc(HMD.sections[k])}</b><small>${esc(HM_SUB[k] || "")}</small></span>
+        <button class="hm-mv" data-hm="-1" title="Move up">▲</button><button class="hm-mv" data-hm="1" title="Move down">▼</button><button class="sw ${on ? "on" : ""}" data-hs="${k}" title="Show / hide"></button></div>` +
+        (k === "d2d" && on ? `<div class="hm-l">${Object.entries(HMD.lanes).map(([l, n]) => `<button class="hm-c ${H.lanesOff.includes(l) ? "" : "on"}" data-hl="${l}">${esc(n)}</button>`).join("")}</div>` : ""); }).join("")}</div>`;
+}
+async function hmSave(next, msg){
+  try { const r = await api("admin/cc/home", { key: HMP, home: next }); HMD.homes = r.homes; toast(msg || "Saved"); } catch (e){ toast(e.message, true); }
+  hmPaint();
+}
+function hmPaint(){ const c = $("#hmCard"); if (!c) return; c.outerHTML = hmHtml(); hmBind(); }
+function hmBind(){
+  const c = $("#hmCard"); if (!c) return; const H = hmCur();
+  c.querySelector("#hmPos").onchange = e => { HMP = e.target.value; hmPaint(); };
+  c.querySelector("#hmDef").onclick = () => { if (!HMD.homes[HMP]) return toast("Already the standard home page"); if (confirm(`Put the standard home page back for ${HMD.positions[HMP]}?`)) hmSave(null, "Back to the standard home page"); };
+  c.querySelectorAll("[data-hs]").forEach(b => b.onclick = () => { const k = b.dataset.hs, off = H.off.includes(k) ? H.off.filter(x => x !== k) : [...H.off, k]; hmSave({ ...H, off }, `${HMD.sections[k]}: ${off.includes(k) ? "OFF" : "ON"}`); });
+  c.querySelectorAll("[data-hl]").forEach(b => b.onclick = () => { const k = b.dataset.hl, lo = H.lanesOff.includes(k) ? H.lanesOff.filter(x => x !== k) : [...H.lanesOff, k]; hmSave({ ...H, lanesOff: lo }, `${HMD.lanes[k]}: ${lo.includes(k) ? "OFF" : "ON"}`); });
+  const move = (from, to) => { if (to < 0 || to >= H.order.length || from === to) return; const o = H.order.slice(), [x] = o.splice(from, 1); o.splice(to, 0, x); hmSave({ ...H, order: o }, "Order saved"); };
+  c.querySelectorAll(".hm-r").forEach(r => { const i = +r.dataset.hi;
+    r.querySelectorAll("[data-hm]").forEach(b => b.onclick = () => move(i, i + Number(b.dataset.hm)));
+    r.ondragstart = ev => { HDR = i; ev.dataTransfer.setData("text/plain", "h"); r.classList.add("drag"); }; r.ondragend = () => r.classList.remove("drag");
+    r.ondragover = ev => ev.preventDefault(); r.ondrop = ev => { ev.preventDefault(); if (HDR != null){ const f = HDR; HDR = null; move(f, i); } }; });
 }
 const lpCopy = x => JSON.parse(JSON.stringify(x));
 const lpCur = () => LPW[LPP] = LPW[LPP] || lpCopy(LPD.layouts[LPP] || LPD.starters[LPP] || { sections: [{ name: "Today", items: [] }] });
@@ -823,14 +861,15 @@ function lpDraw(){
       `<button class="b g" id="lpPrev">👁 Preview</button><select class="sel2" id="lpCopy"><option value="">Copy from…</option>${Object.entries(LPD.positions).filter(([k]) => k !== LPP).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select><button class="b g" id="lpDef">↺ Default</button><button class="b" id="lpSave">Save for ${esc(LPD.positions[LPP])}</button>`) +
     `<div class="lp-pos">${Object.entries(LPD.positions).map(([k, n]) => `<button data-p="${k}" class="${k === LPP ? "on" : ""}">${esc(n)}${LPD.layouts[k] ? "<i title='Saved'></i>" : ""}</button>`).join("")}</div>
     <p class="mut" style="margin:-4px 0 12px">${lpState(LPP)}${LPW[LPP] && JSON.stringify(LPW[LPP]) !== JSON.stringify(LPD.layouts[LPP] || LPD.starters[LPP]) ? ` · <b style="color:#B26A00">changes not saved</b>` : ""}</p>
-    <div class="lp-wrap"><div class="card lp-lib">${groups.map(g => `<h4>${esc(g.toUpperCase())}</h4>` + Object.entries(W).filter(([, w]) => w.group === g).map(([k, w]) => {
+    ${hmHtml()}<div class="lp-wrap"><div class="card lp-lib">${groups.map(g => `<h4>${esc(g.toUpperCase())}</h4>` + Object.entries(W).filter(([, w]) => w.group === g).map(([k, w]) => {
         const u = used.has(k) && !w.many, no = w.app && !ok[k];
         return `<div class="lp-li ${u ? "used" : ""} ${no ? "no" : ""}" draggable="${!u && !no}" data-w="${k}"><span class="ic">${w.icon}</span><span>${esc(w.name)}<small>${no ? "can't open the tool" : u ? "on the page" : w.kind === "kpi" ? "wide table" : w.kind === "todo" ? "list" : w.kind === "shortcut" ? "any tool" : "tile"}</small></span><button data-add="${k}" title="Add to the last section">＋</button></div>`; }).join("")).join("")}</div>
       <div>${L.sections.map((s, si) => `<div class="lp-sec" data-sec="${si}"><div class="lp-sh"><input value="${esc(s.name)}" data-name="${si}" maxlength="40"><button data-up="${si}" title="Move the section up">▲</button><button data-dn="${si}" title="Move the section down">▼</button><button data-rm="${si}" title="Remove the section">✕</button></div>
         <div class="lp-g2">${s.items.map((it, ii) => itemHtml(it, si, ii)).join("")}${s.items.length ? "" : `<div class="lp-drop">Drag objects here (or ＋ on the left)</div>`}</div></div>`).join("")}
         <button class="b g" id="lpSec">＋ Section</button></div></div>`);
   const v = $("#main");
-  v.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { LPP = b.dataset.p; lpDraw(); });
+  hmBind();
+  v.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { LPP = b.dataset.p; HMP = b.dataset.p; lpDraw(); });
   const add = (k, si, ii) => {
     const put = app => { const S = L.sections[si] || L.sections[L.sections.length - 1]; if (!S) return; S.items.splice(ii == null ? S.items.length : ii, 0, { w: k, size: W[k].size || 1, ...(app ? { app } : {}) }); lpDraw(); };
     if (k !== "shortcut") return put();

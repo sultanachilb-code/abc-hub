@@ -93,6 +93,41 @@ function clean(layout, apps) {
   for (const s of secs) s.items = s.items.filter(i => i.w === "shortcut" || (seen.has(i.w) ? false : (seen.add(i.w), true)));
   return { sections: secs };
 }
+/* ---------- Home layout by position (Nov 2026): order of the home sections, each ON / OFF, and the Day to Day timeline lanes ---------- */
+export const HOME_SECTIONS = { brief: "Morning brief", moment: "Message of the moment", d2d: "Day to Day timeline", fu: "Action needed · follow-ups", tools: "All tools" };
+export const HOME_LANES = { shift: "Team on shift", deadlines: "Checklist & handover deadlines", handover: "Handover pins", restroom: "Restroom windows", patrol: "Security patrol rounds",
+  malfunctions: "Malfunctions", quickpass: "Quick passes", contractors: "Contractors attended", gate: "Refused at the gate", closing: "Tenant closing",
+  events: "Meetings & events", off: "Off / leave line", tiles: "Tool tiles under the timeline" };
+export const HOME_KEYS = { ADMIN: "Administrator", ...LP_POSITIONS };
+export const homeKeyOf = u => !u ? null : u.role === "ADMIN" ? "ADMIN" : lpKeyOf(u);
+let HCACHE = null, HCACHE_AT = 0;
+export async function homeAll(env) {
+  if (HCACHE && Date.now() - HCACHE_AT < 60000) return HCACHE;
+  let v = {}; try { v = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'home:pos'"))) || {}).v || "{}"); } catch {}
+  HCACHE = v; HCACHE_AT = Date.now(); return v;
+}
+export const homeFor = async (env, u) => { const k = homeKeyOf(u); return k ? ((await homeAll(env))[k] || null) : null; };
+function cleanHome(h) {
+  const ids = Object.keys(HOME_SECTIONS), order = [...new Set((Array.isArray(h && h.order) ? h.order : []).filter(x => ids.includes(x)))];
+  ids.forEach(x => { if (!order.includes(x)) order.push(x); });
+  const off = [...new Set((Array.isArray(h && h.off) ? h.off : []).filter(x => ids.includes(x)))];
+  const lanesOff = [...new Set((Array.isArray(h && h.lanesOff) ? h.lanesOff : []).filter(x => HOME_LANES[x]))];
+  return { order, off, lanesOff };
+}
+export async function homeAdmin(env, method, b, me) {
+  if (method === "POST") {
+    const key = String(b.key || "").toUpperCase(); if (!HOME_KEYS[key]) throw err("Choose a position");
+    const raw = await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'home:pos'"));
+    let all = {}; try { all = JSON.parse((raw && raw.v) || "{}"); } catch {}
+    if (b.home === null) delete all[key];
+    else all[key] = { ...cleanHome(b.home), at: new Date().toISOString(), by: me.full_name || me.email };
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('home:pos', ?)").bind(JSON.stringify(all)).run();
+    HCACHE = null;
+    return { saved: true, homes: all };
+  }
+  return { positions: HOME_KEYS, sections: HOME_SECTIONS, lanes: HOME_LANES, homes: await homeAll(env) };
+}
+
 /* Admin Control → Landing pages */
 export async function lpAdmin(env, method, b, me, d) {
   if (method === "POST") {

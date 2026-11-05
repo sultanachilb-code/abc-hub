@@ -21,3 +21,11 @@ At the switch, both new positions received everything Security had (defaults and
 * **Tools & access** (`/admin#ws`) replaces *Tools control* and *Who sees what*: per tool a master ON / OFF, the five group switches, and ⋯ More (name on the tile, folder, exact positions, usage, ↺ default). Folder rows: ON / OFF for everyone + one switch per group. Filters: folder, switched off, changed here, not home tiles. `#tl` opens it.
 * **Brief settings** moved into Landing pages: at the switch, the old Manager action brief (Mall Manager, Operations Manager) and KPI brief (Advisor, Director, CDSO) were saved as pages with the items that were ticked (`meta landing:migrated`). The KPI table has ⚙ KPIs (rows + opening period); new object **Weakest this period**. The ⚙ Brief settings button on the home page is gone.
 * ↺ Default in the builder loads the starting page (save to keep it); pressed again it removes the saved page.
+
+## Home layout by position (Nov 2026)
+Admin Control → Landing pages → 🏠 Home layout (top card). Per position (plus Administrator):
+- order of the home sections — Morning brief, Message of the moment, Day to Day timeline, Action needed · follow-ups, All tools (drag or ▲▼);
+- each section ON / OFF — OFF disappears from the home page;
+- Day to Day timeline lanes ON / OFF: shifts, deadlines, handover pins, restroom windows, patrol, malfunctions, quick passes, contractors, gate refusals, tenant closing, meetings & events, off / leave line, tool tiles.
+Saved on every change in meta `home:pos` `{KEY: {order, off, lanesOff, at, by}}`; `/me` returns `home` for the person's position. No saved layout = the standard home page. ↺ Default removes it.
+Tools & access: folder switches are ON / OFF only (ON while any tool of the folder is on / visible to the group).
