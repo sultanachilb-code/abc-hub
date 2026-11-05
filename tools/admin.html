@@ -106,6 +106,8 @@ td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
 @media (max-width:860px){.lp-wrap{grid-template-columns:1fr}.lp-lib{position:static;max-height:none}.lp-g2{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ws-t{width:100%;border-collapse:collapse;font-size:.88rem}.ws-t th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cmut);padding:8px;text-align:center;border-bottom:1px solid var(--cline)}
 .ws-t th:first-child,.ws-t td:first-child{text-align:left}.ws-t td{padding:8px;border-bottom:1px solid var(--cline);text-align:center}.ws-t td .sw{display:inline-block}
+.wsh{display:flex;gap:10px;align-items:center;padding:10px 6px 6px;flex-wrap:wrap}.wsh b{font-size:.9rem}.wst{width:100%;border:0;background:none;font:inherit;color:inherit;cursor:pointer;text-align:left;padding:10px 6px}
+.ws-t tr.wsfr td small{display:block;color:var(--cmut);font-size:.72rem}.ws-t td small{display:block}
 .ws-t tr.wsoff td{opacity:.55}.ws-t tr.wsoff td:first-child,.ws-t tr.wsoff td:nth-child(2),.ws-t tr.wsoff td:last-child{opacity:1}
 .ws-t tr.wsdet td{background:rgba(123,75,176,.04);text-align:left}.wsd{display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;padding:4px 2px}.wsd label{display:block;font-size:.64rem;font-weight:800;letter-spacing:.06em;color:var(--cmut);margin-bottom:3px}
 .wsd input{width:100%;border:1px solid var(--cline);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem;background:var(--ccard);color:inherit}
@@ -709,7 +711,7 @@ async function mb(){
 const WS_GROUPS = [["ops", "Operations team", ["SMS", "MS", "MO", "WH", "SEC"], "Senior Mall Supervisor · Mall Supervisor · Mall Officer · Warehouse · Security staff"],
   ["secm", "Security Manager", ["SECM"], "one per flagship — sees his flagship"], ["hos", "Head of Security", ["HOS"], "all security in ABC — every flagship"],
   ["mgmt", "Management", ["MM", "OM"], "Mall Manager / Senior · Operations Manager / Deputy"], ["lead", "Leadership", ["LEAD"], "Property Advisor · Mall Director · CDSO"]];
-let WSQ = "", WSF = "", WSS = "", WSO = new Set();
+let WSQ = "", WSF = "", WSS = "", WSO = new Set(), WSC = new Set();   // WSC: folders opened below the Folders table
 async function tl(){ PAGE = "ws"; history.replaceState(null, "", "#ws"); return ws(); }   // the old "Tools control" link opens Tools & access
 async function ws(){
   const T = await api("admin/cc/tools"), cfg = T.cfg, H = window.HUB || {}, APPS = H.APPS || [], ACC = H.ACCESS || {}, ALL = Object.keys(T.keys);
@@ -718,20 +720,14 @@ async function ws(){
   const accOf = a => (cfg[a.id] && Array.isArray(cfg[a.id].access)) ? cfg[a.id].access : defAcc(a);
   const grpOf = a => (cfg[a.id] && cfg[a.id].group) || a.group;
   const order = H.GROUPS || [];
-  const folders = () => [...new Set(APPS.map(grpOf))].sort((x, y) => ((order.indexOf(x) + 1) || 99) - ((order.indexOf(y) + 1) || 99));
+  const folders = () => [...new Set([...order.filter(g => g !== "OFF"), ...APPS.map(grpOf)])].sort((x, y) => ((order.indexOf(x) + 1) || 99) - ((order.indexOf(y) + 1) || 99));
   const same = (x, y) => x.length === y.length && x.every(k => y.includes(k));
   const save = async (id, body, msg) => { const r = await api("admin/cc/tools", { id, ...body }); Object.keys(cfg).forEach(k => delete cfg[k]); Object.assign(cfg, r.cfg); if (msg) toast(msg); };
   const swOf = (acc, keys) => { const n = keys.filter(x => acc.includes(x)).length; return n === keys.length ? "on" : n ? "part" : ""; };
   const draw = () => {
     const L = APPS.filter(a => { const c = cfg[a.id] || {}, nm = (c.name || a.name) + " " + a.id;
       return (!WSQ || nm.toLowerCase().includes(WSQ)) && (!WSF || grpOf(a) === WSF) && (!WSS || (WSS === "off" ? c.off : WSS === "changed" ? Object.keys(c).length : WSS === "hidden" ? a.hidden : true)); });
-    const rows = folders().map(g => { const G = L.filter(a => grpOf(a) === g); if (!G.length) return "";
-      const on = G.filter(a => !(cfg[a.id] && cfg[a.id].off));
-      const fsw = WS_GROUPS.map(([k, , keys]) => { const live = on.length ? on : G, n = live.filter(a => keys.every(x => accOf(a).includes(x))).length, any = live.some(a => keys.some(x => accOf(a).includes(x)));
-        const st = n === live.length ? "on" : any ? "part" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="Whole folder for this group"></button></td>`; }).join("");
-      const fon = on.length === G.length ? "on" : on.length ? "part" : "";
-      return `<tr class="fh"><td>${esc(g)} <small style="text-transform:none;letter-spacing:0;font-weight:600">· whole folder${(H.ADMIN_GROUPS || []).includes(g) ? " · administrators only" : ""}</small></td><td><button class="sw ${fon}" data-foff="${esc(g)}" title="Switch the whole folder on / off for everyone"></button></td>${fsw}<td></td></tr>` +
-        G.map(a => { const c = cfg[a.id] || {}, acc = accOf(a), u = T.usage[a.id] || {}, open = WSO.has(a.id);
+    const toolRow = a => { const c = cfg[a.id] || {}, acc = accOf(a), u = T.usage[a.id] || {}, open = WSO.has(a.id);
           const tag = c.off ? `<small style="color:var(--cbad)">switched off for everyone</small>` : `<small>${c.access ? "changed here" : a.group === "Upcoming - Testing" ? "testing: open to everyone" : "default access"}${a.hidden ? " · not a home tile" : ""} · ${u.n || 0} opens · 7 days</small>`;
           return `<tr data-id="${a.id}" class="${c.off ? "wsoff" : ""}"><td><b>${esc(c.name || a.name)}</b>${tag}</td><td><button class="sw ${c.off ? "" : "on"}" data-off title="${c.off ? "Switched off — tap to switch on" : "On — tap to switch off for everyone"}"></button></td>
             ${WS_GROUPS.map(([k, , keys]) => { const st = swOf(acc, keys); return `<td><button class="sw ${st}" data-g="${k}" title="${st === "on" ? "Sees it" : st ? "Some positions see it — tap to give all" : "Hidden"}"></button></td>`; }).join("")}
@@ -741,8 +737,24 @@ async function ws(){
               <div><label>FOLDER</label><select class="sel2" data-fo>${folders().concat(c.group && !folders().includes(c.group) ? [c.group] : []).map(x => `<option ${x === grpOf(a) ? "selected" : ""}>${esc(x)}</option>`).join("")}<option value="__new">＋ New folder…</option></select></div>
               <div style="grid-column:span 2"><label>EXACT POSITIONS</label><div class="acc" data-acc>${Object.entries(T.keys).map(([k, n]) => `<span data-k="${k}" class="${acc.includes(k) ? "on" : ""}" title="${esc(n)}">${esc(n)}</span>`).join("")}</div></div>
               <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${u.n || 0} opens · ${u.people || 0} people in 7 days · id ${esc(a.id)}${c.group ? ` · moved from ${esc(a.group)}` : ""}</span><span style="flex:1"></span>${Object.keys(c).length ? `<button class="b r" data-reset>↺ Default (everything)</button>` : ""}</div>
-            </div></td></tr>` : ""); }).join(""); }).join("");
-    $("#wsBody").innerHTML = rows || `<tr><td colspan="${WS_GROUPS.length + 3}" class="mut">No tool matches.</td></tr>`;
+            </div></td></tr>` : ""); };
+    /* folder switches (Folders table at the top): ON / OFF for everyone + one switch per group — built from the folders that exist, so a new folder appears by itself */
+    const folderSw = (g, G) => { const on = G.filter(a => !(cfg[a.id] && cfg[a.id].off)), fon = on.length === G.length ? "on" : on.length ? "part" : "";
+      return `<td><button class="sw ${fon}" data-foff="${esc(g)}" title="Switch the whole folder on / off for everyone"></button></td>` + WS_GROUPS.map(([k, , keys]) => { const live = on.length ? on : G, n = live.filter(a => keys.every(x => accOf(a).includes(x))).length, any = live.some(a => keys.some(x => accOf(a).includes(x)));
+        const st = n === live.length ? "on" : any ? "part" : ""; return `<td><button class="sw ${st}" data-fg="${k}" data-fold="${esc(g)}" title="Whole folder for this group"></button></td>`; }).join(""); };
+    const FL = folders().filter(g => !WSF || g === WSF);
+    const head = first => `<thead><tr><th>${first}</th><th>On / off</th>${WS_GROUPS.map(([, n]) => `<th>${n}</th>`).join("")}<th></th></tr></thead>`;
+    const ftable = `<div class="card" style="padding:4px 8px;margin-bottom:14px"><div class="wsh"><b>📁 Folders</b><span class="mut">${FL.length} folder${FL.length === 1 ? "" : "s"} · a switch here changes every tool of the folder</span></div><div class="tw"><table class="ws-t">${head("Folder")}<tbody>` +
+      FL.map(g => { const G = APPS.filter(a => grpOf(a) === g), on = G.filter(a => !(cfg[a.id] && cfg[a.id].off)).length;
+        return `<tr class="wsfr"><td><b>${esc(g)}</b><small>${G.length} tool${G.length === 1 ? "" : "s"} · ${on} on</small></td>${G.length ? folderSw(g, G) : `<td colspan="${WS_GROUPS.length + 1}" class="mut">Empty folder — move a tool here from its ⋯ menu</td>`}<td>${G.length ? `<button class="b g" data-jump="${esc(g)}" style="padding:4px 9px">Tools ▾</button>` : ""}</td></tr>`; }).join("") + `</tbody></table></div></div>`;
+    const cards = FL.map(g => { const G = L.filter(a => grpOf(a) === g); if (!G.length) return "";
+      const open = WSQ || WSS || WSF || WSC.has(g);
+      return `<div class="card wsc" data-card="${esc(g)}" style="padding:4px 8px;margin-bottom:10px"><button class="wsh wst" data-tog="${esc(g)}"><b>${open ? "▾" : "▸"} ${esc(g)}</b><span class="mut">${G.length} tool${G.length === 1 ? "" : "s"}</span></button>
+        ${open ? `<div class="tw"><table class="ws-t">${head("Tool")}<tbody>${G.map(toolRow).join("")}</tbody></table></div>` : ""}</div>`; }).join("");
+    const rows = ftable + (cards || `<div class="card mut" style="padding:14px">No tool matches.</div>`);
+    $("#wsBody").innerHTML = rows;
+    $("#wsBody").querySelectorAll("[data-tog]").forEach(x => x.onclick = () => { const g = x.dataset.tog; WSC.has(g) ? WSC.delete(g) : WSC.add(g); draw(); });
+    $("#wsBody").querySelectorAll("[data-jump]").forEach(x => x.onclick = () => { const g = x.dataset.jump; WSC.add(g); draw(); const c = [...$("#wsBody").querySelectorAll("[data-card]")].find(e => e.dataset.card === g); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); });
     const busy = on => $("#wsBody").querySelectorAll("button,input,select").forEach(x => x.disabled = on);
     const run = async f => { busy(true); try { await f(); } catch (e){ toast(e.message, true); } draw(); };
     $("#wsBody").querySelectorAll("tr[data-id]").forEach(tr => { const id = tr.dataset.id, a = APPS.find(x => x.id === id);
@@ -775,7 +787,7 @@ async function ws(){
     `<div class="flt"><input id="wsQ" placeholder="Search tools…" value="${esc(WSQ)}"><select class="sel2" id="wsF"><option value="">All folders</option>${folders().map(g => `<option ${g === WSF ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
       <select class="sel2" id="wsS"><option value="">All tools</option><option value="off" ${WSS === "off" ? "selected" : ""}>Switched off</option><option value="changed" ${WSS === "changed" ? "selected" : ""}>Changed here</option><option value="hidden" ${WSS === "hidden" ? "selected" : ""}>Not home tiles</option></select></div>
     <p class="mut" style="margin:0 0 10px;line-height:1.6">${WS_GROUPS.map(([, n, , who]) => `<b>${n}</b>: ${esc(who)}`).join("<br>")}<br><span class="sw part" style="display:inline-block;vertical-align:middle;transform:scale(.75)"></span> = some positions of the group see it — set them in ⋯ More, or tap to give it to the whole group.</p>
-    <div class="card" style="padding:4px 8px"><div class="tw"><table class="ws-t"><thead><tr><th>Tool</th><th>On / off</th>${WS_GROUPS.map(([, n]) => `<th>${n}</th>`).join("")}<th></th></tr></thead><tbody id="wsBody"></tbody></table></div></div>`);
+    <div id="wsBody"></div>`);
   $("#wsQ").oninput = e => { WSQ = e.target.value.toLowerCase(); draw(); };
   $("#wsF").onchange = e => { WSF = e.target.value; draw(); };
   $("#wsS").onchange = e => { WSS = e.target.value; draw(); };
