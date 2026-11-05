@@ -125,3 +125,13 @@ Complaints: guards were "logged out" again and again. The pairing token lived on
 - Wrong passwords: 8 per 15 minutes per connection, then locked 15 minutes.
 - Old pairing codes: `gate/devices/new` answers 410. Phones paired before keep working and are listed under
   "Phones paired with the old codes" until a manager removes them.
+
+## No password — pair a phone (Nov 2026, replaces the gate account passwords)
+- **Hub → Loading Gate → Gate accounts**: an account has no password. **📱 Pair a phone** makes a one-use code (6 digits, 10 minutes)
+  shown as a QR (the gate link `…/#pair=123456`) and as digits; the dialog closes by itself when the phone is paired. A new code
+  cancels the previous unused one. New account → the pairing dialog opens right after.
+- **Gate app**: "Pair this phone" screen — 📷 scan the pairing QR in the app, or type the 6 digits. Scanning the QR with the phone's
+  own camera opens the link and pairs too.
+- **Never expires**: no 90-day rule any more (`expires` ignored, cookie 400 days renewed on use). A phone is cut off only by
+  **Sign out phones** or **Disable**. Phones signed in with the old password keep working.
+- `POST /api/gate-ext/login` is retired (410). Wrong codes: 8 per 15 minutes per connection, then locked 15 minutes.
