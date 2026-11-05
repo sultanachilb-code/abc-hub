@@ -138,8 +138,8 @@ async function arrivals(env, cfg, day) {
   const out = [];
   for (const k of cfg.expect) {
     const r = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k === "contracts" ? "contracts:last" : "portal:last:" + k).first().catch(() => null);
-    let at = ""; try { at = r ? (JSON.parse(r.v).at || "") : ""; } catch { at = r ? r.v : ""; }
-    out.push({ kind: k, label: MB_EXPECT[k] || k, at, today: !!at && beirutDay(at) === day });
+    let at = "", partial = false; try { const j = r ? JSON.parse(r.v) : {}; at = j.at || ""; partial = !!j.partial; } catch { at = r ? r.v : ""; }
+    out.push({ kind: k, label: MB_EXPECT[k] || k, at, partial, today: !!at && beirutDay(at) === day });
   }
   return out;
 }

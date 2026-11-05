@@ -217,8 +217,9 @@ export async function portalImport(env, d, { files, from }) {
     const gone = partial ? [] : [...prev.values()].filter(p => p.active && !seen.has(p.name)).map(p => p.name);
     for (const n of gone) ops.push(env.DB.prepare("UPDATE portal_items SET active = 0, left_at = ? WHERE name = ?").bind(now, n));
     for (const k of kinds) for (const s of sites) ops.push(env.DB.prepare("UPDATE portal_items SET last_seen = ? WHERE kind = ? AND site = ? AND active = 1").bind(now, k, s));
-    if (!partial) for (const k of kinds) ops.push(env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("portal:last:" + k,
-      JSON.stringify({ at: now, from, file: f.name, rows: [...seen.values()].filter(x => x.kind === k).length, sites: [...sites] })));
+    /* the report arrived: stamp it — a partial Violations report too (Nov 2026: it was imported, so "Report mailbox → Today" must show it), marked partial */
+    for (const k of kinds) ops.push(env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("portal:last:" + k,
+      JSON.stringify({ at: now, from, file: f.name, rows: [...seen.values()].filter(x => x.kind === k).length, sites: [...sites], ...(partial && k === "vr" ? { partial: true } : {}) })));
     for (let i = 0; i < ops.length; i += 150) await env.DB.batch(ops.slice(i, i + 150));
     res.push({ file: f.name, kinds: [...kinds].map(k => KINDS[k].label + (partial ? " (details only)" : "")), rows: seen.size, added, changed, gone: gone.length, unknown: [...unknown].slice(0, 5), partial });
   }
