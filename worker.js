@@ -34,7 +34,8 @@ import { findRoute } from "./modules/find.js";   // Hub search across content �
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
 import { ccSchema, ccHubRoute, ccHandover, ccDay } from "./modules/cleanctl.js";   // Cleaning Control: schedule, cleaner app, before/after photos — see docs/FEATURE-cleaning-app.md
-import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";   // Training tracker — see docs/FEATURE-training.md
+import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";
+import { guideSchema, guideRoute } from "./modules/guide.js";   // Hub Guidebooks — see docs/FEATURE-guide.md   // Training tracker — see docs/FEATURE-training.md
 import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
 import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
 import { storageStatus, storageRun, d1Traffic, d1Top, gql } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
@@ -414,6 +415,7 @@ async function ensureSchema(env) {
     "INSERT OR REPLACE INTO meta (k, v) VALUES ('idx:v1', '1')"
   ].map(q => env.DB.prepare(q))).catch(e => console.error("indexes", e && e.message));
   await trainingSchema(env);   // Training tracker
+  await guideSchema(env);   // Hub Guidebooks
   await digestSchema(env);   // Weekly digest per person
   await profileSchema(env);     // Profile feature
   await twofaSchema(env);       // Two-step login feature
@@ -1607,7 +1609,7 @@ async function notificationsFor(env, me) {
   return { events, readAt: me.notif_read_at || "" };
 }
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
-const TESTING_OPEN = new Set(["quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt", "tlist"]);
+const TESTING_OPEN = new Set(["guide", "quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt", "tlist"]);
 const roleAllows = (u, app) => { if (u.role === "ADMIN" || u.is_admin) return true;   // administrators see every tool, also with their real role (to test) — the rights inside follow the role
   const c = toolsCfgNow()[app];   // Admin Control → Tools control (switched off / who sees it)
   if (c && c.off) return false;
@@ -1884,6 +1886,7 @@ async function auditOps(env, me, p, b, out) {
 
 async function opsRoute(env, me, p, method, b, url) {
   const q = k => url.searchParams.get(k);
+  if (p.startsWith("guide/")) return guideRoute(env, p, method, b, url, { me, now: nowIso, sitesOf, siteName });   // Hub Guidebooks (needs no flagship)
   const site = opsSite(me, method === "GET" ? q("site") : b.site);
   const can = rights(me, site);
 

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hub Guidebooks · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="tools.css">
+<!-- Hub Guidebooks: flip-book guides of the hub per audience, with check questions and progress — see docs/FEATURE-guide.md -->
+<style>
+/* Layout: a shelf of four role books -> one book open as a paper page that turns; tracker panel for leadership */
+:root:root:root{
+  --bg:#ECEAF2; --paper:#FBFAFD; --paper2:#F2EFF8; --ink:#1E1730; --muted:#6A6380; --line:#DAD5E6;
+  --plum:#4B2A85; --plum-soft:#E7DEF7; --gold:#C79A2B; --ok:#1F7A4D; --okbg:#DDF2E6; --bad:#A3322C; --badbg:#F8E1DF;
+  --shadow:0 18px 40px -18px rgba(40,20,80,.35);
+  --f-display:"Bricolage Grotesque",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --f-ar:"IBM Plex Sans Arabic","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+button{font:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--plum);outline-offset:2px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.brand b{background:var(--plum);color:var(--paper);padding:3px 7px;border-radius:4px;letter-spacing:.04em}
+.hero h1{font-size:clamp(30px,6vw,46px);font-weight:800}
+.hero p{color:var(--muted);max-width:60ch;margin:8px 0 0}
+/* shelf */
+.shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:18px;padding:22px 0 26px;border-bottom:10px solid var(--line);border-radius:0 0 4px 4px}
+.cover{position:relative;aspect-ratio:3/4;max-width:100%;border:0;border-radius:4px 12px 12px 4px;padding:18px 16px 16px 26px;text-align:left;color:#fff;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--shadow);transition:transform .25s}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:rgba(0,0,0,.25);border-radius:4px 0 0 4px}
+.cover:hover{transform:translateY(-6px) rotate(-1deg)}
+.cover .vol{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;opacity:.8}
+.cover h2{font-size:22px;color:#fff}
+.cover .sub{font-size:12.5px;opacity:.85}
+.cover .bar{height:5px;background:rgba(255,255,255,.25);border-radius:3px;overflow:hidden;margin-top:10px}
+.cover .bar i{display:block;height:100%;background:#fff}
+.c-sup{background:linear-gradient(160deg,#5B34A0,#36206A)}
+.c-dir{background:linear-gradient(160deg,#2C4A7A,#1A2C4D)}
+.c-cdso{background:linear-gradient(160deg,#7A3D5C,#4A2238)}
+.c-sec{background:linear-gradient(160deg,#2F5E52,#183A31)}
+.note{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:13.5px;color:var(--muted)}
+.note strong{color:var(--ink)}
+/* reader */
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:8px 13px;border-radius:8px;font-size:13.5px}
+.btn.primary{background:var(--plum);border-color:var(--plum);color:var(--paper)}
+.btn:disabled{opacity:.4;cursor:default}
+.spacer{flex:1}
+.prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--plum);transition:width .4s}
+.book{position:relative;perspective:2400px}
+.spread{display:grid;grid-template-columns:1fr 1fr;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);position:relative;min-height:600px}
+.spread::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:40px;transform:translateX(-50%);background:linear-gradient(90deg,transparent,rgba(60,40,100,.10) 45%,rgba(60,40,100,.18) 50%,rgba(60,40,100,.10) 55%,transparent);pointer-events:none}
+.pg{padding:26px clamp(18px,3vw,38px) 30px;min-width:0;background:var(--paper)}
+.pg.l{border-radius:10px 0 0 10px}.pg.r{border-radius:0 10px 10px 0}
+[dir=rtl] .spread{font-family:var(--f-ar)}
+[dir=rtl] .pg.l{border-radius:0 10px 10px 0}[dir=rtl] .pg.r{border-radius:10px 0 0 10px}
+@media (max-width:760px){.spread{grid-template-columns:1fr}.spread::after{display:none}.pg.l{border-radius:10px 10px 0 0;border-bottom:1px dashed var(--line)}.pg.r{border-radius:0 0 10px 10px}[dir=rtl] .pg.l{border-radius:10px 10px 0 0}[dir=rtl] .pg.r{border-radius:0 0 10px 10px}}
+.flip{position:absolute;z-index:3;pointer-events:none;backface-visibility:hidden;box-shadow:-8px 0 20px -10px rgba(40,20,80,.4);animation:turnL .6s ease-in forwards}
+.flip.fromR{transform-origin:left center;animation-name:turnL}
+.flip.fromL{transform-origin:right center;animation-name:turnR}
+@keyframes turnL{to{transform:rotateY(-175deg)}}
+@keyframes turnR{to{transform:rotateY(175deg)}}
+@media (max-width:760px){.flip{transform-origin:center top!important;animation-name:turnUp!important}}
+@keyframes turnUp{to{transform:rotateX(90deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.flip{animation-duration:.01s}}
+.pmeta{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);letter-spacing:.05em;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:18px}
+.chno{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--plum);color:var(--paper);font-family:var(--f-mono);font-size:13px;margin-inline-end:10px;vertical-align:middle}
+.pg h2{font-size:clamp(22px,4vw,30px);display:flex;align-items:center}
+.lead{color:var(--muted);margin:10px 0 18px;max-width:62ch}
+.steps{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.steps li::before{content:counter(s);font-family:var(--f-mono);font-size:12px;width:24px;height:24px;border-radius:6px;background:var(--plum-soft);color:var(--plum);display:grid;place-items:center;margin-top:1px}
+.steps b{font-weight:600}
+.media{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0 0 20px}
+.slot{border:1.5px dashed var(--line);border-radius:10px;aspect-ratio:16/10;max-width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:12.5px;text-align:center;padding:10px;background:var(--paper2)}
+.slot .k{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--plum)}
+.slot.vid{aspect-ratio:16/10}
+.tip{border-inline-start:3px solid var(--gold);background:var(--paper2);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13.5px;margin:0 0 20px}
+[dir=rtl] .tip{border-radius:8px 0 0 8px}
+.box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 16px}
+.box h3{font-size:15px;margin-bottom:8px;font-family:var(--f-body);font-weight:600;color:var(--plum)}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:13.5px}
+.opt.right{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.opt.wrong{background:var(--badbg);border-color:var(--bad);color:var(--bad)}
+.fb{font-size:13px;margin-top:8px;min-height:1em}
+/* mock hub */
+.mock{background:var(--ink);color:var(--paper);border-radius:22px;padding:14px;max-width:300px;margin:6px 0 0}
+.mock .mh{font-family:var(--f-mono);font-size:11px;opacity:.7;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{border:0;background:rgba(255,255,255,.1);color:inherit;border-radius:12px;padding:10px 4px;font-size:10.5px;line-height:1.2;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.tile i{width:20px;height:20px;border-radius:6px;background:var(--plum);display:block}
+.tile.right{background:var(--ok);color:#fff}.tile.wrong{background:var(--bad);color:#fff}
+.done-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
+.chip{font-family:var(--f-mono);font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--plum-soft);color:var(--plum)}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.toc{display:flex;flex-direction:column;gap:4px}
+.toc button{display:flex;gap:10px;align-items:center;text-align:start;border:0;background:none;color:var(--ink);padding:8px 6px;border-radius:6px}
+.toc button:hover{background:var(--paper2)}
+.toc .t{flex:1}
+.dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--muted);flex:none}
+.dot.on{background:var(--ok);border-color:var(--ok)}
+.drawer{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px}
+.cert{text-align:center;padding:30px 10px;display:flex;flex-direction:column;justify-content:center;height:100%}
+.cert h2{justify-content:center;font-size:30px}
+.seal{width:90px;height:90px;border-radius:50%;margin:0 auto 14px;background:var(--plum);color:var(--paper);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:22px;box-shadow:0 0 0 6px var(--plum-soft)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.tblwrap{overflow-x:auto}
+.lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.lang button{border:0;background:var(--paper);color:var(--ink);padding:7px 12px;font-size:13px}
+.lang button.on{background:var(--plum);color:var(--paper)}
+.status{font-size:12.5px;color:var(--muted)}
+
+/* hub page additions */
+.media-f{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper2);display:flex;flex-direction:column}
+.media-f img,.media-f video{display:block;width:100%;max-height:340px;object-fit:contain;background:#141019}
+.media-f img{cursor:zoom-in}
+.media-f figcaption{font-size:12px;color:var(--muted);padding:6px 10px}
+.slot small{font-size:11px;opacity:.8}
+.slot-adm{display:flex;gap:6px;justify-content:center;padding:6px 8px}
+.mini{border:1px solid var(--line);background:var(--paper);color:var(--plum);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+dialog#zoom{border:0;padding:0;background:transparent;max-width:96vw;max-height:94vh}
+dialog#zoom::backdrop{background:rgba(20,10,35,.8)}
+dialog#zoom img{max-width:96vw;max-height:90vh;display:block;border-radius:8px}
+.muted{color:var(--muted)}
+.btn:hover{background:var(--paper2)}.btn.primary:hover{background:var(--plum)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="empty">Opening your guidebook…</div></div>
+<dialog id="zoom" onclick="this.close()"><img alt=""></dialog>
+<script src="common.js"></script>
+<script>
+/* ABC Operations Hub — Hub Guidebooks (docs/FEATURE-guide.md). Content follows the hub as built (apps.js, Nov 2026). */
+const S = (k,d)=>({k,d});              // media slot: Screenshot | Video + what it should show
+const Q = (q,o,a,why)=>({q,o,a,why});  // check question
+
+const FOLDERS=["Day to Day Operations","Property Overview & Info","ABC Platforms","Tenant Management","Micro Tools","Access and Security","Soft Services Management","Hub Applications","Reports","Dashboards","Phone","Upcoming - Testing"];
+
+const INSTALL = {
+  id:"install", t:"Install the hub and sign in",
+  lead:"The hub is a web app. Add it to your home screen once and it opens full screen like any other app.",
+  steps:[
+    "Open <b><bdi dir=ltr>operations-hub.sultanachi-lb-61f.workers.dev</bdi></b> in Safari (iPhone) or Chrome (Android, laptop).",
+    "Sign in with your work email and the password from your welcoming email.",
+    "Confirm the second step: <b>Face ID / fingerprint / Windows Hello</b> (passkey), or the 6-digit <b>email code</b> as a backup.",
+    "The <b>Welcome</b> window asks for what this device needs, one tap each: Alerts, Install the hub, Camera, Face ID and Connect your Outlook.",
+    "iPhone: tap <b>Share → Add to Home Screen</b>, then open the hub from the new icon and turn on alerts."
+  ],
+  media:[S("Video","Signing in and the Welcome window"),S("Screenshot","Add to Home Screen on iPhone")],
+  tip:"Opened from the hub, Snaglist, Incidents and the Restroom dashboard sign you in by themselves — no second password. Signing out of the hub signs you out of them too.",
+  quiz:Q("Where do you reopen the Welcome window later?",["Account menu → Set up this device","Hub Chat","Reports"],0,"Account menu (your photo) → Set up this device.")
+};
+const PHONE = {
+  id:"phone", t:"Hub Phone, Chat, Reminders and ABCON",
+  lead:"Talk to the team and keep track of what is due without leaving the hub.",
+  steps:[
+    "<b>Phone → Hub Phone</b>: call any hub user by keypad, extension or contact — voice or video.",
+    "<b>Phone → Hub Chat</b>: group and one-to-one chats with photos, files and voice notes.",
+    "<b>Reminders</b> (header Operations tools): your title's own reminder list.",
+    "Ask <b>ABCON</b> about any policy. Answers come from <b>Policies & Procedures</b> (Owner, Assist, ABC General, Verdun Tenant Manual) and cite their source.",
+    "Use the home <b>search</b> to jump to any tool or tenant."
+  ],
+  media:[S("Screenshot","Hub Chat conversation"),S("Screenshot","ABCON answer with its source")],
+  quiz:Q("Where do ABCON's policy answers come from?",["The internet","Policies & Procedures in the hub","Hub Chat"],1,"ABCON answers from the documents in Policies & Procedures and cites them.")
+};
+
+const BOOKS = {
+ sup:{ cls:"c-sup", vol:"BOOK 1", title:"Supervisors", sub:"Senior Mall Supervisors, Mall Supervisors, Mall Officers & Floor Managers", chapters:[
+  INSTALL,
+  {id:"home",t:"Your home screen",lead:"The home screen opens on the live Day to Day timeline for your flagship, with the folders below it.",
+   steps:["The <b>Day to Day</b> timeline (06:00 → 24:00) shows who is on shift, contractor dots, meetings, handover pins and restroom windows, with a gold NOW line.","Tap any bar, dot or pin for its details and a button that opens the tool.","Below it: <b>Day to Day Operations</b>, Property Overview & Info, ABC Platforms, Tenant Management, Micro Tools, Access and Security, Soft Services Management, Hub Applications, Reports, Dashboards and Phone.","New tools wait in <b>Upcoming - Testing</b> — everyone can use them while they are tested.","Your photo (top right) opens Profile settings, Set up this device, Downloads and Home layout."],
+   media:[S("Screenshot","Home with the Day to Day timeline"),S("Video","Tapping a contractor dot on the timeline")],
+   sim:{ask:"Tap the folder that holds Shift Handover and Minutes of Meeting.",ans:"Day to Day Operations"},
+   quiz:Q("What does a red contractor dot on the timeline mean?",["Expected","On site","Over permit time"],2,"Amber = on site, hollow = expected, grey = left, red = over permit time.")},
+  {id:"handover",t:"Shift Handover and checklists",lead:"One shared handover per flagship per day, with the AM and PM checklists in Operations Forms.",
+   steps:["Open <b>Day to Day Operations → Operations Forms</b> and fill the <b>AM Checklist</b> before opening and the <b>PM Checklist</b> at closing. Direct Banking, Tenant Opening and Tenant Closing are there too.","Open <b>Shift Handover</b>: follow-ups, today, tomorrow, events and the checklists.","Approved ABC Connect requests are imported by themselves (black); lines you add are red; Loading Gate results show green/yellow.","Press <b>Hand over to the next shift</b>. The hub emails it to the flagship's ABC Operations group with the managers in Cc.","The next shift taps <b>Receive</b> — the gold pin on the timeline stops pulsing."],
+   media:[S("Video","Filling the AM Checklist"),S("Screenshot","Shift Handover with colour-coded lines")],
+   tip:"No signal? Checklists and handovers are saved on the phone and sent as soon as the connection is back.",
+   quiz:Q("Who receives the handover email?",["Only you","The ABC Operations group, managers in Cc","All tenants"],1,"To the flagship's ABC Operations group, Cc the Mall Manager and Operations Manager.")},
+  {id:"schedule",t:"Schedule, meetings and calendar",lead:"Shifts, minutes of meeting and the month's events in one place.",
+   steps:["<b>Operations Schedule</b>: the weekly shifts by flagship. It decides who is on shift for alerts.","<b>Minutes of Meeting</b>: attendance, agenda, actions with owners and deadlines. Your open actions show on the home badge.","<b>Operations Calendar</b>: marketing events, ops activities, MOM, objectives and document expiry dates.","<b>Operations Projects</b>: future projects and the tracker, from idea to done."],
+   media:[S("Screenshot","Operations Schedule week"),S("Screenshot","MOM actions with deadlines")],
+   quiz:Q("Where do you see a document expiry date?",["Operations Calendar","Hub Chat","Key Box"],0,"Expiry dates are kept in the Operations Calendar with reminders.")},
+  {id:"contractors",t:"Contractors, Loading Gate and Quick Pass",lead:"Know who is on site and let contractors in with their QR pass.",
+   steps:["<b>Access and Security → Contractors</b>: who is on site today, check in and out, register and insurance.","<b>Micro Tools → Loading Gate</b>: scan the contractor's ABC Connect QR, then press <b>Approved in</b> or <b>Rejected out</b>.","Letting in a pass that Salesforce shows as rejected needs a reason.","<b>Quick Access Pass</b>: a one-entry QR for a contractor or visitor, live 30 minutes from approval, sent by WhatsApp. You approve the requests others make."],
+   media:[S("Video","Scanning a pass at the Loading Gate"),S("Screenshot","Quick Access Pass request")],
+   quiz:Q("How long is a Quick Access Pass valid?",["30 minutes from approval","All day","One week"],0,"30 minutes from approval, one entry only.")},
+  {id:"systems",t:"Snaglist and incidents",lead:"These systems open inside the hub with a ‹ Hub bar — no extra password.",
+   steps:["<b>Hub Applications → Snaglist Manager</b>: log, assign and close site snags with photos.","<b>Hub Applications → Incident Report System</b>: incident log, SLAs, blacklist and escalation.","<b>Day to Day Operations → Malfunction Records</b>: malfunctions handled by service providers — reported, attended, fixed.","Tap <b>‹ Hub</b> to come back."],
+   media:[S("Screenshot","Snaglist opened inside the hub"),S("Video","Logging a malfunction")],
+   quiz:Q("What does the ‹ Hub bar do?",["Signs you out","Brings you back to the hub","Opens Hub Chat"],1,"It returns you to the hub home screen.")},
+  {id:"tenants",t:"Tenant Management",lead:"Everything about a tenant on one board, plus the announcement emails.",
+   steps:["<b>Tenant 360</b>: pick a tenant to see compliance, sales & score card, ABC Connect and employees on one board.","<b>Tenants Directory</b>: names, mobiles and emails for reception.","<b>Tenant Works Forms</b>: RDM forms forwarded by email — sign and complete.","<b>Tenant Compliance</b>, <b>Fit-out Tracker</b>, <b>Contracts Near Ending</b> and <b>Tenant List</b> are in the same folder.","<b>Day to Day Operations → Tenant Announcements</b>: opening, closure and relocation emails with photos. Recipients are preset by position."],
+   media:[S("Screenshot","Tenant 360 board"),S("Screenshot","Closure announcement preview")],
+   quiz:Q("Where do you send a tenant closure email?",["Tenant Announcements","Tenants Directory","Reports"],0,"Tenant Announcements, in Day to Day Operations.")},
+  {id:"apps",t:"Preventive Maintenance and Marketing",lead:"Send tasks to tenants and collect their answers without chasing by phone.",
+   steps:["<b>Hub Applications → Preventive Maintenance</b>: monthly launch, the tenant uploads its PM certificate from a link, you review, with reminders, extensions and breaches.","<b>Hub Applications → Marketing Participation</b>: send the activation memo; tenants answer <b>Participating</b> or <b>Not participating</b> from the email, with daily reminders and a live % per flagship."],
+   media:[S("Screenshot","PM review list"),S("Screenshot","Marketing Participation live %")],
+   quiz:Q("How do tenants hand in their PM certificate?",["By WhatsApp","From the upload link the hub sends","At reception"],1,"Each tenant gets an upload link from the hub.")},
+  {id:"soft",t:"Soft services and security",lead:"Follow the cleaning company and the security rounds against the plan.",
+   steps:["<b>Soft Services Management → Cleaning Control</b>: cleaning schedule, before/after photos and compliance.","<b>Cleaning Headcount</b>: the provider's punching record against the planned headcount.","<b>Security Patrol</b>: QR checkpoints in the back areas, rounds and round reports.","<b>Access and Security → Emergency Alert</b>: alert everyone on shift with type and location (the red button)."],
+   media:[S("Screenshot","Cleaning Control compliance"),S("Screenshot","Security Patrol round report")],
+   quiz:Q("Who receives an Emergency Alert?",["Everyone in the company","People on shift at that minute","Tenants"],1,"Only people on shift now, from the Operations Schedule.")},
+  PHONE
+ ]},
+ dir:{ cls:"c-dir", vol:"BOOK 2", title:"Directors & Managers", sub:"Property Advisor, Mall Directors, Mall & Operations Managers", chapters:[
+  INSTALL,
+  {id:"brief",t:"Your brief",lead:"The top of your home screen is a brief for your title.",
+   steps:["<b>Managers</b>: an action brief for your flagship — incidents, checklists, handover, malfunctions, snaglist, restroom, cleaning, contractors and contracts ending. Red and amber tiles become follow-ups.","<b>Property Advisor</b>: a KPI brief for every flagship. <b>Mall Director</b>: the flagships ticked on your account.","Switch the period: <b>Today · 7 days · Month</b>. Green ≥ 90 %, amber 75–89 %, red < 75 %; ▲▼ compares with the previous period.","Tap any tile or KPI to open the system behind it."],
+   media:[S("Screenshot","KPI brief across flagships")],
+   sim:{ask:"Tap the folder that holds the Performance Dashboard.",ans:"Dashboards"},
+   quiz:Q("What does an amber KPI mean?",["Below 75 %","75–89 %","90 % or more"],1,"Amber is 75–89 %.")},
+  {id:"dash",t:"Dashboards",lead:"See the portfolio first, then drill into detail.",
+   steps:["<b>Performance Dashboard</b>: every flagship's status, soft services and the monthly pack.","<b>Portal Dashboard</b>: ABC Connect violations, breaches, requests, marketing, permits and portal users.","<b>Tenant Sales & Score Card</b>: YTD against last year, sales/m² and categories — the file is read on your device and never saved.","<b>Snaglist Report</b> and <b>Restroom Inspection Dashboard</b> for site follow-up; <b>Data Accuracy Score</b> shows when each data set was last updated."],
+   media:[S("Screenshot","Performance Dashboard"),S("Screenshot","Tenant Sales & Score Card")],
+   quiz:Q("Is the tenant sales file saved in the hub?",["Yes","No, it is read on your device only"],1,"Sales files are never stored.")},
+  {id:"reports",t:"Reports",lead:"Monthly and daily numbers for management.",
+   steps:["<b>Reports → Executive Report</b>: monthly summary — occupancy, leasing, CAPEX, QC.","<b>Monthly Operations Pack</b>: one page per flagship, this month against last month.","<b>End of Day Report</b> (managers): everything that happened at the flagship today, live.","<b>Footfall</b>: daily car counts from Liban Park per flagship, with the monthly report."],
+   media:[S("Video","Opening the Monthly Operations Pack"),S("Screenshot","Executive Report")],
+   quiz:Q("Who enters the daily footfall?",["The operations team","Liban Park","Marketing"],1,"Liban Park sends the daily car counts.")},
+  {id:"property",t:"Property Overview & Info",lead:"The reference data of each flagship.",
+   steps:["<b>GLA & Occupancy</b>: units, brands, areas and occupancy by level.","<b>Property Details</b>: areas, teams, parking and technical assets.","<b>Mall Layouts</b>: level plans with live unit status — find any brand.","<b>Policies & Procedures</b>, <b>Key Box</b>, <b>Supervisor Coverage</b> and <b>Operations Induction</b> are in the same folder."],
+   media:[S("Screenshot","Mall Layouts with unit status")],
+   quiz:Q("Where do you find a brand's unit on the plan?",["Mall Layouts","Footfall","Hub Chat"],0,"Mall Layouts shows level plans with live unit status.")},
+  PHONE
+ ]},
+ cdso:{ cls:"c-cdso", vol:"BOOK 3", title:"CDSO", sub:"Chief Department Store Operations Officer", chapters:[
+  INSTALL,
+  {id:"stores",t:"Your department stores",lead:"The hub covers Dbayeh, Achrafieh and Verdun Department Stores.",
+   steps:["Your brief shows the KPI rows for the stores ticked on your account.","A store <b>Floor Manager</b> uses the hub as a Mall Supervisor.","The store's retail space is called <b>ABC Retail</b> in GLA and occupancy.","Tap a KPI to open the system behind it."],
+   media:[S("Screenshot","CDSO brief for the three stores")],
+   sim:{ask:"Tap the folder that holds GLA & Occupancy.",ans:"Property Overview & Info"},
+   quiz:Q("Which hub role does a Floor Manager use?",["Mall Director","Mall Supervisor","Advisor"],1,"Floor Managers are set up as Mall Supervisors.")},
+  {id:"dash",t:"Dashboards and reports",lead:"Compare the three stores in one view.",
+   steps:["<b>Dashboards → Performance Dashboard</b>: each store's status and soft services.","<b>Snaglist Report</b>: findings open, added and solved, and the oldest open.","<b>Reports → Monthly Operations Pack</b> and <b>Executive Report</b>."],
+   media:[S("Screenshot","Performance Dashboard for the stores")],
+   quiz:Q("Where is the Monthly Operations Pack?",["Reports","Micro Tools","Phone"],0,"It is in Reports.")},
+  {id:"follow",t:"Follow-up on site",lead:"Open the store teams' work when a KPI needs attention.",
+   steps:["<b>Hub Applications → Snaglist Manager</b>: open snags by store and contractor.","<b>Incident Report System</b>: incidents and their escalation.","<b>Day to Day Operations → Shift Handover</b>: what the store team handed over today."],
+   media:[S("Video","Filtering snags by store")],
+   quiz:Q("Do you need another password for Snaglist?",["Yes","No, the hub signs you in"],1,"Hub sign-in covers Snaglist, Incidents and Restroom.")},
+  PHONE
+ ]},
+ sec:{ cls:"c-sec", vol:"BOOK 4", title:"Security", sub:"Security Supervisors, Security Managers & Head of Security", bilingual:true, chapters:[
+  {...INSTALL, ta:"تثبيت الـHub وتسجيل الدخول", leada:"الـHub تطبيق ويب. زيدو عشاشة تلفونك مرّة وحدة وبيفتح متل أي تطبيق.",
+   sa:["افتح <b><bdi dir=ltr>operations-hub.sultanachi-lb-61f.workers.dev</bdi></b> من Safari أو Chrome.","فوت بإيميل الشغل وكلمة السر يلّي بالـwelcoming email.","أكّد الخطوة التانية: <b>Face ID / بصمة</b>، أو الكود يلّي بيوصل عالإيميل.","شبّاك <b>Welcome</b> بيطلب يلّي بدو ياه الجهاز: Alerts، Install، Camera، Face ID.","آيفون: <b>Share ← Add to Home Screen</b>، وافتح الـHub من الأيقونة الجديدة."],
+   tipa:"Snaglist وIncidents بيفتحوا من الـHub بلا كلمة سر تانية.",
+   qa:Q("وين بتفتح شبّاك Welcome مرّة تانية؟",["Account menu ← Set up this device","Hub Chat","Reports"],0,"من صورتك ← Set up this device.")},
+  {id:"gate",t:"Contractors and the Loading Gate",ta:"المتعهّدين وبوابة التحميل",
+   lead:"Check contractors in and scan their ABC Connect QR pass.",leada:"سجّل دخول وطلعة المتعهّدين واعمل scan للـQR تبع ABC Connect.",
+   steps:["<b>Access and Security → Contractors</b>: who is on site today, check in and out.","<b>Micro Tools → Loading Gate</b>: scan the QR — contractor, tenant, dates and request number fill in by themselves.","Press green <b>Approved in</b> or red <b>Rejected out</b>. A pass Salesforce shows as rejected needs a reason to let in.","Quick Access Passes (<b>QP-…</b>) are one entry only: a second scan shows <i>already used</i>.","The loading-area phone has its own link, set up by operations. The guard types his name at the start of each shift."],
+   sa:["<b>Access and Security ← Contractors</b>: مين موجود اليوم، دخول وطلعة.","<b>Micro Tools ← Loading Gate</b>: اعمل scan للـQR — المتعهّد والمستأجر والتواريخ ورقم الطلب بيطلعوا لحالهن.","اكبس الأخضر <b>Approved in</b> أو الأحمر <b>Rejected out</b>. إذا الطلب مرفوض عالـSalesforce لازم تكتب سبب لتفوّتو.","الـQuick Access Pass (<b>QP-…</b>) دخلة وحدة بس: تاني scan بيقلّك <i>already used</i>.","تلفون الـloading area إلو رابط خاص بيركّبو الـoperations. الحارس بيكتب اسمو ببداية كل shift."],
+   media:[S("Video","Scanning a pass at the Loading Gate"),S("Screenshot","Approved in / Rejected out")],
+   sim:{ask:"Tap the folder that holds Contractors.",ans:"Access and Security",aska:"اكبس عالـfolder يلّي فيه Contractors."},
+   quiz:Q("What must you add to let in a pass Salesforce rejected?",["A photo","A reason","Nothing"],1,"A reason is required."),
+   qa:Q("شو لازم تزيد لتفوّت طلب مرفوض عالـSalesforce؟",["صورة","سبب","ولا شي"],1,"لازم تكتب السبب.")},
+  {id:"patrol",t:"Security Patrol",ta:"دوريات الأمن",
+   lead:"Scan every QR checkpoint once per round.",leada:"اعمل scan لكل checkpoint مرّة بكل round.",
+   steps:["Open the guards' link from WhatsApp <b>once with signal</b> — it then works without internet in the back areas.","Tap <b>Scan checkpoint</b> inside the page (not the phone's camera app).","Choose <b>All clear</b> or <b>Report issue</b> with a quick choice, photo and note.","Rounds run in their time windows (default 10:00–14:00 and 18:00–22:00). The round report goes to management 30 minutes after each round."],
+   sa:["افتح رابط الحرّاس من الواتساب <b>مرّة وحدة مع إنترنت</b> — بعدها بيشتغل بلا إنترنت.","اكبس <b>Scan checkpoint</b> جوّا الصفحة (مش كاميرا التلفون).","اختار <b>All clear</b> أو <b>Report issue</b> مع صورة وملاحظة.","الـrounds بأوقاتها (عادةً 10:00–14:00 و18:00–22:00). التقرير بيوصل للإدارة بعد 30 دقيقة من آخر الـround."],
+   media:[S("Video","Scanning a checkpoint"),S("Screenshot","Report issue screen")],
+   quiz:Q("Where do you scan a checkpoint from?",["The phone's camera app","Scan checkpoint inside the page","WhatsApp"],1,"Always from the Scan checkpoint button in the page."),
+   qa:Q("من وين بتعمل scan للـcheckpoint؟",["كاميرا التلفون","زر Scan checkpoint بالصفحة","الواتساب"],1,"دايماً من زر Scan checkpoint.")},
+  {id:"cleaners",t:"Cleaner Access",ta:"دخول عمّال التنظيف",
+   lead:"Cleaner passes per flagship — register, badges and check-ins.",leada:"بطاقات عمّال التنظيف لكل flagship.",
+   steps:["<b>Access and Security → Cleaner Access</b>: Today, Cleaners, Attendance and the Daily report.","Each flagship sees only its own cleaners. The <b>Head of Security</b> sees every flagship.","At the Loading Gate, scan the cleaner's badge and press <b>Check in</b> (once a day).","A blacklisted cleaner has no entry anywhere and cannot be registered again."],
+   sa:["<b>Access and Security ← Cleaner Access</b>: Today، Cleaners، Attendance والتقرير اليومي.","كل flagship بيشوف عمّالو بس. الـ<b>Head of Security</b> بيشوف الكل.","عالـLoading Gate اعمل scan للبطاقة واكبس <b>Check in</b> (مرّة باليوم).","العامل يلّي عليه blacklist ما بيفوت عأي مكان وما بينسجّل مرّة تانية."],
+   media:[S("Screenshot","Cleaner Access — Today")],
+   quiz:Q("Who sees every flagship's cleaners?",["Every guard","The Head of Security","Tenants"],1,"The Head of Security sees all flagships."),
+   qa:Q("مين بيشوف عمّال كل الـflagships؟",["كل حارس","الـHead of Security","المستأجرين"],1,"الـHead of Security.")},
+  {id:"incidents",t:"Incidents and Emergency Alert",ta:"الحوادث وإنذار الطوارئ",
+   lead:"For Security Managers and the Head of Security.",leada:"للـSecurity Manager والـHead of Security.",
+   steps:["<b>Hub Applications → Incident Report System</b>: log the incident with time, area, type and photos, and follow it until closed.","<b>Access and Security → Emergency Alert</b>: type and location — it reaches only the people on shift at that minute.","Anyone who has not acknowledged shows a <b>📞 Call</b> button on the live board.","<b>Tenant Evacuation Plan</b> shows each tenant's service corridor and assembly point."],
+   sa:["<b>Hub Applications ← Incident Report System</b>: سجّل الحادثة بالوقت والمكان والنوع والصور، وتابعها لتتسكّر.","<b>Access and Security ← Emergency Alert</b>: النوع والمكان — بيوصل بس للي عالـshift هلّق.","يلّي ما ردّ بيطلعلو زر <b>📞 Call</b>.","<b>Tenant Evacuation Plan</b>: الـservice corridor ونقطة التجمّع لكل مستأجر."],
+   media:[S("Video","Logging an incident"),S("Screenshot","Emergency Alert live board")],
+   quiz:Q("Who receives an Emergency Alert?",["Everyone","People on shift now","Tenants"],1,"Only people on shift at that minute."),
+   qa:Q("مين بيوصلو الـEmergency Alert؟",["الكل","يلّي عالـshift هلّق","المستأجرين"],1,"بس يلّي عالـshift.")},
+  {...PHONE, ta:"الـPhone والـChat والـReminders وABCON", leada:"احكي مع الفريق وتابع شو مطلوب منك.",
+   sa:["<b>Phone ← Hub Phone</b>: اتصل بأي حدا عالـHub، صوت أو فيديو.","<b>Phone ← Hub Chat</b>: محادثات مع صور وملفات ورسائل صوتية.","<b>Reminders</b>: لائحة التذكيرات تبع منصبك.","اسأل <b>ABCON</b> عن أي policy — الجواب من Policies & Procedures مع المصدر.","استعمل الـsearch لتوصل لأي tool."],
+   qa:Q("من وين بيجاوب ABCON؟",["من الإنترنت","من Policies & Procedures","من Hub Chat"],1,"من الملفات بـPolicies & Procedures.")}
+ ]}
+};
+
+/* ---------- state ---------- */
+let G = null;             // guide/me
+let view = { screen:"shelf", book:null, page:0, lang:"en", toc:false };
+let progress = {};        // { book: { done:[ids], finished } }
+let media = {};           // slot -> {type, updated}
+const app = $("#app"), ar = () => view.lang === "ar";
+const slotId = (b, ch, i) => `${b}.${ch.id}.${i}`;
+const fileUrl = (slot, m) => `/api/ops/guide/file?slot=${encodeURIComponent(slot)}&v=${encodeURIComponent(m.updated || "")}`;
+function bp(b){ return progress[b] || (progress[b] = { done:[], finished:"" }); }
+function pct(b){ return Math.round(bp(b).done.length / BOOKS[b].chapters.length * 100); }
+const myBooks = () => G.all ? Object.keys(BOOKS) : [G.book];
+let saveT = 0;
+function persist(){ clearTimeout(saveT); saveT = setTimeout(() => api("ops/guide/progress", { books: progress }).catch(e => toast(e.message, true)), 400); }
+
+function render(){ view.screen === "shelf" ? renderShelf() : view.screen === "team" ? renderTeam() : renderBook(); }
+
+function renderShelf(){
+  app.removeAttribute("dir");
+  const first = esc(String(G.name || "").split(" ")[0]);
+  app.innerHTML = `
+   <div class="brand"><b>ABC</b> ABC Operations · Operations Hub</div>
+   <div class="hero"><h1>Hub Guidebooks</h1>
+   <p>${first ? first + ", pick" : "Pick"} your book. Each chapter walks you through one part of the hub step by step, with a check question at the end. Your progress is saved to your hub account.</p></div>
+   <div class="shelf">${myBooks().map(id => { const b = BOOKS[id]; return `
+     <button class="cover ${b.cls}" data-open="${id}">
+       <div><div class="vol">${b.vol} · ${b.chapters.length} CHAPTERS${b.bilingual ? " · EN / عربي" : ""}${id === G.book && G.all ? " · YOURS" : ""}</div></div>
+       <div><h2>${b.title}</h2><div class="sub">${b.sub}</div>
+       <div class="bar"><i style="width:${pct(id)}%"></i></div></div>
+     </button>`; }).join("")}</div>
+   ${G.team ? `<div><button class="btn primary" id="teamBtn">Team progress</button></div>` : ""}
+   ${G.admin ? `<div class="note"><strong>Administrator:</strong> open any chapter and tap a dashed slot to add its screenshot or video (up to 25 MB). Everyone sees it at once.</div>` : ""}`;
+  app.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { view = { screen:"book", book:b.dataset.open, page:0, lang:"en", toc:false }; render(); scrollTo(0, 0); });
+  const tb = $("#teamBtn"); if (tb) tb.onclick = () => { view.screen = "team"; render(); };
+}
+
+function T(ch, f){ return ar() && ch[f + "a"] !== undefined ? ch[f + "a"] : ch[f]; }
+function renderBook(turnDir){
+  const B = BOOKS[view.book], chs = B.chapters, n = chs.length, P = bp(view.book), isCert = view.page === n;
+  if (ar()) app.setAttribute("dir", "rtl"); else app.removeAttribute("dir");
+  const oldSp = $(".spread"); let snap = null;
+  if (oldSp && turnDir){
+    const takeRight = (turnDir > 0) !== ar();
+    const half = oldSp.offsetWidth / 2, src = [...oldSp.querySelectorAll(".pg")].find(p => (p.offsetLeft >= half - 5) === takeRight) || oldSp.querySelector(".pg");
+    if (src){ snap = src.cloneNode(true); snap.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); snap.querySelectorAll("video").forEach(v => v.removeAttribute("src"));
+      Object.assign(snap.style, { left:src.offsetLeft + "px", top:src.offsetTop + "px", width:src.offsetWidth + "px", height:src.offsetHeight + "px" });
+      snap.classList.add("flip", takeRight ? "fromR" : "fromL"); }
+  }
+  app.innerHTML = `
+   <div class="topbar">
+     <button class="btn" id="shelfBtn">${ar() ? "← الكتب" : "← All books"}</button>
+     <button class="btn" id="tocBtn">${ar() ? "المحتوى" : "Contents"}</button>
+     <span class="spacer"></span>
+     ${B.bilingual ? `<div class="lang"><button data-l="en" class="${!ar() ? "on" : ""}">English</button><button data-l="ar" class="${ar() ? "on" : ""}">عربي</button></div>` : ""}
+   </div>
+   <div><div class="prog"><i style="width:${pct(view.book)}%"></i></div>
+   <div class="status" style="margin-top:6px">${B.title} · ${P.done.length}/${n} ${ar() ? "فصول مكتملة" : "chapters complete"}</div></div>
+   ${view.toc ? `<div class="drawer toc">${chs.map((c, i) => `<button data-go="${i}"><span class="dot ${P.done.includes(c.id) ? "on" : ""}"></span><span class="t">${i + 1}. ${T(c, "t")}</span></button>`).join("")}<button data-go="${n}"><span class="dot ${P.done.length === n ? "on" : ""}"></span><span class="t">${ar() ? "الشهادة" : "Certificate"}</span></button></div>` : ""}
+   <div class="book"><div class="spread">${isCert ? certHTML(B, P, n) : chapterHTML(B, chs[view.page], view.page, n, P)}</div></div>
+   <div class="topbar"><button class="btn" id="prev" ${view.page === 0 ? "disabled" : ""}>${ar() ? "→ السابق" : "← Previous"}</button><span class="spacer"></span>
+   <button class="btn primary" id="next" ${isCert ? "disabled" : ""}>${ar() ? "التالي ←" : "Next →"}</button></div>
+   <input type="file" id="upl" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" hidden>`;
+  if (snap){ $(".book").appendChild(snap); setTimeout(() => snap.remove(), 650); }
+  $("#shelfBtn").onclick = () => { view.screen = "shelf"; render(); };
+  $("#tocBtn").onclick = () => { view.toc = !view.toc; renderBook(); };
+  app.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { view.lang = b.dataset.l; renderBook(); });
+  app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(+b.dataset.go));
+  $("#prev").onclick = () => go(view.page - 1); $("#next").onclick = () => go(view.page + 1);
+  wireChapter(chs[view.page]);
+}
+function go(i){ const n = BOOKS[view.book].chapters.length; if (i < 0 || i > n) return; const d = i > view.page ? 1 : -1; view.page = i; view.toc = false; renderBook(d); $(".book").scrollIntoView({ block:"start", behavior:"smooth" }); }
+
+function slotHTML(m, slot){
+  const x = media[slot], adminBar = G.admin ? `<div class="slot-adm"><button class="mini" data-up="${slot}">${x ? "Replace" : "+ Add " + m.k.toLowerCase()}</button>${x ? `<button class="mini" data-rm="${slot}">Remove</button>` : ""}</div>` : "";
+  if (x){
+    const el = x.type.startsWith("video/") ? `<video src="${fileUrl(slot, x)}" controls playsinline preload="metadata"></video>` : `<img src="${fileUrl(slot, x)}" alt="${esc(m.d)}" loading="lazy" data-zoom>`;
+    return `<figure class="media-f">${el}<figcaption>${esc(m.d)}</figcaption>${adminBar}</figure>`;
+  }
+  return `<div class="slot"><span class="k">${m.k}</span>${esc(m.d)}${G.admin ? "" : `<small>Coming soon</small>`}${adminBar}</div>`;
+}
+function chapterHTML(B, ch, i, n, P){
+  const steps = ar() && ch.sa ? ch.sa : ch.steps, q = ar() && ch.qa ? ch.qa : ch.quiz, done = P.done.includes(ch.id);
+  const shown = ch.media.map((m, k) => ({ m, slot: slotId(view.book, ch, k) })).filter(x => G.admin || media[x.slot]);
+  return `<div class="pg l"><div class="pmeta"><span>${B.vol} · ${B.title.toUpperCase()}</span><span>${ar() ? "الفصل" : "CHAPTER"} ${i + 1} / ${n}</span></div>
+   <h2><span class="chno">${i + 1}</span>${T(ch, "t")}</h2>
+   <p class="lead">${T(ch, "lead")}</p>
+   <ol class="steps">${steps.map(s => `<li><span>${s}</span></li>`).join("")}</ol>
+   ${ch.tip ? `<div class="tip">${T(ch, "tip")}</div>` : ""}</div>
+   <div class="pg r"><div class="pmeta"><span>${ar() ? "شوف وجرّب" : "SEE IT · TRY IT"}</span><span>${(i + 1) * 2}</span></div>
+   ${shown.length ? `<div class="media">${shown.map(x => slotHTML(x.m, x.slot)).join("")}</div>` : ""}
+   ${ch.sim ? `<div class="box"><h3>${ar() ? "جرّب بنفسك" : "Try it"}</h3><div>${ar() && ch.sim.aska ? ch.sim.aska : ch.sim.ask}</div>
+     <div class="mock"><div class="mh">ABC HUB · HOME</div><div class="grid">${FOLDERS.map(f => `<button class="tile" data-tile="${esc(f)}"><i></i>${esc(f)}</button>`).join("")}</div></div><div class="fb" id="simfb"></div></div>` : ""}
+   <div class="box"><h3>${ar() ? "سؤال تحقّق" : "Check question"}</h3><div>${q.q}</div>
+     <div class="opts" style="margin-top:10px">${q.o.map((o, k) => `<button class="opt" data-q="${k}">${o}</button>`).join("")}</div>
+     <div class="fb" id="qfb"></div></div>
+   <div class="done-row">${done ? `<span class="chip ok">✓ ${ar() ? "مكتمل" : "Chapter complete"}</span>` : `<span class="chip">${ar() ? "جاوب صح لتكمّل الفصل" : "Answer correctly to complete this chapter"}</span>`}</div></div>`;
+}
+function certHTML(B, P, n){
+  const all = P.done.length === n;
+  return `<div class="pg l"><div class="cert"><div class="seal">${all ? "✓" : P.done.length + "/" + n}</div>
+   <h2>${all ? (ar() ? "خلّصت الكتاب" : "Book complete") : (ar() ? "قرّبت" : "Almost there")}</h2>
+   <p class="lead" style="margin-inline:auto">${all ? (ar() ? "خلّصت كل الفصول. تقدّمك محفوظ بحسابك عالـHub." : `You finished every chapter of the ${B.title} book${P.finished ? " on " + esc(P.finished.slice(0, 10)) : ""}. Your completion is recorded on your hub account.`) : (ar() ? "في فصول بعد ما خلصت. افتح المحتوى لتشوفها." : "Some chapters are still open. Open Contents to see which ones.")}</p>
+   <div class="brand" style="justify-content:center"><b>ABC</b> ABC Operations · Operations Hub</div></div></div>
+   <div class="pg r"><div class="cert"><h2 style="font-size:22px">${ar() ? "شو بعد؟" : "What next"}</h2><p class="lead" style="margin-inline:auto">${ar() ? "ارجع عالـHub وجرّب كل شي قريتو. فيك ترجع عالكتاب من tile الـHub Guidebooks." : "Go back to the hub and try what you read. You can reopen this book any time from the Hub Guidebooks tile."}</p></div></div>`;
+}
+function wireChapter(ch){
+  if (!ch) return;
+  const q = ar() && ch.qa ? ch.qa : ch.quiz;
+  app.querySelectorAll("[data-q]").forEach(b => b.onclick = () => {
+    const k = +b.dataset.q, ok = k === q.a;
+    app.querySelectorAll("[data-q]").forEach(x => x.classList.remove("right", "wrong"));
+    b.classList.add(ok ? "right" : "wrong");
+    $("#qfb").textContent = ok ? (ar() ? "صح. " : "Correct. ") + q.why : (ar() ? "مش هيك. جرّب مرّة تانية." : "Not quite. Try again.");
+    if (ok){ const P = bp(view.book); if (!P.done.includes(ch.id)){ P.done.push(ch.id);
+        if (P.done.length === BOOKS[view.book].chapters.length && !P.finished) P.finished = new Date().toISOString(); persist(); }
+      $(".done-row").innerHTML = `<span class="chip ok">✓ ${ar() ? "مكتمل" : "Chapter complete"}</span>`; $(".prog i").style.width = pct(view.book) + "%";
+      $(".status").textContent = `${BOOKS[view.book].title} · ${P.done.length}/${BOOKS[view.book].chapters.length} ${ar() ? "فصول مكتملة" : "chapters complete"}`; }
+  });
+  app.querySelectorAll("[data-tile]").forEach(b => b.onclick = () => {
+    const ok = b.dataset.tile === ch.sim.ans;
+    app.querySelectorAll("[data-tile]").forEach(x => x.classList.remove("right", "wrong"));
+    b.classList.add(ok ? "right" : "wrong");
+    $("#simfb").textContent = ok ? (ar() ? "تمام، هيدا هو." : "That's the one.") : (ar() ? "لا، جرّب غيرو." : "Not this one. Try another folder.");
+  });
+  let target = "";
+  app.querySelectorAll("[data-up]").forEach(b => b.onclick = () => { target = b.dataset.up; $("#upl").value = ""; $("#upl").click(); });
+  app.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1"){ b.dataset.sure = "1"; b.textContent = "Tap again to remove"; return; }
+    try { await api("ops/guide/media/remove", { slot: b.dataset.rm }); delete media[b.dataset.rm]; renderBook(); toast("Removed"); } catch (e){ toast(e.message, true); }
+  });
+  const up = $("#upl"); if (up) up.onchange = async () => {
+    const f = up.files[0]; if (!f || !target) return;
+    if (f.size > 25 * 1024 * 1024) return toast("The file is larger than 25 MB — shorten or compress the video", true);
+    toast("Uploading…");
+    const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+    try { const r = await api("ops/guide/media", { slot: target, data: data.replace(/^data:video\/x-m4v/, "data:video/mp4"), name: f.name }); media[target] = { type: r.type, updated: r.updated }; renderBook(); toast("Added — everyone sees it now"); }
+    catch (e){ toast(e.message, true); }
+  };
+  app.querySelectorAll("[data-zoom]").forEach(im => im.onclick = () => { const d = $("#zoom"); d.querySelector("img").src = im.src; d.showModal(); });
+}
+
+const POS = { SMS:"Senior Mall Supervisor", MS:"Mall Supervisor", MO:"Mall Officer", WH:"Warehouse", OM:"Operations Manager", DOM:"Deputy Operations Manager", SM:"Security Manager", HOS:"Head of Security" };
+async function renderTeam(){
+  app.removeAttribute("dir");
+  app.innerHTML = `<div class="topbar"><button class="btn" id="back">← All books</button></div>
+   <h1 style="font-size:28px">Team progress</h1><div class="status" id="tstat">Loading…</div><div class="tblwrap" id="tbl"></div>`;
+  $("#back").onclick = () => { view.screen = "shelf"; render(); };
+  try {
+    const r = await api("ops/guide/team");
+    if (!r.rows.length){ $("#tstat").textContent = "No one has opened a book yet."; return; }
+    const ids = Object.keys(BOOKS), fin = r.rows.filter(x => ids.some(k => x.books[k] && x.books[k].done && x.books[k].done.length === BOOKS[k].chapters.length)).length;
+    $("#tstat").textContent = `${r.rows.length} people started · ${fin} finished at least one book`;
+    $("#tbl").innerHTML = `<table><thead><tr><th>Name</th><th>Title</th><th>Flagship</th>${ids.map(k => `<th>${BOOKS[k].title}</th>`).join("")}<th>Last read</th></tr></thead><tbody>${
+      r.rows.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(POS[x.pos] || x.role.charAt(0) + x.role.slice(1).toLowerCase())}</td><td>${esc(x.siteName)}</td>${ids.map(k => { const d = x.books[k], c = d && d.done ? d.done.length : 0, n = BOOKS[k].chapters.length;
+        return `<td>${!c ? `<span class="muted">—</span>` : c === n ? `<span class="pill ok">✓ ${n}/${n}</span>` : `<span class="pill warn">${c}/${n}</span>`}</td>`; }).join("")}<td>${esc(String(x.updated || "").slice(0, 10))}</td></tr>`).join("")}</tbody></table>`;
+  } catch (e){ $("#tstat").textContent = e.message; }
+}
+
+document.addEventListener("keydown", e => { if (view.screen !== "book" || /INPUT|VIDEO/.test(document.activeElement.tagName)) return; const f = ar() ? -1 : 1; if (e.key === "ArrowRight") go(view.page + f); if (e.key === "ArrowLeft") go(view.page - f); });
+let sx = null; document.addEventListener("touchstart", e => { sx = e.target.closest("video,.tblwrap,.mock") ? null : e.touches[0].clientX; }, { passive:true });
+document.addEventListener("touchend", e => { if (view.screen !== "book" || sx === null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) < 70) return; const f = ar() ? -1 : 1; go(view.page + (dx < 0 ? f : -f)); }, { passive:true });
+
+(async () => {
+  try {
+    G = await api("ops/guide/me");
+    progress = G.books || {}; G.media.forEach(m => media[m.slot] = m);
+    if (!G.all){ view = { screen:"book", book:G.book, page:0, lang:"en", toc:false };   // one book: open it at the first chapter not done
+      const P = bp(G.book), i = BOOKS[G.book].chapters.findIndex(c => !P.done.includes(c.id)); view.page = i < 0 ? 0 : i; }
+    render();
+  } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
+})();
+
+</script>
+</body>
+</html>

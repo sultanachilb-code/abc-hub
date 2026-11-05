@@ -1506,7 +1506,7 @@ function startHub(){
   checkApprovals();
   route();
   setInterval(() => { if (!document.hidden){ loadBrief(); if (briefOn()) loadRoleBrief(); } }, 5 * 60 * 1000);
-  setTimeout(() => { if (!welcomeSeen()) welcomeSheet(); else offerPasskey(); }, 900);   // Welcome feature: first sign-in on this device
+  setTimeout(() => { if (!welcomeSeen()){ welcomeSheet(); sheet.addEventListener("close", guideFirst, { once: true }); } else { offerPasskey(); guideFirst(); } }, 900);   // Welcome feature: first sign-in on this device
 }
 
 /* =====================================================================
@@ -1575,6 +1575,15 @@ async function welcomeSheet(){
     } catch (er){ b.disabled = false; msg(er.name === "NotAllowedError" ? "Not allowed — you can try again, or allow it later in the browser's site settings." : er.name === "InvalidStateError" ? "This device already has a passkey for your account." : er.message); }
   };
   draw();
+}
+
+/* Hub Guidebooks: opened once by itself on the person's first sign-in (then from its tile) — docs/FEATURE-guide.md */
+function guideFirst(){
+  const k = "hub.guide." + (ME && ME.user.email); let seen = true;
+  try { seen = !!localStorage.getItem(k); localStorage.setItem(k, new Date().toISOString()); } catch {}
+  if (seen || location.hash.startsWith("#/app/")) return;
+  api("ops/guide/me").then(g => { const started = Object.values(g.books || {}).some(b => b.done && b.done.length);
+    const a = (window.HUB.APPS || []).find(x => x.id === "guide"); if (a && !started) launch(a); }).catch(() => {});
 }
 
 /* ---------- account menu ---------- */
