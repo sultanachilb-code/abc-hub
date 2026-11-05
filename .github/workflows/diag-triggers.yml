@@ -10,6 +10,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          Q="SELECT (SELECT COUNT(*) FROM gla_units WHERE site='ACM') AS gla, (SELECT COUNT(*) FROM meta WHERE k='glaseed:ACM') AS seeded, (SELECT COUNT(*) FROM layout_levels WHERE site='ACM') AS plans, (SELECT COUNT(*) FROM budget_lines WHERE site='ACM') AS budget, (SELECT COUNT(*) FROM dir_contacts WHERE site='ACM') AS dir, (SELECT COUNT(*) FROM users WHERE site_code='ACM') AS users"
+          Q="SELECT (SELECT group_concat(role || '/' || COALESCE(position,'') || '/' || active, ', ') FROM users WHERE site_code='ACM') AS users, (SELECT group_concat(level || ':' || COALESCE(source,'') || ':' || COALESCE(uploaded_at, ''), ' ; ') FROM layout_levels WHERE site='ACM') AS plans, (SELECT COUNT(*) FROM layout_pins WHERE site='ACM') AS pins, (SELECT COUNT(*) FROM layout_pins WHERE site='ACM' AND source<>'auto') AS manualpins"
           npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
           echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[0].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
