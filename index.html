@@ -2868,6 +2868,12 @@ function d2dPack(items, max){
   }
   return rows;
 }
+/* Home layout by position (Nov 2026, Admin Control → Landing pages → Home layout): section order, sections ON / OFF, timeline lanes ON / OFF */
+const HOME_DEF = ["brief", "moment", "d2d", "fu", "tools"];
+const homeCfg = () => (ME && ME.home) || null;
+const homeOn = k => { const h = homeCfg(); return !(h && (h.off || []).includes(k)); };
+const laneOn = k => { const h = homeCfg(); return !(h && (h.lanesOff || []).includes(k)); };
+const homeOrder = () => { const h = homeCfg(), o = h && Array.isArray(h.order) ? h.order.filter(x => HOME_DEF.includes(x)) : []; return [...o, ...HOME_DEF.filter(x => !o.includes(x))]; };
 function d2dHtml(){
   const apps = d2dApps(); if (!apps.length) return "";
   const D = D2D.data, has = id => apps.some(a => a.id === id) || !!byId(id);   // schedule and calendar sit inside the Schedule & Calendar tile
@@ -2933,10 +2939,11 @@ function d2dHtml(){
     const st = r.done ? (late ? "late" : "done") : nm > due ? "over" : due - nm <= 60 ? "soon" : "next";
     const lbl = r.done ? `✓ ${r.label} ${r.at}${late ? " · late" : ""}` : st === "over" ? `⚠ ${r.label} · overdue ${r.due}` : `${r.label} · by ${r.due}`;
     return { t: "dl", r, st, from: `${String(Math.floor((due - 170) / 60)).padStart(2, "0")}:${String((due - 170) % 60).padStart(2, "0")}`, to: r.due, label: lbl }; });
+  [["restroom", rrBars], ["deadlines", dlBars], ["malfunctions", mfBars], ["patrol", ptBars], ["quickpass", qpDots], ["contractors", conDots], ["closing", tcBars], ["events", evBars]].forEach(([k, A]) => { if (!laneOn(k)) A.length = 0; });
   let lanes = "";
   if (rrBars.length) lanes += lane([rrBars], false);
   if (dlBars.length) lanes += d2dPack(dlBars, 3).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl ${b.st}" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">${esc(b.label)}</button>`; }).join("")}</div>`).join("");
-  if (has("schedule")) lanes += lane(d2dPack(shiftBars, 4), !!lanes);
+  if (has("schedule") && laneOn("shift")) lanes += lane(d2dPack(shiftBars, 4), !!lanes);
   if (mfBars.length) lanes += lane(d2dPack(mfBars, 3), !!lanes);
   if (ptBars.length) lanes += lane([ptBars], !mfBars.length && !!lanes);
   if (qpDots.length) lanes += d2dPack(qpDots, 2).map((r, k) => `<div class="d2d-ln ${k === 0 ? "gap" : ""}">${r.map(b => { BARS.push(b);
@@ -2947,24 +2954,24 @@ function d2dHtml(){
   const gRef = []; if (D.gate && (has("gate") || has("contractor-access"))) for (const r of D.gate.refused.slice().sort((a, b) => hmM(a.at) - hmM(b.at))){
     const g = gRef.find(x => Math.abs(hmM(x.at) - hmM(r.at)) <= 20); if (g) g.L.push(r); else gRef.push({ t: "gref", at: r.at, L: [r] }); }
   const gBars = gRef.map(g => ({ ...g, from: g.at, to: mm0(Math.min(1439, hmM(g.at) + 25 + 14 * 9)), label: g.L.length > 1 ? `${g.L.length} refused at the gate` : `Refused · ${g.L[0].contractor || g.L[0].tenant || g.L[0].req}` }));
-  if (gBars.length) lanes += d2dPack(gBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b);
+  if (gBars.length && laneOn("gate")) lanes += d2dPack(gBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b);
     return `<button class="d2d-dot info gref" data-b="${BARS.length - 1}" style="left:${X(b.at)}" title="${esc(b.label)} · ${esc(b.at)}"><i>✕</i><span>${esc(b.label)}</span></button>`; }).join("")}</div>`).join("");
   if (tcBars.length) lanes += d2dPack(tcBars, 2).map(r => `<div class="d2d-ln">${r.map(b => { BARS.push(b); return `<button class="d2d-dl close" data-b="${BARS.length - 1}" style="left:${X(b.to)}" title="${esc(b.label)}">🏁 ${esc(b.label)}</button>`; }).join("")}</div>`).join("");
   if (evBars.length) lanes += lane(d2dPack(evBars, 2), true);
   if (!lanes) lanes = `<div class="d2d-ln"></div>`;
-  const pins = has("handover") && D.handover ? D.handover.handoffs.map((h, k) => { BARS.push({ t: "pin", h });
+  const pins = has("handover") && laneOn("handover") && D.handover ? D.handover.handoffs.map((h, k) => { BARS.push({ t: "pin", h });
     const wait = k === D.handover.handoffs.length - 1 && D.handover.waiting;
     return `<span class="d2d-hl" style="left:${X(h.at)}"><b>Handed over ${esc(h.at)} · ${esc(h.by.split(" ")[0])}${h.receivedBy ? " → " + esc(h.receivedBy.split(" ")[0]) : ""}</b></span><button class="d2d-pin ${wait ? "wait" : ""}" data-b="${BARS.length - 1}" style="left:${X(h.at)}" aria-label="Handover ${esc(h.at)}"></button>`; }).join("") : "";
   D2D.bars = BARS;
   const hours = [...Array(h1 - h0)].map((_, i) => `<span class="${h0 + i >= 12 ? "pm" : ""}">${String(h0 + i).padStart(2, "0")}</span>`).join("");
-  const offTxt = D.off.length ? `<span>Off / leave: <b>${esc(D.off.map(o => o.name.split(" ")[0] + " (" + o.code + ")").join(", "))}</b></span>` : "";
-  const chips = allDay.map(x => `<span>${x.kind === "mom" ? "Meeting" : x.kind === "marketing" ? "Event" : "Activity"}: <b>${esc(x.title)}</b></span>`).join("") + offTxt;
+  const offTxt = D.off.length && laneOn("off") ? `<span>Off / leave: <b>${esc(D.off.map(o => o.name.split(" ")[0] + " (" + o.code + ")").join(", "))}</b></span>` : "";
+  const chips = (laneOn("events") ? allDay : []).map(x => `<span>${x.kind === "mom" ? "Meeting" : x.kind === "marketing" ? "Event" : "Activity"}: <b>${esc(x.title)}</b></span>`).join("") + offTxt;
   const empty = !all.length && !rrBars.length && !dlBars.length && !conDots.length && !tcBars.length && !qpDots.length ? `<p class="brief-empty" style="position:absolute;left:16px;top:44px;font-size:.82rem">Nothing on today's schedule yet — add the shifts in Operations Schedule.</p>` : "";
   return `<section class="d2d" id="d2d">${head}${chips ? `<div class="d2d-day">${chips}</div>` : ""}
     <div class="d2d-sc"><div class="d2d-tr" style="--n:${h1 - h0};--mw:${(h1 - h0) * 46}px"><div class="d2d-hr">${hours}</div>${lanes}${pins}${empty}
       <div class="d2d-now" style="left:${X(now)}"><b>NOW ${esc(now)}</b></div></div></div>
-    <div class="d2d-leg">${has("schedule") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${mfBars.length ? `<span><i style="background:#B5452B"></i>Malfunctions</span>` : ""}${ptBars.length ? `<span><i style="background:#2E8B57"></i>Security patrol rounds</span>` : ""}${qpDots.length ? `<span><i class="pn" style="background:#1E8A4C"></i>Quick Pass approved</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#8C8398"></i>Contractor attended</span>` : ""}${gBars.length ? `<span><i class="pn" style="background:#8C8398"></i>Refused at the gate</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
-    ${d2dCards(apps, D, nm)}</section>`;
+    <div class="d2d-leg">${has("schedule") && laneOn("shift") ? `<span><i style="background:#4A1F73"></i>Team on shift</span>` : ""}${mfBars.length ? `<span><i style="background:#B5452B"></i>Malfunctions</span>` : ""}${ptBars.length ? `<span><i style="background:#2E8B57"></i>Security patrol rounds</span>` : ""}${qpDots.length ? `<span><i class="pn" style="background:#1E8A4C"></i>Quick Pass approved</span>` : ""}${conDots.length ? `<span><i class="pn" style="background:#8C8398"></i>Contractor attended</span>` : ""}${gBars.length && laneOn("gate") ? `<span><i class="pn" style="background:#8C8398"></i>Refused at the gate</span>` : ""}${tcBars.length ? `<span><i style="background:#8E2B2B"></i>Tenant closing</span>` : ""}${evBars.length ? `<span><i style="background:#8A5A1F"></i>Meetings & events</span>` : ""}${has("handover") && laneOn("handover") ? `<span><i class="pn"></i>Handover · dashed line = handed over</span>` : ""}${rrBars.length ? `<span><i style="background:#2F6F7E"></i>Restroom windows</span>` : ""}${dlBars.length ? `<span><i style="background:transparent;border:2px solid var(--brand-2)"></i>Deadlines</span>` : ""}</div>
+    ${laneOn("tiles") ? d2dCards(apps, D, nm) : ""}</section>`;
 }
 function d2dCards(apps, D, nm){
   const line = { schedule: () => {
@@ -3364,10 +3371,13 @@ function renderHome(){
   let foldersDone = false;
   const hlG = groups.slice(); hlGroups = () => hlG;
   if (!q){   // Home layouts: Smart cards · Orbit · Glass dock (search keeps the plain list below)
-    html += `<div id="momentSlot">${momentHtml()}</div>`;   // Message of the moment, above Day to Day
-    if (groups.includes(DAY_GROUP) && showD2D()) html += d2dHtml();
-    html += `<div id="fuSlot">${fuHtml()}</div>`;   // Follow-ups: "Action needed" between Day to Day and All tools
-    html += hlHtml(groups);
+    const part = { brief: () => homeCfg() ? `<div id="briefSlot"></div>` : "",   // with a Home layout the brief moves into its place in the order
+      moment: () => `<div id="momentSlot">${momentHtml()}</div>`,   // Message of the moment
+      d2d: () => groups.includes(DAY_GROUP) && showD2D() ? d2dHtml() : "",
+      fu: () => `<div id="fuSlot">${fuHtml()}</div>`,   // Follow-ups: "Action needed"
+      tools: () => hlHtml(groups) };
+    for (const k of homeOrder()) if (homeOn(k)) html += part[k]();
+    if (!homeOn("tools")){ hlDock(null); document.body.classList.remove("hl-docked"); }
   } else hlDock(null);
   if (!q) groups.length = 0;
   for (const g of groups){
@@ -3383,8 +3393,10 @@ function renderHome(){
   }
   const dir = (q.length >= 3 ? findSection(q) : "") + (q.length >= 2 ? dirSection(q) : "");
   const d2dKeep = $("#d2d .d2d-sc") ? $("#d2d .d2d-sc").scrollLeft : null;
+  if ($("#brief").parentNode !== $("#list").parentNode) $("#list").before($("#brief"));   // put the brief back before the list is rebuilt
   $("#list").innerHTML = dir + html || (DIRS.q === q && DIRS.res && DIRS.res.results.length ? "" : `<p class="empty">No system matches “${esc(q)}”.</p>`);
-  $("#brief").classList.toggle("hidden", !!q);
+  $("#brief").classList.toggle("hidden", !!q || !homeOn("brief"));
+  if (!q && $("#briefSlot")) $("#briefSlot").appendChild($("#brief"));
   if (!q) d2dScroll(d2dKeep);
   if (!q){ hlMarkSwitch(); requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#hlOrb .sat").forEach(x => x.classList.add("in")))); }
   renderRail();

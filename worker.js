@@ -59,7 +59,7 @@ import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   //
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";
-import { lpAdmin, hasLanding } from "./modules/landing.js";
+import { lpAdmin, hasLanding, homeAdmin, homeFor } from "./modules/landing.js";
 import { rpSchema, rpRoute, rpRun } from "./modules/reports.js";   // Report builder — docs/FEATURE-reports.md   // Landing pages by position (Admin Control → Landing pages) — docs/FEATURE-landing-pages.md   // Brief by role: Manager action brief · Advisor / Director / CDSO KPI brief — see docs/FEATURE-brief-by-role.md   // CRM handhelds sheet (Operations Tools) — see docs/FEATURE-crm.md   // ABCON: read-only summaries from Snaglist, Incidents, Restroom and Audit databases
 import { polSchema, polRoute, polSearch, polEmbedPending } from "./modules/policies.js";   // Policies & Procedures library (ABCON reads it) — see docs/FEATURE-policies.md   // Hub Assistant on Workers AI — see docs/FEATURE-ai.md
 import { hotspots } from "./modules/hotspots.js";   // Hotspot map — see docs/FEATURE-hotspots.md
@@ -752,7 +752,7 @@ async function route(request, env, ctx, url) {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     const effRole = me._real ? me._real.role : me.role;   // administrator mode: two-step follows the person's real role
     return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on }, sys: sysSummary(me, ssoDeps) }, sites: SITES, roles: ROLES,
-      tools: toolsCfgNow(), viewAs: me._viewAs || null, landing: await hasLanding(env, me).catch(() => false),
+      tools: toolsCfgNow(), viewAs: me._viewAs || null, landing: await hasLanding(env, me).catch(() => false), home: await homeFor(env, me).catch(() => null),
       admin: isAdminUser(me) ? { mode: !!me._adminMode || (me.role === "ADMIN" && !!me._admUnlocked), unlocked: !!me._admUnlocked, real: me._real || null, split: !!me.is_admin && (me._real ? me._real.role : me.role) !== "ADMIN" } : null });
   }
   if (path.startsWith("fu/")) return ok(await followupRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, { today: beirutToday, now: nowIso }));   // Follow-ups
@@ -881,6 +881,7 @@ async function route(request, env, ctx, url) {
       return new Response(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#F1EEF4"><div style="font:12px Segoe UI,Arial;color:#6D6479;padding:10px 14px;background:#fff;border-bottom:1px solid #E6E1EC"><b>Subject:</b> ${m.subject.replace(/</g, "&lt;")}</div>${m.html}</body>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
     }
     if (a.startsWith("cc/mailbox")) return ok(await mbRoute(env, a, method, body, me, { ...MB_DEPS, hubUrl: HUB_URL }));   // Report mailbox
+    if (a === "cc/home") return ok(await homeAdmin(env, method, body, me));   // Home layout by position (Landing pages → Home layout)
     if (a === "cc/lp") return ok(await lpAdmin(env, method, body, me, { allows: (u, app) => roleAllows(u, app) }));   // Landing pages by position
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie, ssoAdmin: { apps: SSO_APPS, policy: ssoPolicy, set: ssoPolicySet, ready: id => ssoReady(env, id, CONNECTORS[id]) },
