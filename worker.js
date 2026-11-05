@@ -35,7 +35,7 @@ import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js
 import { cleaningSchema, cleaningRoute } from "./modules/cleaning.js";   // Cleaning headcount control — see docs/FEATURE-cleaning-control.md
 import { ccSchema, ccHubRoute, ccHandover, ccDay } from "./modules/cleanctl.js";   // Cleaning Control: schedule, cleaner app, before/after photos — see docs/FEATURE-cleaning-app.md
 import { trainingSchema, trainingRoute, trainingStatus } from "./modules/training.js";
-import { guideSchema, guideRoute } from "./modules/guide.js";   // Hub Guidebooks — see docs/FEATURE-guide.md   // Training tracker — see docs/FEATURE-training.md
+import { guideSchema, guideRoute, guideFile } from "./modules/guide.js";   // Hub Guidebooks — see docs/FEATURE-guide.md   // Training tracker — see docs/FEATURE-training.md
 import { digestSchema, digestFor, digestHtml, digestRun } from "./modules/digest.js";
 import { snagReport, snagReportRun } from "./modules/snagreport.js";   // Snaglist consolidated report — see docs/FEATURE-snaglist-report.md   // Weekly digest per person — see docs/FEATURE-weekly-digest.md
 import { storageStatus, storageRun, d1Traffic, d1Top, gql } from "./modules/storage.js";   // Cloudflare storage (R2 / D1) meter for the admin — see docs/FEATURE-storage-meter.md   // Contracts near ending — see docs/FEATURE-email-inbox.md
@@ -844,6 +844,7 @@ async function route(request, env, ctx, url) {
     if (!roleAllows(me, "induction") || !canSite(me, s2)) return new Response("", { status: 403 });
     return inductionCover(env, s2);
   }   // Tenant Works Forms feature: the PDF
+  if (path === "ops/guide/file" && method === "GET") return guideFile(env, url, request);   // Hub Guidebooks: pictures / videos (byte ranges for iPhone)
   if (path.startsWith("ops/")) {
     const out = await opsRoute(env, me, path.slice(4), method, body, url);
     if (out instanceof Response) return out;   // files streamed from storage (e.g. PM certificates)

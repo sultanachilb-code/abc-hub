@@ -74,14 +74,6 @@ export async function guideRoute(env, p, method, b, url, d) {
       return { name: x.name, role: x.role, pos: x.pos, site: x.site, siteName: x.site ? siteName(x.site) : "", books: bk, updated: x.updated };
     }) };
   }
-  if (p === "guide/file" && method === "GET") {
-    const slot = String(url.searchParams.get("slot") || "");
-    if (!SLOT.test(slot)) throw err("Not found", 404);
-    const m = await DB.prepare("SELECT file_key, type FROM guide_media WHERE slot = ?").bind(slot).first();
-    const o = m && env.FILES ? await env.FILES.get(m.file_key) : null;
-    if (!o) throw err("Not found", 404);
-    return new Response(o.body, { headers: { "content-type": m.type, "cache-control": "private, max-age=86400", "accept-ranges": "bytes" } });
-  }
   if (p === "guide/media" && method === "POST") {
     if (!admin) throw err("Only the administrator adds pictures and videos", 403);
     const slot = String(b.slot || ""); if (!SLOT.test(slot)) throw err("Unknown slot");
@@ -108,4 +100,23 @@ export async function guideRoute(env, p, method, b, url, d) {
     return { removed: true };
   }
   throw err("Unknown request", 404);
+}
+
+/* the picture / video of a slot — with byte ranges, which iPhone Safari needs to play a video */
+export async function guideFile(env, url, request) {
+  const slot = String(url.searchParams.get("slot") || "");
+  if (!SLOT.test(slot)) return new Response("Not found", { status: 404 });
+  const m = await env.DB.prepare("SELECT file_key, type FROM guide_media WHERE slot = ?").bind(slot).first();
+  if (!m || !env.FILES) return new Response("Not found", { status: 404 });
+  const head = await env.FILES.head(m.file_key); if (!head) return new Response("Not found", { status: 404 });
+  const size = head.size, base = { "content-type": m.type, "accept-ranges": "bytes", "cache-control": "private, max-age=86400" };
+  const r = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get("range") || "");
+  if (r && (r[1] || r[2])) {
+    let start = r[1] ? Number(r[1]) : Math.max(0, size - Number(r[2])), end = r[1] && r[2] ? Math.min(Number(r[2]), size - 1) : size - 1;
+    if (start >= size || start > end) return new Response("", { status: 416, headers: { ...base, "content-range": `bytes */${size}` } });
+    const o = await env.FILES.get(m.file_key, { range: { offset: start, length: end - start + 1 } });
+    return new Response(o.body, { status: 206, headers: { ...base, "content-range": `bytes ${start}-${end}/${size}`, "content-length": String(end - start + 1) } });
+  }
+  const o = await env.FILES.get(m.file_key);
+  return new Response(o.body, { headers: { ...base, "content-length": String(size) } });
 }
