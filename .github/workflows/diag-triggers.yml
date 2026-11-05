@@ -10,8 +10,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          npx -y wrangler@4 d1 execute hub-db --remote --json --command "DELETE FROM layout_pins WHERE site='ACM' AND level='L0'; DELETE FROM layout_images WHERE site='ACM' AND level='L0'; DELETE FROM layout_levels WHERE site='ACM' AND level='L0'" > d.json 2> de.txt || true
-          echo "::notice title=del::$(head -c 300 de.txt | tr -d '\r\n')"
-          Q="SELECT (SELECT group_concat(level, ',') FROM layout_levels WHERE site='ACM') AS plans"
+          Q="SELECT (SELECT group_concat(role || '/' || COALESCE(position,''), ', ') FROM users WHERE site_code='ACS' AND active=1) AS users, (SELECT COUNT(*) FROM gla_units WHERE site='ACS') AS gla, (SELECT group_concat(level, ',') FROM layout_levels WHERE site='ACS') AS plans, (SELECT COUNT(*) FROM dir_contacts WHERE site='ACS') AS dir, (SELECT COUNT(*) FROM crm_rows WHERE site='ACS') AS crm, (SELECT COUNT(*) FROM layout_levels WHERE site='ACM' AND level='GF') AS acmgf, (SELECT COUNT(*) FROM gla_units WHERE site='ACM') AS acmgla"
           npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
           echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[0].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
