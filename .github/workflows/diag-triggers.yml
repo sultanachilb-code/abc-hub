@@ -5,12 +5,11 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          H=https://operations-hub.sultanachi-lb-61f.workers.dev
-          echo "::notice title=page::$(curl -s -o /dev/null -w '%{http_code}' $H/tools/footfall)"
-          echo "::notice title=form::$(curl -s -o /dev/null -w '%{http_code}' $H/ff/AAAAAAAAAAAAAAAAAAAAAAAA)"
-          echo "::notice title=ext::$(curl -s $H/api/ff-ext/AAAAAAAAAAAAAAAAAAAAAAAA)"
-          echo "::notice title=ctx::$(curl -s $H/api/ops/ff/context)"
-          echo "::notice title=apps::$(curl -s $H/apps.js | grep -c 'tools/footfall')"
-          echo "::notice title=old::$(curl -s -o /dev/null -w '%{http_code}' https://footfall-hub.sultanachi-lb-61f.workers.dev/)"
+          Q="SELECT (SELECT COUNT(*) FROM gla_units WHERE site='ACM') AS gla, (SELECT COUNT(*) FROM meta WHERE k='glaseed:ACM') AS seeded, (SELECT COUNT(*) FROM layout_levels WHERE site='ACM') AS plans, (SELECT COUNT(*) FROM budget_lines WHERE site='ACM') AS budget, (SELECT COUNT(*) FROM dir_contacts WHERE site='ACM') AS dir, (SELECT COUNT(*) FROM users WHERE site_code='ACM') AS users"
+          npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
+          echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[0].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
