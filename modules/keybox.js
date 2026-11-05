@@ -13,6 +13,20 @@ const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().sl
 export const KB_PURPOSES = ["Viewing", "Fit-out", "Maintenance", "Inspection", "Other"];
 const KINDS = { staff: "Hub staff", leasing: "Leasing", tenant: "Tenant", contractor: "Contractor", other: "Other" };
 
+/* Keys the box keeps for leased units (tenants' storage units), Nov 2026 — they have a hook even though the unit is not vacant.
+   Loaded once per flagship from the key box list the flagship sent (unit codes and brands only). */
+const KB_HELD = {
+  ACS: [["A-0-169", "Storage · Espace S"], ["A-1-034", "Storage · Vanessa Bruno"], ["A-1-073", "Storage · Gerard Darel"], ["A-1-075", "Storage · Zadig & Voltaire"],
+    ["A-1-077", "Storage · Eden Park"], ["A-2-068", "Storage · Le Massif 2000"], ["A-2-069", "Storage · Antonelle"], ["A-2-070", "Storage · Gerry Webber"],
+    ["A-2-071", "Storage · Tartine Et Chocolat"], ["A-2-108", "Storage · Antonelle"]]
+};
+async function kbHeldSeed(env, site) {
+  if (!KB_HELD[site]) return;
+  const c = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind("kbheld:" + site, new Date().toISOString()).run().catch(() => null);
+  if (!c || !c.meta || c.meta.changes !== 1) return;
+  await env.DB.batch(KB_HELD[site].map(([unit, note]) => env.DB.prepare(`INSERT INTO kb_units (site, unit, keys, note, held, updated_by, updated_at) VALUES (?,?,1,?,1,'Key box list',?)
+    ON CONFLICT(site, unit) DO UPDATE SET held = 1, note = CASE WHEN note = '' THEN excluded.note ELSE note END`).bind(site, unit, note, new Date().toISOString())));
+}
 export async function keyboxSchema(env) {
   await env.DB.batch([
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS kb_units (site TEXT NOT NULL, unit TEXT NOT NULL, keys INTEGER NOT NULL DEFAULT 1, note TEXT NOT NULL DEFAULT '',
@@ -25,6 +39,7 @@ export async function keyboxSchema(env) {
     env.DB.prepare("CREATE INDEX IF NOT EXISTS kb_moves_open ON kb_moves (site, back_at, unit)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS kb_moves_unit ON kb_moves (site, unit, id)")
   ]);
+  await env.DB.prepare("ALTER TABLE kb_units ADD COLUMN held INTEGER NOT NULL DEFAULT 0").run().catch(() => {});   // Nov 2026: keys kept for leased units
 }
 const moveOut = (m, now) => m ? ({ id: m.id, unit: m.unit, outAt: m.out_at, dueAt: m.due_at, backAt: m.back_at, keys: m.keys, taker: m.taker, takerKind: m.taker_kind,
   kindLabel: KINDS[m.taker_kind] || m.taker_kind, takerEmail: m.taker_email, company: m.company, phone: m.phone, purpose: m.purpose, notes: m.notes,
@@ -37,15 +52,17 @@ export async function keyboxRoute(env, p, method, b, url, d) {
   const staff = d.isOps(me);   // hands out / receives for others
 
   if (p === "kb/board") {
+    await kbHeldSeed(env, site).catch(() => {});
     const [gla, units, open] = await Promise.all([
       env.DB.prepare("SELECT code, level, brand, status, area FROM gla_units WHERE site = ? AND active = 1 AND section = 'Leasing'").bind(site).all(),
-      env.DB.prepare("SELECT unit, keys, note FROM kb_units WHERE site = ?").bind(site).all(),
+      env.DB.prepare("SELECT unit, keys, note, held FROM kb_units WHERE site = ?").bind(site).all(),
       env.DB.prepare("SELECT * FROM kb_moves WHERE site = ? AND back_at = '' ORDER BY id").bind(site).all()]);
     const U = new Map((units.results || []).map(u => [u.unit, u]));
     const O = new Map((open.results || []).map(m => [m.unit, m]));
     const vacant = (gla.results || []).filter(u => /vacant|terminated/i.test(u.status));
     const codes = new Set(vacant.map(u => u.code));
     for (const m of open.results || []) if (!codes.has(m.unit)) codes.add(m.unit);   // still out after the unit was leased
+    for (const u of units.results || []) if (u.held) codes.add(u.unit);   // keys the box keeps for leased units (storage units)
     const all = gla.results || [];
     const hooks = [...codes].map(code => {
       const g = all.find(u => u.code === code) || {}, k = U.get(code), m = O.get(code);
