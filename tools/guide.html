@@ -133,12 +133,20 @@ dialog#zoom{border:0;padding:0;background:transparent;max-width:96vw;max-height:
 dialog#zoom::backdrop{background:rgba(20,10,35,.8)}
 dialog#zoom img{max-width:96vw;max-height:90vh;display:block;border-radius:8px}
 .muted{color:var(--muted)}
+.media-f.vid{grid-column:1/-1;position:relative}
+.media-f.vid video{max-height:72vh;height:auto;object-fit:contain}
+.vfull{position:absolute;top:10px;right:10px;border:0;border-radius:999px;background:rgba(20,10,35,.75);color:#fff;font-size:13px;font-weight:600;padding:7px 12px;display:flex;gap:6px;align-items:center}
+dialog#vplay{border:0;padding:0;margin:0;width:100vw;height:100dvh;max-width:none;max-height:none;background:#000}
+dialog#vplay::backdrop{background:#000}
+dialog#vplay video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+dialog#vplay button{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:2;border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font-size:15px;font-weight:600;padding:9px 14px}
 .btn:hover{background:var(--paper2)}.btn.primary:hover{background:var(--plum)}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"><div class="empty">Opening your guidebook…</div></div>
 <dialog id="zoom" onclick="this.close()"><img alt=""></dialog>
+<dialog id="vplay"><button type="button" id="vclose">✕ Close</button><video controls playsinline></video></dialog>
 <script src="common.js"></script>
 <script>
 /* ABC Operations Hub — Hub Guidebooks (docs/FEATURE-guide.md). Content follows the hub as built (apps.js, Nov 2026). */
@@ -366,8 +374,9 @@ function go(i){ const n = BOOKS[view.book].chapters.length; if (i < 0 || i > n) 
 function slotHTML(m, slot){
   const x = media[slot], adminBar = G.admin ? `<div class="slot-adm"><button class="mini" data-up="${slot}">${x ? "Replace" : "+ Add " + m.k.toLowerCase()}</button>${x ? `<button class="mini" data-rm="${slot}">Remove</button>` : ""}</div>` : "";
   if (x){
-    const el = x.type.startsWith("video/") ? `<video src="${fileUrl(slot, x)}" controls playsinline preload="metadata"></video>` : `<img src="${fileUrl(slot, x)}" alt="${esc(m.d)}" loading="lazy" data-zoom>`;
-    return `<figure class="media-f">${el}<figcaption>${esc(m.d)}</figcaption>${adminBar}</figure>`;
+    const vid = x.type.startsWith("video/");
+    const el = vid ? `<video src="${fileUrl(slot, x)}" controls playsinline preload="metadata"></video><button class="vfull" data-vfull="${fileUrl(slot, x)}">⤢ ${ar() ? "شاشة كاملة" : "Full screen"}</button>` : `<img src="${fileUrl(slot, x)}" alt="${esc(m.d)}" loading="lazy" data-zoom>`;
+    return `<figure class="media-f${vid ? " vid" : ""}">${el}<figcaption>${esc(m.d)}</figcaption>${adminBar}</figure>`;
   }
   return `<div class="slot"><span class="k">${m.k}</span>${esc(m.d)}${G.admin ? "" : `<small>Coming soon</small>`}${adminBar}</div>`;
 }
@@ -429,6 +438,11 @@ function wireChapter(ch){
     try { const r = await api("ops/guide/media", { slot: target, data: data.replace(/^data:video\/x-m4v/, "data:video/mp4"), name: f.name }); media[target] = { type: r.type, updated: r.updated }; renderBook(); toast("Added — everyone sees it now"); }
     catch (e){ toast(e.message, true); }
   };
+  app.querySelectorAll("[data-vfull]").forEach(b => b.onclick = () => {   // full-screen player (works inside the hub and on iPhone)
+    app.querySelectorAll(".media-f video").forEach(v => v.pause());
+    const d = $("#vplay"), v = d.querySelector("video"); v.src = b.dataset.vfull; d.showModal(); v.play().catch(() => {});
+    const el = d.requestFullscreen ? d : null; if (el) el.requestFullscreen().catch(() => {});
+  });
   app.querySelectorAll("[data-zoom]").forEach(im => im.onclick = () => { const d = $("#zoom"); d.querySelector("img").src = im.src; d.showModal(); });
 }
 
@@ -449,6 +463,10 @@ async function renderTeam(){
   } catch (e){ $("#tstat").textContent = e.message; }
 }
 
+(() => { const d = $("#vplay"), v = d.querySelector("video");
+  const shut = () => { v.pause(); v.removeAttribute("src"); v.load(); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); if (d.open) d.close(); };
+  $("#vclose").onclick = shut; d.addEventListener("cancel", e => { e.preventDefault(); shut(); });
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && d.open) shut(); }); })();
 document.addEventListener("keydown", e => { if (view.screen !== "book" || /INPUT|VIDEO/.test(document.activeElement.tagName)) return; const f = ar() ? -1 : 1; if (e.key === "ArrowRight") go(view.page + f); if (e.key === "ArrowLeft") go(view.page - f); });
 let sx = null; document.addEventListener("touchstart", e => { sx = e.target.closest("video,.tblwrap,.mock") ? null : e.touches[0].clientX; }, { passive:true });
 document.addEventListener("touchend", e => { if (view.screen !== "book" || sx === null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) < 70) return; const f = ar() ? -1 : 1; go(view.page + (dx < 0 ? f : -f)); }, { passive:true });
