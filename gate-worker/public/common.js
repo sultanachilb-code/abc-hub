@@ -1,5 +1,5 @@
 /* ABC Loading Gate — helpers for the scanner page on its own link (stands in for the hub's tools/common.js).
-   • First use: the phone is paired with the one-time code a manager makes in the hub (Loading Gate → Loading-area phones)
+   • First use: the phone is paired with the one-time QR / 6-digit code a manager makes in the hub (Loading Gate → Gate accounts → Pair a phone). No password, no expiry.
    • Each shift: the agent writes his name (kept on the phone, changeable from the top bar)
    • Decisions taken without signal wait on the phone and are sent when the signal is back */
 (function(){ try { document.documentElement.setAttribute("data-theme", "light"); } catch {} })();
@@ -42,37 +42,54 @@ function gateScreen(html){
 const closeScreen = () => { const o = $("#gateScreen"); if (o) o.remove(); };
 
 const standalone = () => { try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch { return false; } };
+/* Pairing (Nov 2026 — no password): the manager presses "Pair a phone" in the hub → QR + 6-digit code, one use, 10 minutes.
+   The phone stays paired until the manager signs it out — never by time or by missing signal. */
+async function pairWith(code){
+  const r = await fetch("/api/pair", { method: "POST", headers: { "content-type": "application/json", "x-gate-agent": encodeURIComponent(ls.get(GK.agent)) }, body: JSON.stringify({ code }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j.error || `Error ${r.status}`);
+  ls.set(GK.token, j.data.token);
+  GINFO = { site: j.data.site, siteName: j.data.siteName, device: j.data.device }; ls.set(GK.info, JSON.stringify(GINFO));
+  if (location.hash) history.replaceState(null, "", "/");
+}
+const codeOf = t => { t = String(t || ""); const m = /[#?&]pair=(\d{6})\b/.exec(t) || /^\s*(\d{3})\s?(\d{3})\s*$/.exec(t); return m ? (m[2] ? m[1] + m[2] : m[1]) : ""; };
 function loginScreen(msg){
   return new Promise(res => {
     const tip = standalone() ? "" : `<div style="background:#FFF7E0;color:#6A4B00;border-radius:12px;padding:10px 12px;font-size:.8rem;line-height:1.45;margin-top:14px">📌 Share → <b>Add to Home Screen</b>, then always open the Gate from that icon — not from WhatsApp.<br><span class="ar" dir="rtl">أضف البوابة إلى الشاشة الرئيسية وافتحها دائماً من الأيقونة</span></div>`;
-    gateScreen(`<p style="font-weight:800;margin-bottom:4px">Sign in</p>
-      <p class="muted" style="font-size:.86rem;line-height:1.5;margin-bottom:12px">Use the gate account from the mall manager.<br><span class="ar" dir="rtl">ادخل اسم المستخدم وكلمة السر</span></p>
+    gateScreen(`<p style="font-weight:800;margin-bottom:4px">Pair this phone</p>
+      <p class="muted" style="font-size:.86rem;line-height:1.5;margin-bottom:12px">The manager presses <b>Pair a phone</b> in the hub. Scan the QR or type the 6-digit code.<br><span class="ar" dir="rtl">امسح رمز الربط أو اكتب الأرقام الستة من المدير</span></p>
       ${msg ? `<p style="color:var(--alert);font-weight:700;font-size:.86rem;margin-bottom:10px">${esc(msg)}</p>` : ""}
-      <label class="muted" style="font-size:.78rem;font-weight:700">Username</label>
-      <input class="inp" id="glUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" value="${esc(ls.get(GK.user))}" style="width:100%;height:50px;font-size:1.1rem;margin:4px 0 10px">
-      <label class="muted" style="font-size:.78rem;font-weight:700">Password</label>
-      <div style="position:relative;margin-top:4px"><input class="inp" id="glPw" type="password" autocomplete="current-password" style="width:100%;height:50px;font-size:1.1rem;padding-right:64px">
-        <button type="button" id="glShow" style="position:absolute;right:6px;top:7px;height:36px;border:0;background:none;color:var(--brand-2);font-weight:800">Show</button></div>
-      <button class="btn" id="glGo" style="width:100%;height:50px;margin-top:14px;font-size:1rem">Sign in · دخول</button>
-      <p class="muted" style="font-size:.76rem;line-height:1.45;margin-top:10px">Stays signed in on this phone for 90 days of use. No signal never signs you out.</p>${tip}`);
-    $("#glShow").onclick = () => { const p = $("#glPw"); p.type = p.type === "password" ? "text" : "password"; $("#glShow").textContent = p.type === "password" ? "Show" : "Hide"; };
-    const go = async () => {
-      const username = $("#glUser").value.trim(), password = $("#glPw").value;
-      if (!username || !password) return toast("Write the username and the password", true);
-      $("#glGo").disabled = true;
-      try {
-        const r = await fetch("/api/login", { method: "POST", headers: { "content-type": "application/json", "x-gate-agent": encodeURIComponent(ls.get(GK.agent)) }, body: JSON.stringify({ username, password }) });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok || !j.ok) throw new Error(j.error || `Error ${r.status}`);
-        ls.set(GK.user, username.toLowerCase()); ls.set(GK.token, j.data.token);
-        GINFO = { site: j.data.site, siteName: j.data.siteName, device: j.data.device }; ls.set(GK.info, JSON.stringify(GINFO));
-        if (location.hash) history.replaceState(null, "", "/");
-        res();
-      } catch (e){ $("#glGo").disabled = false; toast(navigator.onLine ? e.message : "No signal — signing in needs a connection", true); }
+      <button class="btn" id="gpScan" style="width:100%;height:54px;font-size:1rem">📷 Scan the pairing QR · امسح الرمز</button>
+      <div id="gpCam" style="display:none;margin-top:10px;position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:1"><video id="gpVid" playsinline muted style="width:100%;height:100%;object-fit:cover"></video></div>
+      <label class="muted" style="font-size:.78rem;font-weight:700;display:block;margin-top:14px">or the 6-digit code</label>
+      <input class="inp" id="gpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000 000" style="width:100%;height:56px;font-size:1.6rem;letter-spacing:.2em;text-align:center;margin-top:4px">
+      <button class="btn ghost" id="gpGo" style="width:100%;height:50px;margin-top:10px;font-size:1rem">Pair · ربط</button>
+      <p class="muted" style="font-size:.76rem;line-height:1.45;margin-top:10px">No password. Once paired, this phone stays paired — no signal never signs it out.</p>${tip}`);
+    let stream = null, busy = false;
+    const camOff = () => { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $("#gpCam").style.display = "none"; };
+    const go = async code => {
+      if (busy) return; if (!/^\d{6}$/.test(code)) return toast("Type the 6 digits of the code", true);
+      busy = true; $("#gpGo").disabled = true;
+      try { await pairWith(code); camOff(); toast("Phone paired ✓"); res(); }
+      catch (e){ busy = false; $("#gpGo").disabled = false; toast(navigator.onLine ? e.message : "No signal — pairing needs a connection", true); }
     };
-    $("#glGo").onclick = go; $("#glPw").onkeydown = e => { if (e.key === "Enter") go(); };
-    $("#glUser").onkeydown = e => { if (e.key === "Enter") $("#glPw").focus(); };
-    setTimeout(() => (ls.get(GK.user) ? $("#glPw") : $("#glUser")).focus(), 50);
+    $("#gpGo").onclick = () => go($("#gpCode").value.replace(/\D/g, ""));
+    $("#gpCode").oninput = e => { const v = e.target.value.replace(/\D/g, "").slice(0, 6); e.target.value = v.length > 3 ? v.slice(0, 3) + " " + v.slice(3) : v; if (v.length === 6) go(v); };
+    $("#gpScan").onclick = async () => {
+      if (stream) return camOff();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.jsQR) return toast("The camera cannot open here — type the code", true);
+      try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false }); }
+      catch { return toast("Allow the camera, or type the code", true); }
+      const v = $("#gpVid"); v.srcObject = stream; $("#gpCam").style.display = "block"; await v.play().catch(() => {});
+      const c = document.createElement("canvas"), cx = c.getContext("2d", { willReadFrequently: true });
+      const loop = () => { if (!stream || busy) return;
+        if (v.videoWidth){ const side = Math.min(v.videoWidth, v.videoHeight, 720); c.width = c.height = side;
+          cx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, side, side);
+          const q = jsQR(cx.getImageData(0, 0, side, side).data, side, side, { inversionAttempts: "dontInvert" });
+          const code = q && codeOf(q.data); if (code) return go(code); }
+        requestAnimationFrame(loop); };
+      loop();
+    };
   });
 }
 /* the page's storage was cleared but the cookie of this link may still hold the sign-in */
@@ -102,7 +119,9 @@ function ready(){
   if (READY) return READY;
   READY = (async () => {
     if (document.readyState === "loading") await new Promise(r => addEventListener("DOMContentLoaded", r, { once: true }));
-    if (/pair=/.test(location.hash)) history.replaceState(null, "", "/");   // old pairing links are retired
+    const linkCode = codeOf(location.hash);   // the pairing QR scanned with the phone's own camera opens …/#pair=123456
+    if (linkCode && !ls.get(GK.token)) { try { await pairWith(linkCode); } catch (e) { history.replaceState(null, "", "/"); await loginScreen(e.message); } }
+    else if (location.hash) history.replaceState(null, "", "/");
     if (!ls.get(GK.token) && !(await fromCookie())) await loginScreen();
     if (!ls.get(GK.agent) || ls.get(GK.agentDay) !== beirutDay()) await agentScreen();   // the name is asked again every day
     closeScreen();

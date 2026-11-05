@@ -281,22 +281,13 @@ const sameText = (a, b) => { a = String(a || ""); b = String(b || ""); if (!a ||
 const devOut = r => ({ id: r.id, name: r.name, paired: !!r.token_hash, pairedAt: r.paired_at, lastSeen: r.last_seen, lastAgent: r.last_agent,
   pending: !r.token_hash && !!r.pair_hash && r.pair_exp > new Date().toISOString(), pairExp: r.pair_exp, createdName: r.created_name });
 
-/* ---------- Gate accounts: username + password per gate post (Oct 2026) ----------
-   Passwords: PBKDF2-SHA256, 100 000 rounds, random salt. A phone that signs in gets its own token (gate_devices row,
-   account_id set) that stays valid 90 days after its last use. Only a manager action (disable / sign out phones) or
-   90 days without use signs a phone out — never a network or server error. */
-const GATE_DAYS = 90, PW_ROUNDS = 100000;
-const enc = new TextEncoder();
-async function pwHash(pw, salt) {
-  const k = await crypto.subtle.importKey("raw", enc.encode(String(pw)), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode(salt), iterations: PW_ROUNDS }, k, 256);
-  return [...new Uint8Array(bits)].map(x => x.toString(16).padStart(2, "0")).join("");
-}
-const WORDS = ["Dock", "Gate", "Cedar", "Cargo", "Truck", "Crate", "Ramp", "Bay", "Pallet", "Store"];
-const genPw = () => { const b = crypto.getRandomValues(new Uint32Array(2)); return `${WORDS[b[0] % WORDS.length]}-${String(1000 + b[1] % 9000)}`; };
+/* ---------- Gate accounts: one per gate post (Oct 2026) — no password since Nov 2026 ----------
+   A manager pairs each phone from the hub: "Pair a phone" shows a QR + a 6-digit code (one use, 10 minutes).
+   The paired phone gets its own token (gate_devices row, account_id set) that never expires: only a manager action
+   (Sign out phones / Disable) cuts it off — never time, a network or a server error. */
+const PAIR_MIN = 10;
 const cleanUser = u => String(u || "").trim().toLowerCase();
-const expIso = () => new Date(Date.now() + GATE_DAYS * 864e5).toISOString();
-function checkPw(pw) { pw = String(pw || ""); if (pw.length < 6 || pw.length > 60) throw err("The password needs 6 to 60 characters"); return pw; }
+const pairCode = () => String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000);
 
 async function devicesRoute(env, p, method, b, site, d) {
   if (!d.full) throw err("Only managers can manage the gate accounts", 403);
@@ -305,12 +296,12 @@ async function devicesRoute(env, p, method, b, site, d) {
     const [acc, dev] = await Promise.all([
       env.DB.prepare("SELECT id, username, label, disabled, created_by, created_at, pw_by, pw_at, last_login FROM gate_accounts WHERE site = ? ORDER BY username").bind(site).all(),
       env.DB.prepare("SELECT * FROM gate_devices WHERE site = ? AND revoked = 0 AND token_hash != '' ORDER BY id").bind(site).all()]);
-    const D = dev.results || [];
+    const D = (dev.results || []).filter(x => x.token_hash);
     const accounts = (acc.results || []).map(a => { const mine = D.filter(x => x.account_id === a.id).sort((x, y) => (y.last_seen || "").localeCompare(x.last_seen || ""));
       return { id: a.id, username: a.username, label: a.label, disabled: !!a.disabled, phones: mine.length, lastSeen: mine[0] ? mine[0].last_seen : "", lastAgent: mine[0] ? mine[0].last_agent : "",
         pwBy: a.pw_by, pwAt: a.pw_at, createdBy: a.created_by }; });
     const n = (acc.results || []).length + 1;
-    return { accounts, legacy: D.filter(x => !x.account_id).map(devOut), suggest: `${site.toLowerCase()}.gate${n}`, gateUrl, ready: !!env.GATE_KEY, days: GATE_DAYS };
+    return { accounts, legacy: D.filter(x => !x.account_id).map(devOut), suggest: `${site.toLowerCase()}.gate${n}`, gateUrl, ready: !!env.GATE_KEY };
   }
   if (method !== "POST") throw err("Unknown request", 404);
   const acc = async () => { const a = await env.DB.prepare("SELECT * FROM gate_accounts WHERE id = ? AND site = ?").bind(Number(b.id) || 0, site).first(); if (!a) throw err("This gate account does not exist", 404); return a; };
@@ -319,17 +310,22 @@ async function devicesRoute(env, p, method, b, site, d) {
     const username = cleanUser(b.username);
     if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(username)) throw err("Username: 3 to 30 letters or numbers (dots, dashes allowed), no spaces");
     if (await env.DB.prepare("SELECT 1 FROM gate_accounts WHERE username = ?").bind(username).first()) throw err("This username is already taken");
-    const password = b.password ? checkPw(b.password) : genPw(), salt = randomToken(), at = d.now();
-    await env.DB.prepare("INSERT INTO gate_accounts (site, username, label, salt, hash, created_by, created_at, pw_by, pw_at) VALUES (?,?,?,?,?,?,?,?,?)")
-      .bind(site, username, clip(b.label, 60), salt, await pwHash(password, salt), d.me.full_name, at, d.me.full_name, at).run();
+    const at = d.now();   // no password: the hash is random and never used
+    const r = await env.DB.prepare("INSERT INTO gate_accounts (site, username, label, salt, hash, created_by, created_at) VALUES (?,?,?,?,?,?,?)")
+      .bind(site, username, clip(b.label, 60), randomToken(), randomToken(), d.me.full_name, at).run();
     await note("Gate account created", username);
-    return { username, password, gateUrl };
+    return { id: r.meta.last_row_id, username, gateUrl };
   }
-  if (p === "gate/accounts/reset") {
-    const a = await acc(), password = b.password ? checkPw(b.password) : genPw(), salt = randomToken();
-    await env.DB.prepare("UPDATE gate_accounts SET salt = ?, hash = ?, pw_by = ?, pw_at = ? WHERE id = ?").bind(salt, await pwHash(password, salt), d.me.full_name, d.now(), a.id).run();
-    await note("Gate account password changed", a.username);
-    return { username: a.username, password, gateUrl };   // phones already signed in stay signed in
+  if (p === "gate/accounts/pair") {   // a one-use code for one phone: QR + 6 digits, 10 minutes
+    const a = await acc(); if (a.disabled) throw err("Enable the account first");
+    const now = new Date(), exp = new Date(now.getTime() + PAIR_MIN * 60000).toISOString(), device = a.label ? `${a.label} (${a.username})` : a.username;
+    let code = pairCode();
+    for (let i = 0; i < 5 && await env.DB.prepare("SELECT 1 FROM gate_devices WHERE pair_hash = ? AND pair_exp > ?").bind(await sha(code), now.toISOString()).first(); i++) code = pairCode();
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM gate_devices WHERE account_id = ? AND token_hash = '' AND pair_hash != ''").bind(a.id),   // an older code of this account stops working
+      env.DB.prepare("INSERT INTO gate_devices (site, name, pair_hash, pair_exp, created_name, created_at, account_id) VALUES (?,?,?,?,?,?,?)")
+        .bind(site, device, await sha(code), exp, d.me.full_name, d.now(), a.id)]);
+    return { code, expires: exp, minutes: PAIR_MIN, username: a.username, gateUrl, link: `${gateUrl.replace(/\/$/, "")}/#pair=${code}` };
   }
   if (p === "gate/accounts/signout") {
     const a = await acc();
@@ -364,49 +360,32 @@ export async function gatePublic(env, request, p, method, b, url, deps) {
     let L = { n: 0, at: 0 }; try { L = lk ? JSON.parse(lk.v) : L; } catch {}
     if (L.n >= 8 && Date.now() - L.at < 15 * 60000) throw err("Too many wrong codes — wait 15 minutes", 429);
     const code = String(b.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const row = code.length === 8 ? await env.DB.prepare("SELECT * FROM gate_devices WHERE pair_hash = ? AND revoked = 0").bind(await sha(code)).first() : null;
+    let row = [6, 8].includes(code.length) ? await env.DB.prepare("SELECT * FROM gate_devices WHERE pair_hash = ? AND revoked = 0 AND token_hash = ''").bind(await sha(code)).first() : null;
+    if (row && row.account_id) { const a = await env.DB.prepare("SELECT disabled FROM gate_accounts WHERE id = ?").bind(row.account_id).first(); if (!a || a.disabled) row = null; }
     if (!row || !(row.pair_exp > new Date().toISOString())) {
       await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(lockKey, JSON.stringify({ n: (Date.now() - L.at < 15 * 60000 ? L.n : 0) + 1, at: Date.now() })).run().catch(() => {});
       throw err("This code is wrong or has expired — ask the manager for a new one", 400);
     }
     const token = randomToken(), at = deps.now();
-    await env.DB.prepare("UPDATE gate_devices SET token_hash = ?, pair_hash = '', pair_exp = '', paired_at = ?, last_seen = ? WHERE id = ?").bind(await sha(token), at, at, row.id).run();
+    await env.DB.prepare("UPDATE gate_devices SET token_hash = ?, pair_hash = '', pair_exp = '', paired_at = ?, last_seen = ?, expires = '', last_agent = ? WHERE id = ?")
+      .bind(await sha(token), at, at, clip(decodeURIComponent(request.headers.get("x-gate-agent") || ""), 60), row.id).run();
+    if (row.account_id) await env.DB.prepare("UPDATE gate_accounts SET last_login = ? WHERE id = ?").bind(at, row.account_id).run().catch(() => {});
     await env.DB.prepare("DELETE FROM meta WHERE k = ?").bind(lockKey).run().catch(() => {});
     if (deps.raiseEvent) await deps.raiseEvent(env, { site: row.site, app: "gate", tone: "info", title: "Loading-area phone paired", body: row.name }).catch(() => {});
     return { token, site: row.site, siteName: deps.siteName(row.site), device: row.name };
   }
-  if (p === "login" && method === "POST") {   // gate account sign-in: username + password → a token for this phone
-    const lockKey = `gate:loginfail:${ip}`;
-    const lk = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(lockKey).first().catch(() => null);
-    let L = { n: 0, at: 0 }; try { L = lk ? JSON.parse(lk.v) : L; } catch {}
-    if (L.n >= 8 && Date.now() - L.at < 15 * 60000) throw err("Too many wrong passwords — wait 15 minutes", 429);
-    const a = await env.DB.prepare("SELECT * FROM gate_accounts WHERE username = ?").bind(cleanUser(b.username)).first();
-    const good = a && sameText(await pwHash(String(b.password || ""), a.salt), a.hash);
-    if (!good) {
-      await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(lockKey, JSON.stringify({ n: (Date.now() - L.at < 15 * 60000 ? L.n : 0) + 1, at: Date.now() })).run().catch(() => {});
-      throw err("Username or password is incorrect", 400);
-    }
-    if (a.disabled) throw err("This gate account is disabled — ask the manager", 403);
-    const token = randomToken(), at = deps.now(), device = a.label ? `${a.label} (${a.username})` : a.username;
-    await env.DB.batch([
-      env.DB.prepare("INSERT INTO gate_devices (site, name, token_hash, created_name, created_at, paired_at, last_seen, last_agent, account_id, expires) VALUES (?,?,?,?,?,?,?,?,?,?)")
-        .bind(a.site, device, await sha(token), a.username, at, at, at, clip(decodeURIComponent(request.headers.get("x-gate-agent") || ""), 60), a.id, expIso()),
-      env.DB.prepare("UPDATE gate_accounts SET last_login = ? WHERE id = ?").bind(at, a.id)]);
-    await env.DB.prepare("DELETE FROM meta WHERE k = ?").bind(lockKey).run().catch(() => {});
-    return { token, site: a.site, siteName: deps.siteName(a.site), device, days: GATE_DAYS };
-  }
+  if (p === "login" && method === "POST") throw err("Passwords are switched off — ask the manager to pair this phone (QR or 6-digit code)", 410);   // Nov 2026
   const tok = String(request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   /* a database error throws here (500) — the app keeps its sign-in; only a clear "no" below answers 401 */
   const dev = /^[0-9a-f]{64}$/.test(tok) ? await env.DB.prepare(`SELECT d.*, a.id AS a_id, a.disabled AS a_off FROM gate_devices d LEFT JOIN gate_accounts a ON a.id = d.account_id
     WHERE d.token_hash = ? AND d.revoked = 0`).bind(await sha(tok)).first() : null;
-  if (!dev) throw err("This phone is signed out — sign in with the gate account", 401);
+  if (!dev) throw err("This phone is not paired — ask the manager for a pairing code", 401);
   if (dev.account_id && (!dev.a_id || dev.a_off)) throw err("This gate account is disabled — ask the manager", 401);
-  if (dev.account_id && dev.expires && dev.expires < new Date().toISOString()) throw err(`Signed out after ${GATE_DAYS} days without use — sign in again`, 401);
   const agent = clip(decodeURIComponent(request.headers.get("x-gate-agent") || ""), 60);
   const nowIso = deps.now();
   if (!dev.last_seen || Date.parse(nowIso) - Date.parse(dev.last_seen) > 5 * 60000 || (agent && agent !== dev.last_agent))
-    await env.DB.prepare("UPDATE gate_devices SET last_seen = ?, expires = CASE WHEN account_id > 0 THEN ? ELSE expires END, last_agent = CASE WHEN ? != '' THEN ? ELSE last_agent END WHERE id = ?")
-      .bind(nowIso, expIso(), agent, agent, dev.id).run().catch(() => {});   // 90 days from the last use
+    await env.DB.prepare("UPDATE gate_devices SET last_seen = ?, last_agent = CASE WHEN ? != '' THEN ? ELSE last_agent END WHERE id = ?")
+      .bind(nowIso, agent, agent, dev.id).run().catch(() => {});   // no expiry (Nov 2026): a paired phone stays paired
   if (p === "me") return { site: dev.site, siteName: deps.siteName(dev.site), device: dev.name, today: deps.today(), agent };
   if ((p === "cleaner" || p === "cleaner-in") && deps.cleanGate)   // Cleaner Access: a cleaner badge scanned at this flagship's gate
     return deps.cleanGate(env, p, method, b, url, { site: dev.site, agent, device: dev.name });

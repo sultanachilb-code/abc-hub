@@ -16,7 +16,7 @@ const jsonErr = (msg, status) => withSec(new Response(JSON.stringify({ ok: false
 const ALLOWED = /^(login|pair|me|lookup|decide|day|cleaner|cleaner-in)$/;   // cleaner / cleaner-in: Cleaner Access badges (Oct 2026)
 /* the sign-in is also kept in a cookie set by this link (HttpOnly, 90 days, renewed on use): iPhone keeps it even when
    the page's own storage is cleared, so the guards are not asked to sign in again */
-const CK = "gate_t", CK_AGE = 90 * 86400;
+const CK = "gate_t", CK_AGE = 400 * 86400;   // the longest a browser keeps a cookie; renewed on every use — a paired phone never expires (Nov 2026)
 const cookieOf = req => { const m = /(?:^|;\s*)gate_t=([0-9a-f]{64})/.exec(req.headers.get("cookie") || ""); return m ? m[1] : ""; };
 const setCk = t => t ? `${CK}=${t}; Max-Age=${CK_AGE}; Path=/; HttpOnly; Secure; SameSite=Strict` : `${CK}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict`;
 
