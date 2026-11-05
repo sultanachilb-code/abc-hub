@@ -10,6 +10,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          Q="INSERT OR REPLACE INTO meta (k, v) SELECT 'portal:last:vr', json_object('at', '2026-11-05T10:03:30.000Z', 'from', 'Report mailbox', 'file', 'Violations & Requests Report-2026-11-05-07-00-18.csv', 'rows', 267, 'partial', json('true')) WHERE (SELECT COUNT(*) FROM portal_items WHERE kind='vr' AND last_seen >= '2026-11-05') > 0; SELECT v FROM meta WHERE k='portal:last:vr'"
+          Q="SELECT (SELECT group_concat(kind || ':' || year || ':' || n, ', ') FROM (SELECT kind, year, COUNT(*) n FROM budget_lines WHERE site='ACM' GROUP BY kind, year)) AS budget"
           npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
           echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
