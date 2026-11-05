@@ -505,14 +505,15 @@ $("#side").addEventListener("click", async e => {
 
 /* ---------------- upload: read the layout PDF in the browser ---------------- */
 pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs/pdf.worker.min.js";
-const CODE_RE = /(?:VM[\s-]*)?(?:P-)?(?:L\d|GF|LGF|LG|PP|P\d|B\d)-[A-Z]?\d{2,3}\b/gi;
+const CODE_RE = /(?<!(?:^|[^A-Z])A-)(?:VM[\s-]*)?(?:P-)?(?:L\d|GF|LGF|LG|PP|P\d|B\d)-[A-Z]?\d{2,3}\b|\b[MD]-(?:B\d|DS|\d)-\d{3}\b/gi;   // + Achrafieh Mall style "M-3-009", "M-B1-003", "M-DS-001" (Nov 2026)
 const FIG = { total: /Total Level\s*[A-Z0-9-]*\s*Area\s*([\d,.]+)\s*m/i, circulation: /Circulation\s*([\d,.]+)\s*m/i, leasing: /Leasing\s+([\d,.]+)\s*m²/i,
   vacant: /Leasing\s*-\s*Vacant\s*([\d,.]+)\s*m/i, fitout: /Fit\s*Out\s*([\d,.]+)\s*m/i, popup: /POP[\s-]*UP\s*([\d,.]+)\s*m/i, store: /ABC Store Area\s*([\d,.]+)\s*m/i,
   parking: /Parking Area\s*([\d,.]+)\s*m/i, iplay: /IPLAY\s*([\d,.]+)\s*m/i, park: /Central park\s*([\d,.]+)\s*m/i };
 function levelName(txt){
-  const m = /PLAN\s+LEVEL\s+(-\s*\d|L\d|GF|LGF|LG)\b/i.exec(txt) || /LEVEL\s+(-\s*\d|L\d|GF|LGF|LG)\b/i.exec(txt);
+  const m = /PLAN\s+LEVEL\s+(-\s*\d|L\d|GF|LGF|LG|\d)\b/i.exec(txt) || /LEVEL\s+(-\s*\d|L\d|GF|LGF|LG)\b/i.exec(txt);
   if (!m) return "";
-  const v = m[1].replace(/\s/g, "").toUpperCase();
+  let v = m[1].replace(/\s/g, "").toUpperCase();
+  if (/^\d$/.test(v)) v = v === "0" ? "GF" : "L" + v;   // Achrafieh Mall plans: "PLAN LEVEL 3" / "PLAN LEVEL 0"
   return v.startsWith("-") ? "B" + v.slice(1) : v === "LG" ? "LGF" : v;
 }
 async function readPdf(file, onPage){

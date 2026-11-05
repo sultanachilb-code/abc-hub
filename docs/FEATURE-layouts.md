@@ -47,3 +47,7 @@ The GLA tables (`gla_units`, `gla_events`) are **not** touched by this feature.
 - **+ Bins & benches** (operations team — Mall Officer, Mall Supervisor, Senior Mall Supervisor — and management; not Warehouse): pick the type in the yellow banner, tap the plan, give it a name (`L2-BIN-01 near Zara`). Drag to move while the mode is on.
 - Tap a pin: status **OK · Full · Damaged · Missing** (who checked it and when), rename, delete. Anything not OK gets a red ring and is listed under "Bins & benches" in the side panel.
 - Route `POST /api/ops/layouts/furn` (columns `status`, `checked_by`, `checked_at` added to `layout_pins`). ABCON knows the counts per level and which ones need action.
+
+## Achrafieh Mall plans (Nov 2026)
+- Unit codes on the Achrafieh Mall plans look like `M-3-009`, `M-B1-003`, `M-DS-001` (same as its GLA) — read too. `A-B3-…` warehouse stands of the department store are skipped.
+- Its plan pages say "PLAN LEVEL 3" / "PLAN LEVEL 0" — read as L3 / GF.
