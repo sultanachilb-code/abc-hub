@@ -101,6 +101,11 @@ const D = {
   dow: d => D.parse(d).toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short" })
 };
 /* flagship picker for administrators; everyone else is fixed to their own flagship */
+/* Nov 2026: open another hub tool as a hub tab (inside the hub) — closing that tab comes back here. Outside the hub: same window. */
+function hubOpen(app, qs = ""){
+  if (window.parent !== window) { try { window.parent.postMessage({ type: "hub-open", app, qs }, location.origin); return false; } catch {} }
+  location.href = `/tools/${app}${qs}`; return false;
+}
 function siteSelect(ctx, onChange){
   if (!ctx.canPickSite) return `<span class="pill brand">${esc(ctx.siteName)}</span>`;
   setTimeout(() => { const s = $("#siteSel"); if (s) s.onchange = () => onChange(s.value); }, 0);
