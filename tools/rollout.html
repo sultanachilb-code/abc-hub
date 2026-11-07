@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub Training & Rollout · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* Hub Training & Rollout (Nov 2026) — landing page of the 4 phases, each phase on its own page — docs/FEATURE-rollout.md */
+.w2{max-width:1050px;margin:0 auto;display:grid;gap:12px}
+.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
+.head .pct{font-size:1.9rem;font-weight:900;line-height:1}.head small{display:block;color:var(--muted);font-size:.78rem}
+.bar{flex:1;min-width:180px;height:10px;background:rgba(138,92,192,.14);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#1E8A4C;border-radius:99px}
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr))}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:grid;gap:3px;align-content:start}
+.tile:hover{border-color:#C9B2E6;box-shadow:0 6px 18px rgba(74,29,110,.08)}
+.ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:1.45rem;margin-bottom:8px}
+.tile b{font-size:1.02rem}.tile .t{font-weight:700}.tile small{color:var(--muted);font-size:.8rem}
+.mini{height:6px;background:rgba(138,92,192,.14);border-radius:99px;overflow:hidden;margin-top:8px}.mini i{display:block;height:100%;background:#1E8A4C}
+.st{display:inline-block;font-size:.7rem;font-weight:800;border-radius:99px;padding:3px 10px;margin-top:8px;justify-self:start}
+.st-plan{background:rgba(138,92,192,.13);color:#5B2F86}.st-next{background:rgba(200,162,74,.2);color:#8A6418}.st-live{background:rgba(46,107,94,.16);color:#2E6B5E}.st-done{background:rgba(30,138,76,.14);color:#1E7A4F}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.box h3{margin:0 0 10px;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.back{border:0;background:none;color:var(--brand-2,#7B4FB0);font:inherit;font-weight:800;cursor:pointer;padding:0;justify-self:start}
+.fl{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.fl label{display:grid;gap:3px;font-size:.7rem;font-weight:800;color:var(--muted);letter-spacing:.04em}
+.fl input,.fl select,textarea{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--surface);color:var(--text);min-width:0}
+textarea{width:100%;min-height:80px;resize:vertical}
+.ses{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;display:grid;gap:10px}
+.ses .nm{font-weight:800;font-size:.98rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ses .nm input{flex:1;min-width:200px;font-weight:800}
+.sum{font-size:.8rem;color:var(--muted)}.sum b{color:var(--text)}
+table.t{width:100%;border-collapse:collapse;font-size:.84rem}table.t th{text-align:left;font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--line)}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}.tw{overflow-x:auto}
+table.t td small{display:block;color:var(--muted);font-size:.74rem}
+.ok{color:#1E7A4F;font-weight:800}.no{color:#8A6418;font-weight:700}
+.grp td{background:rgba(138,92,192,.06);font-weight:800;font-size:.74rem;letter-spacing:.04em;color:#5B2F86}
+.chk{width:22px;height:22px;accent-color:#1E8A4C;cursor:pointer}
+.mods{display:flex;flex-wrap:wrap;gap:7px}
+.mod{border:1px solid var(--line);border-radius:99px;padding:6px 12px;font:inherit;font-size:.8rem;background:var(--surface);color:var(--text)}
+.mod.done{background:rgba(30,138,76,.12);border-color:rgba(30,138,76,.4);color:#1E7A4F;font-weight:800}
+button.mod{cursor:pointer}.mod .x{margin-left:6px;color:var(--muted);cursor:pointer}
+.sw{width:44px;height:26px;border-radius:99px;background:#CFC7D9;position:relative;cursor:pointer;flex:none;border:0}.sw:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--brand)}.sw.on:after{left:21px}
+.rm{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem}
+dialog.dd{border:0;border-radius:20px;padding:0;width:min(620px,calc(100% - 20px));max-height:92dvh;background:var(--surface);color:var(--text)}
+.dd .h{padding:16px 18px 6px}.dd .h b{font-size:1.05rem}.dd .h small{display:block;color:var(--muted);margin-top:2px}
+.dd .bd{padding:6px 18px 14px;max-height:62dvh;overflow:auto}.dd .f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.pick{display:flex;gap:10px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line);cursor:pointer}.pick small{display:block;color:var(--muted);font-size:.75rem}
+.ro{font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="top"><h1>🎓 Hub Training &amp; Rollout <small id="sub"></small></h1></div>
+<div class="wrap"><div class="w2" id="view"><p class="muted">Loading…</p></div></div>
+<dialog class="dd" id="dlg"></dialog>
+<script src="common.js"></script>
+<script>
+let R = null;
+const STL = { plan: "Planned", next: "Next up", live: "In progress", done: "Done" };
+const fd = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "—";
+const range = p => p.from || p.to ? `${fd(p.from)} → ${fd(p.to)}` : "Dates to set";
+const modPct = p => p.mods.length ? Math.round(p.mods.filter(m => m.done).length / p.mods.length * 100) : 0;
+const allMods = () => R.phases.flatMap(p => p.mods);
+const E = R2 => R2;
+async function load(){ R = await api("ro/get"); draw(); }
+function draw(){
+  const id = +((/#p=(\d+)/.exec(location.hash) || [])[1] || 0), p = R.phases.find(x => x.id === id);
+  $("#sub").textContent = R.canEdit ? "" : "· view only";
+  p ? phase(p) : home();
+  scrollTo(0, 0);
+}
+addEventListener("hashchange", draw);
+function home(){
+  const M = allMods(), pct = M.length ? Math.round(M.filter(m => m.done).length / M.length * 100) : 0;
+  const ppl = new Map(); R.phases.forEach(p => p.sessions.forEach(s => s.people.forEach(x => ppl.set(x.email, x))));
+  const setup = [...ppl.values()].filter(x => x.setup).length;
+  $("#view").innerHTML = `<div class="head"><div><div class="pct">${pct}%</div><small>modules trained</small></div><div class="bar"><i style="width:${pct}%"></i></div>
+      <div><b>${setup} / ${ppl.size}</b><small>accounts set up</small></div>
+      ${R.canEdit ? `<div style="display:flex;gap:8px;align-items:center"><button class="sw ${R.cfg.remind ? "on" : ""}" id="rem" title="Email reminders to the attendees"></button><small>Reminders<br>day before + 1 hour</small></div>` : ""}</div>
+    <div class="tiles">${R.phases.map(p => `<button class="tile" data-p="${p.id}"><div class="ic" style="background:${esc(p.color)}22">${esc(p.icon)}</div>
+      <b>${esc(p.name)}</b><span class="t">${esc(p.title)}</span><small>📅 ${esc(range(p))}</small>
+      <small>${p.sessions.length} session${p.sessions.length === 1 ? "" : "s"} · ${p.mods.filter(m => m.done).length}/${p.mods.length} modules</small>
+      <div class="mini"><i style="width:${modPct(p)}%"></i></div><span class="st st-${p.status}">${STL[p.status] || p.status}</span></button>`).join("")}</div>
+    <p class="ro">Each phase opens on its own page: dates, sessions, who attended, accounts set up and the modules covered.${R.canEdit ? " Every change is saved at once." : ""}</p>`;
+  $("#view").querySelectorAll("[data-p]").forEach(b => b.onclick = () => { location.hash = "p=" + b.dataset.p; });
+  if ($("#rem")) $("#rem").onclick = () => save("ro/cfg", { remind: !R.cfg.remind }, R.cfg.remind ? "Reminders off" : "Reminders on");
+}
+async function save(path, body, msg){ try { await api(path, body); if (msg) toast(msg); await load(); } catch (e){ toast(e.message, true); await load(); } }
+function phase(p){
+  const ed = R.canEdit;
+  $("#view").innerHTML = `<button class="back" id="bk">‹ All phases</button>
+    <div class="head"><div class="ic" style="background:${esc(p.color)}22;margin:0">${esc(p.icon)}</div><div style="flex:1;min-width:200px"><b style="font-size:1.15rem">${esc(p.name)} – ${esc(p.title)}</b>
+      <small>${esc(range(p))} · ${modPct(p)}% of its modules trained</small></div><span class="st st-${p.status}" style="margin:0">${STL[p.status]}</span></div>
+    ${ed ? `<div class="box"><h3>Dates &amp; status</h3><div class="fl">
+      <label>From<input type="date" id="pf" value="${esc(p.from)}"></label><label>To<input type="date" id="pt" value="${esc(p.to)}"></label>
+      <label>Status<select id="ps">${Object.entries(STL).map(([k, v]) => `<option value="${k}" ${k === p.status ? "selected" : ""}>${v}</option>`).join("")}</select></label></div>
+      ${p.updatedAt ? `<p class="ro" style="margin:8px 0 0">Last change by ${esc(p.updatedBy)} · ${esc(new Date(p.updatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</p>` : ""}</div>` : ""}
+    <div class="box"><h3>Sessions <span style="flex:1"></span>${ed ? `<button class="btn small" id="addS">+ Add session</button>` : ""}</h3>
+      ${p.sessions.length ? p.sessions.map(s => sesHtml(s, ed)).join("") : `<p class="ro">No session yet.</p>`}</div>
+    <div class="box"><h3>Modules covered ${ed ? "<span style='text-transform:none;letter-spacing:0;font-weight:600'>— tap when trained</span>" : ""}</h3>
+      <div class="mods">${p.mods.map(m => ed ? `<button class="mod ${m.done ? "done" : ""}" data-m="${m.id}" data-d="${m.done ? 1 : 0}" title="${m.done ? `Trained · ${esc(m.doneBy)}` : "Not trained yet"}">${m.done ? "✓ " : ""}${esc(m.name)}<span class="x" data-mx="${m.id}" title="Remove">×</span></button>`
+        : `<span class="mod ${m.done ? "done" : ""}">${m.done ? "✓ " : ""}${esc(m.name)}</span>`).join("")}
+      ${ed ? `<button class="mod" id="addM" style="border-style:dashed;cursor:pointer">+ Module</button>` : ""}</div></div>
+    <div class="box"><h3>Notes &amp; amendments</h3>${ed ? `<textarea id="pn" placeholder="Changes asked by Sleiman or IT, follow-ups…">${esc(p.notes)}</textarea><div style="text-align:right;margin-top:8px"><button class="btn small" id="pnS">Save notes</button></div>`
+      : `<p style="white-space:pre-wrap;margin:0">${esc(p.notes) || "<span class='ro'>No notes.</span>"}</p>`}</div>`;
+  $("#bk").onclick = () => { location.hash = ""; };
+  if (!ed) return;
+  const ph = body => save("ro/phase", { id: p.id, ...body }, "Saved");
+  $("#pf").onchange = e => ph({ from: e.target.value }); $("#pt").onchange = e => ph({ to: e.target.value }); $("#ps").onchange = e => ph({ status: e.target.value });
+  $("#pnS").onclick = () => ph({ notes: $("#pn").value });
+  $("#addS").onclick = () => save("ro/session", { phase: p.id, name: "New session", day: p.from || "", time: "10:00", fmt: "Online", audience: "ops" }, "Session added");
+  $("#addM").onclick = () => { const n = prompt("Module name"); if (n && n.trim()) save("ro/mod", { op: "add", phase: p.id, name: n.trim() }, "Module added"); };
+  $("#view").querySelectorAll("[data-m]").forEach(b => b.onclick = e => { if (e.target.closest("[data-mx]")) return; save("ro/mod", { id: +b.dataset.m, done: b.dataset.d !== "1" }); });
+  $("#view").querySelectorAll("[data-mx]").forEach(b => b.onclick = e => { e.stopPropagation(); if (confirm("Remove this module from the phase?")) save("ro/mod", { op: "delete", id: +b.dataset.mx }, "Module removed"); });
+  p.sessions.forEach(s => bindSes(s));
+}
+function sesHtml(s, ed){
+  const att = s.people.filter(x => x.attended).length, set = s.people.filter(x => x.setup).length;
+  let last = null;
+  const rows = s.people.map(x => { const g = x.siteName || "No flagship"; const hd = g !== last ? `<tr class="grp"><td colspan="${ed ? 5 : 4}">${esc(g)}</td></tr>` : ""; last = g;
+    return hd + `<tr><td><b>${esc(x.name)}</b><small>${esc(x.pos)}</small></td><td><small style="color:inherit">${esc(x.email)}</small></td>
+      <td>${x.setup ? `<span class="ok">✓ Set up</span>` : `<span class="no">Not signed in yet</span>`}</td>
+      <td>${ed ? `<input type="checkbox" class="chk" data-at="${esc(x.email)}" ${x.attended ? "checked" : ""}>` : (x.attended ? `<span class="ok">✓</span>` : "—")}</td>
+      ${ed ? `<td><button class="rm" data-rmp="${esc(x.email)}" title="Remove from this session">✕</button></td>` : ""}</tr>`; }).join("");
+  const aud = R.audiences[s.audience] || s.audience;
+  return `<div class="ses" data-s="${s.id}">
+    ${ed ? `<div class="nm"><span>📅</span><input class="inp" data-k="name" value="${esc(s.name)}" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-weight:800"><button class="rm" data-del title="Delete session">🗑</button></div>
+      <div class="fl"><label>Date<input type="date" data-k="day" value="${esc(s.day)}"></label><label>Time<input type="time" data-k="time" value="${esc(s.time)}"></label>
+        <label>Format<select data-k="fmt">${R.formats.map(f => `<option ${f === s.fmt ? "selected" : ""}>${f}</option>`).join("")}</select></label>
+        <label>Audience<select data-k="audience">${Object.entries(R.audiences).map(([k, v]) => `<option value="${k}" ${k === s.audience ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+        <label style="flex:1;min-width:200px">Link / place<input data-k="link" value="${esc(s.link)}" placeholder="Teams link or room"></label></div>`
+      : `<div class="nm">📅 ${esc(s.name)}</div><div class="sum"><b>${esc(s.day ? fd(s.day) : "Date to set")}${s.time ? " · " + esc(s.time) : ""}</b> · ${esc(s.fmt)} · ${esc(aud)}${s.link ? ` · ${/^https?:\/\//.test(s.link) ? `<a href="${esc(s.link)}" target="_blank" rel="noopener">Join link</a>` : esc(s.link)}` : ""}</div>`}
+    <div class="sum" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span><b>${s.people.length}</b> invited · <b>${set}</b> accounts set up · <b>${att}</b> attended</span><span style="flex:1"></span>
+      ${ed && s.audience === "champions" ? `<button class="btn ghost small" data-champ>⭐ Choose champions</button>` : ""}${ed ? `<button class="btn ghost small" data-addp>+ Add person</button>` : ""}</div>
+    ${s.people.length ? `<div class="tw"><table class="t"><tr><th>Name</th><th>Account</th><th>Account set up</th><th>Attended</th>${ed ? "<th></th>" : ""}</tr>${rows}</table></div>`
+      : `<p class="ro" style="margin:0">${s.audience === "champions" ? "No champion chosen yet — press ⭐ Choose champions." : "Nobody invited yet — press + Add person."}</p>`}</div>`;
+}
+function bindSes(s){
+  const el = $(`[data-s="${s.id}"]`); if (!el) return;
+  const cur = () => { const o = { id: s.id }; el.querySelectorAll("[data-k]").forEach(i => o[i.dataset.k] = i.value); return o; };
+  el.querySelectorAll("[data-k]").forEach(i => i.onchange = () => save("ro/session", cur(), "Saved"));
+  el.querySelector("[data-del]").onclick = () => { if (confirm(`Delete "${s.name}"?`)) save("ro/session/delete", { id: s.id }, "Session deleted"); };
+  el.querySelectorAll("[data-at]").forEach(c => c.onchange = () => save("ro/att", { session: s.id, email: c.dataset.at, attended: c.checked }));
+  el.querySelectorAll("[data-rmp]").forEach(b => b.onclick = () => save("ro/att", { session: s.id, email: b.dataset.rmp, op: "remove" }, "Removed from this session"));
+  const ch = el.querySelector("[data-champ]"); if (ch) ch.onclick = () => picker("⭐ Hub Champions", "Tick the champions — they are invited to every Champions session.", new Set(R.champions), list => save("ro/champions", { emails: list }, "Champions saved"));
+  el.querySelector("[data-addp]").onclick = () => { const inn = new Set(s.people.map(x => x.email));
+    picker("+ Add people to this session", "Only this session. Tick everyone to add.", new Set(), async list => { for (const e of list) await api("ro/att", { session: s.id, email: e, op: "add" }).catch(er => toast(er.message, true)); toast("Added"); load(); }, x => !inn.has(x.email)); };
+}
+function picker(title, sub, sel, done, filter){
+  const P = (R.people || []).filter(x => !filter || filter(x)), d = $("#dlg");
+  const groups = {}; P.forEach(x => (groups[x.siteName || "No flagship"] = groups[x.siteName || "No flagship"] || []).push(x));
+  d.innerHTML = `<div class="h"><b>${esc(title)}</b><small>${esc(sub)}</small><input class="inp" id="pq" placeholder="Search name, position, flagship" style="width:100%;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit"></div>
+    <div class="bd">${Object.keys(groups).sort().map(g => `<div class="pg"><p style="font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#5B2F86;margin:12px 0 4px">${esc(g)}</p>
+      ${groups[g].map(x => `<label class="pick" data-q="${esc((x.name + " " + x.pos + " " + g + " " + x.email).toLowerCase())}"><input type="checkbox" class="chk" value="${esc(x.email)}" ${sel.has(x.email) ? "checked" : ""}>
+        <span><b>${esc(x.name)}</b><small>${esc(x.pos)} · ${esc(x.email)}${x.setup ? "" : " · not signed in yet"}</small></span></label>`).join("")}</div>`).join("") || `<p class="ro">Nobody else to add.</p>`}</div>
+    <div class="f"><button class="btn ghost" data-v="0">Cancel</button><button class="btn" data-v="1">Save</button></div>`;
+  d.querySelector("#pq").oninput = e => { const q = e.target.value.toLowerCase(); d.querySelectorAll(".pick").forEach(l => l.style.display = l.dataset.q.includes(q) ? "" : "none"); };
+  d.onclick = e => { const v = e.target.closest("[data-v]"); if (!v && e.target !== d) return; d.close();
+    if (v && v.dataset.v === "1") done([...d.querySelectorAll(".pick input:checked")].map(i => i.value)); };
+  d.showModal();
+}
+load().catch(e => { $("#view").innerHTML = `<div class="box">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
