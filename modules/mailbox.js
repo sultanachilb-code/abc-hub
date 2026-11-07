@@ -18,7 +18,7 @@ const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
 const GRAPH = "https://graph.microsoft.com/v1.0";
 export const MB_DEFAULT = { mailbox: "opsverdunmall@abc.com.lb", folder: "Hub Reports", from: "07:00", to: "08:00", check: "08:05", every: 10,
   expect: ["vr", "bp", "nr", "mk"], on: false };
-export const MB_EXPECT = { vr: "Violations & Requests", bp: "Penalties (Breaches & Penalties)", nr: "ABC Requests", mk: "Marketing Requests", cp: "Contractor Permits", users: "Portal Users", contracts: "Contracts near ending" };
+export const MB_EXPECT = { vr: "Violations & Requests", bp: "Penalties (Breaches & Penalties)", nr: "ABC Requests", mk: "Marketing Requests", cp: "Contractor Permits", users: "Portal Users", contracts: "Contracts near ending", handover: "Handover Report" };
 
 export async function mbSchema(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS mb_log (msg_id TEXT PRIMARY KEY, received TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL DEFAULT '', sender TEXT NOT NULL DEFAULT '',
@@ -78,8 +78,15 @@ async function listMessages(tok, base, fid, days = 3) {
 }
 
 /* what a file is, without saving anything (for "Test read") */
-async function preview(f, SITES) {
+async function preview(f, SITES, d) {
   let rows; try { rows = await readSheet(f.name, f.data); } catch (e) { return { file: f.name, error: e.message }; }
+  if (d && d.isHoReport(rows)) {   // Nov 2026: the Handover Report goes into each flagship's Shift Handover
+    const sites = {}; let unplaced = 0, n = 0, ok = 0;
+    for (const r of rows) { const req = r.find(c => /^REQ-?\d+$/i.test(String(c || "").trim())); if (!req) continue; n++;
+      if (!r.some(c => /^approved/i.test(String(c || "").trim()))) continue; ok++;
+      const s = r.map(c => siteOf("", c, SITES)).find(Boolean); if (s) sites[SITES[s]] = (sites[SITES[s]] || 0) + 1; else unplaced++; }
+    return { file: f.name, kind: `Handover Report · ${ok} approved of ${n} → Shift Handover`, rows: ok, sites, unplaced };
+  }
   const u = parseUsers(rows); if (u) return { file: f.name, kind: "Portal Users", rows: u.length || (u.rows || []).length || 0, sites: {} };
   const items = parseReport(rows);
   if (items) {
@@ -91,6 +98,20 @@ async function preview(f, SITES) {
   return { file: f.name, error: "Not a report the hub knows (no BP- / VR- / NR- / MKT- / CP- numbers, not Active Users, not Contracts)" };
 }
 async function importFiles(env, d, files, from) {
+  /* Nov 2026: the Handover Report → each flagship's Shift Handover (approved requests, each REQ once) */
+  const ho = [];
+  for (const f of files) { let rows; try { rows = await readSheet(f.name, f.data); } catch { continue; } if (d.isHoReport(rows)) ho.push({ f, rows }); }
+  if (ho.length) {
+    try {
+      const parts = [];
+      for (const { rows } of ho) { const r = await d.hoReport(env, rows, from);
+        parts.push(`Handover Report: ${r.rows} requests (${r.notApproved} not approved${r.unplaced ? ` · ${r.unplaced} without flagship` : ""}) · ` +
+          (Object.entries(r.sites).map(([s, x]) => `${d.SITES[s]} +${x.added}${x.dup ? ` (${x.dup} already in)` : ""}`).join(" · ") || "nothing new")); }
+      files = files.filter(f => !ho.some(h => h.f === f));
+      if (!files.length) return { ok: true, text: parts.join(" | ") };
+      const rest = await importFiles(env, d, files, from); return { ok: rest.ok, text: parts.concat(rest.text).join(" | ") };
+    } catch (e) { return { ok: false, text: ("Handover Report: " + e.message).slice(0, 400) }; }
+  }
   try {
     const r = await portalImport(env, d, { files, from });
     return { ok: true, text: r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.changed} status changes · ${f.gone} no longer in the report${f.unknown && f.unknown.length ? ` · not placed: ${f.unknown.join(", ")}` : ""}`).join(" | ") };
@@ -119,7 +140,7 @@ export async function mbPass(env, d, { dry = false, retry = false } = {}) {
     const head = { subject: clip(m.subject, 200), from: clip(((m.from || {}).emailAddress || {}).address, 160), received: m.receivedDateTime };
     if (dry) {
       const files = await filesOf(a.tok, base, m);
-      out.push({ ...head, imported: was === 1, files: files.length ? await Promise.all(files.map(f => preview(f, d.SITES))) : [{ file: "—", error: "No attachment and no table in the email" }] });
+      out.push({ ...head, imported: was === 1, files: files.length ? await Promise.all(files.map(f => preview(f, d.SITES, d))) : [{ file: "—", error: "No attachment and no table in the email" }] });
       continue;
     }
     if (was === 1 || (was === 0 && !retry)) continue;
