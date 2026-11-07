@@ -66,6 +66,22 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
 .cvleg{display:flex;gap:12px;flex-wrap:wrap;font-size:.72rem;color:var(--muted);margin-top:8px}.cvleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .grid tr.fs td{background:#2A0F45;color:#fff;text-align:left;padding:8px 12px;font-weight:800;letter-spacing:.06em;font-size:.76rem;text-transform:uppercase}
 @media print{ .covst{display:none} }
+table.grid.eqcols,table.grid.cmp2,table.grid.cvall{table-layout:fixed}
+#allSw .btn.on{background:#2A0F45;color:#fff;border-color:#2A0F45}
+.ckpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));gap:10px;margin-bottom:14px}
+.ck2{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;position:relative;overflow:hidden;cursor:pointer}
+.ck2::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}.ck2.on{border-color:var(--brand-2);box-shadow:inset 0 0 0 1px var(--brand-2)}
+.ck2 b{display:block;font-size:.88rem}.ck2 .big{font-size:1.6rem;font-weight:800;color:var(--c);line-height:1.2}.ck2 small{color:var(--muted);font-size:.74rem;display:block}
+.sec2{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}.sec2 small{text-transform:none;letter-spacing:0;font-weight:600;margin-left:6px}
+.grid td.pc{text-align:center;font-weight:800;cursor:pointer}.grid td.pc.sel{box-shadow:inset 0 0 0 2px var(--brand-2)}
+.cvrow{display:grid;grid-template-columns:repeat(18,1fr);gap:1px;padding:3px 4px}
+.cvrow i{height:22px;border-radius:2px;display:grid;place-items:center;color:#fff;font-style:normal;font-size:.56rem;font-weight:800;overflow:hidden;white-space:nowrap}
+.cvrow i.g{background:#2E9E5B}.cvrow i.y{background:#F2C230;color:#5b4500}.cvrow i.r{background:#E14B4B}
+.cvh{display:grid;grid-template-columns:repeat(18,1fr);font-size:.62rem;opacity:.85;padding:0 4px}
+.grid tr.fs td span{float:right;text-transform:none;letter-spacing:0;font-weight:600;opacity:.85;font-size:.72rem}
+.grid tr.hl td{background:rgba(123,75,176,.12)}
+.gapsall{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:12px 14px;margin-top:12px;font-size:.82rem;line-height:1.7}.gapsall>b{color:var(--alert)}
+@media (max-width:640px){ .cvrow i{font-size:0} }
 /* Weekly schedule email + WhatsApp */
 .sendbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .sendbar .st{flex:1;min-width:200px;font-size:.84rem;line-height:1.45}
@@ -106,6 +122,7 @@ dialog.arr{width:min(560px,calc(100% - 20px))}
     <button class="nav" id="next" aria-label="Next week">›</button>
     <button class="btn ghost small" id="todayBtn">This week</button>
     <span style="flex:1"></span>
+    <span id="allSw" class="hidden" style="display:inline-flex;gap:6px"><button class="btn ghost small" id="swSch">📅 Schedule</button><button class="btn ghost small" id="swCov">🕒 Supervisor coverage</button></span>
     <button class="btn ghost small hidden" id="covBtn" title="Hour by hour: who of the supervisors (SMS / MS) covers the mall this week">🕒 Supervisor coverage</button>
     <span id="editTools" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn ghost small" id="arrBtn" title="Change the order of the names and their section">⇅ Arrange names</button>
@@ -129,7 +146,7 @@ dialog.arr{width:min(560px,calc(100% - 20px))}
 <script>
 let CTX = null, WEEK = null, DATA = null, DIRTY = new Map(), DIRTY_NOTES = new Map();
 /* Nov 2026: Property Advisor, Malls Director and CDSO see their flagships in one table, view only (ALLV); "ALL" in the picker */
-let ALLV = false, LEADV = false, COVON = false, COVD = null, COVDAY = -1;
+let ALLV = false, LEADV = false, COVON = false, COVD = null, COVDAY = -1, AVIEW = "sched", ACOV = null, ASEL = "", ADAY = null;
 const PRESETS = ["08:00-16:00", "10:00-18:00", "11:00-19:00", "12:00-20:00", "14:00-22:00", "16:00-24:00", "07:00-15:00", "15:00-23:00", "23:00-07:00"];
 const TARGET = 48;
 const days = () => [...Array(7)].map((_, i) => D.add(WEEK, i));
@@ -164,7 +181,7 @@ async function load(){
   DATA.noteMap = Object.fromEntries(DATA.notes.map(n => [n.day, n.note]));
   if (LEADV) DATA.can = { ...DATA.can, schedule: false, scheduleOwn: false };   // leadership: view only
   $("#editTools").classList.toggle("hidden", !DATA.can.schedule);
-  $("#covBtn").classList.remove("hidden"); loadCov();
+  $("#covBtn").classList.remove("hidden"); $("#allSw").classList.add("hidden"); loadCov();
   if (!DATA.can.schedule && DATA.can.scheduleOwn && !$("#ownHint")) $("#board").insertAdjacentHTML("beforebegin", `<p id="ownHint" class="muted noprint" style="font-size:.82rem;margin:0 0 8px">Tap a day on <b>your own line</b> to fill your shift, then <b>Save changes</b>.</p>`);
   render();
   if (LEADV) $("#sendbar").classList.add("hidden"); else loadSend();
@@ -176,6 +193,8 @@ async function loadAll(){
   $("#sub").textContent = LEADV ? "All my flagships" : "All flagships";
   $("#ptitle").textContent = `ABC — Mall Operations Schedule — ${S.map(x => CTX.sites[x]).join(" · ")} — ${D.fmt(d[0])} to ${D.fmt(d[6], { year: "numeric" })}`;
   ["#editTools", "#sendbar", "#savebar", "#covBtn", "#covStrip"].forEach(x => $(x).classList.add("hidden"));
+  $("#allSw").classList.remove("hidden"); $("#swSch").classList.toggle("on", AVIEW === "sched"); $("#swCov").classList.toggle("on", AVIEW === "cov");
+  if (AVIEW === "cov") return loadAllCov();
   const oh = $("#ownHint"); if (oh) oh.remove();
   $("#board").innerHTML = `<div class="card empty">Loading ${S.length} flagships…</div>`;
   const R = await Promise.all(S.map(x => api(`ops/schedule?site=${x}&from=${d[0]}&to=${d[6]}`).then(r => ({ site: x, r })).catch(() => ({ site: x, r: null }))));
@@ -196,8 +215,48 @@ async function loadAll(){
       return g + `<tr><td class="name"><b>${esc(p.name)}</b><small>${esc(p.title || p.positionLabel)}</small></td>${cells}<td class="hrs ${total === TARGET ? "ok" : total > TARGET ? "over" : total ? "under" : ""}">${total || "—"}</td></tr>`;
     }).join("");
   }).join("");
-  $("#board").innerHTML = `<p class="muted noprint" style="font-size:.82rem;margin:0 0 8px">View only · ${S.length} flagships · pick one flagship above to see its supervisor coverage.</p><div class="tbl-wrap"><table class="grid">${head}<tbody>${body}</tbody></table></div>`;
+  $("#board").innerHTML = `<p class="muted noprint" style="font-size:.82rem;margin:0 0 8px">View only · ${S.length} flagships · <a href="#" id="toCov">🕒 see the supervisor coverage of all of them</a></p><div class="tbl-wrap"><table class="grid eqcols"><colgroup><col style="width:210px">${d.map(() => `<col>`).join("")}<col style="width:72px"></colgroup>${head}<tbody>${body}</tbody></table></div>`;
+  $("#toCov").onclick = e => { e.preventDefault(); AVIEW = "cov"; loadAll(); };
+  covCount(S);
 }
+
+/* ---------- leadership: supervisor coverage of all their flagships in one report (cards · % per day · hour by hour · gaps) ---------- */
+async function covCount(S){   // the gap count on the switch, also while the schedule is shown
+  if (!ACOV || ACOV.week !== WEEK) { const d = days(); ACOV = { week: WEEK, list: await Promise.all(S.map(x => api(`ops/coverage?site=${x}&from=${d[0]}&to=${d[6]}`).then(c => ({ site: x, c })).catch(() => ({ site: x, c: null })))) }; }
+  const n = ACOV.list.reduce((a, x) => a + (x.c ? gapsOf(covGrid(x.c)).length : 0), 0);
+  $("#swCov").textContent = `🕒 Supervisor coverage · ${n} gap${n === 1 ? "" : "s"}`; $("#swCov").style.color = n && AVIEW !== "cov" ? "var(--alert)" : "";
+}
+async function loadAllCov(){
+  const d = days(), S = Object.keys(CTX.sites);
+  $("#board").innerHTML = `<div class="card empty">Loading the coverage of ${S.length} flagships…</div>`;
+  await covCount(S);
+  const L = ACOV.list.filter(x => x.c).map(x => { const G = covGrid(x.c), n = { g: 0, y: 0, r: 0 }; G.flat().forEach(c => n[c.c]++);
+    return { site: x.site, name: CTX.sites[x.site], c: x.c, G, n, gaps: gapsOf(G), pct: Math.round(n.g * 100 / (n.g + n.y + n.r || 1)) }; });
+  const tone = p => p >= 70 ? "#2E9E5B" : p >= 50 ? "#B7791F" : "#E14B4B";
+  const T = L.reduce((a, x) => ({ g: a.g + x.n.g, y: a.y + x.n.y, r: a.r + x.n.r }), { g: 0, y: 0, r: 0 }), tp = Math.round(T.g * 100 / (T.g + T.y + T.r || 1));
+  const V = ASEL ? L.filter(x => x.site === ASEL) : L;
+  const cards = `<div class="ckpis"><div class="ck2 ${!ASEL ? "on" : ""}" data-as="" style="--c:${tone(tp)}"><b>All ${L.length} flagships</b><div class="big">${tp}%</div><small>covered by SMS / MS · ${T.y}h management · <span style="color:var(--alert)">${T.r}h not covered</span></small></div>
+    ${L.map(x => `<div class="ck2 ${ASEL === x.site ? "on" : ""}" data-as="${x.site}" style="--c:${tone(x.pct)}"><b>${esc(x.name)}</b><div class="big">${x.pct}%</div><small>${x.gaps.length} gap${x.gaps.length === 1 ? "" : "s"} · ${x.n.r}h not covered</small></div>`).join("")}</div>`;
+  const dayPct = row => Math.round(row.filter(c => c.c === "g").length * 100 / row.length);
+  const bg = p => p >= 70 ? "#E3F4EA" : p >= 50 ? "#FDE7C8" : "#FDECEC";
+  const compact = `<div class="sec2">% covered by a supervisor · per flagship and day <small>tap a cell for that day hour by hour</small></div>
+    <div class="tbl-wrap"><table class="grid cmp2"><colgroup><col style="width:210px">${d.map(() => "<col>").join("")}<col style="width:80px"></colgroup>
+    <thead><tr><th class="name">Flagship</th>${d.map(x => `<th class="${x === CTX.today ? "today" : ""}">${D.dow(x)}<small>${D.fmt(x)}</small></th>`).join("")}<th>Week</th></tr></thead>
+    <tbody>${V.map(x => `<tr><td class="name"><b>${esc(x.name)}</b></td>${x.G.map((row, di) => { const p = dayPct(row); return `<td class="pc ${ADAY && ADAY.site === x.site && ADAY.di === di ? "sel" : ""}" style="background:${bg(p)}" data-ad="${x.site}|${di}">${p}%</td>`; }).join("")}<td class="pc"><b style="color:${tone(x.pct)}">${x.pct}%</b></td></tr>`).join("")}</tbody></table></div>`;
+  const hrs = `<div class="cvh">${CV_H.map(h => `<span>${h % 3 === 1 ? pad2(h).slice(0, 2) : ""}</span>`).join("")}</div>`;
+  const hourly = `<div class="sec2">Hour by hour · 07:00 → 01:00 <small>green = SMS / MS on duty (initials) · yellow = management only, Mon–Fri 08–16 · red = not covered</small></div>
+    <div class="tbl-wrap"><table class="grid cvall"><colgroup><col style="width:150px"><col></colgroup><thead><tr><th class="name">Flagship · day</th><th style="text-align:left">${hrs}</th></tr></thead><tbody>
+    ${V.map(x => `<tr class="fs"><td colspan="2">${esc(x.name)}<span>${x.c.people.length ? "Supervisors: " + x.c.people.map(p => `${esc(initials(p.name))} ${esc(p.name)}`).join(" · ") : "No SMS / MS linked to this flagship"}</span></td></tr>` +
+      x.G.map((row, di) => `<tr id="cv-${x.site}-${di}" class="${ADAY && ADAY.site === x.site && ADAY.di === di ? "hl" : ""}"><td class="name"><b>${D.dow(d[di])}</b> <small style="display:inline">${D.parse(d[di]).getUTCDate()}</small></td><td><div class="cvrow">${row.map((c, hi) =>
+        `<i class="${c.c}" title="${esc(x.name)} · ${esc(D.dow(d[di]))} ${pad2(CV_H[hi])}–${pad2(CV_H[hi] + 1)} · ${esc(c.t)}">${c.c === "g" ? esc(c.t) : c.c === "y" ? "M" : ""}</i>`).join("")}</div></td></tr>`).join("")).join("")}
+    </tbody></table></div>`;
+  const gaps = `<div class="gapsall"><b>Gaps to fill</b>${V.map(x => `<div><u>${esc(x.name)}</u>: ${x.gaps.length ? x.gaps.map(g => `${esc(D.dow(d[g.di]))} ${pad2(g.from)}–${pad2(g.to)}`).join(" · ") : "none ✓"}</div>`).join("")}</div>`;
+  $("#board").innerHTML = `<p class="muted noprint" style="font-size:.82rem;margin:0 0 8px">View only · built from each flagship's schedule (Senior Mall Supervisors and Mall Supervisors).</p>${cards}${compact}${hourly}${gaps}`;
+  $("#board").querySelectorAll("[data-as]").forEach(c => c.onclick = () => { ASEL = c.dataset.as; loadAllCov(); });
+  $("#board").querySelectorAll("[data-ad]").forEach(c => c.onclick = () => { const [site, di] = c.dataset.ad.split("|"); ADAY = { site, di: +di }; loadAllCov().then(() => { const r = $(`#cv-${site}-${di}`); if (r) r.scrollIntoView({ behavior: "smooth", block: "center" }); }); });
+}
+$("#swSch").onclick = () => { AVIEW = "sched"; loadAll(); };
+$("#swCov").onclick = () => { AVIEW = "cov"; loadAll(); };
 
 /* ---------- supervisor coverage strip (same rules as the Supervisor Coverage page: SMS / MS, 07:00 → 01:00, management Mon–Fri 08–16) ---------- */
 const CV_H = [...Array(18)].map((_, i) => 7 + i);
@@ -209,10 +268,10 @@ async function loadCov(){
   b.style.color = gaps.length ? "var(--alert)" : "";
   if (COVON) drawCov();
 }
-function covGrid(){
+function covGrid(cov = COVD){
   const span = v => { if (!v || !String(v).includes("-")) return null; const [a, b] = String(v).split("-").map(t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim()); return m ? +m[1] + m[2] / 60 : null; }); if (a == null || b == null) return null; return [a, b <= a ? b + 24 : b]; };
-  const by = {}; for (const c of COVD.cells){ const sp = span(c.val); if (sp) (by[c.day] = by[c.day] || []).push({ email: c.email, s: sp }); }
-  const ini = {}; COVD.people.forEach(p => ini[p.email] = initials(p.name) || "?");
+  const by = {}; for (const c of cov.cells){ const sp = span(c.val); if (sp) (by[c.day] = by[c.day] || []).push({ email: c.email, s: sp }); }
+  const ini = {}; cov.people.forEach(p => ini[p.email] = initials(p.name) || "?");
   return days().map((day, di) => CV_H.map(h => { const on = (by[day] || []).filter(x => Math.min(x.s[1], h + 1) - Math.max(x.s[0], h) >= 0.5).map(x => ini[x.email]);
     return on.length ? { c: "g", t: on.join(" ") } : di < 5 && h >= 8 && h < 16 ? { c: "y", t: "Management" } : { c: "r", t: "Not covered" }; }));
 }
