@@ -19,7 +19,7 @@ import { directorySchema, directoryRoute, directoryPublic } from "./modules/dire
 import { worksSchema, worksInbox, worksFile, worksRoute } from "./modules/works.js";   // Tenant Works Forms feature — see docs/FEATURE-tenant-works.md   // Tenants Directory feature — see docs/FEATURE-directory.md
 import { profileSchema, profileRoute, coversAdmin } from "./modules/profile.js";
 import { twofaSchema, twofaOn, twofaGate, twofaPublic, twofaRoute, twofaAdmin, twofaClean, requiredRoles } from "./modules/twofa.js";   // Two-step login feature — see docs/FEATURE-two-step.md   // Profile feature — see docs/FEATURE-profile.md
-import { leadershipRoute } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
+import { leadershipRoute, siteOverview } from "./modules/leadership.js";   // Leadership dashboards feature — see docs/FEATURE-leadership.md
 import { automationSchema, automationRun, backupData, eodEmailHtml } from "./modules/automation.js";   // Automation feature (EOD email, daily snapshot, weekly backup) — see docs/FEATURE-automation.md   // Tenant Management feature — see docs/FEATURE-tenant-management.md
 import { calendarSchema, calendarRoute, calendarRun, calendarDayEvents, CAL_KINDS, DOC_TYPES } from "./modules/calendar.js";   // Operations Calendar feature — see docs/FEATURE-calendar.md
 import { historySchema, makeAudit, historyClean, historyList, historyOf } from "./modules/history.js";   // Change history feature — see docs/FEATURE-history.md
@@ -230,6 +230,7 @@ const APP_ACCESS = {
   quickpass: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],
   patrol: ["MM", "OM", "SMS", "MS", "MO", "SEC","SECM", "HOS", "LEAD"],   // push only: "Quick Pass to approve" goes to the operations team (anyone can open the tile and ask)
   leadership: ["LEAD"],
+  perf: ["MM", "OM", "SMS", "LEAD"],   // Performance Dashboard
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   emergency: ["MM",  "OM",  "SMS",  "MS",  "MO", "SECM", "HOS"],
@@ -2052,6 +2053,16 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("exec/")) return execRoute(env, p, method, b, url, { site, can, me, now: nowIso, siteName, glaAsOf,
     sites: sitesMap(me) });
 
+  if (p === "perf/summary") {   // Performance Dashboard (Nov 2026): one page for Performance + Monthly Pack + Executive Report + Snaglist Report — which pages this user has, and each flagship's status
+    const lead = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(me.role);
+    const L = sitesOf(me), ctxL = { me, sitesOf, siteName, pullDay, today: beirutToday };
+    const F = (await Promise.all(L.map(s => siteOverview(env, s, ctxL, beirutToday().slice(0, 7)).catch(() => null)))).filter(Boolean);
+    return { today: beirutToday(), me: { name: me.full_name, role: me.role }, sites: sitesMap(me),
+      items: { status: lead && roleAllows(me, "leadership"), soft: lead && roleAllows(me, "leadership"), lpack: lead && roleAllows(me, "leadership"), pack: roleAllows(me, "pack"), exec: roleAllows(me, "exec"),
+        snag: roleAllows(me, "snagreport") && (isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS")), accuracy: roleAllows(me, "accuracy") || lead },
+      flagships: F.map(f => ({ site: f.site, name: f.siteName, light: f.light, attention: f.attention, occupancy: f.gla.occupancy, vacantUnits: f.gla.vacantUnits, fitout: f.gla.fitout,
+        active: f.gla.active, trend: f.trend.map(t => ({ day: t.day, restroom: t.restroom })), checklists: f.mtd.checklists, compliance: f.mtd.compliance, accuracy: f.accuracy })) };
+  }
   if (p.startsWith("lead/")) return leadershipRoute(env, p, method, b, url, { me, sitesOf, siteName, pullDay, today: beirutToday });   // Leadership dashboards feature
   /* ----- Tenant Management feature (modules/tenants.js) ----- */
   if (p.startsWith("tm/") || p === "compliance" || p.startsWith("fitout")) return tenantsRoute(env, p, method, b, url, { site, can, me, now: nowIso,
