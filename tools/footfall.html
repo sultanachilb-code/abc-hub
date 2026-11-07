@@ -402,8 +402,8 @@ function drawSettings(o){
         <div><b>${o.revenue ? "ON" : "OFF"}</b><div class="muted" style="font-size:.8rem">${o.revenue ? "Liban Park also types Membership and Total balance (LBP); shown in the report." : "Membership and Total balance are not asked for and not kept. Switching off removes the amounts already kept."}</div></div></div></div>
       ${Object.entries(S).map(([s, x]) => `<div class="box"><h3>${esc(x.name)}<span style="flex:1"></span><button class="sw ${x.on ? "on" : ""}" data-on="${s}"></button><b style="color:var(--text)">${x.on ? "ON" : "OFF"}</b></h3>
         <div class="pad fl" style="display:grid;gap:10px">
-          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div><label>LIBAN PARK EMAIL (TO)</label><input data-to="${s}" value="${esc(x.to.join(", "))}" placeholder="name@libanpark.com"></div>
-          <div><label>CC</label><input data-cc="${s}" value="${esc(x.cc.join(", "))}" placeholder="separate several with commas"></div></div>
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div><label>LIBAN PARK EMAIL (TO)</label><input data-to="${s}" value="${esc([].concat(x.to || []).join(", "))}" placeholder="name@libanpark.com"></div>
+          <div><label>CC</label><input data-cc="${s}" value="${esc([].concat(x.cc || []).join(", "))}" placeholder="separate several with commas"></div></div>
           <div><label>GATES (THE FORM LIBAN PARK FILLS IN)</label>${x.gates.map((g, i) => gateRow(s, g, i)).join("")}<button class="btn ghost small" data-ga="${s}">＋ Add a gate</button></div>
           <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div><label>PAY MACHINES (TRANSACTIONS PER DAY)</label><input data-apm="${s}" value="${esc((x.apm || []).join(", "))}" placeholder="e.g. East, Central, Store"></div>
           <div><label>HANDHELDS AT THE EXITS</label><input data-hh="${s}" value="${esc((x.hh || []).join(", "))}" placeholder="e.g. Unesco, Mallat, TL"></div></div>
