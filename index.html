@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ABC Operations Hub</title>
+<title>ABC Property Hub</title>
 <meta name="theme-color" content="#2A0F45">
 <script>/* theme before first paint — Light unless the person chose Dark or Automatic */try{var t=localStorage.getItem("hub.theme");try{t=JSON.parse(t)}catch(e){}if(!t)t="light";if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}</script>
 <meta name="description" content="ABC Operations — all operational systems in one app">
@@ -1029,7 +1029,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
     <div class="auth-clock"><b id="authTime">--:--</b><small id="authDate"></small></div>
   </aside>
   <div class="auth-card" id="authCard"></div>
-  <div class="auth-foot">ABC Operations Hub · authorised staff only</div>
+  <div class="auth-foot">ABC Property Hub · authorised staff only</div>
 </div>
 
 <!-- HOME -->
@@ -1049,7 +1049,7 @@ dialog::backdrop{background:rgba(20,8,34,.55)}
         </div>
         <img src="icons/abc-logo-white.png" alt="ABC" id="hubLogo">
         <span class="rule"></span>
-        <div><h1 id="hubTitle">ABC Operations Hub</h1><p id="greet"></p></div>
+        <div><h1 id="hubTitle">ABC Property Hub</h1><p id="greet"></p></div>
       </div>
       <div class="mh-actions">
         <label class="search">
@@ -1352,7 +1352,7 @@ function externalHome(){
     .xh .t:hover{border-color:#8A5CC0}.xh .t i{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-style:normal;color:#fff;font-weight:800;font-size:1.1rem;flex:none}
     .xf{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;background:#fff}.xf.on{display:flex}
     .xf .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#2A0F45;color:#fff}.xf .bar b{flex:1;font-size:.92rem}.xf iframe{flex:1;border:0;width:100%}
-  </style><div class="xh"><header><img src="icons/abc-logo-white.png" alt="ABC"><b>ABC Operations Hub</b><button id="xPw">Password</button><button id="xOut">Sign out</button></header>
+  </style><div class="xh"><header><img src="icons/abc-logo-white.png" alt="ABC"><b>ABC Property Hub</b><button id="xPw">Password</button><button id="xOut">Sign out</button></header>
     <main><h1>Hello ${esc(ME.user.name.split(" ")[0])}</h1><p>Your systems — they open signed in with your hub account.</p>
     <div class="g">${apps.map(a => `<button class="t" data-x="${esc(a.id)}"><i style="background:${esc(a.color || "#4A1F73")}">${esc(a.name[0])}</i><span><b>${esc(a.name)}</b><br><small style="color:var(--muted,#6D6479)">${esc(a.desc || "")}</small></span></button>`).join("") || `<p>No system has been given to this account yet — contact the hub administrator.</p>`}</div></main></div>
     <div class="xf" id="xf"><div class="bar"><button class="xb" id="xBack">‹ Hub</button><b id="xT"></b><button class="xb" id="xExt" title="Open in its own tab">↗</button></div><iframe id="xFr" allow="camera; microphone; geolocation; clipboard-write; fullscreen"></iframe></div>`;
@@ -1376,7 +1376,7 @@ function authScreen(mode, errText){
   show("auth"); authClock();
   const logo = `<div class="logo"><img src="icons/abc-logo-white.png" alt="ABC"></div>`;
   const forms = {
-    login: `${logo}<h1>ABC Operations Hub</h1><p class="sub">${(() => { const t = new URLSearchParams(location.search).get("sso"), n = { snaglist: "Snaglist Manager", incidents: "the Incident Report System", restroom: "the Restroom dashboard" }[t]; return n ? `Sign in with your hub account to continue to <b>${n}</b>.` : "Sign in to reach every operational system in one place."; })()}</p>
+    login: `${logo}<h1>ABC Property Hub</h1><p class="sub">${(() => { const t = new URLSearchParams(location.search).get("sso"), n = { snaglist: "Snaglist Manager", incidents: "the Incident Report System", restroom: "the Restroom dashboard" }[t]; return n ? `Sign in with your hub account to continue to <b>${n}</b>.` : "Sign in to reach every operational system in one place."; })()}</p>
       <div id="aMsg"></div>
       <label class="field"><span>Email</span><input id="aEmail" type="email" autocomplete="username" required></label>
       <label class="field"><span>Password</span><input id="aPass" type="password" autocomplete="current-password" required></label>
@@ -1567,7 +1567,7 @@ async function welcomeSheet(){
       if (k === "install"){
         if (deferred){ deferred.prompt(); await deferred.userChoice; deferred = null; }
         else if (iOS) { msg("In Safari, tap the Share button, then “Add to Home Screen”. Open the hub from the new icon, then turn on alerts."); b.disabled = false; return; }
-        else { msg("Use the browser menu → “Install ABC Operations Hub” (or “Add to Home screen”)."); b.disabled = false; return; }
+        else { msg("Use the browser menu → “Install ABC Property Hub” (or “Add to Home screen”)."); b.disabled = false; return; }
       }
       if (k === "camera"){ const s2 = await navigator.mediaDevices.getUserMedia({ video: true }); s2.getTracks().forEach(t => t.stop()); }
       if (k === "passkey") await addPasskey();
@@ -1746,7 +1746,7 @@ function defaultCover(siteName){
       <path d="M-10 164 C 140 90, 320 76, 540 112" fill="none" stroke="#fff" stroke-width="1" opacity=".18"/>
       <g font-family="Arial,sans-serif" font-size="8" font-weight="700" fill="#fff" opacity=".35" text-anchor="end">${floors.map((f, i) => `<text x="508" y="${158 - i * 16}">${f}</text><line x1="484" x2="496" y1="${155 - i * 16}" y2="${155 - i * 16}" stroke="#fff"/>`).join("")}</g>
     </svg>
-    <div class="pf-brand"><img src="/icons/abc-logo-white.png" alt="ABC"><span class="rule"></span><b class="${(siteName || "").length > 16 ? "long" : ""}">${esc(all ? "All flagships" : siteName)}</b><i>Operations Hub</i></div>`;
+    <div class="pf-brand"><img src="/icons/abc-logo-white.png" alt="ABC"><span class="rule"></span><b class="${(siteName || "").length > 16 ? "long" : ""}">${esc(all ? "All flagships" : siteName)}</b><i>Property Hub</i></div>`;
 }
 /* resize on the device: centre square crop (profile) or width-limited (cover) → JPEG data URL */
 function loadImg(file){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file is not a picture this browser can read.")); i.src = URL.createObjectURL(file); }); }
@@ -1835,7 +1835,7 @@ function twofaLogin(t, view){
   } else {
     const mail = view === "email";
     body = `<h1>${mail ? "Check your email" : view === "code" ? "Enter the code" : "Enter a backup code"}</h1>
-      <p class="sub" id="tfSub">${mail ? (t.mail && t.mail.sent ? `We emailed a 6-digit code to <b>${esc(t.mail.to)}</b>. It works for ${t.mail.minutes} minutes.` : "Sending a 6-digit code to your work email…") : view === "code" ? "Open your authenticator app and type the 6-digit code for ABC Operations Hub." : "Use one of the backup codes you saved when you turned on two-step login. Each code works once."}</p>
+      <p class="sub" id="tfSub">${mail ? (t.mail && t.mail.sent ? `We emailed a 6-digit code to <b>${esc(t.mail.to)}</b>. It works for ${t.mail.minutes} minutes.` : "Sending a 6-digit code to your work email…") : view === "code" ? "Open your authenticator app and type the 6-digit code for ABC Property Hub." : "Use one of the backup codes you saved when you turned on two-step login. Each code works once."}</p>
       <div id="aMsg"></div><label class="field"><span>${view === "backup" ? "Backup code" : "6-digit code"}</span><input id="tfCode" class="tf-code" ${view !== "backup" ? 'inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="––––––"' : 'maxlength="9" placeholder="XXXX-XXXX" style="text-transform:uppercase"'}></label>
       <button class="btn" id="tfGo">Confirm</button>${mail ? `<div style="text-align:center;margin-top:8px"><button class="btn ghost small" id="tfResend" style="border:0;color:var(--brand-2)">Send a new code</button></div>` : ""}${trust}`;
   }
@@ -1925,7 +1925,7 @@ async function approveSheet(id){
   };
   sheet.onclick = e => { if (e.target === sheet || e.target.closest("[data-close]")) sheet.close(); };
   if (d.status !== "pending") return done(false, d.status === "approved" || d.status === "used" ? "This sign-in was already approved." : d.status === "denied" ? "This sign-in was declined." : d.status === "expired" ? "This request has expired. Sign in again on the other device." : (d.error || "Request not found."));
-  sheet.innerHTML = `<div class="sheet-h"><div><b>Is this you signing in?</b><small>ABC Operations Hub</small></div></div>
+  sheet.innerHTML = `<div class="sheet-h"><div><b>Is this you signing in?</b><small>ABC Property Hub</small></div></div>
     <div class="sheet-body"><div class="tf-dev">${esc(d.device)} · ${esc(d.time)}</div>
       <p class="tf-note" style="margin-top:10px">Pick the number shown on the other screen, then confirm with Face ID, fingerprint or your phone PIN.</p>
       <div class="tf-picks">${d.options.map(n => `<button data-pick="${n}">${n}</button>`).join("")}</div>
@@ -2265,7 +2265,7 @@ function aiDraw(){
     card.querySelectorAll("[data-act]").forEach(btn => btn.onclick = async () => {
       const a = btn.dataset.act;
       if (a === "copy"){ try { await navigator.clipboard.writeText(aiPlain(m.content)); btn.textContent = "✓ Copied"; } catch { btn.textContent = "Copy failed"; } }
-      if (a === "share"){ const text = `${q}\n\n${aiPlain(m.content)}\n\n— ABCON · ABC Operations Hub`;
+      if (a === "share"){ const text = `${q}\n\n${aiPlain(m.content)}\n\n— ABCON · ABC Property Hub`;
         if (navigator.share) navigator.share({ title: "ABCON", text }).catch(() => {}); else location.href = `mailto:?subject=${encodeURIComponent("ABCON: " + q.slice(0, 60))}&body=${encodeURIComponent(text)}`; }
       if (a === "up"){ m.voted = 1; api("ai/feedback", { site: AIC.site, vote: 1, q, a: m.content }).catch(() => {}); aiDraw(); aiSave(); }
       if (a === "down"){ const w = act(".abx-why"); w.hidden = !w.hidden; if (!w.hidden) w.querySelector("textarea").focus(); }
@@ -3128,7 +3128,7 @@ function hlOrbit(C){
     : L.map((a, i) => { const ang = -Math.PI / 2 + (i + .5) * 2 * Math.PI / L.length, r2 = rr * .6;
         return hlApp(a, "sat", `--x:${(Math.cos(ang) * r2).toFixed(1)}px;--y:${(Math.sin(ang) * r2).toFixed(1)}px;transition-delay:${i * 40}ms`); }).join("");
   return `<div class="hl-orb ${sel ? "open" : ""}" id="hlOrb"><div class="ring" style="width:${rr * 2}px;height:${rr * 2}px"></div><div class="ring" style="width:${rr * 1.25}px;height:${rr * 1.25}px"></div>
-    <button class="core" id="hlCore">${sel ? "‹ All<br>categories" : "ABC<br>Operations Hub"}</button>${cats}${tools}</div>`;
+    <button class="core" id="hlCore">${sel ? "‹ All<br>categories" : "ABC<br>Property Hub"}</button>${cats}${tools}</div>`;
 }
 /* a folder's colour and picture: those of its first tool */
 const hlTint = c => esc((c.L[0] && c.L[0].color) || "#4A1F73");
@@ -4056,7 +4056,7 @@ async function adminUsers(body, editing){
     const og = (d.opsGroups || {})[site] || { emails: [], auto: true };
     const mm = inSlot("MM"), om = inSlot("OM");
     main = `<div class="pg og"><div class="pg-h"><h4>ABC Operations Groups</h4></div>
-        <p class="pg-n">The flagship's operations group email. When a handover is handed over, the hub emails it from <b>ABC Operations Hub</b> to this group, with the Mall Manager and the Operations Manager in Cc.</p>
+        <p class="pg-n">The flagship's operations group email. When a handover is handed over, the hub emails it from <b>ABC Property Hub</b> to this group, with the Mall Manager and the Operations Manager in Cc.</p>
         <label class="field"><span>Group email${og.emails.length > 1 ? "s" : ""}</span><input id="ogEmails" type="text" placeholder="e.g. abcverdunoperations@abc.com.lb" value="${esc(og.emails.join(", "))}"></label>
         <label class="field"><span>CCTV emails · PM handover</span><input id="ogCctv" type="text" placeholder="e.g. cctvverdunmall@abc.com.lb, …  (up to 5, comma separated)" value="${esc((og.cctv || []).join(", "))}"></label>
         <label class="chk"><input type="checkbox" id="ogAuto" ${og.auto ? "checked" : ""}> Email the handover automatically when it is handed over</label>

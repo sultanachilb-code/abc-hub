@@ -32,7 +32,7 @@ const CHALLENGE_MIN = 2;          // an approval request is valid 2 minutes
 const PRE_MIN = 10;               // the password step is remembered 10 minutes
 const TRUST_DAYS = 30;
 const MAX_FAILS = 5, LOCK_MIN = 15;
-const ISSUER = "ABC Operations Hub";
+const ISSUER = "ABC Property Hub";
 
 export async function twofaSchema(env) {
   await env.DB.batch([
@@ -122,7 +122,7 @@ const maskEmail = e => String(e).replace(/^(.)(.*)(.@.*)$/, (m, a, b, c) => a + 
 const EMAIL_MIN = 10, EMAIL_GAP_S = 45;
 function emailCodeHtml(name, code) {
   return `<div style="font-family:Arial,sans-serif;max-width:460px;margin:0 auto;padding:24px;border:1px solid #E3DCEC;border-radius:14px">
-    <div style="font-size:13px;color:#6D6479">ABC Operations Hub · sign-in</div>
+    <div style="font-size:13px;color:#6D6479">ABC Property Hub · sign-in</div>
     <p style="font-size:15px;color:#221A2E">Hello ${String(name || "").replace(/[<>&]/g, "")},<br><br>Your sign-in code is:</p>
     <div style="font-size:34px;font-weight:bold;letter-spacing:8px;color:#2A0F45;background:#F6F4F9;border-radius:12px;padding:14px 0;text-align:center">${code}</div>
     <p style="font-size:13px;color:#6D6479;line-height:1.5">It works for ${EMAIL_MIN} minutes. If you did not try to sign in, ignore this email and tell your administrator — your password may be known to someone else.</p></div>`;
@@ -133,7 +133,7 @@ async function sendEmailCode(env, deps, u) {
   if (st.email_sent && Date.now() - Date.parse(st.email_sent) < EMAIL_GAP_S * 1000) throw err(`A code was just sent — wait ${EMAIL_GAP_S} seconds before asking for another.`, 429);
   if (!deps.relay) throw err("Email is not set up on the hub.", 500);
   const code = String(100000 + (new DataView(rand(4).buffer).getUint32(0) % 900000));
-  const r = await deps.relay(env, { to: [u.email], subject: `${code} is your ABC Operations Hub sign-in code`, html: emailCodeHtml(u.full_name.split(" ")[0], code) });
+  const r = await deps.relay(env, { to: [u.email], subject: `${code} is your ABC Property Hub sign-in code`, html: emailCodeHtml(u.full_name.split(" ")[0], code) });
   if (!r.ok) throw err("The code could not be emailed right now. Try another way, or ask your administrator.", 502);
   const now = new Date();
   await env.DB.prepare("UPDATE user_2fa SET email_code = ?, email_exp = ?, email_sent = ?, email_tries = 0 WHERE email = ?")
@@ -205,7 +205,7 @@ async function newChallenge(env, deps, request, u, st) {
   let pushed = false;
   const sub = st.approve_ep ? await env.DB.prepare("SELECT * FROM push_subs WHERE endpoint = ? AND email = ?").bind(st.approve_ep, u.email).first() : null;
   if (sub) {
-    const r = await deps.sendPush(env, sub, { title: "Sign-in request · ABC Operations Hub", body: `${deviceLabel(ua)} · ${beirutTime(now.toISOString())} — tap to approve`,
+    const r = await deps.sendPush(env, sub, { title: "Sign-in request · ABC Property Hub", body: `${deviceLabel(ua)} · ${beirutTime(now.toISOString())} — tap to approve`,
       url: `/#/approve/${id}`, tag: `approve-${id}`, tone: "alert", ttl: CHALLENGE_MIN * 60 });
     pushed = !!r.ok;
   }

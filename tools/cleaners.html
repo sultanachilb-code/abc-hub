@@ -253,7 +253,7 @@ async function drawReport(){
 }
 
 /* ---------- migration (administrators) ---------- */
-const SNIPPET = `/* ===== ABC Operations Hub — migration export (paste at the END of the script) ===== */
+const SNIPPET = `/* ===== ABC Property Hub — migration export (paste at the END of the script) ===== */
 function apiHubExport_(p) {
   const key = PropertiesService.getScriptProperties().getProperty('HUB_KEY');
   if (!key || p.key !== key) return { ok:false, error:'Not authorised' };

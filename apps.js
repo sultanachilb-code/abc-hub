@@ -1,5 +1,5 @@
 /* =====================================================================
-   ABC Operations Hub — system registry
+   ABC Property Hub — system registry
    This is the ONLY file you need to edit to add / remove / update systems.
    ---------------------------------------------------------------------
    Fields per system:
@@ -23,7 +23,7 @@
    ===================================================================== */
 
 window.HUB = {
-  title: "ABC Operations Hub",
+  title: "ABC Property Hub",
   org: "ABC Operations",
 
   GROUPS: ["Day to Day Operations", "Property Overview & Info", "ABC Platforms", "Tenant Management", "Micro Tools", "Access and Security", "Soft Services Management",

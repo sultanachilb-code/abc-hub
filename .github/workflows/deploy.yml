@@ -1,4 +1,4 @@
-# ABC Operations Hub — deploy to Cloudflare on every upload to main (the hub, then the Loading Gate app)
+# ABC Property Hub — deploy to Cloudflare on every upload to main (the hub, then the Loading Gate app)
 # (and by hand: GitHub → Actions → "Deploy hub to Cloudflare" → Run workflow)
 name: Deploy hub to Cloudflare
 

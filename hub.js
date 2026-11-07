@@ -1,5 +1,5 @@
 /**
- * ABC Operations Hub connector for the Incident Reporting system.
+ * ABC Property Hub connector for the Incident Reporting system.
  *
  *   GET /api/hubstats?site=VRM   — badge + daily-brief figures for the hub
  *                                  (server-to-server, needs the x-hub-key header)

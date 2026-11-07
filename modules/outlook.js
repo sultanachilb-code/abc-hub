@@ -252,7 +252,7 @@ export async function outlookAddinStart(env, hubUrl) {
 function addinPage(msg) {   // runs inside the Office dialog
   const data = JSON.stringify(msg).replace(/</g, "\\u003c");
   const text = msg.ok ? "Signed in — you can close this window." : (msg.error || "Sign-in failed");
-  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ABC Operations Hub</title>
+  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ABC Property Hub</title>
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script></head>
 <body style="font-family:Segoe UI,system-ui,sans-serif;background:#F7F5FA;color:#22163A;display:grid;place-items:center;height:100vh;margin:0">
 <div style="text-align:center;max-width:320px"><div style="font-size:34px">${msg.ok ? "✓" : "⚠️"}</div><p style="font-size:14px">${text.replace(/[<>&]/g, "")}</p></div>
@@ -301,8 +301,8 @@ export async function outlookRoute(env, p, method, b, me, hubUrl) {
     return { connected: false };
   }
   if (p === "ms/test" && method === "POST") {
-    const r = await graphSend(env, email, { to: [email], subject: "Test · sent from the ABC Operations Hub through your Outlook",
-      html: `<p style="font-family:Calibri,Arial">This email was sent by the ABC Operations Hub <b>from your own Outlook</b>. It is in your Sent Items too.</p>` });
+    const r = await graphSend(env, email, { to: [email], subject: "Test · sent from the ABC Property Hub through your Outlook",
+      html: `<p style="font-family:Calibri,Arial">This email was sent by the ABC Property Hub <b>from your own Outlook</b>. It is in your Sent Items too.</p>` });
     if (!r.ok) throw err(r.error);
     return { sent: true };
   }

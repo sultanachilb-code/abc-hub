@@ -152,7 +152,7 @@ function pack(){
   const TYPE = { open: "Opening", close: "Closure", reloc: "Relocation" };
   app.innerHTML = `<div class="pack">
     <section class="page cover"><img src="/icons/abc-logo-white.png" alt="" style="width:90px;margin-bottom:24px" onerror="this.remove()"><h1>Monthly Management Pack</h1><p>${esc(mname)} · ${esc(v.name)}</p>
-      <p style="color:#fff;font-size:11pt;opacity:.85;margin-top:40px">${esc(F.map(f => f.siteName).join(" · "))}</p><p style="color:#CDB8EA;font-size:9pt">Prepared by the ABC Operations Hub · ${esc(new Date(D1.generatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}</p></section>
+      <p style="color:#fff;font-size:11pt;opacity:.85;margin-top:40px">${esc(F.map(f => f.siteName).join(" · "))}</p><p style="color:#CDB8EA;font-size:9pt">Prepared by the ABC Property Hub · ${esc(new Date(D1.generatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}</p></section>
     <section class="page"><h2>Summary</h2>
       <table class="sum"><tr><th>Flagship</th><th>Occupancy</th><th>Active</th><th>Opened</th><th>Closed</th><th>Checklists</th><th>Restroom</th><th>Incidents</th><th>Compliance</th><th>Cleaning</th><th>Security</th><th>Parking</th></tr>
       ${F.map(f => `<tr><td><b>${esc(f.siteName)}</b></td><td>${occ(f.gla.occupancy)}</td><td>${f.gla.active}</td><td>${f.mtd.opened}</td><td>${f.mtd.closed}</td><td>${pctS(f.mtd.checklists)}</td><td>${pctS(f.mtd.restroom)}</td><td>${f.mtd.incidents}</td><td>${f.mtd.compliance ?? "—"}</td><td>${f.scores.cleaning.score ?? "—"}</td><td>${f.scores.security.score ?? "—"}</td><td>${f.scores.parking.score ?? "—"}</td></tr>`).join("")}</table>

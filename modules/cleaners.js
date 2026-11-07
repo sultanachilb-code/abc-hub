@@ -310,7 +310,7 @@ export async function dailyReport(env, d, site, day, o = {}) {
   const html = shell("ABC " + short.toUpperCase(), "DAILY CLEANER ENTRY REPORT · " + fmtDay(day).toUpperCase(),
     `<table style="width:100%;border-collapse:collapse;margin-bottom:16px"><tr>${stat(r.count, "CLEANERS")}${stat(r.entries, "ENTRIES")}${stat(Object.keys(r.byTenant).length, "TENANTS")}${stat(Object.keys(r.byCompany).length, "COMPANIES")}</tr></table>
      <table style="width:100%;border-collapse:collapse"><tr>${th("Time")}${th("Name")}${th("Company")}${th("Tenant")}${th("Agent")}</tr>${rows}</table>
-     <p style="color:#6D6479;font-size:11px;margin-top:16px">Automated report — Cleaner Access, ABC Operations Hub.</p>`);
+     <p style="color:#6D6479;font-size:11px;margin-top:16px">Automated report — Cleaner Access, ABC Property Hub.</p>`);
   const subject = `${o.testTo ? "[TEST] " : ""}ABC ${short} — Cleaner entries — ${fmtDay(day)} (${r.count} cleaner${r.count === 1 ? "" : "s"})`;
   const s = await d.outlookSend(env, { from: FROM, to, cc, subject, html }).catch(e => ({ ok: false, error: e.message }));
   return s && s.ok ? { sent: true, to, cc } : { sent: false, why: (s && s.error) || "Outlook is not connected in the hub" };

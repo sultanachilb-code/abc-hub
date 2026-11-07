@@ -201,7 +201,7 @@ async function makeDeck(){
       s.addImage({ objectName: `A${g}z_ph${j}`, data: img(av[i]), x: x + (cw - ph) / 2, y, w: ph, h: ph });
       txt(s, `A${g}f_nm${j}`, m.name, { x, y: y + ph + 0.1, w: cw, h: 0.36, fontSize: 16, bold: true, color: DEEP, align: "center", fit: "shrink" });
       txt(s, `A${g}f_ps${j}`, m.pos, { x, y: y + ph + 0.44, w: cw, h: 0.32, fontSize: 13, color: PURPLE, align: "center" }); });
-    s.addNotes("Introduce each person and their role. Names, positions and photos come from the ABC Operations Hub.");
+    s.addNotes("Introduce each person and their role. Names, positions and photos come from the ABC Property Hub.");
   }
   /* 5 organization chart */
   { const s = content("The team"); title(s, "Organization chart"); const O = orgOf(T, cfg), K = O.kids, n = Math.max(1, K.length);
@@ -267,7 +267,7 @@ async function makeDeck(){
       box(s, `A${g}u_p${i}`, x, 1.6, cw, 3.2, LIGHT, { r: 0.18 }); s.addImage({ objectName: `A${g}u_pi${i}`, data: img(im), x: x + cw / 2 - 0.8, y: 1.95, w: 1.6, h: 1.6 });
       txt(s, `A${g}u_pt${i}`, t, { x: x + 0.2, y: 3.75, w: cw - 0.4, h: 0.85, fontSize: 17, bold: true, color: DEEP, align: "center", valign: "middle", fit: "shrink" }); });
     box(s, "A5f_hub", 0.6, 5.25, W - 1.2, 1.25, DEEP, { r: 0.18 });
-    txt(s, "A5f_ht", [{ text: "All of them are in the ABC Operations Hub.  ", options: { bold: true, color: GOLD } }, { text: "Open Policies & Procedures, or simply ask ABCON — it answers with the exact rule and its source.", options: { color: "FFFFFF" } }], { x: 1.0, y: 5.25, w: W - 2.0, h: 1.25, fontSize: 17, valign: "middle" }); }
+    txt(s, "A5f_ht", [{ text: "All of them are in the ABC Property Hub.  ", options: { bold: true, color: GOLD } }, { text: "Open Policies & Procedures, or simply ask ABCON — it answers with the exact rule and its source.", options: { color: "FFFFFF" } }], { x: 1.0, y: 5.25, w: W - 2.0, h: 1.25, fontSize: 17, valign: "middle" }); }
   /* 11 tenant rules */
   { const s = content("Rules"); title(s, "Key tenant rules we enforce");
     const R = [["Insurance", "Verify tenant policies", "Keep all required insurance; provide copies"], ["Staff listing", "Keep the security database", "Submit employee names monthly"], ["Deliveries", "Set routes and timing", "Back doors and service corridors only"],

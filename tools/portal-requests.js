@@ -1,4 +1,4 @@
-/* ABC Operations Hub — reader for the Tenant Connect "Handover Report" Excel (shared by Contractors)
+/* ABC Property Hub — reader for the Tenant Connect "Handover Report" Excel (shared by Contractors)
    Columns: Status · Valid From · Request Name · Tenant Name · Valid To · Sub Maintenance · Contractor · Description
    Blank Status / Valid From cells repeat the row above (grouped report). Needs XLSX loaded. */
 window.PortalRequests = (() => {

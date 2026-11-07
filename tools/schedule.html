@@ -289,7 +289,7 @@ async function openMail(){
   dl.innerHTML = `<div class="mh"><div class="sj">${esc(P.subject)}</div>
       <div><span class="k">To</span>${P.to.length ? L(P.to) : `<b style="color:var(--alert)">No Mall Manager set in People &amp; roles</b>`}</div>
       <div class="cc"><span class="k">Cc</span>${L(P.cc) || "—"}</div>
-      <div><span class="k">From</span>ABC Operations Hub · replies come to you</div></div>
+      <div><span class="k">From</span>ABC Property Hub · replies come to you</div></div>
     <iframe id="mailFrame" title="Email preview"></iframe>
     <div class="dlg-f"><button class="btn ghost" data-x>Cancel</button><button class="btn" id="mailGo" ${P.to.length ? "" : "disabled"}>${P.sent ? "Send update" : "Send email"}</button></div>`;
   dl.querySelector("#mailFrame").srcdoc = `<!doctype html><meta charset="utf-8"><body style="margin:14px">${P.html}</body>`;
@@ -370,7 +370,7 @@ function schedulePng(){
   d.forEach((dd, i) => { let am = 0, pm = 0; DATA.staff.forEach(p => { const v = DATA.map[key(p.email, dd)] || ""; if (!v.includes("-")) return; const [a, b] = v.split("-").map(hm); if (a < 12) am++; if (b >= 20 || b <= a) pm++; });
     cellRect(W + i * CW, y, CW, 40, "#F3F0F7"); text(`${am} AM · ${pm} PM`, W + i * CW + CW / 2, y + 20, F("bold", 12), "#221A2E"); });
   cellRect(W + 7 * CW, y, TW, 40, "#F3F0F7"); y += 40;
-  text(`ABC Operations Hub · shared by ${CTX.me.name} · ${new Date().toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, 12, y + 22, F("", 12), "#6D6479", "left");
+  text(`ABC Property Hub · shared by ${CTX.me.name} · ${new Date().toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, 12, y + 22, F("", 12), "#6D6479", "left");
   return new Promise(res => c.toBlob(res, "image/png"));
 }
 async function shareWhatsApp(){

@@ -1,6 +1,6 @@
 /* =====================================================================
    HUB SIGN-IN (SSO) CONNECTOR — for Restroom Inspection Dashboard, Cleaner QR Access and Footfall Hub
-   Lets a person open the system from the ABC Operations Hub without typing a password again.
+   Lets a person open the system from the ABC Property Hub without typing a password again.
 
    How it works: the hub sends the person to  /api/sso?token=…  with a one-minute pass signed with HUB_KEY
    (the same secret the hub already shares with these systems). This code checks the pass and signs the

@@ -124,7 +124,7 @@ export function e164(m) {
 }
 const xml = s => String(s).replace(/[<>&"']/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]));
 async function placeCall(env, to, e, siteName) {
-  const say = `Emergency at ${siteName || e.site}. ${e.type}. ${e.location}. ${e.note || ""} Open the ABC Operations Hub and tap I am on it.`;
+  const say = `Emergency at ${siteName || e.site}. ${e.type}. ${e.location}. ${e.note || ""} Open the ABC Property Hub and tap I am on it.`;
   const twiml = `<Response><Pause length="1"/><Say voice="alice" language="en-GB" loop="3">${xml(say)}</Say></Response>`;
   const body = new URLSearchParams({ To: to, From: env.TWILIO_FROM, Twiml: twiml, Timeout: "40" });
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Calls.json`, { method: "POST", body,

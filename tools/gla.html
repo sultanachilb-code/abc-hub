@@ -176,7 +176,7 @@ function render(){
         <h3>Key</h3><div class="lg"><span><i style="background:#7B4BB0"></i>Leased</span><span><i style="background:rgba(229,72,77,.5)"></i>Vacant</span><span><i style="background:rgba(200,162,74,.6)"></i>Fit-out</span><span><i style="background:rgba(47,128,237,.45)"></i>Reserved (signed, not in fit-out yet)</span><span><i style="background:var(--line)"></i>Closed (grey italic)</span><span><i style="background:rgba(229,72,77,.5)"></i>Terminated (struck through)</span><span><i style="background:#2E8B7A"></i>Pop-up</span><span><i style="background:rgba(74,111,165,.5)"></i>${RETAIL()}</span></div>
       </div>
     </div>
-    <div class="foot"><span>ABC Operations Hub · ${esc(CTX.siteName)} GLA · ${G.changes} change${G.changes === 1 ? "" : "s"} since ${esc((G.baseline && G.baseline.source) || "the workbook")}</span><span>${U.length} units · figures in square metres</span></div>
+    <div class="foot"><span>ABC Property Hub · ${esc(CTX.siteName)} GLA · ${G.changes} change${G.changes === 1 ? "" : "s"} since ${esc((G.baseline && G.baseline.source) || "the workbook")}</span><span>${U.length} units · figures in square metres</span></div>
   </div>`;
   applyFit(); search();
   /* Mall Layouts feature: arriving from a plan pin opens that unit's editor, and returns to the plan afterwards */
