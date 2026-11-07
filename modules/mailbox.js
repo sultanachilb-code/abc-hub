@@ -9,7 +9,7 @@
    • Admin Control Center → Report mailbox: connect, settings, "Test read (no import)", "Import now", log.
    ===================================================================== */
 import { rmbAccess, rmbStatus, rmbDisconnect, rmbConnectUrl, msOn } from "./outlook.js";
-import { portalImport, parseReport, parseUsers, siteOf, KINDS } from "./portal.js";
+import { portalImport, parseReport, parseUsers, parseLookup, siteOf, KINDS } from "./portal.js";
 import { contractsImport } from "./contracts.js";
 import { readSheet } from "./sheetread.js";
 
@@ -18,7 +18,7 @@ const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
 const GRAPH = "https://graph.microsoft.com/v1.0";
 export const MB_DEFAULT = { mailbox: "opsverdunmall@abc.com.lb", folder: "Hub Reports", from: "07:00", to: "08:00", check: "08:05", every: 10,
   expect: ["vr", "bp", "nr", "mk"], on: false };
-export const MB_EXPECT = { vr: "Violations & Requests", bp: "Penalties (Breaches & Penalties)", nr: "ABC Requests", mk: "Marketing Requests", cp: "Contractor Permits", users: "Portal Users", contracts: "Contracts near ending", handover: "Handover Report" };
+export const MB_EXPECT = { vr: "Violations & Requests", bp: "Penalties (Breaches & Penalties)", nr: "ABC Requests", mk: "Marketing Requests", cp: "Contractor Permits", users: "Portal Users", contracts: "Contracts near ending", handover: "Handover Report", lookup: "Account hierarchy" };
 
 export async function mbSchema(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS mb_log (msg_id TEXT PRIMARY KEY, received TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL DEFAULT '', sender TEXT NOT NULL DEFAULT '',
@@ -87,6 +87,7 @@ async function preview(f, SITES, d) {
       const s = r.map(c => siteOf("", c, SITES)).find(Boolean); if (s) sites[SITES[s]] = (sites[SITES[s]] || 0) + 1; else unplaced++; }
     return { file: f.name, kind: `Handover Report · ${ok} approved of ${n} → Shift Handover`, rows: ok, sites, unplaced };
   }
+  const lk = parseLookup(rows, SITES); if (lk) return { file: f.name, kind: "Account hierarchy (shop → brand → company → group)", rows: lk.length, sites: {} };
   const u = parseUsers(rows); if (u) return { file: f.name, kind: "Portal Users", rows: u.length || (u.rows || []).length || 0, sites: {} };
   const items = parseReport(rows);
   if (items) {

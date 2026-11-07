@@ -41,6 +41,10 @@ export async function portalSchema(env) {
       company TEXT NOT NULL DEFAULT '', account TEXT NOT NULL DEFAULT '', site TEXT NOT NULL DEFAULT '', profile TEXT NOT NULL DEFAULT '', last_login TEXT NOT NULL DEFAULT '',
       created TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1, first_seen TEXT NOT NULL DEFAULT '', last_seen TEXT NOT NULL DEFAULT '')`)
   ]);
+  /* Nov 2026: the account hierarchy (Salesforce lookup: shop → brand → company → group, per contract) and each user's account as sent */
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS portal_lookup (contract TEXT PRIMARY KEY, shop TEXT NOT NULL, brand TEXT NOT NULL DEFAULT '', company TEXT NOT NULL DEFAULT '',
+    grp TEXT NOT NULL DEFAULT '', site TEXT NOT NULL DEFAULT '', start_day TEXT NOT NULL DEFAULT '', end_day TEXT NOT NULL DEFAULT '')`).run();
+  await env.DB.prepare("ALTER TABLE portal_users ADD COLUMN raw_account TEXT NOT NULL DEFAULT ''").run().catch(() => {});
   /* v2 columns: valid from / to (marketing, permits), contractor phone, work permit, ABC comments, and a fingerprint to skip unchanged rows */
   for (const c of ["valid_from TEXT NOT NULL DEFAULT ''", "valid_to TEXT NOT NULL DEFAULT ''", "phone TEXT NOT NULL DEFAULT ''", "permit TEXT NOT NULL DEFAULT ''",
     "abc_note TEXT NOT NULL DEFAULT ''", "fp TEXT NOT NULL DEFAULT ''"]) await env.DB.prepare(`ALTER TABLE portal_items ADD COLUMN ${c}`).run().catch(() => {});
@@ -123,6 +127,47 @@ export function parseReport(rows) {
   return out.length ? out : null;
 }
 
+/* ---------- the account hierarchy (Nov 2026): Tenant_Name · Parent_Tenant · Parent_Company · Parent_Group · Business_Unit per contract ---------- */
+const lkDay = v => { if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10); const s = String(v || "").trim(); let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s); if (m) return m[0];
+  m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/.exec(s); if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  if (typeof v === "number" && v > 30000 && v < 80000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10); return ""; };
+export function parseLookup(rows, SITES) {
+  const hi = rows.findIndex(r => r.some(h => /tenant[_ ]name/i.test(String(h || ""))) && r.some(h => /parent[_ ]tenant/i.test(String(h || ""))));
+  if (hi < 0) return null;
+  const H = rows[hi].map(h => String(h || "").toLowerCase()), col = re => H.findIndex(h => re.test(h));
+  const C = { contract: col(/contract/), shop: col(/tenant[_ ]name/), brand: col(/parent[_ ]tenant/), company: col(/parent[_ ]company/), grp: col(/parent[_ ]group/), bu: col(/^business[_ ]unit(__c)?$/), start: col(/start/), end: col(/end/) };
+  const byName = Object.fromEntries(Object.entries(SITES).map(([c, n]) => [norm(n), c]));
+  const out = [];
+  for (const r of rows.slice(hi + 1)) {
+    const shop = clip(r[C.shop], 160); if (!shop) continue;
+    const bu = C.bu >= 0 ? norm(r[C.bu]) : "";
+    out.push({ contract: clip(C.contract >= 0 ? r[C.contract] : "", 40) || shop + "#" + out.length, shop, brand: clip(r[C.brand], 160), company: clip(r[C.company], 160), grp: clip(r[C.grp], 160),
+      site: byName[bu] || siteOf("", shop, SITES) || "", start: lkDay(r[C.start]), end: lkDay(r[C.end]) });
+  }
+  return out.length ? out : null;
+}
+/* names compared without legal suffixes and punctuation ("Noura S.A.L" = "NOURA SAL" = "Noura") */
+const lkN = s => String(s || "").toLowerCase().replace(/\b(s\.?a\.?r\.?l|s\.?a\.?l|sal|sarl|co|company|ltd|llc|est|ets|inc)\b\.?/g, " ").replace(/[^a-z0-9؀-ۿ]+/g, "");
+/* each user: level (shop / brand / company / group), the flagships it covers (running contracts) and its tree */
+async function placeUsers(env, users, today) {
+  const L = (await env.DB.prepare("SELECT * FROM portal_lookup").all()).results || [];
+  if (!L.length) return { users, lookup: null };
+  const idx = { shop: new Map(), brand: new Map(), company: new Map(), grp: new Map() };
+  for (const x of L) for (const k of ["shop", "brand", "company", "grp"]) { const n = lkN(x[k]); if (!n) continue; if (!idx[k].has(n)) idx[k].set(n, []); idx[k].get(n).push(x); }
+  const LV = { shop: "Shop", brand: "Brand", company: "Company", grp: "Group" };
+  const out = users.map(u => {
+    const a = lkN(u.raw || u.company);
+    let lvl = "", rows = null;
+    for (const k of ["shop", "brand", "company", "grp"]) if (a && idx[k].has(a)) { lvl = k; rows = idx[k].get(a); break; }
+    if (!rows) return { ...u, level: "", sites: u.site ? [u.site] : [] };
+    const run = rows.filter(x => !x.end_day || x.end_day >= today), use = run.length ? run : rows;
+    const shops = [...new Map(use.map(x => [x.shop, { shop: x.shop, site: x.site, running: !x.end_day || x.end_day >= today, brand: x.brand }])).values()];
+    const f = rows[0];
+    return { ...u, level: LV[lvl], sites: [...new Set(use.map(x => x.site).filter(Boolean))], tree: { group: f.grp, company: f.company, brand: lvl === "shop" || lvl === "brand" ? f.brand : "", shops: lvl === "shop" ? shops.filter(x => x.shop === f.shop) : shops } };
+  });
+  return { users: out, lookup: { rows: L.length } };
+}
+
 /* ---------- the Active Users report (portal users): Username + Last Login / Active / Account Name columns ---------- */
 export function parseUsers(rows) {
   /* Nov 2026: the daily "Sample Report: Active Users" has First Name · Last Name · Title · Username · Account Name · Active (no Last Login) */
@@ -148,10 +193,10 @@ async function importUsers(env, d, users, now) {
     if (seen.has(u.username)) continue; seen.add(u.username);
     const p = prev.get(u.username); if (!p || !p.active) added++;
     const site = u.branch || u.account ? siteOf(u.branch, u.account, d.SITES) : "";
-    ops.push(env.DB.prepare(`INSERT INTO portal_users (username, first, last, title, company, account, site, profile, last_login, created, active, first_seen, last_seen) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?)
+    ops.push(env.DB.prepare(`INSERT INTO portal_users (username, first, last, title, company, account, site, profile, last_login, created, active, first_seen, last_seen, raw_account) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?)
       ON CONFLICT(username) DO UPDATE SET first=excluded.first, last=excluded.last, title=excluded.title, company=excluded.company, account=excluded.account, site=excluded.site,
-      profile=excluded.profile, last_login=excluded.last_login, created=excluded.created, active=1, last_seen=excluded.last_seen`)
-      .bind(u.username, u.first, u.last, u.title, u.company, site ? tenantOf(u.account, d.SITES[site]) : u.account, site, u.profile, u.login, u.created, now, now));
+      profile=excluded.profile, last_login=excluded.last_login, created=excluded.created, active=1, last_seen=excluded.last_seen, raw_account=excluded.raw_account`)
+      .bind(u.username, u.first, u.last, u.title, u.company, site ? tenantOf(u.account, d.SITES[site]) : u.account, site, u.profile, u.login, u.created, now, now, u.account));
   }
   const gone = [...prev.values()].filter(p => p.active && !seen.has(p.username));
   for (const g of gone) ops.push(env.DB.prepare("UPDATE portal_users SET active = 0, last_seen = ? WHERE username = ?").bind(now, g.username));
@@ -165,6 +210,16 @@ export async function portalImport(env, d, { files, from }) {
   const res = [], now = d.now();
   for (const f of files.slice(0, 10)) {
     let rows; try { rows = await readSheet(f.name, f.data); } catch (e) { res.push({ file: f.name, error: e.message }); continue; }
+    const look = parseLookup(rows, d.SITES);
+    if (look) {   // Nov 2026: the account hierarchy — replaces the whole lookup
+      const ops = [env.DB.prepare("DELETE FROM portal_lookup")];
+      for (const x of look) ops.push(env.DB.prepare("INSERT OR REPLACE INTO portal_lookup (contract, shop, brand, company, grp, site, start_day, end_day) VALUES (?,?,?,?,?,?,?,?)")
+        .bind(x.contract, x.shop, x.brand, x.company, x.grp, x.site, x.start, x.end));
+      for (let i = 0; i < ops.length; i += 150) await env.DB.batch(ops.slice(i, i + 150));
+      await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("portal:last:lookup", JSON.stringify({ at: now, from, file: f.name, rows: look.length })).run();
+      res.push({ file: f.name, kinds: ["Account hierarchy"], rows: look.length, added: look.length, changed: 0, gone: 0, unknown: [] });
+      continue;
+    }
     const users = parseUsers(rows);
     if (users) {
       const u = await importUsers(env, d, users, now);
@@ -268,10 +323,12 @@ export async function portalRoute(env, p, method, b, url, d) {
   /* Portal Users — managers and leadership only (names and emails) */
   if (p === "portal/users") {
     if (!d.full(me)) throw err("Portal users are for managers and leadership", 403);
-    const { results } = await env.DB.prepare("SELECT username, first, last, title, company, account, site, last_login, created FROM portal_users WHERE active = 1 ORDER BY last_login DESC").all();
-    const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'portal:last:users'").first();
-    return { today: d.today(), last: r ? JSON.parse(r.v) : null, siteNames: d.SITES,
-      users: (results || []).map(u => ({ user: u.username, name: [u.first, u.last].filter(Boolean).join(" "), title: u.title, company: u.company || u.account, site: u.site, login: u.last_login, created: u.created })) };
+    const { results } = await env.DB.prepare("SELECT username, first, last, title, company, account, site, last_login, created, raw_account FROM portal_users WHERE active = 1 ORDER BY last_login DESC").all();
+    const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'portal:last:users'").first(), lk = await env.DB.prepare("SELECT v FROM meta WHERE k = 'portal:last:lookup'").first();
+    const base = (results || []).map(u => ({ user: u.username, name: [u.first, u.last].filter(Boolean).join(" "), title: u.title, company: u.company || u.account, raw: u.raw_account || (u.site && u.account ? `${u.account} ${d.SITES[u.site] || ""}` : u.account || u.company),   // imported before Nov 2026: shop = tenant + flagship
+      site: u.site, login: u.last_login, created: u.created }));
+    const P = await placeUsers(env, base, d.today());
+    return { today: d.today(), last: r ? JSON.parse(r.v) : null, lookupLast: lk ? JSON.parse(lk.v) : null, siteNames: d.SITES, users: P.users };
   }
   if (p === "portal/import" && method === "POST") {
     const site = d.sitesOf(me).find(team);

@@ -35,3 +35,10 @@ Contractor · Description · Status) is recognised by its columns and goes strai
 Today (running today) · Tomorrow · Coming up (later dates); finished ones are skipped. The flagship comes from the tenant name
 ("ZARA Verdun Mall"). Approved requests also fill Contractors (`conImportRows`). Creates the day's handover when there is none yet.
 Arrival kept in `portal:last:handover`; tick **Handover Report** under "Reports expected every morning" for the 08:05 missing check.
+
+## Account hierarchy → Portal Users levels (Nov 2026)
+The Salesforce lookup (ContractNumber · Tenant_Name · Parent_Tenant · Parent_Company · Parent_Group · Business_Unit · Start / End) is
+recognised by Portal Dashboard → Import and by the Report mailbox ("Account hierarchy"); each import replaces `portal_lookup`
+(kept in D1 only — commercial data stays out of the repo). Portal Users: each user's account (as sent, `portal_users.raw_account`)
+is matched shop → brand → company → group (names without legal suffixes); the user gets a **level** and covers every flagship where
+that node has a running contract (ended contracts only when none is running). Tap a user for the tree.
