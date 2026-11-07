@@ -80,7 +80,8 @@ async function tenantsOf(env, site) {
     dbank: dbN.has(norm(bare(t.brand))) || dbN.has(norm(t.brand)) }));
 }
 const pass = (t, f) => (!f.cats.length || f.cats.includes(t.cat)) && (!f.depts.length || f.depts.includes(t.dept)) && (!f.floors.length || [...t.floors].some(x => f.floors.includes(x)))
-  && (!f.crm || (f.crm === "yes") === t.crm) && (!f.dbank || (f.dbank === "yes") === t.dbank);
+  && (!f.crm || (f.crm === "yes") === t.crm) && (!f.dbank || (f.dbank === "yes") === t.dbank)
+  && (!f.contract || (f.contract === "crm" ? t.crm : f.contract === "dbank" ? t.dbank : t.crm && t.dbank));   // Contract Terms: CRM · Direct Banking · both
 async function audience(env, d, sites, f) {
   const P = f.positions.map(x => x.toLowerCase()), PA = f.levels.length ? await portalAudience(env, d.SITES, d.today()).catch(() => null) : null;
   const out = [];
@@ -102,13 +103,14 @@ async function filters(env, sites) {
   const q = sites.map(() => "?").join(",");
   const p = sites.length ? (await env.DB.prepare(`SELECT position, COUNT(*) AS n FROM dir_contacts WHERE site IN (${q}) AND email != '' AND position != '' GROUP BY position ORDER BY n DESC`).bind(...sites).all().catch(() => ({ results: [] }))).results || [] : [];
   return { tenants: all.length, cats: count(t => t.cat).sort((a, b) => b.n - a.n), depts: count(t => t.dept).map(x => ({ ...x, cat: catOf(x.name) })).sort((a, b) => a.name.localeCompare(b.name)),
-    floors: count(t => [...t.floors]).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true })), crm: all.filter(t => t.crm).length, dbank: all.filter(t => t.dbank).length,
+    floors: count(t => [...t.floors]).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true })), crm: all.filter(t => t.crm).length, dbank: all.filter(t => t.dbank).length, both: all.filter(t => t.crm && t.dbank).length,
     positions: p.map(x => ({ name: x.position, n: x.n })), levels: PORTAL_LEVELS };
 }
 const filtOf = b => {
   const a = (v, n = 60) => (Array.isArray(v) ? v : []).map(x => clip(x, n)).filter(Boolean).slice(0, 60);
   return { cats: a(b.cats), depts: a(b.depts), floors: a(b.floors, 20), crm: ["yes", "no"].includes(b.crm) ? b.crm : "", dbank: ["yes", "no"].includes(b.dbank) ? b.dbank : "",
-    positions: a(b.positions), levels: a(b.levels).filter(x => PORTAL_LEVELS.includes(x)) };
+    contract: ["crm", "dbank", "both"].includes(b.contract) ? b.contract : "",
+    positions: a(b.positions), levels: Array.isArray(b.levels) ? a(b.levels).filter(x => PORTAL_LEVELS.includes(x)) : [...PORTAL_LEVELS] };   // Nov 2026: Directory + portal at all levels unless told otherwise
 };
 
 /* ---------- the email ---------- */
@@ -207,11 +209,19 @@ export async function memoRoute(env, p, method, b, url, d) {
   const pickSites = v => (Array.isArray(v) ? v : String(v || "").split(",")).filter(s => mySites.includes(s));
   const memo = async id => { const m = await env.DB.prepare("SELECT * FROM memo_memos WHERE id = ?").bind(Number(id)).first(); if (!m) throw err("Not found", 404);
     if (!JSON.parse(m.sites).some(s => mySites.includes(s))) throw err("No access to this memo", 403); return m; };
+  if (p === "memo/groups") {   // the opening page: one group per flagship
+    const ms = (await env.DB.prepare("SELECT sites, sent_day FROM memo_memos ORDER BY id DESC").all()).results || [];
+    const out = [];
+    for (const s of mySites) { const mine = ms.filter(m => JSON.parse(m.sites).includes(s));
+      out.push({ site: s, name: d.siteName(s), tenants: (await tenantsOf(env, s).catch(() => [])).length, memos: mine.length, last: mine[0] ? mine[0].sent_day : "" }); }
+    return { groups: out, ops };
+  }
   if (p === "memo/list") {
-    const ms = ((await env.DB.prepare("SELECT * FROM memo_memos ORDER BY id DESC LIMIT 80").all()).results || []).filter(m => JSON.parse(m.sites).some(s => mySites.includes(s)));
+    const only = q("site");
+    const ms = ((await env.DB.prepare("SELECT * FROM memo_memos ORDER BY id DESC LIMIT 200").all()).results || []).filter(m => JSON.parse(m.sites).some(s => mySites.includes(s) && (!only || s === only)));
     const out = [];
     for (const m of ms) { const rows = (await env.DB.prepare("SELECT site, state, emails, opened_at FROM memo_targets WHERE memo_id = ?").bind(m.id).all()).results || [];
-      out.push({ ...memoOut(m), stats: statsOf(rows.filter(r => mySites.includes(r.site))) }); }
+      out.push({ ...memoOut(m), stats: statsOf(rows.filter(r => mySites.includes(r.site) && (!only || r.site === only))) }); }
     return { list: out, ops, sites: Object.fromEntries(mySites.map(s => [s, d.siteName(s)])), cats: MEMO_CATS, today };
   }
   if (p === "memo/one") {
