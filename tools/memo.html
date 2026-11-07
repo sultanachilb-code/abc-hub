@@ -3,27 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Memo · ABC</title>
+<title>Memo · ABC Property Hub</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
 <style>
-/* Memo (Upcoming - Testing, Nov 2026) — docs/FEATURE-memo.md */
-.cmp{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;flex-wrap:wrap}
-.cmp:hover{border-color:var(--brand-2)}.cmp .m{flex:1;min-width:200px}.cmp .m b{display:block}.cmp small{color:var(--muted);font-size:.78rem}
+/* Memo (Upcoming - Testing, Nov 2026) — docs/FEATURE-memo.md · laid out like an ABC Connect group (flagship groups → group page: composer + feed) */
+:root{--cb:#0B6FD0;--cl:#D8DDE6}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr));gap:12px}
+.grpc{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--cl);border-radius:8px;padding:16px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.grpc:hover{border-color:var(--cb)}
+.lg{width:58px;height:58px;border-radius:50%;background:var(--paper);display:grid;place-items:center;flex:none;overflow:hidden}
+.lg img{width:70%;filter:brightness(0);opacity:.82}
+.grpc b{display:block;font-size:1rem}.grpc small{display:block;color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.04em}
+.grpc .n{font-size:.8rem;color:var(--cb);margin-top:4px}
+.gbox{background:var(--surface);border:1px solid var(--cl);border-radius:6px}
+.ghead{padding:18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.ghead .lg{width:96px;height:96px}
+.tiny{font-size:.74rem;color:var(--muted);text-transform:uppercase}
+.ghead h2{font-size:1.45rem;margin:4px 0 0;font-weight:700}
+.segb{display:inline-flex;border:1px solid var(--cl);border-radius:4px;overflow:hidden;margin-top:12px;flex-wrap:wrap}
+.segb button{padding:7px 14px;color:var(--cb);border-right:1px solid var(--cl);font-weight:600;font-size:.86rem;background:transparent}.segb button:last-child{border:0}
+.comp{margin-top:14px}
+.ctab{background:var(--paper);border-bottom:1px solid var(--cl)}.ctab span{display:inline-block;padding:11px 18px;color:var(--cb);background:var(--surface);border-right:1px solid var(--cl);font-weight:600}
+.cbody{padding:14px 16px;display:grid;gap:8px}
+textarea.inp{min-height:130px;padding:10px;resize:vertical;line-height:1.45}
+.rec{border:1px solid var(--cl);border-radius:6px;padding:10px 12px}
+.rec>b{font-size:.86rem}
+.dots{display:flex;gap:8px 16px;flex-wrap:wrap;margin:8px 0 2px}
+.dots label{display:flex;gap:7px;align-items:center;cursor:pointer;font-size:.88rem;font-weight:600}
+.dots input{width:16px;height:16px;accent-color:var(--cb)}
+.opt{margin-top:10px}.opt>b{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.ck{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ck span{border:1px solid var(--cl);border-radius:99px;padding:5px 11px;font-size:.8rem;cursor:pointer;background:var(--surface);user-select:none}
+.ck span.on{background:var(--cb);border-color:var(--cb);color:#fff}.ck span small{opacity:.75;margin-left:4px}
+.cnt{margin-top:10px;font-size:.86rem;color:var(--muted)}.cnt b{color:var(--text)}.cnt a{color:var(--cb);cursor:pointer;font-weight:700}
+.crow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.crow .sel{width:auto}
+.share{background:var(--cb)!important;border-color:var(--cb)!important}
+.fbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 4px}.fbar .inp{max-width:320px;flex:1}
+.post{padding:16px 4px;border-bottom:1px solid var(--cl)}
+.ph{display:flex;gap:10px;align-items:center}.av{width:36px;height:36px}.ph b{color:var(--cb)}.ph small{display:block;color:var(--muted);font-size:.78rem}
+.post .tt{font-weight:800;margin:12px 0 4px}
+.post .bd{white-space:pre-line;line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.post .bd.open{display:block}
+.xp{color:var(--cb);font-size:.84rem;cursor:pointer;font-weight:600}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips span{font-size:.72rem;background:#EEF4FC;color:#0B4F94;border-radius:99px;padding:2px 9px}
+.att{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--cl);border-radius:4px;padding:8px 11px;margin:4px 0;color:var(--cb);font-weight:600;text-decoration:none;font-size:.86rem}
+.pf{display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px}
+.ack{font-size:1rem;cursor:pointer}.ack b{color:var(--cb)}
+.st{color:var(--muted);font-size:.82rem}.st a{color:var(--cb);cursor:pointer}
 .ref{font-size:.7rem;font-weight:800;letter-spacing:.04em;color:var(--brand-2)}
 .pill2{font-size:.72rem;font-weight:800;border-radius:99px;padding:4px 9px;white-space:nowrap}
 .p-ok{background:#E3F4EA;color:#1E7A4F}.p-rep{background:#E6EEFB;color:#1F5A96}.p-wait{background:#FFF1D6;color:#8A6200}.p-mail{background:#EEE9F4;color:#5B4E70}.p-cl{background:#ECECEC;color:#555}
-.sec{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
-.fm{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:4px}
-.fm label{font-size:.76rem;font-weight:700;color:var(--muted);margin-top:8px}
-.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.ck{display:flex;gap:6px;flex-wrap:wrap}
-.ck span{border:1px solid var(--line);border-radius:99px;padding:6px 11px;font-size:.8rem;cursor:pointer;background:var(--surface);user-select:none}
-.ck span.on{background:var(--brand);border-color:var(--brand);color:#fff}.ck span small{opacity:.7;margin-left:4px}
-.ck.lv span.on{background:#1F5A96;border-color:#1F5A96}
-textarea.inp{min-height:150px;padding:10px;resize:vertical;line-height:1.45}
-.grp{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-top:10px}
-.grp>b{font-size:.82rem}
 .sites{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:12px 0}
 .site{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer}
 .site.on{border-color:var(--brand);box-shadow:0 0 0 2px rgba(74,31,115,.18)}
@@ -44,113 +75,155 @@ table.t{width:100%;border-collapse:collapse;font-size:.82rem;min-width:680px}
 .acts{display:flex;gap:6px;flex-wrap:wrap}
 .rp{white-space:pre-line;background:var(--paper);border-radius:9px;padding:6px 9px;margin-top:4px;max-width:420px}
 .memo{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;white-space:pre-line;line-height:1.5}
-dialog#ed{border:0;border-radius:18px;padding:0;width:min(460px,calc(100% - 24px))}
+dialog#ed{border:0;border-radius:18px;padding:0;width:min(560px,calc(100% - 24px));max-height:90dvh}
 dialog#ed .b{padding:16px;display:grid;gap:6px}dialog#ed label{font-size:.76rem;font-weight:700;color:var(--muted);margin-top:6px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tl{max-height:55dvh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.tl label{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:.84rem;align-items:start}
+.tl .inp{grid-column:2;height:30px;font-size:.78rem}
 </style>
 </head>
 <body>
-<div class="top"><h1>📜 Memo <small>official memos to tenants</small></h1></div>
+<div class="top"><h1>📜 Memo <small id="sub">ABC Property Hub</small></h1></div>
 <div class="wrap"><div id="view"><p class="muted">Loading…</p></div></div>
 <dialog id="ed"></dialog>
 <input type="file" id="fileIn" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" hidden>
 <script src="common.js"></script>
 <script>
-let L = null, C = null, SITE = "", FIL = "all", FORM = null;
+const UP = new URLSearchParams(location.search);
+let GR = null, G = UP.get("site") || "", L = null, C = null, SITE = "", FIL = "all", FORM = null, FLT = null, SORT = "latest", Q = "", SN = {}, AUDT = 0;
 const fd = d => d ? new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
+const fdl = d => d ? new Date(d).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Beirut" }).replace(",", " at") : "";
 const V = h => { $("#view").innerHTML = h; };
 const todayISO = () => new Date(Date.now() + 2 * 36e5).toISOString().slice(0, 10);
 const ST = { ack: `<span class="pill2 p-ok">✓ Acknowledged</span>`, reply: `<span class="pill2 p-rep">💬 Replied</span>`, "": `<span class="pill2 p-wait">Waiting</span>` };
+const logo = () => `<span class="lg"><img src="/icons/abc-logo-white.png" alt=""></span>`;
+const go = (site, id) => history.replaceState(null, "", site ? `?site=${site}${id ? "&memo=" + id : ""}` : location.pathname);
 
-async function list(){
-  C = null; L = await api("ops/memo/list");
-  V(`<div class="bar2" style="margin-bottom:12px"><span class="muted">${L.list.length} memo${L.list.length === 1 ? "" : "s"}</span>${L.ops ? `<button class="btn" id="new">＋ New memo</button>` : ""}</div>
-    ${L.list.map(m => `<div class="cmp" data-c="${m.id}"><div class="m"><span class="ref">${esc(m.ref)}${m.cat ? " · " + esc(m.cat) : ""}</span><b>${esc(m.title)}</b><small>${m.sites.map(s => esc(L.sites[s] || s)).join(" · ")} · sent ${esc(fd(m.sent))} by ${esc(m.by)}${m.replyBy ? " · answer by " + esc(fd(m.replyBy)) : ""}</small></div>
-      ${m.closed ? `<span class="pill2 p-cl">Closed</span>` : ""}<span class="pill2 ${m.mode === "reply" ? "p-rep" : "p-ok"}">${m.mode === "reply" ? "Reply" : "Acknowledge"} · ${m.stats.pct}%</span><span class="mut">${m.stats.done}/${m.stats.invited}</span></div>`).join("")
-      || `<div class="card empty" style="padding:22px">No memo yet.${L.ops ? " Press “＋ New memo” to write the first one." : ""}</div>`}`);
-  $("#view").querySelectorAll("[data-c]").forEach(x => x.onclick = () => open(+x.dataset.c));
-  const n = $("#new"); if (n) n.onclick = () => newForm();
+/* ---------- 1 · the flagship groups ---------- */
+async function groups(){
+  C = null; G = ""; go(""); $("#sub").textContent = "ABC Property Hub";
+  GR = await api("ops/memo/groups"); GR.groups.forEach(g => SN[g.site] = g.name);
+  V(`<div class="groups">${GR.groups.map(g => `<button class="grpc" data-g="${g.site}">${logo()}<div><small>📡 Broadcast only</small><b>${esc(g.name)}</b>
+      <div class="n">${g.tenants} tenants · ${g.memos} memo${g.memos === 1 ? "" : "s"}${g.last ? " · last " + esc(fd(g.last)) : ""}</div></div></button>`).join("")}</div>`);
+  $("#view").querySelectorAll("[data-g]").forEach(b => b.onclick = () => group(b.dataset.g));
 }
 
-/* ---------- new memo ---------- */
-async function newForm(){
-  const sites = Object.keys(L.sites);
-  FORM = FORM || { title: "", body: "", cat: "Operations", mode: "ack", replyBy: "", auto: true, every: 2, max: 3, sites: sites.length === 1 ? sites : [], cats: [], depts: [], floors: [], crm: "", dbank: "",
-    positions: [], levels: ["Shop", "Brand", "Company", "Group"], file: null, aud: null, off: new Set(), mails: {} };
-  const F = FORM, f = F.sites.length ? await api("ops/memo/filters?sites=" + F.sites.join(",")) : { cats: [], depts: [], floors: [], positions: [], levels: ["Shop", "Brand", "Company", "Group"], crm: 0, dbank: 0, tenants: 0 };
-  const chips = (id, key, L2, label = x => esc(x.name), cls = "") => `<div class="ck ${cls}" id="${id}">${L2.map(x => `<span data-v="${esc(x.name)}" class="${F[key].includes(x.name) ? "on" : ""}">${label(x)}${x.n != null ? `<small>${x.n}</small>` : ""}</span>`).join("") || `<span class="mut" style="border:0">${F.sites.length ? "None" : "Choose a flagship first"}</span>`}</div>`;
-  const depts = f.depts.filter(x => !F.cats.length || F.cats.includes(x.cat));
-  const tri = (key, n) => `<div class="ck" data-tri="${key}">${[["", "All"], ["yes", "With"], ["no", "Without"]].map(([v, l]) => `<span data-v="${v}" class="${F[key] === v ? "on" : ""}">${l}</span>`).join("")}</div>${n != null ? `<span class="mut">${n} tenant${n === 1 ? "" : "s"} with</span>` : ""}`;
-  V(`<button class="btn ghost small" id="back">‹ Memos</button>
-    <div class="fm" style="margin-top:10px">
-      <div class="g2"><div style="grid-column:span 2"><label>Subject</label><input class="inp" id="fT" value="${esc(F.title)}" placeholder="e.g. Fire alarm test — Tuesday 10 Nov, 8:00 AM"></div>
-        <div><label>Category</label><select class="sel" id="fC">${L.cats.map(c => `<option ${F.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div></div>
-      <label>Memo text</label><textarea class="inp" id="fB" placeholder="Dear Tenant,&#10;Please be informed that…">${esc(F.body)}</textarea>
-      <label>Attachment (optional · PDF, image, Word or Excel · up to 8 MB)</label><div><button class="btn ghost small" id="fF">${F.file ? "📎 " + esc(F.file.name) + " · change" : "Attach a file"}</button>${F.file ? ` <button class="btn ghost small" id="fFx">Remove</button>` : ""}</div>
-      <div class="g2"><div><label>Tenants must</label><select class="sel" id="fMo"><option value="ack" ${F.mode === "ack" ? "selected" : ""}>Acknowledge (one button)</option><option value="reply" ${F.mode === "reply" ? "selected" : ""}>Reply (text + file)</option></select></div>
-        <div><label>Answer by (optional)</label><input class="inp" type="date" id="fR" value="${F.replyBy}" min="${todayISO()}"></div></div>
-      <div class="grp"><b>Reminders to tenants who don't answer</b>
-        <div class="g2" style="align-items:end"><div><label><input type="checkbox" id="fA" ${F.auto ? "checked" : ""}> Automatic</label></div>
-          <div><label>Every (days)</label><input class="inp" type="number" min="1" max="30" id="fEv" value="${F.every}"></div><div><label>Up to (times)</label><input class="inp" type="number" min="0" max="10" id="fMx" value="${F.max}"></div></div>
-        <span class="mut">You can also send a reminder yourself at any time from the memo's board.</span></div>
-
-      <div class="sec" style="margin-top:18px">Who receives it</div>
-      <label>Flagships</label><div class="ck" id="kS">${sites.map(s => `<span data-v="${s}" class="${F.sites.includes(s) ? "on" : ""}">${esc(L.sites[s])}</span>`).join("")}</div>
-      <label>Category <span class="mut">(none selected = all)</span></label>${chips("kC", "cats", f.cats)}
-      <label>Sub-category <span class="mut">(GLA department · none selected = all)</span></label>${chips("kD", "depts", depts)}
-      <label>Mall level</label>${chips("kF", "floors", f.floors)}
-      <div class="g2"><div><label>CRM handheld</label>${tri("crm", F.sites.length ? f.crm : null)}</div><div><label>Direct Banking</label>${tri("dbank", F.sites.length ? f.dbank : null)}</div></div>
-      <label>Tenants Directory contacts by position <span class="mut">(none selected = all contacts)</span></label>${chips("kP", "positions", f.positions)}
-      <label>+ Tenant Portal Database <span class="mut">(ABC Connect users of the shop, its brand, company and group)</span></label>${chips("kL", "levels", f.levels.map(x => ({ name: x })), x => esc(x.name) + " level", "lv")}
-      <div class="acts" style="margin-top:12px"><button class="btn" id="fV">Show the tenants</button><button class="btn ghost" id="fTest">✉ Send me a test</button></div>
-    </div><div id="aud"></div>`);
-  const keep = () => Object.assign(F, { title: $("#fT").value, body: $("#fB").value, cat: $("#fC").value, mode: $("#fMo").value, replyBy: $("#fR").value, auto: $("#fA").checked, every: +$("#fEv").value || 2, max: +$("#fMx").value });
-  ["#fT", "#fB", "#fC", "#fMo", "#fR", "#fA", "#fEv", "#fMx"].forEach(s => { const el = $(s); el.addEventListener("input", keep); el.addEventListener("change", keep); });
-  $("#back").onclick = () => { keep(); list(); };
-  const reset = () => { F.aud = null; $("#aud").innerHTML = ""; };
-  const tog = (id, key, reload) => { const el = $("#" + id); if (el) el.onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; const v = s.dataset.v, a = F[key];
-    a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); s.classList.toggle("on"); reset(); if (reload) { keep(); newForm(); } }; };
-  tog("kS", "sites", true); tog("kC", "cats", true); tog("kD", "depts"); tog("kF", "floors"); tog("kP", "positions"); tog("kL", "levels");
-  $("#view").querySelectorAll("[data-tri]").forEach(g => g.onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; F[g.dataset.tri] = s.dataset.v; g.querySelectorAll("span").forEach(x => x.classList.toggle("on", x === s)); reset(); });
+/* ---------- 2 · one group: composer + feed ---------- */
+async function group(site){
+  C = null; G = site; go(site); V(`<p class="muted">Loading…</p>`);
+  if (!GR) { GR = await api("ops/memo/groups"); GR.groups.forEach(g => SN[g.site] = g.name); }
+  $("#sub").textContent = SN[site] || "";
+  [L, FLT] = await Promise.all([api(`ops/memo/list?site=${site}`), api(`ops/memo/filters?sites=${site}`)]);
+  if (!FORM || FORM.site !== site) FORM = { site, title: "", body: "", cat: "Operations", mode: "ack", auto: true, every: 2, max: 3, all: true, use: { cats: false, depts: false, floors: false, contract: false },
+    cats: [], depts: [], floors: [], contract: "", file: null, aud: null, off: new Set(), mails: {} };
+  drawGroup();
+}
+function drawGroup(){
+  const F = FORM, g = GR.groups.find(x => x.site === G) || { tenants: 0, memos: 0 };
+  const chips = (key, list, label = x => esc(x.name)) => `<div class="ck" data-k="${key}">${list.map(x => `<span data-v="${esc(x.name)}" class="${F[key].includes(x.name) ? "on" : ""}">${label(x)}<small>${x.n}</small></span>`).join("") || `<span class="mut" style="border:0">None in the GLA</span>`}</div>`;
+  const depts = FLT.depts.filter(x => !F.use.cats || !F.cats.length || F.cats.includes(x.cat));
+  const opt = (k, title, body) => F.use[k] ? `<div class="opt"><b>${title}</b>${body}</div>` : "";
+  let feed = L.list.slice();
+  if (SORT === "waiting") feed.sort((a, b) => (b.stats.wait - a.stats.wait) || (b.id - a.id));
+  if (Q) { const s = Q.toLowerCase(); feed = feed.filter(m => `${m.ref} ${m.title} ${m.body}`.toLowerCase().includes(s)); }
+  const tags = m => { const f = m.filt || {}, t = [];
+    if (f.cats && f.cats.length) t.push("Category: " + f.cats.join(", ")); if (f.depts && f.depts.length) t.push("Sub category: " + f.depts.join(", "));
+    if (f.floors && f.floors.length) t.push("Levels: " + f.floors.join(", ")); if (f.contract) t.push({ crm: "CRM", dbank: "Direct Banking", both: "CRM + Direct Banking" }[f.contract]);
+    return t.length ? t : ["All tenants"]; };
+  V(`<div class="gbox ghead">${logo()}<div><div class="tiny">Unlisted · 📡 Broadcast only</div><h2>${esc(SN[G] || G)}</h2>
+      <div class="segb"><button id="bk">‹ All groups</button><button disabled style="color:var(--muted)">${g.tenants} tenants</button><button disabled style="color:var(--muted)">${L.list.length} memo${L.list.length === 1 ? "" : "s"}</button></div></div></div>
+    ${L.ops ? `<div class="gbox comp"><div class="ctab"><span>Memo</span></div><div class="cbody">
+      <div class="crow"><input class="inp" id="fT" style="flex:1;min-width:220px" value="${esc(F.title)}" placeholder="Subject — e.g. Mall evacuation awareness session">
+        <select class="sel" id="fC">${L.cats.map(c => `<option ${F.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
+      <textarea class="inp" id="fB" placeholder="Dear Valued Partners,&#10;…">${esc(F.body)}</textarea>
+      <div class="crow"><button class="btn ghost small" id="fF">📎 ${F.file ? esc(F.file.name) + " · change" : "Attach file"}</button>${F.file ? `<button class="btn ghost small" id="fFx">Remove</button>` : ""}<span class="mut">PDF, image, Word or Excel · up to 8 MB</span></div>
+      <div class="rec"><b>Recipients</b>
+        <div class="dots"><label><input type="checkbox" data-all ${F.all ? "checked" : ""}> All tenants</label>
+          ${[["cats", "Category"], ["depts", "Sub Category"], ["floors", "Mall Levels"], ["contract", "Contract Terms"]].map(([k, n]) => `<label><input type="checkbox" data-use="${k}" ${F.use[k] ? "checked" : ""}> ${n}</label>`).join("")}</div>
+        ${opt("cats", "Category", chips("cats", FLT.cats))}
+        ${opt("depts", "Sub Category", chips("depts", depts))}
+        ${opt("floors", "Mall Levels", chips("floors", FLT.floors))}
+        ${opt("contract", "Contract Terms", `<div class="ck" data-ct>${[["crm", "CRM", FLT.crm], ["dbank", "Direct Banking", FLT.dbank], ["both", "Both (CRM and Direct Banking)", FLT.both]].map(([v, n, c]) => `<span data-v="${v}" class="${F.contract === v ? "on" : ""}">${n}<small>${c}</small></span>`).join("")}</div>`)}
+        <div class="cnt" id="cnt">…</div></div>
+      <div class="crow"><select class="sel" id="fMo"><option value="ack" ${F.mode === "ack" ? "selected" : ""}>Tenants must: Acknowledge</option><option value="reply" ${F.mode === "reply" ? "selected" : ""}>Tenants must: Reply (text + file)</option></select>
+        <select class="sel" id="fRm">${[[1, 2, 3], [1, 1, 3], [1, 3, 3], [1, 2, 5], [0, 2, 3]].map(([a, e, m]) => `<option value="${a}|${e}|${m}" ${(F.auto ? 1 : 0) === a && (!a || (F.every === e && F.max === m)) ? "selected" : ""}>${a ? `Reminder every ${e} day${e === 1 ? "" : "s"} · ${m} times` : "No automatic reminder"}</option>`).join("")}</select>
+        <span style="flex:1"></span><button class="btn ghost small" id="fTest">Send me a test</button><button class="btn share" id="share">Share</button></div>
+    </div></div>` : ""}
+    <div class="fbar"><span class="mut">Sort by:</span><select class="sel" id="srt" style="width:auto"><option value="latest">Latest memos</option><option value="waiting" ${SORT === "waiting" ? "selected" : ""}>Most waiting</option></select><span style="flex:1"></span><input class="inp" id="fq" placeholder="🔍 Search this feed…" value="${esc(Q)}"></div>
+    <div>${feed.map(m => `<div class="post"><div class="ph">${logo().replace('class="lg"', 'class="lg av"')}<div><b>Operations Team</b> <span class="ref">· ${esc(m.ref)}${m.cat ? " · " + esc(m.cat) : ""}</span><small>${esc(fdl(m.at))} · by ${esc(m.by)}${m.closed ? " · closed" : ""}</small></div></div>
+        <div class="tt">${esc(m.title)}</div><div class="bd" data-bd>${esc(m.body)}</div>${m.body.split("\n").length > 4 || m.body.length > 320 ? `<span class="xp" data-xp>Expand post</span>` : ""}
+        <div class="chips">${tags(m).map(t => `<span>${esc(t)}</span>`).join("")}</div>
+        ${m.file ? `<a class="att" href="/api/ops/memo/file?id=${m.id}" target="_blank">📄 ${esc(m.file.name)}</a>` : ""}
+        <div class="pf"><span class="ack" data-open="${m.id}">${m.mode === "reply" ? "💬 Reply" : "👍 Acknowledge"} · <b>${m.stats.done} / ${m.stats.invited}</b></span>
+          <span class="st">${m.stats.reply ? `<a data-open="${m.id}" data-f="reply">${m.stats.reply} repl${m.stats.reply === 1 ? "y" : "ies"}</a> · ` : ""}${m.stats.opened} views · <a data-open="${m.id}" data-f="wait">${m.stats.wait} waiting</a>${L.ops && !m.closed && m.stats.wait ? ` · <a data-rem="${m.id}">🔔 Remind</a>` : ""}</span></div></div>`).join("")
+      || `<div class="card empty" style="padding:22px">No memo in this group yet.</div>`}</div>`);
+  wireGroup();
+}
+function wireGroup(){
+  const F = FORM, v = $("#view");
+  $("#bk").onclick = () => groups();
+  v.querySelectorAll("[data-xp]").forEach(x => x.onclick = () => { const b = x.previousElementSibling; b.classList.toggle("open"); x.textContent = b.classList.contains("open") ? "Collapse" : "Expand post"; });
+  v.querySelectorAll("[data-open]").forEach(x => x.onclick = e => { e.stopPropagation(); FIL = x.dataset.f || "all"; open(+x.dataset.open); });
+  v.querySelectorAll("[data-rem]").forEach(x => x.onclick = async e => { e.stopPropagation(); try { const r = await api("ops/memo/remind", { id: +x.dataset.rem }); toast(`Reminder sent to ${r.sent} tenants`); group(G); } catch (er){ toast(er.message, true); } });
+  $("#srt").onchange = e => { SORT = e.target.value; drawGroup(); };
+  const fq = $("#fq"); fq.oninput = () => { Q = fq.value; const p = fq.selectionStart; drawGroup(); const n = $("#fq"); n.focus(); n.setSelectionRange(p, p); };
+  if (!L.ops) return;
+  const keep = () => { const [a, e, m] = $("#fRm").value.split("|").map(Number); Object.assign(F, { title: $("#fT").value, body: $("#fB").value, cat: $("#fC").value, mode: $("#fMo").value, auto: !!a, every: e, max: m }); };
+  ["#fT", "#fB", "#fC", "#fMo", "#fRm"].forEach(s => { const el = $(s); el.addEventListener("input", keep); el.addEventListener("change", keep); });
+  const changed = () => { F.aud = null; F.off = new Set(); keep(); drawGroup(); };
+  v.querySelector("[data-all]").onchange = e => { F.all = e.target.checked; if (F.all) F.use = { cats: false, depts: false, floors: false, contract: false }; else if (!Object.values(F.use).some(Boolean)) F.use.cats = true; changed(); };
+  v.querySelectorAll("[data-use]").forEach(c => c.onchange = () => { F.use[c.dataset.use] = c.checked; F.all = !Object.values(F.use).some(Boolean); changed(); });
+  v.querySelectorAll(".ck[data-k]").forEach(g => g.onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; const a = F[g.dataset.k], x = s.dataset.v; a.includes(x) ? a.splice(a.indexOf(x), 1) : a.push(x); changed(); });
+  const ct = v.querySelector("[data-ct]"); if (ct) ct.onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; F.contract = F.contract === s.dataset.v ? "" : s.dataset.v; changed(); };
   $("#fF").onclick = () => { const p = $("#fileIn"); p.value = ""; p.onchange = () => { const x = p.files[0]; if (!x) return; if (x.size > 8e6) return toast("The file is larger than 8 MB", true);
-    const r = new FileReader(); r.onload = () => { keep(); F.file = { name: x.name, data: r.result }; newForm(); }; r.readAsDataURL(x); }; p.click(); };
-  const fx = $("#fFx"); if (fx) fx.onclick = () => { keep(); F.file = null; newForm(); };
-  $("#fTest").onclick = async () => { keep(); if (!F.sites.length) return toast("Choose a flagship", true);
-    try { const r = await api("ops/memo/test", { sites: F.sites, title: F.title, body: F.body, cat: F.cat, mode: F.mode, replyBy: F.replyBy, file: F.file ? { name: F.file.name } : null }); toast("Test sent to " + r.sent); } catch (e){ toast(e.message, true); } };
-  $("#fV").onclick = async () => { keep(); if (!F.sites.length) return toast("Choose at least one flagship", true);
-    try { F.aud = (await api("ops/memo/audience", body())).list; F.off = new Set(); audience(); $("#aud").scrollIntoView({ behavior: "smooth" }); } catch (e){ toast(e.message, true); } };
-  if (F.aud) audience();
+    const r = new FileReader(); r.onload = () => { keep(); F.file = { name: x.name, data: r.result }; drawGroup(); }; r.readAsDataURL(x); }; p.click(); };
+  const fx = $("#fFx"); if (fx) fx.onclick = () => { keep(); F.file = null; drawGroup(); };
+  $("#fTest").onclick = async () => { keep(); try { const r = await api("ops/memo/test", { sites: [G], title: F.title, body: F.body, cat: F.cat, mode: F.mode, file: F.file ? { name: F.file.name } : null }); toast("Test sent to " + r.sent); } catch (e){ toast(e.message, true); } };
+  $("#share").onclick = () => share();
+  count();
 }
-const body = () => { const F = FORM; return { sites: F.sites, cats: F.cats, depts: F.depts, floors: F.floors, crm: F.crm, dbank: F.dbank, positions: F.positions, levels: F.levels }; };
-function audience(){
-  const F = FORM, A = F.aud, key = t => `${t.site}|${t.brand}`;
-  const on = A.filter(t => !F.off.has(key(t))), noMail = on.filter(t => !(F.mails[key(t)] ?? t.emails)).length;
-  const nMails = new Set(on.flatMap(t => String(F.mails[key(t)] ?? t.emails).split(/[\s,;]+/).filter(Boolean))).size;
-  $("#aud").innerHTML = `<div class="sec">${on.length} of ${A.length} tenants selected · ${nMails} emails · ${noMail ? `<span style="color:#B0283C">${noMail} without email</span>` : "all have an email ✓"}</div>
-    <div class="tw"><table class="t"><thead><tr><th><input type="checkbox" id="all" ${on.length === A.length ? "checked" : ""}></th><th>Tenant</th><th>Category · level</th><th>CRM · DB</th><th>Emails <span class="mut" style="text-transform:none;letter-spacing:0">(Directory + portal)</span></th></tr></thead><tbody>
-    ${A.map((t, i) => `<tr><td><input type="checkbox" data-i="${i}" ${F.off.has(key(t)) ? "" : "checked"}></td><td><b>${esc(t.brand)}</b><br><span class="mut">${esc(t.units)}${F.sites.length > 1 ? " · " + esc(L.sites[t.site]) : ""}</span></td>
-      <td>${esc(t.cat)}<br><span class="mut">${esc(t.dept)}${t.floors ? " · " + esc(t.floors) : ""}</span></td><td class="mut">${t.crm ? "CRM ✓" : "—"}<br>${t.dbank ? "Direct Banking ✓" : ""}</td>
-      <td><input class="inp" data-m="${i}" value="${esc(F.mails[key(t)] ?? t.emails)}" placeholder="no email — type one"><br><span class="mut">${t.dir} Directory · ${t.portal} portal</span></td></tr>`).join("")}</tbody></table></div>
-    <div class="bar2" style="margin-top:12px"><span class="mut">One email per shop, with its own link. ${F.auto && F.max ? `Reminder every ${F.every} day${F.every === 1 ? "" : "s"}, up to ${F.max} times.` : "No automatic reminder."}</span>
-      <button class="btn" id="go">Send the memo to ${on.length} tenants</button></div>`;
-  $("#aud").querySelectorAll("[data-i]").forEach(c => c.onchange = () => { const k = key(A[+c.dataset.i]); c.checked ? F.off.delete(k) : F.off.add(k); audience(); });
-  $("#all").onchange = e => { F.off = e.target.checked ? new Set() : new Set(A.map(key)); audience(); };
-  $("#aud").querySelectorAll("[data-m]").forEach(c => c.onchange = () => { F.mails[key(A[+c.dataset.m])] = c.value; audience(); });
-  $("#go").onclick = async () => {
-    if (!F.title.trim()) { toast("Give the memo a subject", true); $("#fT").focus(); return; }
-    if (!F.body.trim()) { toast("Write the memo", true); $("#fB").focus(); return; }
-    if (!(await confirmBox("Send the memo", `<b>${esc(F.title)}</b> to ${on.length} tenants (${nMails} emails), asking them to ${F.mode === "reply" ? "reply" : "acknowledge"}?`, "Send"))) return;
-    $("#go").disabled = true;
-    try { const r = await api("ops/memo/create", { ...body(), title: F.title, body: F.body, cat: F.cat, mode: F.mode, replyBy: F.replyBy, auto: F.auto, every: F.every, max: F.max, file: F.file, only: on.map(key), extraEmails: F.mails });
-      toast(`${r.ref} sent to ${r.mailed} tenants`); FORM = null; open(r.id); } catch (e){ $("#go").disabled = false; toast(e.message, true); } };
+const filt = () => { const F = FORM; return { sites: [G], cats: F.use.cats ? F.cats : [], depts: F.use.depts ? F.depts : [], floors: F.use.floors ? F.floors : [], contract: F.use.contract ? F.contract : "" }; };
+const key = t => `${t.site}|${t.brand}`;
+async function count(){
+  const F = FORM, my = ++AUDT;
+  if (!F.aud) { try { const r = await api("ops/memo/audience", filt()); if (my !== AUDT) return; F.aud = r.list; } catch (e){ const c = $("#cnt"); if (c) c.textContent = e.message; return; } }
+  const on = F.aud.filter(t => !F.off.has(key(t))), em = new Set(on.flatMap(t => String(F.mails[key(t)] ?? t.emails).split(/[\s,;]+/).filter(Boolean))), no = on.filter(t => !(F.mails[key(t)] ?? t.emails)).length;
+  const c = $("#cnt"); if (c) c.innerHTML = `→ <b>${on.length} tenant${on.length === 1 ? "" : "s"}</b> · ${em.size} emails${no ? ` · <span style="color:#B0283C">${no} without email</span>` : ""} · <a id="seeT">see / untick tenants</a>`;
+  const s = $("#seeT"); if (s) s.onclick = () => seeTenants();
+}
+function seeTenants(){
+  const F = FORM, A = F.aud, d = $("#ed");
+  const paint = () => { d.innerHTML = `<div class="b"><b>${A.length - F.off.size} of ${A.length} tenants</b><span class="mut">Directory contacts + Tenant Portal Database (shop, brand, company and group). Edit an email or untick a tenant.</span>
+      <div class="tl">${A.map((t, i) => `<label><input type="checkbox" data-i="${i}" ${F.off.has(key(t)) ? "" : "checked"}><span><b>${esc(t.brand)}</b> <span class="mut">${esc(t.units)} · ${esc(t.cat)}${t.floors ? " · " + esc(t.floors) : ""}${t.crm ? " · CRM" : ""}${t.dbank ? " · DB" : ""}</span></span>
+        <input class="inp" data-m="${i}" value="${esc(F.mails[key(t)] ?? t.emails)}" placeholder="no email — type one"></label>`).join("")}</div>
+      <div class="acts" style="justify-content:space-between;margin-top:10px"><span><button class="btn ghost small" id="tA">All</button> <button class="btn ghost small" id="tN">None</button></span><button class="btn" id="tOk">Done</button></div></div>`;
+    d.querySelectorAll("[data-i]").forEach(c => c.onchange = () => { const k = key(A[+c.dataset.i]); c.checked ? F.off.delete(k) : F.off.add(k); d.querySelector("b").textContent = `${A.length - F.off.size} of ${A.length} tenants`; });
+    d.querySelectorAll("[data-m]").forEach(c => c.onchange = () => { F.mails[key(A[+c.dataset.m])] = c.value; });
+    $("#tA").onclick = () => { F.off = new Set(); paint(); }; $("#tN").onclick = () => { F.off = new Set(A.map(key)); paint(); };
+    $("#tOk").onclick = () => { d.close(); count(); }; };
+  paint(); d.showModal(); d.addEventListener("close", () => count(), { once: true });
+}
+async function share(){
+  const F = FORM; if (!F.aud) await count();
+  const on = F.aud.filter(t => !F.off.has(key(t)));
+  if (!F.title.trim()) { toast("Write the subject", true); return $("#fT").focus(); }
+  if (!F.body.trim()) { toast("Write the memo", true); return $("#fB").focus(); }
+  if (F.use.contract && !F.contract) return toast("Choose CRM, Direct Banking or Both", true);
+  if (!on.length) return toast("No tenant matches these recipients", true);
+  if (!(await confirmBox("Share the memo", `<b>${esc(F.title)}</b> to ${on.length} tenants of ${esc(SN[G])}, asking them to ${F.mode === "reply" ? "reply" : "acknowledge"}?`, "Share"))) return;
+  const b = $("#share"); b.disabled = true;
+  try { const r = await api("ops/memo/create", { ...filt(), title: F.title, body: F.body, cat: F.cat, mode: F.mode, auto: F.auto, every: F.every, max: F.max, file: F.file, only: on.map(key), extraEmails: F.mails });
+    toast(`${r.ref} shared with ${r.mailed} tenants`); FORM = null; GR = null; group(G); } catch (e){ b.disabled = false; toast(e.message, true); }
 }
 
-/* ---------- one memo ---------- */
-async function open(id){ V(`<p class="muted">Loading…</p>`); C = await api(`ops/memo/one?id=${id}`); if (SITE && !C.sites.some(s => s.site === SITE)) SITE = ""; draw(); }
+/* ---------- 3 · one memo: who answered ---------- */
+async function open(id){ V(`<p class="muted">Loading…</p>`); C = await api(`ops/memo/one?id=${id}`); if (!G) G = C.memo.sites[0]; go(G, id); SITE = ""; draw(); }
 function draw(){
   const m = C.memo, T = C.targets.filter(t => !SITE || t.site === SITE), live = !m.closed;
   const F = { all: T, ack: T.filter(t => t.state === "ack"), reply: T.filter(t => t.state === "reply"), wait: T.filter(t => !t.state), mail: T.filter(t => !t.state && !t.emails), unread: T.filter(t => !t.state && !t.opened) };
   const rows = F[FIL], waitN = F.wait.filter(t => t.emails).length;
-  V(`<button class="btn ghost small" id="back">‹ Memos</button>
+  V(`<button class="btn ghost small" id="back">‹ ${esc(SN[G] || "Group")}</button>
     <div class="bar2" style="margin-top:10px"><div><span class="ref">${esc(m.ref)}${m.cat ? " · " + esc(m.cat) : ""}</span><h2 style="margin:0">${esc(m.title)} ${m.closed ? `<span class="pill2 p-cl" style="vertical-align:middle">Closed</span>` : ""}</h2>
       <span class="mut">By ${esc(m.by)} · sent ${esc(fd(m.sent))} · tenants ${m.mode === "reply" ? "reply" : "acknowledge"}${m.replyBy ? " by <b>" + esc(fd(m.replyBy)) + "</b>" : ""} ·
         ${m.auto && m.max ? `reminder every ${m.every} day${m.every === 1 ? "" : "s"}, up to ${m.max} times` : "no automatic reminder"}${m.file ? ` · <a href="/api/ops/memo/file?id=${m.id}" target="_blank">📎 ${esc(m.file.name)}</a>` : ""}</span></div>
@@ -166,7 +239,7 @@ function draw(){
       <td class="mut">${t.mails ? `${t.mails} (${t.reminders} reminder${t.reminders === 1 ? "" : "s"})<br>last ${esc(fd(t.lastMail))}` : "—"}</td>
       <td style="white-space:nowrap">${C.ops ? `${live && !t.state && t.emails ? `<button class="btn ghost small" data-r="${t.id}" title="Remind now">🔔</button> ` : ""}<button class="btn ghost small" data-e="${t.id}" title="Edit">✎</button> <button class="btn ghost small" data-l="${esc(t.link)}" title="Copy the tenant's link">🔗</button>` : ""}</td></tr>`).join("")
       || `<tr><td colspan="5" class="mut" style="padding:16px">Nothing here.</td></tr>`}</tbody></table></div>`);
-  $("#back").onclick = () => list();
+  $("#back").onclick = () => group(G);
   $("#view").querySelectorAll("[data-s]").forEach(x => x.onclick = () => { SITE = x.dataset.s; draw(); });
   $("#view").querySelectorAll("[data-f]").forEach(x => x.onclick = () => { FIL = x.dataset.f; draw(); });
   const rem = $("#rem"); if (rem) rem.onclick = async () => { rem.disabled = true; try { const r = await api("ops/memo/remind", { id: m.id, site: SITE }); toast(`Reminder sent to ${r.sent} tenants`); open(m.id); } catch (e){ rem.disabled = false; toast(e.message, true); } };
@@ -202,9 +275,8 @@ function edit(t){
   $("#ok").onclick = async () => { const b = { id: m.id, target: t.id, emails: $("#eM").value };
     if ($("#eA").value !== t.state || $("#eC").value !== (t.reply || "")) Object.assign(b, { state: $("#eA").value, reply: $("#eC").value });
     try { await api("ops/memo/target", b); d.close(); toast("Saved"); open(m.id); } catch (e){ toast(e.message, true); } };
-}
-window.hubRefresh = () => C ? open(C.memo.id) : list();
-list().catch(e => V(`<p class="muted">${esc(e.message)}</p>`));
+}window.hubRefresh = () => C ? open(C.memo.id) : G ? group(G) : groups();
+(UP.get("memo") ? open(+UP.get("memo")) : G ? group(G) : groups()).catch(e => V(`<p class="muted">${esc(e.message)}</p>`));
 </script>
 </body>
 </html>

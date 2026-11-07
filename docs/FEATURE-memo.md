@@ -9,3 +9,9 @@ Tile **Memo** (Hub Applications, `/tools/memo`) — official memos from the oper
 - Reminders: automatic every N days up to M times (default 2 × 3, per memo, can be off) from 09:00 (`memoRun`, meta `memo:run`), until the answer-by date; **Remind waiting** / 🔔 per tenant at any time.
 - Board: % answered per flagship, Acknowledged / Replied / Waiting / Not opened / No email, replies and their files, edit emails or record an answer given in person, copy the tenant link, export, close / re-open.
 - Tables: `memo_memos`, `memo_targets`. Routes: `/api/ops/memo/*` (send: operations team) · tenant page `/memo/<token>` → `tools/memotenant.html`, API `/api/memo-ext/<token>[/file|/rfile|/answer]`.
+
+## Layout (Nov 2026, v2 — like an ABC Connect group)
+- Opening page: one group card per flagship (tenants, memos, last memo) — `/api/ops/memo/groups`.
+- Group page (`?site=VRM`): header (Broadcast only, ‹ All groups) · **Memo composer** (subject, category, text, attachment, Recipients, Acknowledge / Reply, reminder choice, Send me a test, **Share**) · **feed** of the flagship's memos (sort latest / most waiting, search) with "👍 Acknowledge x / y", replies, views, waiting, 🔔 Remind. Tapping a count opens the tracking list (`?site=VRM&memo=<id>`).
+- Recipients: All tenants, or any combination of **Category**, **Sub Category**, **Mall Levels**, **Contract Terms** (CRM · Direct Banking · Both = tenants with CRM and Direct Banking — `filt.contract`). Live count "→ N tenants · M emails", **see / untick tenants** to untick or edit emails.
+- Emails are not chosen on the page: Tenants Directory contacts (all positions) + Tenant Portal Database at all levels.
