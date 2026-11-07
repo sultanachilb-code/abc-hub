@@ -52,3 +52,6 @@ The GLA tables (`gla_units`, `gla_events`) are **not** touched by this feature.
 - Unit codes on the Achrafieh Mall plans look like `M-3-009`, `M-B1-003`, `M-DS-001` (same as its GLA) — read too. `A-B3-…` warehouse stands of the department store are skipped.
 - Its plan pages say "PLAN LEVEL 3" / "PLAN LEVEL 0" — read as L3 / GF.
 - Achrafieh Department Store plans: codes `A-3-038`, `A-B3-009`; pages say "LEVEL 4" / "LEVEL 0". One-letter codes (`A-`, `M-`, `D-`) are kept only when the flagship's own GLA uses that letter, so the DS warehouses printed on the mall's B3 plan don't show on the mall.
+
+## Key Box button (Nov 2026)
+Top-right **🔑 Key Box** — count of vacant-unit keys (and keys out / late, red when late) from `/api/ops/kb/board`; opens Key Box in a hub tab, closing it comes back here. See FEATURE-keybox.md.

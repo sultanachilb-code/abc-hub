@@ -3659,10 +3659,20 @@ $("#tabs").addEventListener("click", e => {
   const t = e.target.closest(".tab"); if (t) location.hash = "#/app/" + encodeURIComponent(t.dataset.k);
 });
 $("#tabs").addEventListener("keydown", e => { if (e.key === "Enter") e.target.closest(".tab")?.click(); });
+/* a tool asks to open another tool as a tab (common.js hubOpen) — e.g. Mall Layouts → Key Box; closing it returns to the opener */
+const OPENER = new Map();
+addEventListener("message", ev => {
+  if (ev.origin !== location.origin || !ev.data || ev.data.type !== "hub-open") return;
+  const a = byId(String(ev.data.app || "")); if (!a) return;
+  const from = [...open.entries()].find(([, r]) => r.frame.contentWindow === ev.source);
+  if (from) OPENER.set(keyOf(a.id), from[0]);
+  openDeep(a.id, /^\?[\w=&%.-]*$/.test(ev.data.qs || "") ? ev.data.qs : "");
+});
 function closeApp(k){
   const r = open.get(k); if (!r) return;
   clearTimeout(r.slow); r.frame.remove(); r.loader.remove(); open.delete(k);
-  if (active === k){ const next = [...open.keys()].pop(); if (next) location.hash = "#/app/" + encodeURIComponent(next); else goHome(); }
+  const back = OPENER.get(k); OPENER.delete(k);
+  if (active === k){ const next = back && open.has(back) ? back : [...open.keys()].pop(); if (next) location.hash = "#/app/" + encodeURIComponent(next); else goHome(); }
   else renderTabs();
 }
 function goHome(){

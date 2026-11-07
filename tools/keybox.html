@@ -204,7 +204,7 @@ async function handOver(btn){
   } catch (e){ btn.disabled = false; say(e.message, true); }
 }
 window.hubRefresh = () => { if (!dlg().open) load(); };
-boot().catch(e => { $("#board").innerHTML = `<p class="muted">${esc(e.message)}</p>`; });
+boot(new URLSearchParams(location.search).get("site") || undefined).catch(e => { $("#board").innerHTML = `<p class="muted">${esc(e.message)}</p>`; });   // ?site= when opened from another tool
 </script>
 </body>
 </html>

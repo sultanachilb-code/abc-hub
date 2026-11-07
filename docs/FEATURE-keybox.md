@@ -16,3 +16,6 @@ Page `tools/keybox.html` · module `modules/keybox.js` · routes `/api/ops/kb/{b
 ## Keys kept for leased units (Nov 2026)
 - `kb_units.held = 1` gives a unit a hook even though it is leased (tenants' storage units whose keys stay in the box).
 - Loaded once per flagship from `KB_HELD` in `modules/keybox.js` (meta `kbheld:<site>`). Achrafieh Department Store: 10 storage units from its key box list.
+
+## From Mall Layouts (Nov 2026)
+Mall Layouts has a **🔑 Key Box · N vacant · M out** button (top right). It opens Key Box for the same flagship as a hub tab (`hubOpen("keybox", "?site=…")` in common.js → the hub's `hub-open` message); closing the Key Box tab returns to Mall Layouts. Key Box and Supervisor Coverage read `?site=`.

@@ -116,6 +116,7 @@ body{display:flex;flex-direction:column;overflow:hidden}
   <button class="btn ghost small" id="hotBtn" title="Where snags, malfunctions, patrol issues and incidents keep happening">🔥 Hotspots</button>
   <button class="btn ghost small hidden" id="adjBtn">Adjust pins</button>
   <button class="btn ghost small hidden" id="uplBtn">Upload layout PDF</button>
+  <button class="btn ghost small" id="kbBtn" title="Keys of the vacant units — opens Key Box in a tab; close it to come back to the layout">🔑 Key Box</button>
 </div>
 <div class="levels" id="levels"></div>
 <div class="furbar hidden" id="furbar"></div>
@@ -152,12 +153,20 @@ const stCls = u => !u ? "s-none" : u.status === "Fit-out" ? "s-fit" : u.status =
 const fmt = n => Math.round(n).toLocaleString("en-US");
 const params = new URLSearchParams(location.search);
 
+/* Nov 2026: Key Box from the layout — the button shows the flagship's vacant-unit keys and opens Key Box in a hub tab */
+async function kbCount(){
+  const b = $("#kbBtn"); b.textContent = "🔑 Key Box";
+  try { const k = await api(`ops/kb/board?site=${CTX.site}`); const n = k.hooks.filter(h => h.vacant).length;
+    b.textContent = `🔑 Key Box · ${n} vacant${k.counts.out + k.counts.late ? ` · ${k.counts.out + k.counts.late} out` : ""}`; b.style.color = k.counts.late ? "var(--alert)" : ""; } catch { }
+}
+$("#kbBtn").onclick = () => hubOpen("keybox", `?site=${CTX.site}`);
 async function boot(site){
   CTX = await api("ops/context" + (site ? "?site=" + site : ""));
   $("#sub").textContent = CTX.siteName;
   $("#siteBox").innerHTML = siteSelect(CTX, s => { LEVEL = null; boot(s); });
   const [l, g] = await Promise.all([api(`ops/layouts/list?site=${CTX.site}`), api(`ops/gla/get?site=${CTX.site}`).catch(() => ({ report: null, can: {} }))]);
   L = l; CAN = { ...l.can, gla: g.can && g.can.gla };
+  kbCount();
   UNITS = g.report ? g.report.units : [];
   $("#adjBtn").classList.toggle("hidden", !CAN.layouts || !L.levels.length);
   $("#uplBtn").classList.toggle("hidden", !CAN.layouts);

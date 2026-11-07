@@ -19,3 +19,7 @@ Files: `modules/schedmail.js` · `tools/schedule.html` · meta keys `schedcc`, `
 
 ## Warehouse position
 People & roles → Role *Operations team* → Position **Warehouse**. The person is linked to a flagship and sees its data (every tool the operations team opens), but changes nothing and is **not on the Operations Schedule** (nor in the schedule email / WhatsApp picture).
+
+## Supervisor coverage strip and leadership view (Nov 2026)
+- **🕒 Supervisor coverage · N gaps** on the week bar opens an hour-by-hour strip (07:00 → 01:00) for the same week and flagship, built from `/api/ops/coverage` with the Supervisor Coverage rules (SMS / MS on duty = green, management Mon–Fri 08–16 = purple, not covered = red). Tap a day for who covers each hour; **Full page ›** opens Supervisor Coverage in a hub tab.
+- **Property Advisor, Malls Director, CDSO** open the schedule on **All my flagships**: every flagship they can reach (Advisor: all; Director / CDSO: the flagships ticked on their account) in one table, a band per flagship, **view only** (no edit, no weekly email bar). They can still pick one flagship (view only) to see its coverage. Admin gets the same "All flagships" choice.

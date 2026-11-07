@@ -128,7 +128,7 @@ $("#next").onclick = () => { WEEK = D.add(WEEK, 7); load(); };
 $("#todayBtn").onclick = () => { WEEK = D.monday(CTX.today); load(); };
 $("#printBtn").onclick = () => print();
 window.hubRefresh = () => load();
-boot().catch(e => { $("#board").innerHTML = `<p class="muted">${esc(e.message)}</p>`; });
+boot(new URLSearchParams(location.search).get("site") || undefined).catch(e => { $("#board").innerHTML = `<p class="muted">${esc(e.message)}</p>`; });   // ?site= when opened from another tool
 </script>
 </body>
 </html>
