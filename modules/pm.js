@@ -1,3 +1,4 @@
+import { portalAudience, PORTAL_LEVELS } from "./portal.js";
 /* =====================================================================
    PREVENTIVE MAINTENANCE (Oct 2026, Upcoming - Testing) — docs/FEATURE-pm.md
    The hub version of "ABC Preventive Maintenance Solution V3":
@@ -199,6 +200,13 @@ async function setupFor(env, site, month) {
   return (results || []).map(r => ({ ...r, cats: r.cat ? [r.cat] : JSON.parse(r.cats || "[]"), sites: JSON.parse(r.sites || "[]"), months: JSON.parse(r.months || "[]") }))
     .filter(r => r.sites.includes(site) && r.months.includes(month));
 }
+/* Nov 2026: + the Tenant Portal Database — portal users at the chosen levels get the PM email with the Directory contacts (Admin keeps the levels in meta pm:plevels) */
+export async function pmLevels(env) {
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:plevels'").first().catch(() => null);
+  try { const v = JSON.parse(r ? r.v : "null"); if (Array.isArray(v)) return v.filter(x => PORTAL_LEVELS.includes(x)); } catch {}
+  return [...PORTAL_LEVELS];
+}
+const mergeMails = (a, extra) => [...new Set([...String(a || "").split(/[\s,;]+/), ...extra].map(x => String(x || "").trim().toLowerCase()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))].slice(0, 40).join(", ");
 export async function pmLaunch(env, site, ym, d, by = "the hub") {
   if (await env.DB.prepare("SELECT 1 FROM pm_cycles WHERE site = ? AND month = ?").bind(site, ym).first()) throw err(`${monthName(ym)} is already open at this flagship`);
   const S = await setupFor(env, site, Number(ym.slice(5)));
@@ -206,12 +214,14 @@ export async function pmLaunch(env, site, ym, d, by = "the hub") {
   const deadline = lastDay(ym), sixMonths = addDays(ym + "-01", -182);
   const { results } = await env.DB.prepare("SELECT * FROM pm_tenants WHERE site = ? AND excluded = 0 AND category != ''").bind(site).all();
   const T = (results || []).filter(t => !t.since || t.since <= sixMonths);
+  const LV = await pmLevels(env), PA = LV.length ? await portalAudience(env, d.SITES, d.today()).catch(() => null) : null;
   const cyc = (await env.DB.prepare("INSERT INTO pm_cycles (site, month, deadline, launched_at, launched_by) VALUES (?,?,?,?,?)").bind(site, ym, deadline, d.now(), by).run()).meta.last_row_id;
   const mails = []; let n = 0;
   for (const t of T) {
     const need = S.filter(s => s.cats.includes(t.category));
     if (!need.length) continue;
     const tk = token();
+    t.emails = PA ? mergeMails(t.emails, PA(site, t.brand, LV)) : t.emails;
     const rid = (await env.DB.prepare("INSERT INTO pm_records (cycle_id, site, brand, category, emails, token, deadline, last_mail) VALUES (?,?,?,?,?,?,?,?)")
       .bind(cyc, site, t.brand, t.category, t.emails, tk, deadline, d.today()).run()).meta.last_row_id;
     await env.DB.batch(need.map(s => env.DB.prepare("INSERT INTO pm_certs (record_id, site, cert, risk, checklist, applicable) VALUES (?,?,?,?,?,?)").bind(rid, site, s.cert, s.risk, s.checklist || "", s.applicable ? 1 : 0)));
@@ -348,7 +358,9 @@ export async function pmRoute(env, p, method, b, url, d) {
   }
   if (p === "pm/tenants" && method === "GET") {
     const { results } = await env.DB.prepare("SELECT * FROM pm_tenants WHERE site = ? ORDER BY brand").bind(site).all();
-    return { list: (results || []).map(t => ({ brand: t.brand, category: t.category, emails: t.emails, units: t.units, since: t.since, excluded: !!t.excluded })), cats: CATS };
+    const LV = await pmLevels(env), PA = await portalAudience(env, d.SITES, today).catch(() => null);
+    return { list: (results || []).map(t => ({ brand: t.brand, category: t.category, emails: t.emails, units: t.units, since: t.since, excluded: !!t.excluded,
+        portal: PA && LV.length ? PA(site, t.brand, LV).filter(e => !String(t.emails).toLowerCase().includes(e)).length : 0 })), cats: CATS, levels: LV, allLevels: PORTAL_LEVELS };
   }
   if (method !== "POST") throw err("Unknown request", 404);
   if (!ops) throw err("Only the operations team manages preventive maintenance", 403);
@@ -396,6 +408,11 @@ export async function pmRoute(env, p, method, b, url, d) {
         .bind(r.name, r.risk, JSON.stringify([r.cat]), JSON.stringify(r.sites), JSON.stringify(months(r.months)), r.cat, r.kind, r.sub, r.applicable, r.checklist, r.freq, i + 1))]);
     await stamp(`imported ${clip(b.file, 80) || "Excel"}`);
     return { imported: L.length, cats: cats.map(c => C[c]) };
+  }
+  if (p === "pm/plevels") {
+    const v = (Array.isArray(b.levels) ? b.levels : []).filter(x => PORTAL_LEVELS.includes(x));
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pm:plevels', ?)").bind(JSON.stringify(v)).run();
+    return { levels: v };
   }
   if (p === "pm/tenants/import") {
     const L = parseTenants(await d.readSheet(clip(b.name, 120), b.data), d.SITES, site).filter(t => d.canSite(me, t.site));

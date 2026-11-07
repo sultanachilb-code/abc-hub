@@ -160,16 +160,20 @@ async function tenants(){
   V(`${H.ops ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn small" id="fill">⇣ Fill from GLA &amp; Directory</button><button class="btn ghost small" id="imp">Import Excel</button>
       <span class="muted2" style="align-self:center">Excel columns: Brand · Category · Email(s) · Units · Active since (optional: Flagship)</span></div>` : ""}
     <p class="muted2" style="margin-bottom:8px">${T.list.length} tenants · a tenant needs a <b>category</b> to get a PM, and an <b>email</b> to receive it. Tenants open for less than 6 months are skipped.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><span class="muted2"><b>+ Tenant Portal Database</b> — also email the ABC Connect users at:</span>
+      ${T.allLevels.map(l => `<button class="btn small ${T.levels.includes(l) ? "" : "ghost"}" data-lv="${l}" ${H.ops ? "" : "disabled"}>${T.levels.includes(l) ? "✓ " : ""}${l}</button>`).join("")}</div>
     <div class="tw"><table class="t"><thead><tr><th>Brand</th><th>Category</th><th>Emails</th><th>Active since</th><th>Skip</th></tr></thead><tbody>
     ${T.list.map((t, i) => `<tr data-i="${i}"><td><b>${esc(t.brand)}</b><br><span class="muted2">${esc(t.units)}</span></td>
       <td><select class="sel" data-f="category" ${H.ops ? "" : "disabled"}><option value="">— choose —</option>${Object.entries(CATS).map(([k, n]) => `<option value="${k}" ${t.category === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></td>
-      <td><input class="inp" data-f="emails" value="${esc(t.emails)}" placeholder="manager@brand.com" ${H.ops ? "" : "disabled"}></td>
+      <td><input class="inp" data-f="emails" value="${esc(t.emails)}" placeholder="manager@brand.com" ${H.ops ? "" : "disabled"}>${t.portal ? `<br><span class="muted2">+ ${t.portal} portal user${t.portal === 1 ? "" : "s"}</span>` : ""}</td>
       <td><input class="inp" type="date" data-f="since" value="${esc(t.since)}" ${H.ops ? "" : "disabled"}></td>
       <td><input type="checkbox" data-f="excluded" ${t.excluded ? "checked" : ""} ${H.ops ? "" : "disabled"}></td></tr>`).join("") || `<tr><td colspan="5" class="muted2">No tenant yet — press “Fill from GLA &amp; Directory”.</td></tr>`}
     </tbody></table></div>`);
   $("#view").querySelectorAll("tr[data-i]").forEach(tr => tr.querySelectorAll("[data-f]").forEach(el => el.onchange = async () => {
     const t = T.list[+tr.dataset.i]; t[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value;
     try { await api("ops/pm/tenants/save", { site: CTX.site, ...t }); toast("Saved"); } catch (e){ toast(e.message, true); } }));
+  $("#view").querySelectorAll("[data-lv]").forEach(b => b.onclick = async () => { const v = b.dataset.lv, L = T.levels.includes(v) ? T.levels.filter(x => x !== v) : [...T.levels, v];
+    try { await api("ops/pm/plevels", { site: CTX.site, levels: L }); toast("Saved — used from the next PM launch"); tenants(); } catch (e){ toast(e.message, true); } });
   const fl = $("#fill"); if (fl) fl.onclick = async () => { fl.disabled = true; try { const r = await api("ops/pm/tenants/fill", { site: CTX.site }); toast(`${r.added} tenants from GLA`); H = await api(`ops/pm/home?site=${CTX.site}`); tenants(); } catch (e){ fl.disabled = false; toast(e.message, true); } };
   const im = $("#imp"); if (im) im.onclick = () => pickSheet("ops/pm/tenants/import", r => { toast(`${r.imported} tenants imported`); tenants(); });
 }

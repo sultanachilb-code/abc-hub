@@ -124,9 +124,10 @@ const K = { bp: { c: "var(--bp)", short: "Breach" }, vr: { c: "var(--vr)", short
 const ST_COL = { "Sent to Tenant": "#C0392B", "In Review": "#C07A12", "Acknowledged": "#2E8B57", "Rejected": "#8C8398", "Confirmed & Resolved": "#2E8B57", "Confirmed": "#2E8B57", "Closed": "#5E7F6B",
   "Created": "#B9AFC8", "Approved": "#2E8B57", "Submitted To Review": "#C07A12", "Submitted": "#C07A12" };
 const stCol = s => ST_COL[s] || "#7B4BB0";
-const TABS = [["overview", "Overview"], ["vr", "Violations"], ["bp", "Breaches & Penalties"], ["nr", "ABC Requests"], ["mk", "Marketing"], ["cp", "Contractor Permits"], ["users", "Portal Users"]];
+const TABS = [["overview", "Overview"], ["vr", "Violations"], ["bp", "Breaches & Penalties"], ["nr", "ABC Requests"], ["mk", "Marketing"], ["cp", "Contractor Permits"]];   // Nov 2026: Portal Users moved to its own page — Tenant Portal Database (/tools/tpdb)
 let ctx = null, site = UP.get("site") || "", P = null, U = null, tab = UP.get("tab") || "overview", kind = "", q = UP.get("q") || "", old = false, tenant = "", status = "follow", LIM = 40;
 let mkF = "review", mkType = "", cpF = "live", usF = "", usLim = 150, usS = "", usT = "";   // usS / usT: Portal Users — flagship / tenant tapped in the panels
+if (tab === "users") location.replace("/tools/tpdb" + (UP.get("site") ? "?site=" + UP.get("site") : ""));
 if (q && /^(MKT|CP)-/i.test(q)) tab = /^MKT/i.test(q) ? "mk" : "cp";
 async function boot(){
   try {
@@ -179,6 +180,7 @@ function draw(){
   const lastTxt = k => { const l = P.last[k]; const lab = k === "users" ? "Portal Users" : P.kinds[k].label; return `<span class="it" style="--k:${tk[k]}"><i></i>${esc(lab)}: ${l ? `<b>${esc(ago(l.at))}</b> · ${l.rows}` : "<b>not yet</b>"}</span>`; };
   const tabsH = `<div class="tabs" role="tablist">${TABS.filter(([k]) => k !== "users" || P.can.users).map(([k, n]) => `<button role="tab" data-tab="${k}" class="${tab === k ? "on" : ""}" style="--k:${tk[k] || "var(--brand)"}">${k !== "overview" ? "<i></i>" : ""}${esc(n)}${cnt[k] !== "" && cnt[k] != null ? ` <em>${cnt[k]}${k === "cp" ? " live" : ""}</em>` : ""}</button>`).join("")}</div>`;
   const src = `<div class="card src">${["vr", "bp", "nr", "mk", "cp", ...(P.can.users ? ["users"] : [])].map(lastTxt).join("")}<span class="sp"></span>
+      ${P.can.users ? `<a class="btn small ghost" href="/tools/tpdb?site=${site}">🗂 Tenant Portal Database ›</a>` : ""}
       ${P.can.import ? `<button class="btn small ghost" id="impBtn" title="Salesforce report exports (.xls / .xlsx / .csv): Violations, Breaches & Penalties, ABC Requests, Marketing Requests, Contractor Permits, Active Users">⤓ Import reports</button>` : ""}</div>`;
   const body = tab === "mk" ? drawMk(of("mk")) : tab === "cp" ? drawCp(of("cp")) : tab === "users" ? drawUsers() : tab === "overview" ? drawOverview(I) : drawKind(tab, I);
   $("#app").innerHTML = src + tabsH + body;
@@ -193,7 +195,7 @@ function drawOverview(I){
   const cpL = cp.filter(x => cpLive(x, n)), cpToday = cp.filter(x => x.from && x.from.slice(0, 10) === P.today), cpWait = cp.filter(x => /^submitted/i.test(x.status));
   const usA = U && U.users ? U.users.filter(u => P.all || (u.sites && u.sites.length ? u.sites : [u.site]).some(x => P.sites.includes(x))) : [], us = usA.length ? usA : null, us30 = us ? us.filter(u => u.login && days(u.login.slice(0, 10), U.today) <= 30).length : 0;
   const lastTile = P.can.users
-    ? `<div class="card kc" style="--k:var(--us)" data-tab="users"><h4>Portal users active</h4><div class="big">${us ? Math.round(us30 / us.length * 100) : "—"}<small>%</small></div><div class="sub">${us ? `${us30} of ${us.length} logged in during the last 30 days` : U ? "Import the Active Users report" : "Loading…"}</div></div>`
+    ? `<div class="card kc" style="--k:var(--us)" onclick="location.href='/tools/tpdb?site=${site}'"><h4>Portal users active ›</h4><div class="big">${us ? Math.round(us30 / us.length * 100) : "—"}<small>%</small></div><div class="sub">${us ? `${us30} of ${us.length} logged in during the last 30 days` : U ? "Import the Active Users report" : "Loading…"}</div></div>`
     : `<div class="card kc" style="--k:var(--bp)" data-tab="bp"><h4>Breaches open</h4><div class="big">${bp.filter(isOpenBp).length}</div><div class="sub">${bp.length} in the report</div></div>`;
   /* by flagship */
   const S = P.sites.map(s => { const f = x => x.site === s;

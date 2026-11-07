@@ -74,7 +74,7 @@ async function list(){
 /* ---------- new activation ---------- */
 async function newForm(){
   const sites = Object.keys(L.sites);
-  FORM = FORM || { title: "", message: "", actFrom: "", actTo: "", start: todayISO(), end: "", sites: sites.length === 1 ? sites : [], depts: [], positions: [], memo: null, aud: null, off: new Set(), mails: {} };
+  FORM = FORM || { title: "", message: "", actFrom: "", actTo: "", start: todayISO(), end: "", sites: sites.length === 1 ? sites : [], depts: [], positions: [], levels: ["Shop", "Brand", "Company", "Group"], memo: null, aud: null, off: new Set(), mails: {} };
   const F = FORM, f = await api("ops/mk/filters?sites=" + F.sites.join(","));
   V(`<button class="btn ghost small" id="back">‹ Activations</button>
     <div class="fm" style="margin-top:10px">
@@ -87,6 +87,7 @@ async function newForm(){
       <label>Flagships</label><div class="ck" id="kS">${sites.map(s => `<span data-v="${s}" class="${F.sites.includes(s) ? "on" : ""}">${esc(L.sites[s])}</span>`).join("")}</div>
       <label>Sub-category <span class="mut">(none selected = all)</span></label><div class="ck" id="kD">${f.depts.map(x => `<span data-v="${esc(x.name)}" class="${F.depts.includes(x.name) ? "on" : ""}">${esc(x.name)}<small>${x.n}</small></span>`).join("") || `<span class="mut" style="border:0">Choose a flagship first</span>`}</div>
       <label>Send to contacts <span class="mut">(Tenants Directory position · none selected = all contacts)</span></label><div class="ck" id="kP">${f.positions.map(x => `<span data-v="${esc(x.name)}" class="${F.positions.includes(x.name) ? "on" : ""}">${esc(x.name)}<small>${x.n}</small></span>`).join("") || `<span class="mut" style="border:0">No contact positions in the Directory yet</span>`}</div>
+      <label>+ Tenant Portal Database <span class="mut">(ABC Connect users linked to the tenant · none selected = Directory only)</span></label><div class="ck" id="kL">${(f.levels || []).map(x => `<span data-v="${x}" class="${F.levels.includes(x) ? "on" : ""}">${x} level</span>`).join("")}</div>
       <div style="margin-top:12px"><button class="btn" id="fV">Show the tenants</button></div>
     </div><div id="aud"></div>`);
   const keep = () => Object.assign(F, { title: $("#fT").value, message: $("#fM").value, actFrom: $("#fA1").value, actTo: $("#fA2").value, start: $("#fS").value, end: $("#fE").value });
@@ -95,20 +96,20 @@ async function newForm(){
   ["#fT", "#fM", "#fA1", "#fA2", "#fS", "#fE"].forEach(s => { const el = $(s); if (el) el.addEventListener("input", keep), el.addEventListener("change", keep); });
   const tog = (id, key, reload) => $(id).onclick = e => { const s = e.target.closest("[data-v]"); if (!s) return; const v = s.dataset.v, a = F[key];
     a.includes(v) ? a.splice(a.indexOf(v), 1) : a.push(v); s.classList.toggle("on"); F.aud = null; $("#aud").innerHTML = ""; if (reload) { keep(); newForm(); } };
-  tog("#kS", "sites", true); tog("#kD", "depts"); tog("#kP", "positions");
+  tog("#kS", "sites", true); tog("#kD", "depts"); tog("#kP", "positions"); tog("#kL", "levels");
   $("#fP").onclick = () => { const p = $("#pdf"); p.value = ""; p.onchange = () => { const x = p.files[0]; if (!x) return; if (x.size > 8e6) return toast("The memo is larger than 8 MB", true);
     const r = new FileReader(); r.onload = () => { keep(); F.memo = { name: x.name, data: r.result }; newForm(); }; r.readAsDataURL(x); }; p.click(); };
   $("#fV").onclick = async () => { keep(); if (!F.sites.length) return toast("Choose at least one flagship", true);
-    try { F.aud = (await api("ops/mk/audience", { sites: F.sites, depts: F.depts, positions: F.positions })).list; F.off = new Set(); audience(); } catch (e){ toast(e.message, true); } };
+    try { F.aud = (await api("ops/mk/audience", { sites: F.sites, depts: F.depts, positions: F.positions, levels: F.levels })).list; F.off = new Set(); audience(); } catch (e){ toast(e.message, true); } };
   if (F.aud) audience();
 }
 function audience(){
   const F = FORM, A = F.aud, key = t => `${t.site}|${t.brand}`;
   const on = A.filter(t => !F.off.has(key(t))), noMail = on.filter(t => !(F.mails[key(t)] || t.emails)).length;
   $("#aud").innerHTML = `<div class="sec">${on.length} of ${A.length} tenants selected · ${noMail ? `<span style="color:#B0283C">${noMail} without email</span>` : "all have an email ✓"}</div>
-    <div class="tw"><table class="t"><thead><tr><th><input type="checkbox" id="all" ${on.length === A.length ? "checked" : ""}></th><th>Tenant</th><th>Sub-category</th><th>Units</th><th>Emails</th></tr></thead><tbody>
+    <div class="tw"><table class="t"><thead><tr><th><input type="checkbox" id="all" ${on.length === A.length ? "checked" : ""}></th><th>Tenant</th><th>Sub-category</th><th>Units</th><th>Emails <span class="mut" style="text-transform:none;letter-spacing:0">(Directory + portal)</span></th></tr></thead><tbody>
     ${A.map((t, i) => `<tr><td><input type="checkbox" data-i="${i}" ${F.off.has(key(t)) ? "" : "checked"}></td><td><b>${esc(t.brand)}</b>${F.sites.length > 1 ? `<br><span class="mut">${esc(L.sites[t.site])}</span>` : ""}</td><td>${esc(t.dept)}</td><td class="mut">${esc(t.units)}</td>
-      <td><input class="inp" data-m="${i}" value="${esc(F.mails[key(t)] ?? t.emails)}" placeholder="${t.contacts ? "no contact with this position" : "no contact in the Directory"}"></td></tr>`).join("")}</tbody></table></div>
+      <td><input class="inp" data-m="${i}" value="${esc(F.mails[key(t)] ?? t.emails)}" placeholder="${t.contacts ? "no contact with this position" : "no contact in the Directory"}">${t.portal ? `<span class="mut">${t.portal} from the Tenant Portal Database</span>` : ""}</td></tr>`).join("")}</tbody></table></div>
     <div class="bar2" style="margin-top:12px"><span class="mut">${F.start > todayISO() ? `Scheduled — the memo goes out on ${esc(fd(F.start))} at 09:00.` : "The memo goes out now."} Reminders every day until ${esc(fd(F.end) || "the reply-by date")}.</span>
       <button class="btn" id="go">${F.start > todayISO() ? "Schedule" : "Send the memo"} to ${on.length} tenants</button></div>`;
   $("#aud").querySelectorAll("[data-i]").forEach(c => c.onchange = () => { const k = key(A[+c.dataset.i]); c.checked ? F.off.delete(k) : F.off.add(k); audience(); });
@@ -121,7 +122,7 @@ function audience(){
     if (!F.end) { toast("Set the reply-by date", true); const t = $("#fE"); if (t){ t.focus(); t.scrollIntoView({ behavior: "smooth", block: "center" }); } return; }
     if (!(await confirmBox("Send the activation", `<b>${esc(F.title)}</b> to ${on.length} tenants${F.start > todayISO() ? ` on ${esc(fd(F.start))}` : " now"}, with a daily reminder until ${esc(fd(F.end))}?`, "Send"))) return;
     $("#go").disabled = true;
-    try { const r = await api("ops/mk/create", { title: F.title, message: F.message, actFrom: F.actFrom, actTo: F.actTo, start: F.start, end: F.end, sites: F.sites, depts: F.depts, positions: F.positions,
+    try { const r = await api("ops/mk/create", { title: F.title, message: F.message, actFrom: F.actFrom, actTo: F.actTo, start: F.start, end: F.end, sites: F.sites, depts: F.depts, positions: F.positions, levels: F.levels,
         memo: F.memo, only: on.map(key), extraEmails: F.mails });
       toast(r.scheduled ? `Scheduled · ${r.tenants} tenants` : `Sent to ${r.mailed} tenants`); FORM = null; open(r.id); } catch (e){ $("#go").disabled = false; toast(e.message, true); } };
 }

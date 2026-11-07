@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#2A0F45">
+<title>Memo · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<!-- Memo: the tenant's page, opened from the email /memo/<token> (no hub account) — Acknowledge or Reply. See docs/FEATURE-memo.md -->
+<style>
+:root{--brand:#4A1F73;--deep:#2A0F45;--bg:#F4F0F8;--card:#fff;--text:#221A2E;--muted:#6D6479;--line:#E6E0EE;--ok:#1E8A4C;--no:#B03A2E}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh}
+.hd{background:linear-gradient(140deg,var(--deep),var(--brand));color:#fff;padding:22px 20px 74px;text-align:center}
+.hd img{height:34px}.hd small{display:block;opacity:.8;font-size:.78rem;margin-top:8px;letter-spacing:.06em;text-transform:uppercase}
+.wrap{width:min(640px,calc(100% - 24px));margin:-56px auto 30px}
+.card{background:var(--card);border-radius:22px;box-shadow:0 18px 50px rgba(42,15,69,.14);padding:20px 18px}
+.ref{font-size:.74rem;font-weight:800;letter-spacing:.05em;color:var(--brand)}
+h1{font-size:1.25rem;margin-top:4px}.sub{color:var(--muted);font-size:.86rem;margin-top:3px;line-height:1.5}
+.msg{white-space:pre-line;font-size:.94rem;line-height:1.6;margin:14px 0;border-top:1px solid var(--line);padding-top:14px}
+.file{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:.86rem;color:var(--brand);font-weight:700;text-decoration:none;margin:4px 0 10px}
+.q{background:#F7F4FA;border-radius:16px;padding:16px;margin-top:12px}
+.q p{font-weight:800;margin-bottom:8px}
+label{display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin:12px 0 5px}
+.in{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:.9rem;background:#fff;color:var(--text)}
+textarea.in{min-height:110px;resize:vertical}
+.save{margin-top:14px;width:100%;background:var(--brand);color:#fff;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:800;font-size:.98rem;cursor:pointer}
+.save.ok{background:var(--ok)}.save:disabled{opacity:.6}
+.done{border-radius:14px;padding:13px 14px;font-weight:700;font-size:.92rem;margin:12px 0;background:rgba(30,138,76,.1);color:var(--ok)}
+.done .rp{white-space:pre-line;font-weight:500;color:var(--text);margin-top:6px}
+.note{margin-top:10px;border-radius:10px;padding:9px 11px;font-size:.84rem;font-weight:600;background:rgba(176,58,46,.1);color:var(--no)}
+.switch{font-size:.82rem;color:var(--muted);margin-top:10px;text-align:center}.switch a{color:var(--brand);font-weight:700;cursor:pointer}
+.foot{text-align:center;font-size:.72rem;color:var(--muted);margin-top:18px}
+:root[data-theme="dark"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="dark"] .q{background:#2A2040}:root[data-theme="dark"] .in{background:#1F1730}
+@media (prefers-color-scheme:dark){:root[data-theme="auto"]{--bg:#120B1B;--card:#1F1730;--text:#EFEAF5;--muted:#A99EB8;--line:#2E2440}:root[data-theme="auto"] .q{background:#2A2040}:root[data-theme="auto"] .in{background:#1F1730}}
+</style>
+</head>
+<body>
+<div class="hd"><img src="/icons/abc-logo-white.png" alt="ABC"><small id="site">Memo</small></div>
+<div class="wrap"><div class="card" id="app"><p class="sub">Loading…</p></div>
+<div class="foot">ABC · Mall Operations · this page is personal to your shop</div></div>
+<script>
+fetch("/api/ext-cfg").then(r => r.json()).then(j => { if (j && j.ok && j.data && j.data.theme) document.documentElement.setAttribute("data-theme", j.data.theme); }).catch(() => {});
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TK = (location.pathname.match(/\/memo\/([A-Za-z0-9]{18})/) || [])[1] || "";
+const day = d => d ? new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "";
+let D = null, EDIT = false, FILE = null, ERR = "";
+async function call(path, body){
+  const r = await fetch(`/api/memo-ext/${TK}${path}`, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || "Something went wrong — try again");
+  return j.data;
+}
+function draw(){
+  $("#site").textContent = `${D.siteName} · Memo ${D.ref}`;
+  const done = D.state && !EDIT, isReply = D.mode === "reply";
+  let name = ""; try { name = localStorage.getItem("memo:name") || ""; } catch {}
+  $("#app").innerHTML = `<div class="ref">${esc(D.ref)}${D.cat ? " · " + esc(D.cat) : ""}</div><h1>${esc(D.title)}</h1>
+    <div class="sub">To ${esc(D.brand)} (${esc(D.units)}) · ${esc(day(D.sent))}${D.replyBy ? ` · ${isReply ? "reply" : "acknowledge"} by <b>${esc(day(D.replyBy))}</b>` : ""}</div>
+    <div class="msg">${esc(D.body)}</div>
+    ${D.file ? `<a class="file" href="/api/memo-ext/${TK}/file" target="_blank" rel="noopener">📎 ${esc(D.file.name)}</a>` : ""}
+    ${done ? `<div class="done">✓ ${D.state === "reply" ? "Your reply was received" : "Acknowledged"} on ${esc(day(D.at))} by ${esc(D.by)}${D.reply ? `<div class="rp">${esc(D.reply)}</div>` : ""}${D.replyFile ? `<div class="rp">📎 ${esc(D.replyFile)}</div>` : ""}</div>
+        ${D.open && isReply ? `<div class="switch"><a id="chg">Change my reply</a></div>` : ""}`
+      : !D.open ? `<div class="note">This memo is closed — contact the mall operations team.</div>`
+      : `<div class="q"><p>${isReply ? "Your reply" : "Please confirm you have read this memo"}</p>
+        ${isReply ? `<textarea class="in" id="rp" placeholder="Write your reply…">${esc(D.reply || "")}</textarea>
+          <label>Attach a file (optional · PDF, image, Word or Excel · up to 8 MB)</label><input type="file" class="in" id="rf" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx">` : ""}
+        <label>Your name</label><input class="in" id="nm" value="${esc(name)}" placeholder="Name and position">
+        ${ERR ? `<div class="note">${esc(ERR)}</div>` : ""}
+        <button class="save ${isReply ? "" : "ok"}" id="go">${isReply ? "Send my reply" : "✓ Read & acknowledged"}</button></div>`}`;
+  const rp = $("#rp"); if (rp) rp.oninput = () => { D.reply = rp.value; };
+  const c = $("#chg"); if (c) c.onclick = () => { EDIT = true; draw(); };
+  const f = $("#rf"); if (f) f.onchange = () => { const x = f.files[0]; FILE = null; if (!x) return; if (x.size > 8e6) { ERR = "The file is larger than 8 MB"; f.value = ""; return draw(); }
+    const r = new FileReader(); r.onload = () => { FILE = { name: x.name, data: r.result }; }; r.readAsDataURL(x); };
+  const g = $("#go"); if (g) g.onclick = async () => {
+    const nm = $("#nm").value.trim(); if (!nm) { ERR = "Write your name"; return draw(); }
+    try { localStorage.setItem("memo:name", nm); } catch {}
+    g.disabled = true; ERR = "";
+    try { await call("/answer", { name: nm, reply: isReply ? $("#rp").value : "", file: FILE }); EDIT = false; FILE = null; D = await call(""); draw(); }
+    catch (e){ ERR = e.message; draw(); }
+  };
+}
+call("").then(d => { D = d; draw(); }).catch(e => { $("#app").innerHTML = `<p class="sub">${esc(e.message)}</p>`; });
+</script>
+</body>
+</html>

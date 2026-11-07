@@ -82,6 +82,7 @@ window.HUB = {
     "malfunctions":    ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "tenant360":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "portal":          ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+    "tpdb":            ["MM",  "OM",  "LEAD"],   // Tenant Portal Database (Nov 2026) — managers and leadership, like Portal Users
     "works":           ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "directory":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "gla":             ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
@@ -246,7 +247,8 @@ window.HUB = {
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
-    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing, contractor permits and portal users", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing and contractor permits", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    { id: "tpdb", name: "Tenant Portal Database", desc: "Every ABC Connect user linked to shop → brand → company → group — the recipients of Marketing, PM and Memo", group: "Tenant Management", icon: "users", color: "#1F5A96", url: "/tools/tpdb" },
     /* Malfunction Records — soft services and operations follow the service providers (see docs/FEATURE-malfunctions.md) */
     { id: "malfunctions", name: "Malfunction Records", desc: "Malfunctions handled by service providers — reported, attended, fixed", group: "Day to Day Operations", icon: "bolt", color: "#B5452B", url: "/tools/malfunctions" },
     { id: "works", name: "Tenant Works Forms", desc: "RDM forms forwarded by email — sign and complete", group: "Tenant Management", icon: "scroll", color: "#2F6F7E", url: "/tools/works" },
@@ -335,6 +337,7 @@ window.HUB = {
     { id: "cleanctl", name: "Cleaning Control", desc: "Cleaning schedule, before / after photos, compliance and the cleaner app phones", group: "Soft Services Management", icon: "clipboard", color: "#2F6F73", url: "/tools/cleanctl" },
     { id: "rollout", name: "Hub Training & Rollout", desc: "The hub rollout plan — 4 phases, sessions, who attended, accounts set up, modules trained", group: "Hub Applications", icon: "book", color: "#4A1D6E", url: "/tools/rollout" },   /* docs/FEATURE-rollout.md */
     { id: "mkt", name: "Marketing Participation", desc: "Send marketing activation memos — tenants answer Participating / Not participating from the email, daily reminders, live % per flagship", group: "Hub Applications", icon: "megaphone", color: "#B8456B", url: "/tools/mkt" },
+    { id: "memo", name: "Memo", desc: "Official memos to tenants — text + attachment, Acknowledge or Reply, reminders to the ones who don't answer, filters by category, CRM, Direct Banking, level", group: "Hub Applications", icon: "scroll", color: "#9A5B13", url: "/tools/memo" },
     { id: "pm", name: "Preventive Maintenance", desc: "Tenant PM certificates — setup, monthly launch, tenant upload link, review, reminders, extensions and breaches", group: "Hub Applications", icon: "shield", color: "#2F6F73", url: "/tools/pm" },
     { id: "tlist", name: "Tenant List", desc: "Tenants with their SKU (CRM sheet) — YES / NO for each, live YES % of the tenants selected; one shared list per flagship", group: "Tenant Management", icon: "clipboard", color: "#1E7A6B", url: "/tools/tlist" },
     { id: "keybox", name: "Key Box", desc: "Keys of the vacant units — who has which key, back by when, signed hand-over and late alerts", group: "Property Overview & Info", icon: "box", color: "#B08A2E", url: "/tools/keybox" },
