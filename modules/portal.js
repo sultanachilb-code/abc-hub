@@ -168,6 +168,65 @@ async function placeUsers(env, users, today) {
   return { users: out, lookup: { rows: L.length } };
 }
 
+const usersBase = (results, SITES) => (results || []).map(u => ({ user: u.username, name: [u.first, u.last].filter(Boolean).join(" "), title: u.title, company: u.company || u.account,
+  raw: u.raw_account || (u.site && u.account ? `${u.account} ${SITES[u.site] || ""}` : u.account || u.company),   // imported before Nov 2026: shop = tenant + flagship
+  site: u.site, login: u.last_login, created: u.created }));
+const activeUsers = async (env, SITES) => usersBase((await env.DB.prepare("SELECT username, first, last, title, company, account, site, last_login, created, raw_account FROM portal_users WHERE active = 1 ORDER BY last_login DESC").all()).results, SITES);
+
+/* Tenant 360: the hierarchy of one tenant (its shop in this flagship → brand → company → group), the sister shops and the portal users at each level */
+export async function hierarchyFor(env, brand, site, SITES, today) {
+  if (!lkN(brand)) return null;
+  const L = (await env.DB.prepare("SELECT * FROM portal_lookup").all().catch(() => ({ results: [] }))).results || [];
+  if (!L.length) return { imported: false };
+  /* the GLA name as written, then without the space tags the GLA adds ("ZARA TA", "LACOSTE OT", "RAYBAN 2 TA") */
+  const bare = String(brand).replace(/(\s+(TA|OT|TS|kiosk|\d+))+\s*$/i, "");
+  for (const nm of bare !== brand && lkN(bare) ? [brand, bare] : [brand]) { const r = await hierOf(env, L, nm, site, SITES, today); if (r) return r; }
+  return { imported: true, found: false };
+}
+async function hierOf(env, L, brand, site, SITES, today) {
+  const b = lkN(brand);
+  const run = x => !x.end_day || x.end_day >= today;
+  const sn = lkN(brand + " " + (SITES[site] || ""));
+  /* best match first: "<brand> <flagship>" shop · the brand's shop · the brand · a shop starting with the brand (here), then the brand anywhere */
+  const tests = [x => x.site === site && lkN(x.shop) === sn, x => x.site === site && lkN(x.shop) === b, x => x.site === site && lkN(x.brand) === b,
+    x => x.site === site && lkN(x.shop).startsWith(sn), x => lkN(x.brand) === b || lkN(x.shop) === b];
+  let hit = [];
+  for (const t of tests) { hit = L.filter(t); if (hit.length) break; }
+  if (!hit.length) return null;
+  hit.sort((x, y) => run(y) - run(x) || String(y.end_day).localeCompare(String(x.end_day)));
+  const n = hit[0], ck = lkN(n.company), bk = lkN(n.brand);
+  const fam = L.filter(x => ck ? lkN(x.company) === ck : lkN(x.brand) === bk);
+  const shops = [...new Map(fam.sort((x, y) => run(y) - run(x)).map(x => [x.shop, { shop: x.shop, brand: x.brand, site: x.site, siteName: SITES[x.site] || "", running: run(x), here: hit.some(h => h.shop === x.shop) }])).values()]
+    .sort((x, y) => (y.here - x.here) || (y.running - x.running) || String(x.brand).localeCompare(String(y.brand)) || String(x.siteName).localeCompare(String(y.siteName)));
+  const keys = new Map([...new Set(hit.map(x => lkN(x.shop)))].map(k => [k, "Shop"]));
+  for (const [k, v] of [[bk, "Brand"], [ck, "Company"], [lkN(n.grp), "Group"]]) if (k && !keys.has(k)) keys.set(k, v);
+  const users = (await activeUsers(env, SITES)).map(u => ({ u, lv: keys.get(lkN(u.raw || u.company)) })).filter(x => x.lv)
+    .map(({ u, lv }) => ({ name: u.name || u.user, title: u.title, login: u.login, level: lv, account: u.raw || u.company }));
+  const O = { Shop: 0, Brand: 1, Company: 2, Group: 3 };
+  users.sort((x, y) => O[x.level] - O[y.level] || String(y.login).localeCompare(String(x.login)));
+  return { imported: true, found: true, shop: n.shop, brand: n.brand, company: n.company, group: n.grp, running: run(n), end: n.end_day, shops: shops.slice(0, 80), users: users.slice(0, 80), usersTotal: users.length };
+}
+
+/* daily (after the 07:00–08:00 import window): tell the admins how many portal tenants are still not linked to the hierarchy — hub alert + email */
+export async function lkAlertRun(env, d) {
+  if (d.hour() < 9) return;
+  const day = d.today(), claim = `pt:lkalert:${day}`;
+  const got = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, '1')").bind(claim).run().catch(() => null);
+  if (!got || !got.meta || !got.meta.changes) return;
+  await env.DB.prepare("DELETE FROM meta WHERE k LIKE 'pt:lkalert:%' AND k < ?").bind(claim).run().catch(() => {});
+  const users = await activeUsers(env, d.SITES).catch(() => []);
+  if (!users.length) return;
+  const P = await placeUsers(env, users, day);
+  const off = P.users.filter(u => !u.level), acc = [...new Set(off.map(u => lkN(u.raw || u.company)).filter(Boolean))];
+  const st = { day, imported: !!P.lookup, tenants: P.lookup ? acc.length : null, users: off.length, total: users.length };
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pt:lkalert', ?)").bind(JSON.stringify(st)).run();
+  if (P.lookup && !acc.length) return;
+  const title = P.lookup ? `${acc.length} tenant${acc.length === 1 ? " is" : "s are"} still not linked to their hierarchy` : "The account hierarchy is not imported yet";
+  const body = P.lookup ? `${acc.length} portal tenant account${acc.length === 1 ? "" : "s"} (${off.length} of ${users.length} active users) are not in the Account hierarchy. Upload the data in Salesforce and import the new hierarchy: Portal Dashboard → Import, or the Report mailbox → Import now.`
+    : `${users.length} active portal users cannot be placed under a shop, brand, company or group. Import the Account hierarchy report: Portal Dashboard → Import, or the Report mailbox → Import now.`;
+  await d.notifyAdmins(env, title, body, "warn");
+}
+
 /* ---------- the Active Users report (portal users): Username + Last Login / Active / Account Name columns ---------- */
 export function parseUsers(rows) {
   /* Nov 2026: the daily "Sample Report: Active Users" has First Name · Last Name · Title · Username · Account Name · Active (no Last Login) */
@@ -325,8 +384,7 @@ export async function portalRoute(env, p, method, b, url, d) {
     if (!d.full(me)) throw err("Portal users are for managers and leadership", 403);
     const { results } = await env.DB.prepare("SELECT username, first, last, title, company, account, site, last_login, created, raw_account FROM portal_users WHERE active = 1 ORDER BY last_login DESC").all();
     const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'portal:last:users'").first(), lk = await env.DB.prepare("SELECT v FROM meta WHERE k = 'portal:last:lookup'").first();
-    const base = (results || []).map(u => ({ user: u.username, name: [u.first, u.last].filter(Boolean).join(" "), title: u.title, company: u.company || u.account, raw: u.raw_account || (u.site && u.account ? `${u.account} ${d.SITES[u.site] || ""}` : u.account || u.company),   // imported before Nov 2026: shop = tenant + flagship
-      site: u.site, login: u.last_login, created: u.created }));
+    const base = usersBase(results, d.SITES);
     const P = await placeUsers(env, base, d.today());
     return { today: d.today(), last: r ? JSON.parse(r.v) : null, lookupLast: lk ? JSON.parse(lk.v) : null, siteNames: d.SITES, users: P.users };
   }

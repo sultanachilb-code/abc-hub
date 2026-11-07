@@ -28,7 +28,7 @@ import { projectsSchema, projectsRoute, projectsRun } from "./modules/projects.j
 import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute, addinIssue } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
-import { portalSchema, portalRoute } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
+import { portalSchema, portalRoute, lkAlertRun } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
 import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs/FEATURE-tenant-360.md
 import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
@@ -665,6 +665,7 @@ export default {
       await pushRun(env).catch(e => console.error("push", e && e.message));
       await chatRun(env).catch(e => console.error("chat", e && e.message));
       await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));
+      await lkAlertRun(env, { today: beirutToday, hour: beirutHour, SITES, notifyAdmins }).catch(e => console.error("lkalert", e && e.message));   // Portal: tenants not linked to the account hierarchy (daily, admins)
       await roRun(env, { ...RO_DEPS, outlookSend, hubUrl: HUB_URL }).catch(e => console.error("rollout", e && e.message));   // Hub Training & Rollout: session reminders
       await rpRun(env, { SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend, hubUrl: HUB_URL }).catch(e => console.error("reports", e && e.message));   // Report builder: scheduled reports
       await ffRun(env, { SITES, today: beirutToday, hour: beirutHour, outlookSend, raiseEvent, hubUrl: HUB_URL }).catch(e => console.error("footfall", e && e.message));   // Footfall: Liban Park emails 09:00 → 14:00
@@ -760,6 +761,7 @@ async function route(request, env, ctx, url) {
     const effRole = me._real ? me._real.role : me.role;   // administrator mode: two-step follows the person's real role
     return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on }, sys: sysSummary(me, ssoDeps) }, sites: SITES, roles: ROLES,
       tools: toolsCfgNow(), viewAs: me._viewAs || null, landing: await hasLanding(env, me).catch(() => false), home: await homeFor(env, me).catch(() => null),
+      lkAlert: isAdminUser(me) ? await env.DB.prepare("SELECT v FROM meta WHERE k = 'pt:lkalert'").first().then(r => r ? JSON.parse(r.v) : null).catch(() => null) : null,
       admin: isAdminUser(me) ? { mode: !!me._adminMode || (me.role === "ADMIN" && !!me._admUnlocked), unlocked: !!me._admUnlocked, real: me._real || null, split: !!me.is_admin && (me._real ? me._real.role : me.role) !== "ADMIN" } : null });
   }
   if (path.startsWith("fu/")) return ok(await followupRoute(env, path, method, method === "GET" ? Object.fromEntries(url.searchParams) : body, me, { today: beirutToday, now: nowIso }));   // Follow-ups
@@ -2089,7 +2091,7 @@ async function opsRoute(env, me, p, method, b, url) {
   }
   if (p.startsWith("mf/")) return malfunctionsRoute(env, p, method, b, url, { site, me, can, now: nowIso, raiseEvent, siteName });   // Malfunction Records
   if (p === "find") return findRoute(env, url, { sites: sitesOf(me), siteName });   // Hub search across content
-  if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, today: beirutToday, canSales: roleAllows(me, "sales") });   // Tenant 360
+  if (p.startsWith("t360/")) return t360Route(env, p, method, b, url, { me, site, siteName, SITES, today: beirutToday, canSales: roleAllows(me, "sales") });   // Tenant 360
   if (p.startsWith("portal/")) return portalRoute(env, p, method, b, url, { me, SITES, canSite, sitesOf, full: isFull, now: nowIso, today: beirutToday, audit: auditMe });   // Tenant portal follow-up
   if (p.startsWith("contracts/")) return contractsRoute(env, p, method, b, url, { site, me, full: isFull(me), canSite, now: nowIso, today: beirutToday, audit: auditMe });   // Contracts near ending
   if (p.startsWith("patrol/")) return patrolRoute(env, p, method, b, url, { site, me, can, canSite, full: isFull(me), now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Security Patrol

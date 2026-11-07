@@ -25,3 +25,9 @@ Pills in the same style as the leadership KPI board. Tapping a row opens its det
   - Open means still active and not closed or resolved.
   - The details list each item with its link to the portal.
 - **Employees:** the contacts from the Tenants Directory, with call and email buttons.
+
+## Company & group (Nov 2026)
+The unit board shows a **Company & group · ABC Connect** box built from the Salesforce *Account hierarchy* report (`portal_lookup`, imported from the Portal Dashboard or the Report mailbox).
+- Match (`hierarchyFor` in `modules/portal.js`): "<brand> <flagship>" shop → the brand's shop → the brand in this flagship → a shop starting with the brand → the brand anywhere. GLA space tags (`TA`, `OT`, `TS`, a trailing number) are dropped on a second try.
+- Shows Group → Company → Brand → Shop, every shop of the same company (this shop first, running / ended, flagship) and the active portal users linked at shop, brand, company or group level (first 80).
+- Not imported / not found: the box says so and what to do. The header "Group" uses the hierarchy group when found, else the Tenant List group.

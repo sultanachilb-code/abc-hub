@@ -8,7 +8,7 @@
    Routes: /api/ops/t360/list?site= · /api/ops/t360/unit?site=&id=
    ===================================================================== */
 import { complianceFor, MILESTONES } from "./tenants.js";
-import { isFollowUp, cleanStatus, linkOf } from "./portal.js";
+import { isFollowUp, cleanStatus, linkOf, hierarchyFor } from "./portal.js";
 
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 /* "ZARA s.a.l." → "zara" — company suffixes and punctuation do not count when matching names */
@@ -160,6 +160,7 @@ export async function t360Route(env, p, method, b, url, d) {
     const pmMine = pm.filter(r => mine(r.brand)).slice(0, 3).map(r => ({ month: r.month, done: !!r.completed_at, n: r.n, ok: r.ok, deadline: r.deadline,
       certs: String(r.certs || "").split("|").filter(Boolean).map(x => { const i = x.lastIndexOf(":"); return { cert: x.slice(0, i), status: x.slice(i + 1) }; }) }));
     const mkMine = mk.filter(r => mine(r.brand)).slice(0, 3).map(r => ({ title: r.title, answer: r.answer, offer: r.offer, reason: r.reason, at: r.answered_at, from: r.act_from || r.start_day, to: r.act_to || r.end_day }));
+    const hierarchy = await hierarchyFor(env, brand, site, d.SITES || {}, T).catch(() => null);   // Salesforce account hierarchy (Portal Users lookup)
     const fitMs = R.fit ? JSON.parse(R.fit.ms || "{}") : null;
     const c = contractEnd(R.contracts);
     return {
@@ -179,7 +180,7 @@ export async function t360Route(env, p, method, b, url, d) {
       contractors: visits.filter(v => mine(v.tenant)).slice(0, 20).map(v => ({ company: v.company, work: v.work, req: v.req, from: v.day_from, to: v.day_to, time: [v.time_from, v.time_to].filter(Boolean).join("–") })),
       gate: scans.filter(s => mine(s.tenant)).slice(0, 20).map(s => ({ day: s.day, at: s.at, decision: s.decision, reason: s.reason, req: s.req, contractor: s.contractor, workers: s.workers })),
       history: history.map(h => ({ kind: h.kind, date: h.eff_date, note: h.note, by: h.by_name, before: safe(h.before), after: safe(h.after) })),
-      trend, group, sku: [...new Set(crmMine.map(r => r.sku).filter(Boolean))].join(", "),
+      trend, group: (hierarchy && hierarchy.group) || group, hierarchy, sku: [...new Set(crmMine.map(r => r.sku).filter(Boolean))].join(", "),
       handhelds: crmMine.filter(r => r.serial || r.model).map(r => ({ serial: r.serial, model: r.model, connection: r.connection, status: r.status, crm: r.crm })),
       pm: pmMine, marketing: mkMine, canSales: !!d.canSales, portal12, complianceEntries: compNow ? compNow.entries : [],
       evacuation: evac && (evac.corridor || evac.assembly) ? { corridor: evac.corridor || "", assembly: evac.assembly || "", note: evac.note || "" } : null
