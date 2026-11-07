@@ -174,7 +174,7 @@ function draw(){
   $("#sub").textContent = P.all ? "All flagships" : P.siteNames[P.sites[0]] || "";
   const I = P.items, of = k => I.filter(x => x.kind === k);
   const cnt = { overview: "", vr: of("vr").filter(x => x.followUp).length, bp: of("bp").filter(isOpenBp).length, nr: of("nr").filter(isOpenNr).length,
-    mk: of("mk").filter(mkReview).length, cp: of("cp").filter(x => cpLive(x, nowL())).length, users: U && U.users ? U.users.filter(u => P.all || P.sites.includes(u.site)).length : "" };
+    mk: of("mk").filter(mkReview).length, cp: of("cp").filter(x => cpLive(x, nowL())).length, users: U && U.users ? U.users.filter(u => P.all || (u.sites && u.sites.length ? u.sites : [u.site]).some(x => P.sites.includes(x))).length : "" };
   const tk = { vr: "var(--vr)", bp: "var(--bp)", nr: "var(--nr)", mk: "var(--mk)", cp: "var(--cp)", users: "var(--us)" };
   const lastTxt = k => { const l = P.last[k]; const lab = k === "users" ? "Portal Users" : P.kinds[k].label; return `<span class="it" style="--k:${tk[k]}"><i></i>${esc(lab)}: ${l ? `<b>${esc(ago(l.at))}</b> · ${l.rows}` : "<b>not yet</b>"}</span>`; };
   const tabsH = `<div class="tabs" role="tablist">${TABS.filter(([k]) => k !== "users" || P.can.users).map(([k, n]) => `<button role="tab" data-tab="${k}" class="${tab === k ? "on" : ""}" style="--k:${tk[k] || "var(--brand)"}">${k !== "overview" ? "<i></i>" : ""}${esc(n)}${cnt[k] !== "" && cnt[k] != null ? ` <em>${cnt[k]}${k === "cp" ? " live" : ""}</em>` : ""}</button>`).join("")}</div>`;
@@ -191,7 +191,7 @@ function drawOverview(I){
   const res = vr.length ? Math.round(vr.filter(isDoneVr).length / vr.length * 100) : null;
   const mkR = mk.filter(mkReview), mkOld = mkR.filter(x => (x.age || 0) > 7), mkWeek = mk.filter(x => /^approved/i.test(x.status) && x.from > n && x.from <= D.add(P.today, 7) + "T23:59");
   const cpL = cp.filter(x => cpLive(x, n)), cpToday = cp.filter(x => x.from && x.from.slice(0, 10) === P.today), cpWait = cp.filter(x => /^submitted/i.test(x.status));
-  const usA = U && U.users ? U.users.filter(u => P.all || P.sites.includes(u.site)) : [], us = usA.length ? usA : null, us30 = us ? us.filter(u => u.login && days(u.login.slice(0, 10), U.today) <= 30).length : 0;
+  const usA = U && U.users ? U.users.filter(u => P.all || (u.sites && u.sites.length ? u.sites : [u.site]).some(x => P.sites.includes(x))) : [], us = usA.length ? usA : null, us30 = us ? us.filter(u => u.login && days(u.login.slice(0, 10), U.today) <= 30).length : 0;
   const lastTile = P.can.users
     ? `<div class="card kc" style="--k:var(--us)" data-tab="users"><h4>Portal users active</h4><div class="big">${us ? Math.round(us30 / us.length * 100) : "—"}<small>%</small></div><div class="sub">${us ? `${us30} of ${us.length} logged in during the last 30 days` : U ? "Import the Active Users report" : "Loading…"}</div></div>`
     : `<div class="card kc" style="--k:var(--bp)" data-tab="bp"><h4>Breaches open</h4><div class="big">${bp.filter(isOpenBp).length}</div><div class="sub">${bp.length} in the report</div></div>`;
@@ -358,15 +358,20 @@ function drawUsers(){
   if (U.err) return `<div class="card empty" style="padding:22px">Portal users could not be loaded.</div>`;
   /* Nov 2026: each user's flagship comes from the Account Name ("TOYS R US Verdun Mall" → Verdun Mall); the flagship picker filters the list */
   const SN = U.siteNames || P.siteNames || {}, mine = P.all ? null : new Set(P.sites);
-  const L0 = U.users.filter(u => !mine || mine.has(u.site)), t = U.today, s = q.toLowerCase();
-  const L = L0.filter(u => (!usS || (usS === "-" ? !u.site : u.site === usS)) && (!usT || (u.company || "") === usT));
+  /* Nov 2026: with the account hierarchy a user covers every flagship of its shops (u.sites); Shop / Brand / Company / Group level */
+  const sitesOf = u => u.sites && u.sites.length ? u.sites : u.site ? [u.site] : [];
+  const L0 = U.users.filter(u => !mine || sitesOf(u).some(x => mine.has(x))), t = U.today, s = q.toLowerCase();
+  const L = L0.filter(u => (!usS || (usS === "-" ? !sitesOf(u).length : sitesOf(u).includes(usS))) && (!usT || (u.company || "") === usT));
   const b = u => !u.login ? "never" : days(u.login.slice(0, 10), t) <= 7 ? "7" : days(u.login.slice(0, 10), t) <= 30 ? "30" : days(u.login.slice(0, 10), t) <= 90 ? "90" : "old";
   const BK = [["7", "Last 7 days"], ["30", "8–30 days"], ["90", "31–90 days"], ["old", "Over 90 days"], ["never", "Never logged in"]];
   const c = {}; L.forEach(u => { const k = b(u); c[k] = (c[k] || 0) + 1; });
   const F = L.filter(u => (!usF || b(u) === usF) && (!s || `${u.name} ${u.user} ${u.title} ${u.company} ${SN[u.site] || ""}`.toLowerCase().includes(s)));
   const bk = (rows, color, attr, on) => { const m = Math.max(1, ...rows.map(r => r[1]));
     return rows.map(([lbl, n, key]) => `<div class="hb" ${attr}="${esc(key)}" style="${on === key ? "background:rgba(138,92,192,.1);border-radius:6px" : ""}"><span class="t">${esc(lbl)}</span><span class="b"><i style="width:${n / m * 100}%;background:${color}"></i></span><span class="n">${n}</span></div>`).join(""); };
-  const perSite = {}; L0.forEach(u => { const k = u.site || "-"; perSite[k] = (perSite[k] || 0) + 1; });
+  const perSite = {}; L0.forEach(u => { const ks = sitesOf(u); (ks.length ? ks : ["-"]).forEach(k => perSite[k] = (perSite[k] || 0) + 1); });
+  const LVC = { Shop: "#2E6B5E", Brand: "#7B4FB0", Company: "#9A5B13", Group: "#4A1D6E" };
+  const lvlTag = u => u.level ? `<span class="tag" style="background:${LVC[u.level]}1f;color:${LVC[u.level]};font-weight:800">${u.level}</span> ` : "";
+  const covers = u => { const ks = sitesOf(u); return ks.length ? ks.map(k => SN[k] || k).join(" · ") : (U.lookupLast ? "Not in the lookup" : "No flagship"); };
   const perTen = {}; L.forEach(u => { const k = u.company || ""; if (k) perTen[k] = (perTen[k] || 0) + 1; });
   const filt = [usS ? (usS === "-" ? "No flagship" : SN[usS] || usS) : "", usT].filter(Boolean);
   const TT = {}; L.forEach(u => { const k = (u.title || "").replace(/\s+/g, " ").trim(); if (k) TT[k] = (TT[k] || 0) + 1; });
@@ -381,16 +386,30 @@ function drawUsers(){
     </div>
     <div class="cols"><div>
       <div class="bar"><input class="inp" id="q" placeholder="Search name, email, title or company…" value="${esc(q)}">${usF ? `<span class="pill brand">${esc((BK.find(x => x[0] === usF) || [])[1] || "")} <button data-usf="" style="font-weight:800;margin-left:4px">×</button></span>` : ""}</div>
-      <div class="card" style="padding:4px 6px"><div class="tw"><table class="ut"><thead><tr><th>Name</th><th>Flagship · tenant</th><th>Last login</th><th class="hide-s">Title</th><th class="hide-s">Company</th><th class="hide-s">User since</th></tr></thead>
-        <tbody>${F.slice(0, usLim).map(u => `<tr><td><b>${esc(u.name || "—")}</b><small>${esc(u.user)}</small></td><td><b>${esc(SN[u.site] || "No flagship")}</b><small>${esc(u.company || "—")}</small></td><td>${u.login ? esc(dt(u.login)) + `<small>${days(u.login.slice(0, 10), t)} days ago</small>` : `<span class="tag">Never</span>`}</td><td class="hide-s">${esc(u.title)}</td><td class="hide-s">${esc(u.company || (u.site ? U.siteNames[u.site] || "" : ""))}</td><td class="hide-s">${esc(dt((u.created || "").slice(0, 10)))}</td></tr>`).join("")}</tbody></table></div></div>
+      <div class="card" style="padding:4px 6px"><div class="tw"><table class="ut"><thead><tr><th>Name</th><th>Level · flagships · tenant</th><th>Last login</th><th class="hide-s">Title</th><th class="hide-s">Company</th><th class="hide-s">User since</th></tr></thead>
+        <tbody>${F.slice(0, usLim).map(u => `<tr><td><b>${esc(u.name || "—")}</b><small>${esc(u.user)}</small></td><td>${lvlTag(u)}<b style="cursor:${u.tree ? "pointer" : "default"}" ${u.tree ? `data-utree="${esc(u.user)}"` : ""}>${esc(covers(u))}</b><small>${esc(u.company || "—")}${u.tree ? " · tap for the tree" : ""}</small></td><td>${u.login ? esc(dt(u.login)) + `<small>${days(u.login.slice(0, 10), t)} days ago</small>` : `<span class="tag">Never</span>`}</td><td class="hide-s">${esc(u.title)}</td><td class="hide-s">${esc(u.company || (u.site ? U.siteNames[u.site] || "" : ""))}</td><td class="hide-s">${esc(dt((u.created || "").slice(0, 10)))}</td></tr>`).join("")}</tbody></table></div></div>
       ${F.length > usLim ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="usMore">Show more · ${F.length - usLim} left</button></div>` : ""}
     </div><div>
       <div class="card panel"><div class="sec">Last login</div>${bars(BK.map(([k, l]) => [l, c[k] || 0, "", k]), "var(--us)")}<div class="sub" style="margin-top:8px">Tap a line to list those users. Users who never logged in or not for 90 days are the first to review for licences.</div></div>
       <div class="card panel"><div class="sec">Top titles · ${L.length - Object.values(TT).reduce((a, n) => a + n, 0)} without a title</div>${bars(Object.entries(TT).sort((a, b) => b[1] - a[1]).slice(0, 8), "var(--brand-2)")}</div>
-      ${P.all ? `<div class="card panel"><div class="sec">Users per flagship${usS ? ` <button class="btn ghost small" data-uss="" style="float:right">All</button>` : ""}</div>${bk([...Object.keys(SN).filter(k => perSite[k]).map(k => [SN[k], perSite[k], k]), ...(perSite["-"] ? [["No flagship", perSite["-"], "-"]] : [])], "var(--us)", "data-uss", usS)}<div class="sub" style="margin-top:8px">From the Account Name in the Active Users report. Tap a flagship to list its users.</div></div>` : ""}
+      ${P.all ? `<div class="card panel"><div class="sec">Users per flagship${usS ? ` <button class="btn ghost small" data-uss="" style="float:right">All</button>` : ""}</div>${bk([...Object.keys(SN).filter(k => perSite[k]).map(k => [SN[k], perSite[k], k]), ...(perSite["-"] ? [["No flagship", perSite["-"], "-"]] : [])], "var(--us)", "data-uss", usS)}<div class="sub" style="margin-top:8px">${U.lookupLast ? `A brand, company or group user counts in every flagship where it has a running shop. Account hierarchy: ${U.lookupLast.rows} contracts, imported ${esc(dt(U.lookupLast.at))}.` : "From the Account Name. Import the account hierarchy (Tenant_Name · Parent_Tenant · Parent_Company · Parent_Group) to place brand, company and group users."} Tap a flagship to list its users.</div></div>` : ""}
       <div class="card panel"><div class="sec">Users per tenant · top 10${usT ? ` <button class="btn ghost small" data-ust="" style="float:right">All</button>` : ""}</div>${bk(Object.entries(perTen).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => [k, n, k]), "var(--brand-2)", "data-ust", usT)}</div>
       ${U.users.some(u => u.site || u.company) ? "" : `<div class="note warnnote">⚠ This Active Users report has no <b>Account Name</b> column, so users can't be placed per flagship or tenant. Ask IT to add it.</div>`}
     </div></div>`;
+}
+/* Portal Users: the account tree of one user (group → company → brand → shops) */
+function showTree(user){
+  const u = (U.users || []).find(x => x.user === user); if (!u || !u.tree) return;
+  const T = u.tree, SN = U.siteNames || {}, d = document.getElementById("utree") || document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "utree" }));
+  d.style.cssText = "border:0;border-radius:18px;padding:0;width:min(560px,calc(100% - 20px));max-height:88dvh";
+  const row = (lbl, v, on) => v ? `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)"><span style="width:84px;color:var(--muted);font-size:.74rem;font-weight:800;letter-spacing:.05em">${lbl.toUpperCase()}</span><b style="${on ? "color:var(--brand)" : ""}">${esc(v)}${on ? " ← this user" : ""}</b></div>` : "";
+  d.innerHTML = `<div style="padding:16px 18px 8px"><b style="font-size:1.05rem">${esc(u.name || u.user)}</b><div class="sub">${esc(u.title || "")} · ${esc(u.user)}</div></div>
+    <div style="padding:4px 18px 10px;max-height:60dvh;overflow:auto">${row("Group", T.group, u.level === "Group")}${row("Company", T.company, u.level === "Company")}${row("Brand", T.brand, u.level === "Brand")}
+      <div style="margin-top:10px;font-size:.74rem;font-weight:800;letter-spacing:.05em;color:var(--muted)">SHOPS${u.level === "Shop" ? " · THIS USER" : ""} · ${T.shops.length}</div>
+      ${T.shops.map(x => `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(x.shop)}</span><span class="sub">${esc(SN[x.site] || x.site || "—")}${x.running ? "" : " · ended"}</span></div>`).join("")}</div>
+    <div style="padding:12px 18px;border-top:1px solid var(--line);text-align:right"><button class="btn" id="utC">Close</button></div>`;
+  d.querySelector("#utC").onclick = () => d.close(); d.onclick = e => { if (e.target === d) d.close(); };
+  d.showModal();
 }
 function wire(){
   $("#app").onclick = e => {
@@ -402,6 +421,7 @@ function wire(){
     const mt = e.target.closest("[data-mkt],[data-mkt2]"); if (mt){ const v = mt.dataset.mkt != null ? mt.dataset.mkt : mt.dataset.mkt2; mkType = mkType === v && mt.dataset.mkt2 != null ? "" : v; LIM = 40; return draw(); }
     const cf = e.target.closest("[data-cpf]"); if (cf){ cpF = cf.dataset.cpf; LIM = 40; return draw(); }
     const uf = e.target.closest("[data-usf]"); if (uf){ usF = uf.dataset.usf; usLim = 150; return draw(); }
+    const tr = e.target.closest("[data-utree]"); if (tr) return showTree(tr.dataset.utree);
     const us2 = e.target.closest("[data-uss]"); if (us2){ usS = usS === us2.dataset.uss ? "" : us2.dataset.uss; usT = ""; usLim = 150; return draw(); }
     const ut2 = e.target.closest("[data-ust]"); if (ut2){ usT = usT === ut2.dataset.ust ? "" : ut2.dataset.ust; usLim = 150; return draw(); }
     if (e.target.closest("[data-usclr]")){ usS = ""; usT = ""; return draw(); }
