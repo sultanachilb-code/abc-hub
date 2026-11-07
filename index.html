@@ -1339,6 +1339,25 @@ async function boot(){
   if (ME.user.role === "EXTERNAL") return externalHome();   // External accounts: only their systems
   startHub();
 }
+/* Portal account hierarchy (Nov 2026): once a day, tell the admin how many portal tenants are still not linked — the same alert is emailed by the daily check */
+function lkPopup(){
+  const A = ME.lkAlert; if (!A || !ME.admin || (A.imported && !A.tenants)) return;
+  if (typeof sheet !== "undefined" && sheet.open) return sheet.addEventListener("close", () => setTimeout(lkPopup, 400), { once: true });   // after the welcome sheet
+  const k = "lkpop:" + A.day; try { if (localStorage.getItem(k)) return; localStorage.setItem(k, "1"); } catch {}
+  const d = document.createElement("dialog"); d.className = "lkpop";
+  d.style.cssText = "border:0;border-radius:18px;padding:0;max-width:min(440px,calc(100vw - 32px));box-shadow:0 20px 60px rgba(0,0,0,.25);font:inherit";
+  const t = A.imported ? `${A.tenants} tenant${A.tenants === 1 ? " is" : "s are"} still not linked to their hierarchy` : "The account hierarchy is not imported yet";
+  const b = A.imported ? `${A.tenants} portal tenant account${A.tenants === 1 ? "" : "s"} (${A.users} of ${A.total} active users) are not in the Account hierarchy. Upload the data in Salesforce, then import the new hierarchy.`
+    : `${A.total} active portal users cannot be placed under a shop, brand, company or group. Import the Account hierarchy report.`;
+  d.innerHTML = `<div style="background:#B7791F;color:#fff;padding:14px 18px;font-weight:800">⚠ ABC Connect · account hierarchy</div>
+    <div style="padding:16px 18px"><b style="display:block;font-size:1.05rem;margin-bottom:6px">${esc(t)}</b><p style="margin:0 0 10px;color:#5b5368">${esc(b)}</p>
+    <p style="margin:0;color:#5b5368;font-size:.85rem">Where: Portal Dashboard → Import, or Admin → Report mailbox → Import now. This alert is also emailed to the admins each day.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn ghost" data-x>Later</button><button class="btn" data-go>Open Portal Dashboard</button></div></div>`;
+  document.body.appendChild(d);
+  d.querySelector("[data-x]").onclick = () => d.close();
+  d.querySelector("[data-go]").onclick = () => { d.close(); const a = ALL_APPS.find(x => x.id === "portal"); if (a) launch(a); };
+  d.addEventListener("close", () => d.remove()); d.showModal();
+}
 /* ---------- External accounts (Oct 2026): a small home with only the systems given to them ---------- */
 function externalHome(){
   const S = ME.user.sys || {}, apps = ALL_APPS.filter(a => S[a.id]);
@@ -1506,6 +1525,7 @@ function startHub(){
   checkApprovals();
   route();
   setInterval(() => { if (!document.hidden){ loadBrief(); if (briefOn()) loadRoleBrief(); } }, 5 * 60 * 1000);
+  setTimeout(lkPopup, 2600);   // Portal: tenants not linked to the account hierarchy (admins, once a day)
   setTimeout(() => { if (!welcomeSeen()){ welcomeSheet(); sheet.addEventListener("close", guideFirst, { once: true }); } else { offerPasskey(); guideFirst(); } }, 900);   // Welcome feature: first sign-in on this device
 }
 

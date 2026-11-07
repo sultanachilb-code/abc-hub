@@ -55,6 +55,13 @@ dialog.dl::backdrop{background:rgba(20,8,35,.45)}
 .spark{display:flex;align-items:flex-end;gap:5px;height:70px;margin:6px 0}.spark div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}.spark i{display:block;width:100%;border-radius:5px 5px 0 0;min-height:3px}.spark small{font-size:.66rem;color:var(--muted)}
 @media (max-width:760px){.k4{grid-template-columns:1fr 1fr}.ph .x{margin-left:0}table.k th:nth-child(3),table.k td:nth-child(3){display:none}}
 @media print{.top,.noprint{display:none!important}body{background:#fff}.ph{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.hier .hm{color:var(--mut,#6b6478);margin:4px 0 0;font-size:.88rem}
+.hier .hc{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:8px;margin:8px 0}
+.hier .hl{border:1px solid var(--line,#e4dfec);border-radius:12px;padding:8px 10px;min-width:0}.hier .hl small{display:block;font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mut,#6b6478)}
+.hier .hl b{display:block;overflow-wrap:anywhere}.hier details{margin-top:8px}.hier summary{cursor:pointer;font-weight:700;padding:6px 0}
+.hier .tw{overflow-x:auto}.hier .tg{font-size:.7rem;font-weight:700;border-radius:99px;padding:1px 7px;background:#efe7f8;color:#4a1f73;white-space:nowrap}.hier .tg.g{background:#e3f4ea;color:#1f8a4c}
+.hier .hu{margin:6px 0}.hier .hu>small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mut,#6b6478)}
+.hier .ur{display:grid;gap:1px;padding:6px 0;border-bottom:1px solid var(--line,#e4dfec)}.hier .ur span,.hier .ur small{color:var(--mut,#6b6478);font-size:.82rem}
 </style>
 </head>
 <body>
@@ -187,11 +194,29 @@ function drawU(){
         ${pRow("vr", "Violations")}${pRow("bp", "Penalties")}${pRow("nr", "ABC Requests")}
         <tr class="sec"><td colspan="4">People · Tenants Directory</td></tr>
         <tr class="go" data-d="emp"><td>Employees</td><td>${pill(U.contacts.length, U.contacts.length ? "" : "a", 0, esc([...new Set(U.contacts.map(x => x.position).filter(Boolean))].slice(0, 3).join(" · ")))}</td><td></td><td class="more">See them ›</td></tr>
-      </tbody></table></div>`;
+      </tbody></table></div>${hierBox(U.hierarchy)}`;
   $("#cls").onclick = () => drawO(); $("#prt").onclick = () => print();
   const up = $("#up2"); if (up) up.onclick = () => $("#sfile").click();
   const ym = $("#ytm"); if (ym) ym.onchange = e => { SM = Number(e.target.value); drawU(); };
   $("#app").querySelectorAll("[data-d]").forEach(r => r.onclick = () => detail(r.dataset.d, S));
+}
+
+/* ---------- company & group (Salesforce account hierarchy, Nov 2026) ---------- */
+function hierBox(H){
+  if (!H) return "";
+  if (!H.imported) return `<div class="box hier"><h3><span>Company &amp; group · ABC Connect</span></h3><p class="hm">The account hierarchy is not imported yet — Portal Dashboard → Import (Account hierarchy report).</p></div>`;
+  if (!H.found) return `<div class="box hier"><h3><span>Company &amp; group · ABC Connect</span></h3><p class="hm">This tenant is not in the account hierarchy yet — ask IT to add it in Salesforce, then import the new hierarchy.</p></div>`;
+  const lv = (k, v) => v ? `<div class="hl"><small>${k}</small><b>${esc(v)}</b></div>` : "";
+  const here = H.shops.filter(x => x.here), other = H.shops.filter(x => !x.here), runO = other.filter(x => x.running);
+  const shop = x => `<tr><td>${esc(x.shop)}${x.here ? ` <span class="tg">this shop</span>` : ""}</td><td>${esc(x.brand || "")}</td><td>${esc(x.siteName || "—")}</td><td>${x.running ? `<span class="tg g">running</span>` : `<span class="tg">ended</span>`}</td></tr>`;
+  const by = ["Shop", "Brand", "Company", "Group"].map(l => [l, H.users.filter(u => u.level === l)]).filter(x => x[1].length);
+  return `<div class="box hier"><h3><span>Company &amp; group · ABC Connect</span><span>${H.running ? "" : "contract ended"}</span></h3>
+    <div class="hc">${lv("Group", H.group)}${lv("Company", H.company)}${lv("Brand", H.brand)}${lv("Shop", H.shop)}</div>
+    <details ${other.length <= 6 ? "open" : ""}><summary>Shops of ${esc(H.company || H.brand)} · ${H.shops.length} (${runO.length + here.filter(x => x.running).length} running)</summary>
+      <div class="tw"><table class="k"><thead><tr><th>Shop</th><th>Brand</th><th>Flagship</th><th></th></tr></thead><tbody>${[...here, ...other].map(shop).join("")}</tbody></table></div></details>
+    <details ${H.users.length && H.users.length <= 8 ? "open" : ""}><summary>Portal users for this tenant · ${H.usersTotal}${H.usersTotal > H.users.length ? ` (first ${H.users.length})` : ""}</summary>
+      ${by.length ? by.map(([l, L]) => `<div class="hu"><small>${l} level</small>${L.map(u => `<div class="ur"><b>${esc(u.name)}</b><span>${esc(u.title || "")}</span><small>${esc(u.account)}${u.login ? " · last login " + esc(dd(String(u.login).slice(0, 10))) : ""}</small></div>`).join("")}</div>`).join("")
+        : `<p class="hm">No active portal user for this shop, brand, company or group.</p>`}</details></div>`;
 }
 
 /* ---------- details ---------- */

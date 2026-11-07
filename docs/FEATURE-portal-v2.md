@@ -34,3 +34,8 @@ The Portal Dashboard (Dashboards → Portal Dashboard) now reads seven ABC Conne
 2. Active Users: add **Account Name** and **Branch**.
 3. Violations & Requests: add **Description** (then the Resolved/Unresolved report is not needed).
 4. All reports: add **Record ID** (Open in portal goes straight to the record); Marketing Requests: fill **Branch** on every line.
+
+## Daily alert: tenants not linked to the hierarchy (Nov 2026)
+`lkAlertRun` (cron, once a day from 09:00 Beirut, claim `pt:lkalert:<day>`) places the active portal users against `portal_lookup`. Tenant accounts that match no shop / brand / company / group are counted (distinct accounts).
+- If any (or the hierarchy was never imported): `notifyAdmins` → a hub notification and an email to every admin: "X tenants are still not linked to their hierarchy — upload the data and import the new hierarchy".
+- The day's figures are kept in meta `pt:lkalert` and returned by `/api/me` to admins; the hub shows them once a day as a pop-up (after the welcome sheet) with **Open Portal Dashboard**.
