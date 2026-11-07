@@ -123,7 +123,7 @@ function drawImport(o){
         <div class="muted" style="font-size:.8rem">${D.long(yday)}${y.status === "in" ? ` · <b style="color:var(--text)">${N(y.entries)}</b> entries · ${y.source === "liban" ? "Liban Park" : esc(y.by)} at ${time(y.at)}` : ""}</div>
         ${y.status !== "in" ? `<div class="tl">${slots.map(h => `<span class="${h <= hr ? "d" : ""}">${String(h).padStart(2, "0")}:00${h === 9 ? " link" : h === 14 ? " last" : ""}</span>`).join("")}</div>` : ""}
         ${!x.contacts ? `<div class="ban bad" style="font-size:.78rem;padding:8px 10px">No Liban Park email set — no emails go out. ${C.settings ? "Settings → add it." : ""}</div>` : ""}
-        <div class="muted" style="font-size:.78rem">Parking duration ${esc(mLabel(x.durLast.month))}: ${x.durLast.done ? "<b class='up'>received</b>" : "<b>not received</b>"}${canEdit(s) ? ` · <a href="#" data-dur="${s}">${x.durLast.done ? "open" : "enter / send link"}</a>` : ""}</div>`}
+`}
     </div>`; }).join("");
   const rows = (s) => o.sites[s].list.map(d => `<tr class="click" data-day="${d.day}" data-site="${s}"><td>${esc(D.fmt(d.day, { weekday: "short", year: "numeric" }))}</td>
     <td>${pill(d.status)}</td><td class="n">${N(d.entries)}</td><td class="n">${N(d.exits)}</td><td>${d.status === "in" ? `${d.source === "liban" ? "Liban Park" : d.source === "import" ? "History import" : esc(d.by)} · ${time(d.at)}` : d.sentAt ? `Link sent ${time(d.sentAt)}${d.reminders ? ` · ${d.reminders} reminder${d.reminders > 1 ? "s" : ""}` : ""}` : "—"}</td></tr>`).join("");
@@ -139,6 +139,16 @@ function gateInputs(gates, cur, ro){
   const ins = gates.filter(g => g.dir === "in"), outs = gates.filter(g => g.dir === "out");
   return `<label>CAR ENTRIES</label>${ins.map(box).join("")}${outs.length ? `<label>CAR EXITS</label>${outs.map(box).join("")}` : ""}`;
 }
+/* Nov 2026: cars per hour · payments per machine (transactions) · parking duration — same as the Liban Park form */
+function extraInputs(site, cur, ro){
+  const m = (C.mach || {})[site] || { apm: [], hh: [] }, cell = (lbl, attr, v) => `<div><label>${esc(lbl)}</label>${ro ? `<div style="font-weight:800">${v ? N(v) : "—"}</div>` : `<input inputmode="numeric" ${attr} value="${v || ""}">`}</div>`;
+  const h = (cur && cur.h) || [], du = (cur && cur.dur) || [], tx = (cur && cur.tx) || { apm: {}, hh: {} };
+  if (ro && !h.length && !du.length && !(cur && cur.tx)) return `<div class="muted" style="font-size:.8rem">No hourly, payment or duration figures for this day.</div>`;
+  return `<label>CARS ENTERING PER HOUR</label><div class="gin" style="--n:4">${C.hours.map((x, i) => cell(`${x}–${C.hours[i + 1] || "23:00"}`, `data-h="${i}"`, h[i])).join("")}</div>
+    ${m.apm.length ? `<label>PAY MACHINES · TRANSACTIONS</label><div class="gin" style="--n:${Math.min(3, m.apm.length)}">${m.apm.map(n => cell(n, `data-tx="apm" data-n="${esc(n)}"`, (tx.apm || {})[n])).join("")}</div>` : ""}
+    ${m.hh.length ? `<label>HANDHELDS · TRANSACTIONS</label><div class="gin" style="--n:${Math.min(3, m.hh.length)}">${m.hh.map(n => cell(n, `data-tx="hh" data-n="${esc(n)}"`, (tx.hh || {})[n])).join("")}</div>` : ""}
+    <label>PARKING DURATION · CARS THAT LEFT</label><div class="gin" style="--n:4">${C.buckets.map((b, i) => cell(b, `data-du="${i}"`, du[i])).join("")}</div>`;
+}
 async function openDay(site, day){
   const d = $("#dlg"); d.innerHTML = `<div class="h"><b>Loading…</b></div>`; d.showModal();
   let r; try { r = await api(`ops/ff/day?site=${site}&day=${day}`); } catch (e){ d.close(); return toast(e.message, true); }
@@ -146,7 +156,7 @@ async function openDay(site, day){
   const view = () => {
     d.innerHTML = `<div class="h"><b>${esc(C.sites[site])}</b><span class="badge">${esc(D.long(day))}</span>${x ? pill("in") : pill(day === D.add(C.today, -1) && C.hour <= 14 ? "wait" : "miss")}</div>
       <div class="bd">${x ? `<div class="kpi"><div class="k"><b>${N(x.entries)}</b><span>ENTRIES</span></div><div class="k"><b>${N(x.noemp)}</b><span>WITHOUT EMPLOYEES</span></div>${x.detail ? `<div class="k"><b>${N(x.exits)}</b><span>EXITS</span></div><div class="k"><b>${N(x.free)}</b><span>FREE TICKETS</span></div>` : ""}</div>
-        ${x.detail ? gateInputs(r.gates, x, true) : `<div class="muted">Imported as a total only (no gate details).</div>`}
+        ${x.detail ? gateInputs(r.gates, x, true) + extraInputs(site, x, true) : `<div class="muted">Imported as a total only (no gate details).</div>`}
         ${C.revenue && x.detail ? `<div class="muted">Membership <b>${N(x.membership)} LBP</b> · Total balance <b>${N(x.balance)} LBP</b></div>` : ""}`
         : `<div class="ban">Not received.${r.sentAt ? ` Link sent at ${time(r.sentAt)}${r.reminders ? ` · ${r.reminders} reminder(s)` : ""}.` : ""}</div>`}
         ${r.log.length ? `<div class="log">${r.log.map(l => `${esc(new Date(l.at).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))} · ${esc(l.what)} · ${esc(l.by_name)}`).join("<br>")}</div>` : ""}
@@ -160,7 +170,7 @@ async function openDay(site, day){
   const edit = () => {
     const det = x && x.detail ? x : null;
     d.innerHTML = `<div class="h"><b>${x ? "Correct" : "Enter"} · ${esc(C.sites[site])}</b><span class="badge">${esc(D.long(day))}</span></div>
-      <div class="bd fl">${gateInputs(r.gates, det, false)}
+      <div class="bd fl">${gateInputs(r.gates, det, false)}${extraInputs(site, det, false)}
         <div class="gin" style="--n:${C.revenue ? 3 : 1}"><div><label>FREE TICKETS</label><input inputmode="numeric" id="free" value="${det ? det.free || "" : ""}"></div>
         ${C.revenue ? `<div><label>MEMBERSHIP (LBP)</label><input inputmode="numeric" id="membership" value="${det ? det.membership || "" : ""}"></div><div><label>TOTAL BALANCE (LBP)</label><input inputmode="numeric" id="balance" value="${det ? det.balance || "" : ""}"></div>` : ""}</div>
         <div class="ban" id="tot" style="font-size:.84rem"></div>
@@ -169,13 +179,14 @@ async function openDay(site, day){
     const num = v => Math.max(0, Math.round(Number(String(v || "").replace(/[,\s]/g, ""))) || 0);
     const coll = () => { const g = {}; d.querySelectorAll("[data-g]").forEach(i => (g[i.dataset.g] = g[i.dataset.g] || {})[i.dataset.k] = num(i.value));
       const v = id => { const el = d.querySelector("#" + id); return el ? num(el.value) : 0; };
-      return { g, free: v("free"), membership: v("membership"), balance: v("balance") }; };
+      const tx = { apm: {}, hh: {} }; d.querySelectorAll("[data-tx]").forEach(i => tx[i.dataset.tx][i.dataset.n] = num(i.value));
+      return { g, free: v("free"), membership: v("membership"), balance: v("balance"), h: [...d.querySelectorAll("[data-h]")].map(i => num(i.value)), dur: [...d.querySelectorAll("[data-du]")].map(i => num(i.value)), tx }; };
     const sums = () => { const c = coll(); let tin = 0, tout = 0; for (const gt of r.gates){ const s = Object.values(c.g[gt.id] || {}).reduce((a, b) => a + b, 0); d.querySelector(`[data-sum="${gt.id}"]`).textContent = "= " + N(s); gt.dir === "in" ? tin += s : tout += s; }
       $("#tot").innerHTML = `Entries <b>${N(tin)}</b> · Exits <b>${N(tout)}</b>`; };
     d.querySelectorAll("input[data-g]").forEach(i => i.oninput = sums); sums();
     $("#bk").onclick = view;
     $("#sv").onclick = async () => { const b = $("#sv"); b.disabled = true;
-      try { await api("ops/ff/day", { site, day, ...coll(), note: x ? ($("#note").value || "") : "" }); toast("Saved"); CACHE = {}; d.close(); draw(); } catch (e){ toast(e.message, true); b.disabled = false; } };
+      try { await api("ops/ff/day", { site, day, ...coll(), note: x ? ($("#note").value || "") : "" }); toast("Saved"); CACHE = {}; MON = {}; d.close(); draw(); } catch (e){ toast(e.message, true); b.disabled = false; } };
   };
   view();
 }
@@ -190,7 +201,7 @@ async function openDur(site, month){
   $("#cl").onclick = () => d.close();
   const s = $("#snd"); if (s) s.onclick = async () => { s.disabled = true; try { const o = await api("ops/ff/send", { site, kind: "dur", period: month }); toast(`Sent to ${o.to.join(", ")}`); d.close(); } catch (e){ toast(e.message, true); s.disabled = false; } };
   $("#sv").onclick = async () => { const dur = [...d.querySelectorAll("[data-i]")].map(i => Math.max(0, Math.round(Number(String(i.value || "").replace(/[,\s]/g, ""))) || 0));
-    try { await api("ops/ff/dur", { site, month, dur }); toast("Saved"); CACHE = {}; d.close(); draw(); } catch (e){ toast(e.message, true); } };
+    try { await api("ops/ff/dur", { site, month, dur }); toast("Saved"); CACHE = {}; MON = {}; d.close(); draw(); } catch (e){ toast(e.message, true); } };
 }
 
 /* ---------- data (one calendar year + last December, per flagship) ---------- */
@@ -269,37 +280,118 @@ async function drawReport(){
 }
 
 /* ---------- 3. Analysis ---------- */
+/* ---------- 3. Analysis (Nov 2026): a landing page of icons, each report on its own page — built from the daily figures, Liban Park's monthly reports where they exist ---------- */
+let ANA = "", ASITE = "", MON = {};
+const PAGES = [["ee", "🚗", "Entries & exits", "Month by month, year over year"], ["adm", "🎫", "Parking admissions", "Tickets · VIP cards · Employees · Soffa"],
+  ["peak", "⏱", "Peak times", "Cars entering per hour, 10:00 → 23:00"], ["dur", "⌛", "Parking duration", "How long cars stay"], ["soffa", "🅿️", "Soffa", "Entrances, exits and the gap"],
+  ["tx", "💳", "Machine transactions", "Pay machines and handhelds per exit"], ["week", "📅", "Weekdays", "Average entries per weekday"]];
+const MN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+async function monthsOf(site){ if (!MON[site]) MON[site] = await api(`ops/ff/monthly?site=${site}&from=2017-01&to=${C.today.slice(0, 7)}`); return MON[site]; }
+const pctS = (a, b) => b ? (a / b * 100).toFixed(1) + "%" : "—";
+const srcNote = (list, k) => { const r = list.filter(x => x.src[k] === "report").length, d = list.filter(x => x.src[k] === "daily"); return `<div class="muted" style="font-size:.76rem;padding:8px 14px">${r ? `${r} month${r > 1 ? "s" : ""} from Liban Park's monthly report` : ""}${r && d.length ? " · " : ""}${d.length ? `${d.length} month${d.length > 1 ? "s" : ""} from the daily figures${d.some(x => x.days < x.mdays) ? " (current month: " + d.filter(x => x.days < x.mdays).map(x => `${x.days} of ${x.mdays} days`).join(", ") + ")" : ""}` : ""}${!r && !d.length ? "No figures yet." : ""}</div>`; };
 async function drawAnalysis(){
-  const sites = shown(); if (!sites.length) return shell(`<div class="ban">No flagship is switched on.</div>`);
-  const y = YEAR, Y = {}, DU = {};
-  for (const s of sites){ Y[s] = await yearDays(s, +y); DU[s] = await api(`ops/ff/dur?site=${s}&from=${y}-01&to=${y}-12`); }
-  const yl = s => Object.values(Y[s].by).filter(x => x.day.startsWith(y));
-  /* weekday pattern */
-  const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const wd = sites.map(s => { const a = WD.map(() => [0, 0]); for (const x of yl(s)){ const k = (D.parse(x.day).getUTCDay() + 6) % 7; a[k][0] += x.entries; a[k][1]++; } return a.map(([t, n]) => n ? t / n : 0); });
-  const wmx = Math.max(1, ...wd.flat());
-  const wdBlock = `<div class="box"><h3>Average car entries by weekday · ${y}</h3><div style="padding:8px 0">${WD.map((n, i) => `<div class="bar"><span>${n}</span><span style="display:grid;gap:3px">${sites.map((s, j) => `<span class="mini"><i style="width:${wd[j][i] / wmx * 100}%;background:${COLORS[j]}"></i></span>`).join("")}</span><b>${sites.map((s, j) => N(Math.round(wd[j][i]))).join("<br>")}</b></div>`).join("")}</div>
-    ${sites.length > 1 ? `<div class="lg" style="padding-top:4px">${sites.map((s, j) => `<span style="--c:${COLORS[j]}">${esc(C.sites[s])}</span>`).join("")}</div>` : ""}</div>`;
-  /* parking duration */
-  const durBlock = sites.map((s, j) => { const ms = DU[s].months; if (!ms.length) return `<div class="box"><h3>Parking duration · ${esc(C.sites[s])} · ${y}</h3><div class="pad muted">No parking duration for ${y} yet. Liban Park sends it on the 1st of each month${C.settings ? " — older years: History import" : ""}.</div></div>`;
-    const tot = DU[s].buckets.map((_, i) => ms.reduce((a, m) => a + (m.data[i] || 0), 0)), all = tot.reduce((a, b) => a + b, 0), mx = Math.max(1, ...tot);
-    const groups = [["Up to 15 min", [0]], ["1 hour", [1]], ["2 hours", [2]], ["3 hours", [3]], ["4 hours", [4]], ["5 hours", [5]], ["6 hours +", [6, 7, 8, 9, 10, 11, 12]]];
-    const gv = groups.map(([n, ix]) => [n, ix.reduce((a, i) => a + tot[i], 0)]), gmx = Math.max(1, ...gv.map(x => x[1]));
-    const one2 = all ? (tot[1] + tot[2]) / all * 100 : 0;
-    return `<div class="box"><h3>Parking duration · ${esc(C.sites[s])} · ${y} <span class="muted" style="text-transform:none;letter-spacing:0">· ${ms.length} month${ms.length > 1 ? "s" : ""}, ${N(all)} cars</span></h3>
-      <div style="padding:8px 0">${gv.map(([n, v]) => `<div class="bar"><span>${n}</span><span class="mini"><i style="width:${v / gmx * 100}%;background:${COLORS[j]}"></i></span><b>${all ? (v / all * 100).toFixed(1) : 0}%</b></div>`).join("")}</div>
-      <div class="muted pad" style="font-size:.8rem;padding-top:0">${one2.toFixed(0)}% of cars stay 1–2 hours.</div></div>`; }).join("");
-  /* employees share and gates */
-  const shares = sites.map(s => { const l = yl(s).filter(x => x.detail); const t = sum(l, "entries"); return { s, emp: t ? sum(l, "employees") / t * 100 : null, days: l.length }; });
-  const years = []; for (let k = +C.today.slice(0, 4); k >= 2023; k--) years.push(String(k));
-  shell(`<div class="box"><div class="pad" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>Year</b><select class="sel" id="yr">${years.map(k => `<option ${k === y ? "selected" : ""}>${k}</option>`).join("")}</select>
-      <span class="muted" style="font-size:.8rem">${sites.map(s => `${esc(C.sites[s])}: ${yl(s).length} days`).join(" · ")}</span></div></div>
-    <div class="grid">${wdBlock}${durBlock}</div>
-    <div class="box"><h3>Employee cars · share of entries · ${y}</h3><div class="tw"><table class="t">${shares.map(x => `<tr><td>${esc(C.sites[x.s])}</td><td class="n"><b>${x.emp == null ? "—" : x.emp.toFixed(1) + "%"}</b></td><td class="muted">${x.days} days with gate details</td></tr>`).join("")}</table></div></div>
-    <div class="empty"><b>More analysis is added as needed</b> — for example the same month last year, peaks around events and campaigns, gate trends, or revenue per car (when revenue is on). Ask and it is added here.</div>`);
-  $("#yr").onchange = e => { YEAR = e.target.value; draw(); };
+  const sites = sitesOn().length ? sitesOn() : Object.keys(C.sites); if (!sites.length) return shell(`<div class="ban">No flagship is switched on.</div>`);
+  if (!sites.includes(ASITE)) ASITE = SITE !== "ALL" && sites.includes(SITE) ? SITE : sites[0];
+  const R = await monthsOf(ASITE), y = YEAR, yl = R.months.filter(m => m.month.startsWith(y));
+  const years = [...new Set(R.months.map(m => m.month.slice(0, 4)))].sort().reverse(); if (!years.includes(y)) years.unshift(y);
+  const bar = `<div class="box"><div class="pad" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${ANA ? `<button class="btn ghost small" id="aBk">‹ Analysis</button>` : ""}
+    <select class="sel" id="aS">${sites.map(s => `<option value="${s}" ${s === ASITE ? "selected" : ""}>${esc(C.sites[s])}</option>`).join("")}</select>
+    <select class="sel" id="yr">${years.map(k => `<option ${k === y ? "selected" : ""}>${k}</option>`).join("")}</select><span style="flex:1"></span>
+    <button class="btn ghost small" id="xl">⤓ Excel · the 7 reports</button></div></div>`;
+  let body = "";
+  if (!ANA) body = `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr))">${PAGES.map(([k, ic, n, d]) => `<div class="sc" data-pg="${k}" style="cursor:pointer"><div style="font-size:1.6rem">${ic}</div><b class="nm">${n}</b><span class="muted" style="font-size:.8rem">${d}</span></div>`).join("")}</div>
+    <div class="muted" style="font-size:.8rem">Every report is built from Liban Park's daily figures. Months covered by their monthly report (Verdun history) use that report.</div>`;
+  else if (ANA === "week") return weekPage(bar);
+  else body = page(ANA, R, yl, y);
+  shell(bar + body);
+  bindAna();
 }
-
+function bindAna(){
+  const v = $("#view");
+  v.querySelectorAll("[data-pg]").forEach(x => x.onclick = () => { ANA = x.dataset.pg; draw(); });
+  const bk = $("#aBk"); if (bk) bk.onclick = () => { ANA = ""; draw(); };
+  $("#aS").onchange = e => { ASITE = e.target.value; draw(); };
+  $("#yr").onchange = e => { YEAR = e.target.value; draw(); };
+  $("#xl").onclick = () => excel7().catch(e => toast(e.message, true));
+}
+function tbl(head, rows, foot){ return `<div class="tw"><table class="t"><tr>${head.map((h, i) => `<th${i ? ' class="n"' : ""}>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((c, i) => `<td${i ? ' class="n"' : ""}>${c}</td>`).join("")}</tr>`).join("")}${foot ? `<tr>${foot.map((c, i) => `<td${i ? ' class="n"' : ""}><b>${c}</b></td>`).join("")}</tr>` : ""}</table></div>`; }
+function page(k, R, yl, y){
+  const by = Object.fromEntries(R.months.map(m => [m.month, m])), mm = i => `${y}-${String(i + 1).padStart(2, "0")}`, at = (i, kk) => { const m = by[mm(i)]; return m && m.src[kk] ? m : null; };
+  if (k === "ee"){
+    const ys = [...new Set(R.months.filter(m => m.src.ee).map(m => m.month.slice(0, 4)))].sort().filter(x => x <= y).slice(-4), last = ys.filter(x => x < y).pop();
+    const val = (yy, i, d) => { const m = by[`${yy}-${String(i + 1).padStart(2, "0")}`]; return m && m.src.ee ? m.ee[d] : null; };
+    const upto = MN.map((_, i) => val(y, i, "in") != null).lastIndexOf(true);
+    const ytd = yy => MN.slice(0, upto + 1).reduce((a, _, i) => a + (val(yy, i, "in") || 0), 0);
+    const mx = Math.max(1, ...ys.flatMap(yy => MN.map((_, i) => val(yy, i, "in") || 0))), cols = ["#D9CFE6", "#B79AD6", "#7B4FB0", "#C8A24A"].slice(-ys.length);
+    const t = ytd(y), p = last ? ytd(last) : 0;
+    return `<div class="kpi"><div class="k"><b>${N(t)}</b><span>${upto >= 0 ? `JAN–${MN[upto].slice(0, 3).toUpperCase()} ${y}` : y}</span>${last ? delta(t, p, "vs " + last) : ""}</div>
+      <div class="k"><b>${N(p)}</b><span>SAME MONTHS ${last || ""}</span></div><div class="k"><b>${N(Math.round(t / Math.max(1, upto + 1)))}</b><span>MONTHLY AVERAGE ${y}</span></div></div>
+      <div class="box"><h3>Car entries per month</h3><div class="chart">${MN.map((n, i) => `<div class="b">${ys.map((yy, j) => `<i style="height:${(val(yy, i, "in") || 0) / mx * 100}%;background:${cols[j]}" title="${n} ${yy}: ${N(val(yy, i, "in"))}"></i>`).join("")}<s>${n.slice(0, 3)}</s></div>`).join("")}</div>
+      <div class="lg">${ys.map((yy, j) => `<span style="--c:${cols[j]}">${yy}</span>`).join("")}</div></div>
+      <div class="box"><h3>Entries &amp; exits · ${y}</h3>${tbl(["Month", "Entries", "Exits", "Difference", last ? "Entries " + last : ""].filter(Boolean),
+        MN.map((n, i) => { const m = at(i, "ee"); return [n, m ? N(m.ee.in) : "—", m ? N(m.ee.out) : "—", m ? N(m.ee.out - m.ee.in) : "—", ...(last ? [N(val(last, i, "in"))] : [])]; }),
+        ["Total", N(yl.reduce((a, m) => a + (m.src.ee ? m.ee.in : 0), 0)), N(yl.reduce((a, m) => a + (m.src.ee ? m.ee.out : 0), 0)), "", ...(last ? [N(MN.reduce((a, _, i) => a + (val(last, i, "in") || 0), 0))] : [])])}${srcNote(yl, "ee")}</div>`;
+  }
+  if (k === "adm"){
+    const L = MN.map((n, i) => at(i, "adm")), T = ["t", "c", "e", "s"].map(x => L.reduce((a, m) => a + (m ? m.adm[x] : 0), 0)), all = T.reduce((a, b) => a + b, 0);
+    return `<div class="kpi">${["Tickets", "VIP cards", "Employees", "Soffa"].map((n, i) => `<div class="k"><b>${pctS(T[i], all)}</b><span>${n.toUpperCase()}</span><em class="muted">${N(T[i])} cars</em></div>`).join("")}</div>
+      <div class="box"><h3>Parking admissions · ${y}</h3>${tbl(["Month", "Tickets", "VIP cards", "Employees", "Soffa", "Total entries", "Without employees"],
+        MN.map((n, i) => { const m = L[i]; if (!m) return [n, "—", "—", "—", "—", "—", "—"]; const a = m.adm, t = a.t + a.c + a.e + a.s; return [n, N(a.t), N(a.c), N(a.e), N(a.s), N(t), N(t - a.e)]; }),
+        ["Total", ...T.map(N), N(all), N(all - T[2])])}${srcNote(yl, "adm")}</div>`;
+  }
+  if (k === "peak"){
+    const L = MN.map((n, i) => at(i, "peak")), mx = Math.max(1, ...L.filter(Boolean).flatMap(m => m.peak)), tot = C.hours.map((_, h) => L.reduce((a, m) => a + (m ? m.peak[h] : 0), 0));
+    const best = tot.indexOf(Math.max(...tot)), all = tot.reduce((a, b) => a + b, 0);
+    return `<div class="kpi"><div class="k"><b>${all ? `${C.hours[best]}–${C.hours[best + 1] || "23:00"}` : "—"}</b><span>BUSIEST HOUR ${y}</span><em class="muted">${all ? pctS(tot[best], all) + " of the cars" : ""}</em></div></div>
+      <div class="box"><h3>Cars entering per hour · ${y}</h3><div class="tw"><table class="t"><tr><th>Month</th>${C.hours.map(h => `<th class="n">${h.slice(0, 2)}</th>`).join("")}</tr>
+      ${MN.map((n, i) => { const m = L[i]; return `<tr><td>${n.slice(0, 3)}</td>${C.hours.map((_, h) => { const v = m ? m.peak[h] : 0, a = v / mx; return `<td class="n" style="background:rgba(74,31,115,${m ? a.toFixed(2) : 0});color:${a > .55 ? "#fff" : "inherit"}">${m ? N(v) : "—"}</td>`; }).join("")}</tr>`; }).join("")}
+      <tr><td><b>Total</b></td>${tot.map(v => `<td class="n"><b>${N(v)}</b></td>`).join("")}</tr><tr><td class="muted">%</td>${tot.map(v => `<td class="n muted">${all ? (v / all * 100).toFixed(1) : "—"}</td>`).join("")}</tr></table></div>${srcNote(yl, "peak")}</div>`;
+  }
+  if (k === "dur"){
+    const L = MN.map((n, i) => at(i, "dur")), tot = C.buckets.map((_, b) => L.reduce((a, m) => a + (m ? m.dur[b] : 0), 0)), all = tot.reduce((a, b) => a + b, 0), mx = Math.max(1, ...tot);
+    return `<div class="box"><h3>Share of cars by time parked · ${y}</h3><div style="padding:8px 0">${C.buckets.map((b, i) => `<div class="bar"><span>${esc(b)}</span><span class="mini"><i style="width:${tot[i] / mx * 100}%"></i></span><b>${pctS(tot[i], all)}</b></div>`).join("")}</div></div>
+      <div class="box"><h3>Parking duration · ${y}</h3>${tbl(["Month", ...C.buckets.map(b => b.replace(" Minutes", " min").replace(/ Hours?/, " h"))], MN.map((n, i) => [n.slice(0, 3), ...C.buckets.map((_, b) => L[i] ? N(L[i].dur[b]) : "—")]), ["Total", ...tot.map(N)])}${srcNote(yl, "dur")}</div>`;
+  }
+  if (k === "soffa"){
+    const L = MN.map((n, i) => at(i, "soffa")), ti = L.reduce((a, m) => a + (m ? m.soffa.in : 0), 0), to = L.reduce((a, m) => a + (m ? m.soffa.out : 0), 0);
+    return `<div class="box"><h3>Soffa · ${y}</h3>${tbl(["Month", "Entrances", "Exits", "Difference"], MN.map((n, i) => { const m = L[i]; return [n, m ? N(m.soffa.in) : "—", m ? N(m.soffa.out) : "—", m ? N(m.soffa.in - m.soffa.out) : "—"]; }), ["Total", N(ti), N(to), N(ti - to)])}${srcNote(yl, "soffa")}</div>`;
+  }
+  if (k === "tx"){
+    const L = MN.map((n, i) => at(i, "tx")), A = R.apm.length ? R.apm : [...new Set(L.filter(Boolean).flatMap(m => Object.keys(m.tx.apm || {})))], H = R.hh.length ? R.hh : [...new Set(L.filter(Boolean).flatMap(m => Object.keys(m.tx.hh || {})))];
+    const one = (kk, names, title) => { if (!names.length) return ""; const tot = names.map(n => L.reduce((a, m) => a + (m ? (m.tx[kk] || {})[n] || 0 : 0), 0)), all = tot.reduce((a, b) => a + b, 0);
+      return `<div class="box"><h3>${title} · ${y}</h3>${tbl(["Month", ...names, "Total"], MN.map((n, i) => { const m = L[i]; if (!m) return [n, ...names.map(() => "—"), "—"]; const v = names.map(x => (m.tx[kk] || {})[x] || 0), t = v.reduce((a, b) => a + b, 0); return [n, ...v.map(x => `${N(x)} <span class="muted" style="font-size:.72rem">${pctS(x, t)}</span>`), N(t)]; }),
+        ["Total", ...tot.map(x => `${N(x)} <span class="muted" style="font-size:.72rem">${pctS(x, all)}</span>`), N(all)])}</div>`; };
+    return one("apm", A, "Pay machines (APM) · transactions") + one("hh", H, "Handhelds · transactions") + (A.length || H.length ? `<div class="box">${srcNote(yl, "tx")}</div>` : `<div class="empty">No machines set for this flagship — Footfall → Settings → Pay machines / Handhelds.</div>`);
+  }
+  return "";
+}
+async function weekPage(bar){
+  const y = YEAR, s = ASITE, Y = await yearDays(s, +y), l = Object.values(Y.by).filter(x => x.day.startsWith(y));
+  const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], a = WD.map(() => [0, 0]);
+  for (const x of l){ const k = (D.parse(x.day).getUTCDay() + 6) % 7; a[k][0] += x.entries; a[k][1]++; }
+  const v = a.map(([t, n]) => n ? t / n : 0), mx = Math.max(1, ...v);
+  shell(bar + `<div class="box"><h3>Average car entries by weekday · ${esc(C.sites[s])} · ${y}</h3><div style="padding:8px 0">${WD.map((n, i) => `<div class="bar"><span>${n}</span><span class="mini"><i style="width:${v[i] / mx * 100}%"></i></span><b>${N(Math.round(v[i]))}</b></div>`).join("")}</div>
+    <div class="muted pad" style="font-size:.78rem;padding-top:0">${l.length} days with daily figures in ${y}.</div></div>`);
+  bindAna();
+}
+/* Excel: the 7 Liban Park reports, same layout, for one flagship and year (no amounts) */
+async function excel7(){
+  await xlsxReady();
+  const s = ASITE, y = YEAR, R = await monthsOf(s), by = Object.fromEntries(R.months.map(m => [m.month, m])), g = (yy, i) => by[`${yy}-${String(i + 1).padStart(2, "0")}`];
+  const wb = XLSX.utils.book_new(), add = (name, aoa) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), name.slice(0, 31));
+  const yrs = [...new Set(R.months.filter(m => m.src.ee).map(m => m.month.slice(0, 4)))].sort();
+  for (const [nm, d] of [["Total Entries", "in"], ["Total Exits", "out"]]) add(nm, [[nm], ["Month | Year", ...yrs.map(Number)], ...MN.map((n, i) => [n, ...yrs.map(yy => { const m = g(yy, i); return m && m.src.ee ? m.ee[d] : null; })]),
+    ["Total", ...yrs.map(yy => MN.reduce((a, _, i) => { const m = g(yy, i); return a + (m && m.src.ee ? m.ee[d] : 0); }, 0))]]);
+  add(`Parking Admissions ${y}`, [[`Parking Admissions | ${y}`], ["Month", "Tickets", "VIP Cards", "Employees", "Soffa", "Total Entries", "Without Employees"],
+    ...MN.map((n, i) => { const m = g(y, i); if (!m || !m.src.adm) return [n]; const a = m.adm, t = a.t + a.c + a.e + a.s; return [n, a.t, a.c, a.e, a.s, t, t - a.e]; })]);
+  const syrs = [...new Set(R.months.filter(m => m.src.soffa).map(m => m.month.slice(0, 4)))].sort();
+  for (const [nm, d] of [["Soffa Entrances", "in"], ["Soffa Exits", "out"]]) add(nm, [[nm], ["Month", ...syrs.map(Number)], ...MN.map((n, i) => [n, ...syrs.map(yy => { const m = g(yy, i); return m && m.src.soffa ? m.soffa[d] : null; })])]);
+  add(`Parking Duration ${y}`, [[`Parking Duration ${y}`], ["Duration", ...C.buckets], ...MN.map((n, i) => { const m = g(y, i); return m && m.src.dur ? [n, ...m.dur] : [n]; })]);
+  add(`Parking Peak Times ${y}`, [[`Parking Peak Times ${y}`], ["Month | Hour", ...C.hours.map((h, i) => `${h} till ${C.hours[i + 1] || "23:00"}`)], ...MN.map((n, i) => { const m = g(y, i); return m && m.src.peak ? [n, ...m.peak] : [n]; })]);
+  for (const [k, nm, names] of [["apm", "APM Transactions", R.apm], ["hh", "Handheld Transactions", R.hh]]) if (names.length)
+    add(`${nm} ${y}`, [[`${nm} | ${y}`], ["Month", ...names, "Total Transactions"], ...MN.map((n, i) => { const m = g(y, i); if (!m || !m.src.tx) return [n]; const v = names.map(x => (m.tx[k] || {})[x] || 0); return [n, ...v, v.reduce((a, b) => a + b, 0)]; })]);
+  XLSX.writeFile(wb, `Footfall reports — ${C.sites[s]} — ${y}.xlsx`);
+}
 /* ---------- Settings ---------- */
 function drawSettings(o){
   const S = JSON.parse(JSON.stringify(o.sites));
@@ -313,8 +405,10 @@ function drawSettings(o){
           <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div><label>LIBAN PARK EMAIL (TO)</label><input data-to="${s}" value="${esc(x.to.join(", "))}" placeholder="name@libanpark.com"></div>
           <div><label>CC</label><input data-cc="${s}" value="${esc(x.cc.join(", "))}" placeholder="separate several with commas"></div></div>
           <div><label>GATES (THE FORM LIBAN PARK FILLS IN)</label>${x.gates.map((g, i) => gateRow(s, g, i)).join("")}<button class="btn ghost small" data-ga="${s}">＋ Add a gate</button></div>
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div><label>PAY MACHINES (TRANSACTIONS PER DAY)</label><input data-apm="${s}" value="${esc((x.apm || []).join(", "))}" placeholder="e.g. East, Central, Store"></div>
+          <div><label>HANDHELDS AT THE EXITS</label><input data-hh="${s}" value="${esc((x.hh || []).join(", "))}" placeholder="e.g. Unesco, Mallat, TL"></div></div>
         </div></div>`).join("")}
-      <div class="box"><h3>Schedule</h3><div class="pad muted" style="font-size:.84rem">Link at <b>${String(o.schedule.start).padStart(2, "0")}:00</b> for yesterday · reminders every hour until <b>${o.schedule.last}:00</b> · a day still missing is flagged to the operations team at ${o.schedule.last + 1}:00 · on the 1st the email also asks for last month's parking duration. Sent from the hub's Outlook connection.</div></div>
+      <div class="box"><h3>Schedule</h3><div class="pad muted" style="font-size:.84rem">Link at <b>${String(o.schedule.start).padStart(2, "0")}:00</b> for yesterday · reminders every hour until <b>${o.schedule.last}:00</b> · a day still missing is flagged to the operations team at ${o.schedule.last + 1}:00 · the form also asks for cars per hour, transactions per pay machine / handheld and parking duration (no amounts). Sent from the hub's Outlook connection.</div></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><span class="muted" style="font-size:.78rem;margin-right:auto">${o.updatedAt ? `Last saved by ${esc(o.updatedBy)} · ${esc(new Date(o.updatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut" }))}` : ""}</span>
         <button class="btn ghost" id="tst">✉ Send me a test email</button><button class="btn" id="sv">Save settings</button></div>`);
     const v = $("#view");
@@ -328,11 +422,12 @@ function drawSettings(o){
   };
   const read = () => { const v = $("#view");
     for (const s of Object.keys(S)){ const t = v.querySelector(`[data-to="${s}"]`); if (!t) continue; S[s].to = t.value; S[s].cc = v.querySelector(`[data-cc="${s}"]`).value;
+      S[s].apm = v.querySelector(`[data-apm="${s}"]`).value.split(",").map(x => x.trim()).filter(Boolean); S[s].hh = v.querySelector(`[data-hh="${s}"]`).value.split(",").map(x => x.trim()).filter(Boolean);
       S[s].gates.forEach((g, i) => { g.name = v.querySelector(`[data-gn="${s}:${i}"]`).value; g.dir = v.querySelector(`[data-gd="${s}:${i}"]`).value; g.kind = v.querySelector(`[data-gk="${s}:${i}"]`).value; }); } };
   const save = async () => { read();
     if (o.revenue !== o._rev0 && !await confirmBox("Revenue", o.revenue ? "Switch revenue ON? Liban Park will be asked for Membership and Total balance." : "Switch revenue OFF? The amounts already kept are removed.", "Yes")) return;
-    try { await api("ops/ff/settings", { sites: Object.fromEntries(Object.entries(S).map(([s, x]) => [s, { on: x.on, to: x.to, cc: x.cc, gates: x.gates }])), revenue: o.revenue });
-      toast("Settings saved"); C = await api("ops/ff/context"); CACHE = {}; o._rev0 = o.revenue; draw(); } catch (e){ toast(e.message, true); } };
+    try { await api("ops/ff/settings", { sites: Object.fromEntries(Object.entries(S).map(([s, x]) => [s, { on: x.on, to: x.to, cc: x.cc, gates: x.gates, apm: x.apm || [], hh: x.hh || [] }])), revenue: o.revenue });
+      toast("Settings saved"); C = await api("ops/ff/context"); CACHE = {}; MON = {}; o._rev0 = o.revenue; draw(); } catch (e){ toast(e.message, true); } };
   o._rev0 = o.revenue;
   render();
 }
@@ -402,7 +497,7 @@ function preview(wb){
   const dur = parseDur(wb);
   if (dur.length){
     $("#hp").innerHTML = `<div class="ban">Parking duration: <b>${dur.length} months</b> (${esc(dur[0].month)} → ${esc(dur[dur.length - 1].month)}) → ${esc(C.sites[site])}</div><button class="btn" id="hi">Import</button>`;
-    $("#hi").onclick = async () => { try { const r = await api("ops/ff/import", { site, kind: "dur", months: dur, overwrite: $("#ho").checked }); toast(`${r.imported} months imported`); CACHE = {}; $("#hp").innerHTML = `<div class="ban">✓ ${r.imported} months imported.</div>`; } catch (e){ toast(e.message, true); } };
+    $("#hi").onclick = async () => { try { const r = await api("ops/ff/import", { site, kind: "dur", months: dur, overwrite: $("#ho").checked }); toast(`${r.imported} months imported`); CACHE = {}; MON = {}; $("#hp").innerHTML = `<div class="ban">✓ ${r.imported} months imported.</div>`; } catch (e){ toast(e.message, true); } };
     return;
   }
   const p = parseDaily(wb);
@@ -427,7 +522,7 @@ function preview(wb){
       const send = async (s, list) => { for (let i = 0; i < list.length; i += 300){ const r = await api("ops/ff/import", { site: s, rows: list.slice(i, i + 300), overwrite: $("#ho").checked }); tot += r.imported; sk += r.skipped; } };
       if ($("#h_main").checked) await send(site, rows);
       for (const [s, l] of oth) if ($(`[data-oth="${s}"]`).checked) await send(s, l);
-      CACHE = {}; $("#hp").innerHTML = `<div class="ban">✓ ${tot} days imported${sk ? ` · ${sk} skipped (already in the hub, empty, or today)` : ""}. Open the Monthly report to check.</div>`;
+      CACHE = {}; MON = {}; $("#hp").innerHTML = `<div class="ban">✓ ${tot} days imported${sk ? ` · ${sk} skipped (already in the hub, empty, or today)` : ""}. Open the Monthly report to check.</div>`;
     } catch (e){ toast(e.message, true); b.disabled = false; }
   };
 }

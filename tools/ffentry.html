@@ -67,6 +67,15 @@ function drawDay(){
     <div class="fg" style="--n:${F.revenue ? 3 : 1}"><div><label>Free tickets</label><input inputmode="numeric" id="free" value="${cur.free || ""}"></div>
     ${F.revenue ? `<div><label>Membership (LBP)</label><input inputmode="numeric" id="membership" value="${cur.membership || ""}"></div><div><label>Total balance (LBP)</label><input inputmode="numeric" id="balance" value="${cur.balance || ""}"></div>` : ""}</div>
     <div class="tot"><div><small>TOTAL ENTRIES</small><b id="tIn">0</b></div><div><small>WITHOUT EMPL.</small><b id="tNo">0</b></div>${outs.length ? `<div><small>TOTAL EXITS</small><b id="tOut">0</b></div><div><small>DIFFERENCE</small><b id="tDif">0</b></div>` : ""}</div>
+    <h3>⏱ Cars entering per hour</h3><p class="mut" style="margin:-4px 0 8px">From the parking system's hourly report. Each box = that hour until the next.</p>
+    <div class="fg" style="--n:4">${F.hours.map((h, i) => `<div><label>${esc(h)}–${esc(F.hours[i + 1] || "23:00")}</label><input inputmode="numeric" data-h="${i}" value="${cur.h && cur.h[i] ? cur.h[i] : ""}"></div>`).join("")}</div>
+    <div class="mut" id="hSum" style="margin-top:6px"></div>
+    ${F.apm.length || F.hh.length ? `<h3>💳 Payments — number of transactions</h3>
+      ${F.apm.length ? `<div class="gate"><h4>Pay machines</h4><div class="fg" style="--n:${Math.min(F.apm.length, 3)}">${F.apm.map(m => `<div><label>${esc(m)}</label><input inputmode="numeric" data-tx="apm" data-n="${esc(m)}" value="${cur.tx && cur.tx.apm && cur.tx.apm[m] ? cur.tx.apm[m] : ""}"></div>`).join("")}</div></div>` : ""}
+      ${F.hh.length ? `<div class="gate"><h4>Handhelds at the exits</h4><div class="fg" style="--n:${Math.min(F.hh.length, 3)}">${F.hh.map(m => `<div><label>${esc(m)}</label><input inputmode="numeric" data-tx="hh" data-n="${esc(m)}" value="${cur.tx && cur.tx.hh && cur.tx.hh[m] ? cur.tx.hh[m] : ""}"></div>`).join("")}</div></div>` : ""}` : ""}
+    <h3>⌛ Parking duration — cars that left, by time parked</h3>
+    <div class="fg" style="--n:4">${F.buckets.map((b, i) => `<div><label>${esc(b)}</label><input inputmode="numeric" data-du="${i}" value="${cur.dur && cur.dur[i] ? cur.dur[i] : ""}"></div>`).join("")}</div>
+    <div class="mut" id="dSum" style="margin-top:6px"></div>
     <div id="m"></div><button class="btn" id="go">Send to ABC</button>
     <p class="mut" style="margin-top:10px;text-align:center">Type only the numbers — totals are worked out for you.</p>`;
   C.querySelectorAll("input").forEach(i => i.oninput = sums);
@@ -77,7 +86,9 @@ function collect(){
   const g = {};
   C.querySelectorAll("[data-g]").forEach(i => { (g[i.dataset.g] = g[i.dataset.g] || {})[i.dataset.k] = n(i.value); });
   const v = id => { const e = document.getElementById(id); return e ? n(e.value) : 0; };
-  return { g, free: v("free"), membership: v("membership"), balance: v("balance") };
+  const h = [...C.querySelectorAll("[data-h]")].map(i => n(i.value)), dur = [...C.querySelectorAll("[data-du]")].map(i => n(i.value)), tx = { apm: {}, hh: {} };
+  C.querySelectorAll("[data-tx]").forEach(i => { tx[i.dataset.tx][i.dataset.n] = n(i.value); });
+  return { g, free: v("free"), membership: v("membership"), balance: v("balance"), h, dur, tx };
 }
 function sums(){
   const x = collect(); let tin = 0, tno = 0, tout = 0;
@@ -86,7 +97,10 @@ function sums(){
     if (gt.dir === "in"){ tin += s; tno += s - (o.e || 0); } else tout += s; }
   const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = fmt(v); };
   set("tIn", tin); set("tNo", tno); set("tOut", tout); const d = document.getElementById("tDif"); if (d) d.textContent = (tout - tin > 0 ? "+" : "") + fmt(tout - tin);
-  return { tin, tout };
+  const hs = x.h.reduce((a, b) => a + b, 0), ds = x.dur.reduce((a, b) => a + b, 0), hEl = document.getElementById("hSum"), dEl = document.getElementById("dSum");
+  if (hEl) hEl.innerHTML = hs ? `Hours add up to <b>${fmt(hs)}</b> of ${fmt(tin)} entries${tin && Math.abs(hs - tin) > Math.max(50, tin * 0.03) ? ` — <b style="color:var(--bad)">please check</b>` : " ✓"}` : "";
+  if (dEl) dEl.innerHTML = ds ? `Duration adds up to <b>${fmt(ds)}</b> cars${tout ? ` · exits ${fmt(tout)}` : ""}` : "";
+  return { tin, tout, hs };
 }
 function drawDur(){
   const cur = (F.current && F.current.dur) || [];
@@ -105,10 +119,12 @@ function drawDur(){
 const note = (t, w) => { document.getElementById("m").innerHTML = `<div class="msg ${w ? "warn" : "bad"}">${esc(t)}</div>`; };
 const go = b => { const x = document.getElementById("go"); x.disabled = b; x.textContent = b ? "Sending…" : "Send to ABC"; };
 const ok = t => { C.innerHTML = `<div class="done"><div class="x">✓</div><h3>Thank you — received</h3><p class="mut">${esc(t)}</p><p class="mut" style="margin-top:10px">You can open the link again to correct the figures.</p></div>`; };
-let confirmGap = false;
+let confirmGap = false, confirmHours = false, confirmHrGap = false;
 async function send(){
-  const { tin, tout } = sums();
+  const { tin, tout, hs } = sums();
   if (!tin) return note("Please type the figures first.");
+  if (!hs && !confirmHours){ confirmHours = true; return note("The cars per hour are empty. Please add them, or press Send again to send without them.", true); }
+  if (hs && Math.abs(hs - tin) > Math.max(50, tin * 0.03) && !confirmHrGap){ confirmHrGap = true; return note(`The hours add up to ${fmt(hs)} but the entries are ${fmt(tin)}. Please double-check, then press Send again.`, true); }
   if (tout && Math.abs(tout - tin) > Math.max(150, tin * 0.05) && !confirmGap){ confirmGap = true; return note(`Entries (${fmt(tin)}) and exits (${fmt(tout)}) differ by ${fmt(Math.abs(tout - tin))}. Please double-check, then press Send again.`, true); }
   go(true);
   try { const r = await call("POST", collect()); ok(`${fmt(r.entries)} entries${F.gates.some(g => g.dir === "out") ? ` · ${fmt(r.exits)} exits` : ""} — ${F.siteName}, ${dayLabel(F.period)}.`); }
