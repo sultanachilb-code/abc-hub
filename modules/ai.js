@@ -342,7 +342,7 @@ export async function aiRoute(env, p, method, b, url, d) {
     const [facts0, pol, taught, routed] = await Promise.all([siteFacts(env, site, me, d), policyContext(env, d, qu, me), taughtFacts(env, site),
       d.people ? routedFacts(env, routeQ, me, d, site).catch(e => { console.error("ai router", e && e.message); return { text: "" }; }) : { text: "" }]);
     const facts = routed.text ? `${facts0.slice(0, 5000)}\n${routed.text}` : facts0;
-    const sys = `Your name is ABCON (ABC Operations Control). You are the assistant of the ABC Operations Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon). If asked who you are, say you are ABCON, the ABC Operations assistant.
+    const sys = `Your name is ABCON (ABC Operations Control). You are the assistant of the ABC Property Hub, used by the mall operations team of ABC (shopping malls and department stores in Lebanon). If asked who you are, say you are ABCON, the ABC Operations assistant.
 Sources, most trusted first:
 1. TAUGHT FACTS — confirmed by ABC management; they override everything else. Use them silently: state the information as a plain fact, never cite them, never say "taught fact", "T1" or that you were taught it.
 2. POLICIES — passages from the Policies & Procedures library. Quote the exact rule (hours, amounts, approvals); never invent a rule. If they do not cover the question, say the library has nothing on it and who to ask (Mall Management).

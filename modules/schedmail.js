@@ -6,7 +6,7 @@
      Subject : ABC Verdun: Operations Weekly Schedule October 5th till October 11th, 2026
      To      : the flagship's Mall Manager / Senior Mall Manager (People & roles)
      Cc      : the flagship's list (Hub administration → ABC Operations Groups → Weekly schedule Cc)
-     From    : ABC Operations Hub, replies go to the person who sends it — signed with their name and position
+     From    : ABC Property Hub, replies go to the person who sends it — signed with their name and position
    Reminders to the flagship's operations team: Wednesday 10:00 "finalize next week's schedule",
    Sunday 10:00 "send the weekly schedule", Sunday 18:00 again if it is still not sent.
    After sending, any change to that week turns the button into "Send update" (subject starts with "UPDATED:").

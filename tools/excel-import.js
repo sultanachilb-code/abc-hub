@@ -1,4 +1,4 @@
-/* ABC Operations Hub — reusable Excel import helpers (needs xlsx.full.min.js loaded first).
+/* ABC Property Hub — reusable Excel import helpers (needs xlsx.full.min.js loaded first).
    Kept for tools that accept Excel uploads. Not used by the GLA page, whose data is built into the system. */
 const ExcelImport = {
   /* Read a File into a workbook */

@@ -286,7 +286,7 @@ export function reportHtml(name, R, link) {
       <div style="color:#fff;font-size:18px;font-weight:bold;margin-top:8px">${esc(R.period.label)}</div><div style="color:#D8CCE6;font-size:12px;margin-top:2px">${esc(R.sites.map(s => s.name).join(" · "))}</div></div>
     <div style="padding:6px 22px 20px">${R.pages.map(p => `<div style="font-size:14px;font-weight:bold;color:#2A0F45;border-bottom:2px solid #C8A24A;padding:14px 0 4px;margin-bottom:4px">${esc(p.title)}</div>${p.blocks.map(blk).join("")}`).join("")}
     ${link ? `<p style="margin-top:18px"><a href="${esc(link)}" style="background:#4A1F73;color:#fff;text-decoration:none;font-weight:bold;padding:10px 18px;border-radius:9px;font-size:13px">Open in the hub · PDF · Excel</a></p>` : ""}
-    <p style="color:#6D6479;font-size:11px;margin-top:16px">Automated report — ABC Operations Hub.</p></div></div>`;
+    <p style="color:#6D6479;font-size:11px;margin-top:16px">Automated report — ABC Property Hub.</p></div></div>`;
 }
 /* Excel 2003 XML (opens in Excel with every table / chart block as a sheet) */
 export function reportXls(name, R) {

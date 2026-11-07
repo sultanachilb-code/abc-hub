@@ -198,7 +198,7 @@ async function drawCard(){
         <div class="li">vs category average: <b class="${cls(cat && cat.sqm ? (x.sqm / cat.sqm - 1) * 100 : NaN)}">${pc(cat && cat.sqm ? (x.sqm / cat.sqm - 1) * 100 : NaN)}</b></div>
         <div class="li">Category ${esc(x.cat)}: ${pc(cat ? cat.dp : NaN)} vs last year · tenant ${pc(x.dp)}</div>
         <div class="li">Share of the flagship's sales: <b>${A.tc ? (x.c / A.tc * 100).toFixed(2) : 0}%</b></div></div></div>
-    <p class="muted" style="font-size:.7rem;margin-top:14px">Sales from ${esc(S.file)} (not saved in the hub). Operations figures from the ABC Operations Hub.</p></div>`;
+    <p class="muted" style="font-size:.7rem;margin-top:14px">Sales from ${esc(S.file)} (not saved in the hub). Operations figures from the ABC Property Hub.</p></div>`;
   $("#back").onclick = () => { card = null; draw(); };
   tipData($("#mch"), x.cur.slice(0, M), x.prev, D.year, D.prevYear); hoverBars();
   /* the hub side: Tenant 360 of the unit with this brand at the flagship */

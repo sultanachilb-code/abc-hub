@@ -1,5 +1,5 @@
 /* =====================================================================
-   SNAGLIST ↔ ABC OPERATIONS HUB CONNECTOR
+   SNAGLIST ↔ ABC PROPERTY HUB CONNECTOR
    Add this to Snaglist's worker.js (in the abc-snaglist repo).
 
    STEP 1 — inside  async function handleApi(context) { ... }

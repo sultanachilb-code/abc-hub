@@ -1,4 +1,4 @@
-/* ABC Operations Hub — shared helpers for the built-in tools (same sign-in as the hub) */
+/* ABC Property Hub — shared helpers for the built-in tools (same sign-in as the hub) */
 (function(){
   /* Light unless the person chose Dark or Automatic in the hub's Settings */
   const read = v => { try { v = JSON.parse(v); } catch {} return v || "light"; };

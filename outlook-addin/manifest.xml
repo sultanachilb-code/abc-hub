@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- ABC Operations Hub — Outlook add-in (mail, read mode). Install: see docs/FEATURE-outlook-addin.md
+<!-- ABC Property Hub — Outlook add-in (mail, read mode). Install: see docs/FEATURE-outlook-addin.md
      Hosted by the hub itself: https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/ -->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -10,7 +10,7 @@
   <Version>1.1.0.0</Version>
   <ProviderName>ABC Operations</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="ABC Operations Hub"/>
+  <DisplayName DefaultValue="ABC Property Hub"/>
   <Description DefaultValue="Follow up emails with your own flags and reminders (High / Medium / Low, notes), and in one tap send attachments to Tenant Works Forms, add an email to the handover, the Operations Calendar or tenant feedback."/>
   <IconUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://operations-hub.sultanachi-lb-61f.workers.dev/outlook-addin/icon-128.png"/>
@@ -85,7 +85,7 @@
           <bt:String id="btnLabel" DefaultValue="ABC Hub"/>
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="btnDesc" DefaultValue="Send this email to the ABC Operations Hub: Works Forms, shift handover, tenant feedback or the Operations Calendar."/>
+          <bt:String id="btnDesc" DefaultValue="Send this email to the ABC Property Hub: Works Forms, shift handover, tenant feedback or the Operations Calendar."/>
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>

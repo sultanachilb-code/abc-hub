@@ -85,15 +85,15 @@ export function eodEmailHtml(R, hubUrl) {
     ${box("Tenant feedback", li(R.feedback.map(f => `<b>${esc(f.tenant)}</b> · ${esc(f.category)}${f.description ? " — " + esc(f.description) : ""} · ${esc(f.action)}`)))}
     ${box("Direct banking tour", R.dbank.today.length ? li(R.dbank.today.map(r => `${r.status === "submitted" ? "Done" : "In progress"} by ${esc(r.by)} · ${r.issues} finding${r.issues === 1 ? "" : "s"}${r.findings.length ? ": " + esc(r.findings.map(f => `${f.task} (${f.remark || "✗"})`).slice(0, 6).join("; ")) : ""}`)) : `Not done today.${R.dbank.last ? ` Last tour ${esc(R.dbank.last.day)}.` : ""}`)}
     ${box("Team on shift", `${R.schedule.headcount} on shift${R.schedule.shifts.length ? ": " + R.schedule.shifts.map(s => `${esc(s.name)} ${esc(s.start)}–${esc(s.end)}`).join(" · ") : ""}`)}
-    <tr><td style="${F}padding:12px 10px;font-size:13px"><a href="${hubUrl}/#/app/eod" style="color:#4A1F73;font-weight:bold">Open the full report in the Operations Hub</a></td></tr>
-  </table><p style="${F}font-size:11px;color:#888">Sent automatically by the ABC Operations Hub at 23:30. To stop receiving it, ask the administrator to untick the report in People &amp; roles.</p></div>`;
+    <tr><td style="${F}padding:12px 10px;font-size:13px"><a href="${hubUrl}/#/app/eod" style="color:#4A1F73;font-weight:bold">Open the full report in the Property Hub</a></td></tr>
+  </table><p style="${F}font-size:11px;color:#888">Sent automatically by the ABC Property Hub at 23:30. To stop receiving it, ask the administrator to untick the report in People &amp; roles.</p></div>`;
 }
 
 /* ---------- backup ---------- */
 const SKIP_TABLES = new Set(["layout_images", "usage_log", "hub_events", "reminder_runs", "_cf_KV", "d1_migrations"]);
 export async function backupData(env) {
   const { results } = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all();
-  const out = { hub: "ABC Operations Hub", at: new Date().toISOString(), tables: {} };
+  const out = { hub: "ABC Property Hub", at: new Date().toISOString(), tables: {} };
   for (const { name } of results || []) {
     if (SKIP_TABLES.has(name)) continue;
     const rows = (await env.DB.prepare(`SELECT * FROM "${name}"`).all()).results || [];
@@ -133,8 +133,8 @@ export async function automationRun(env, deps, now = new Date()) {
     const to = (results || []).map(u => u.email);
     const sum = Object.entries(data.tables).map(([k, v]) => `${k}: ${v.length}`).join(" · ");
     if (to.length) {
-      const r = await deps.relay(env, { to, subject: `ABC Operations Hub — weekly backup ${t.day}`,
-        html: `<p style="font-family:Calibri,Arial">The weekly backup of the ABC Operations Hub is attached (${Math.round(z.bytes / 1024)} KB, compressed JSON).</p><p style="font-family:Calibri,Arial;font-size:12px;color:#666">${esc(sum)}</p>`,
+      const r = await deps.relay(env, { to, subject: `ABC Property Hub — weekly backup ${t.day}`,
+        html: `<p style="font-family:Calibri,Arial">The weekly backup of the ABC Property Hub is attached (${Math.round(z.bytes / 1024)} KB, compressed JSON).</p><p style="font-family:Calibri,Arial;font-size:12px;color:#666">${esc(sum)}</p>`,
         attachment: { fileName: `abc-hub-backup-${t.day}.json.gz`, mimeType: "application/gzip", base64: z.base64 } });
       await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('backup:last', ?)").bind(JSON.stringify({ day: t.day, at: now.toISOString(), bytes: z.bytes, ok: !!r.ok, error: r.error || "" })).run();
       out.backup = !!r.ok;

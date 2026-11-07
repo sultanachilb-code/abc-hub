@@ -134,7 +134,7 @@ function render(P){
       ${tile("Contractor check-ins", N.contractors.visits, B.contractors.visits, { neutral: true })}${tile("Contractor worker-days", N.contractors.workerDays, B.contractors.workerDays, { neutral: true })}
       ${tile("Evacuation plan complete", P.evac.pct, null, { pct: true, sub: `${P.evac.done} of ${P.evac.tenants} active tenants` })}</div></div>
     <div class="foot"><span>Generated ${esc(new Date(P.generatedAt).toLocaleString("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }))} by ${esc(P.by)}</span>
-      <span>Sources: ABC Operations Hub (GLA, checklists, handover, MOM, feedback, calendar, projects, contractors), Restroom and Incident systems. Sales figures are not included.</span></div>
+      <span>Sources: ABC Property Hub (GLA, checklists, handover, MOM, feedback, calendar, projects, contractors), Restroom and Incident systems. Sales figures are not included.</span></div>
   </div>`;
 }
 boot();

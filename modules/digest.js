@@ -59,7 +59,7 @@ export function digestHtml(u, D, hubUrl) {
   const col = { al: "#C0392B", warn: "#B7791F" };
   const F = "font-family:Segoe UI,Arial,sans-serif;";
   return `<div style="${F}max-width:640px;margin:0 auto;color:#221A2E">
-    <div style="background:#2A0F45;color:#fff;padding:18px 22px;border-radius:14px 14px 0 0"><div style="font-size:12px;opacity:.75;letter-spacing:.08em;text-transform:uppercase">ABC Operations Hub · weekly</div>
+    <div style="background:#2A0F45;color:#fff;padding:18px 22px;border-radius:14px 14px 0 0"><div style="font-size:12px;opacity:.75;letter-spacing:.08em;text-transform:uppercase">ABC Property Hub · weekly</div>
       <div style="font-size:20px;font-weight:700;margin-top:4px">Good morning ${esc(u.full_name.split(" ")[0])} — ${D.count} item${D.count === 1 ? "" : "s"} for you this week</div></div>
     <div style="border:1px solid #E3DCEC;border-top:0;border-radius:0 0 14px 14px;padding:8px 22px 18px">
     ${D.sections.map(s => `<div style="margin-top:16px;font-size:12px;font-weight:700;color:#6D6479;text-transform:uppercase;letter-spacing:.06em">${esc(s.title)}</div>
@@ -84,7 +84,7 @@ export async function digestRun(env, d) {
     await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(k, new Date().toISOString()).run();
     const D = await digestFor(env, u, d).catch(() => null);
     if (!D || !D.count) continue;
-    await d.relay(env, { to: [u.email], subject: `Your week · ${D.count} item${D.count === 1 ? "" : "s"} · ABC Operations Hub`, html: digestHtml(u, D, d.hubUrl) });
+    await d.relay(env, { to: [u.email], subject: `Your week · ${D.count} item${D.count === 1 ? "" : "s"} · ABC Property Hub`, html: digestHtml(u, D, d.hubUrl) });
     sent++;
   }
   return { sent };

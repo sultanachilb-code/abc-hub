@@ -149,7 +149,7 @@ dialog#vplay button{position:absolute;top:max(12px,env(safe-area-inset-top));rig
 <dialog id="vplay"><button type="button" id="vclose">✕ Close</button><video controls playsinline></video></dialog>
 <script src="common.js"></script>
 <script>
-/* ABC Operations Hub — Hub Guidebooks (docs/FEATURE-guide.md). Content follows the hub as built (apps.js, Nov 2026). */
+/* ABC Property Hub — Hub Guidebooks (docs/FEATURE-guide.md). Content follows the hub as built (apps.js, Nov 2026). */
 const S = (k,d)=>({k,d});              // media slot: Screenshot | Video + what it should show
 const Q = (q,o,a,why)=>({q,o,a,why});  // check question
 
@@ -320,7 +320,7 @@ function renderShelf(){
   app.removeAttribute("dir");
   const first = esc(String(G.name || "").split(" ")[0]);
   app.innerHTML = `
-   <div class="brand"><b>ABC</b> ABC Operations · Operations Hub</div>
+   <div class="brand"><b>ABC</b> ABC Operations · Property Hub</div>
    <div class="hero"><h1>Hub Guidebooks</h1>
    <p>${first ? first + ", pick" : "Pick"} your book. Each chapter walks you through one part of the hub step by step, with a check question at the end. Your progress is saved to your hub account.</p></div>
    <div class="shelf">${myBooks().map(id => { const b = BOOKS[id]; return `
@@ -402,7 +402,7 @@ function certHTML(B, P, n){
   return `<div class="pg l"><div class="cert"><div class="seal">${all ? "✓" : P.done.length + "/" + n}</div>
    <h2>${all ? (ar() ? "خلّصت الكتاب" : "Book complete") : (ar() ? "قرّبت" : "Almost there")}</h2>
    <p class="lead" style="margin-inline:auto">${all ? (ar() ? "خلّصت كل الفصول. تقدّمك محفوظ بحسابك عالـHub." : `You finished every chapter of the ${B.title} book${P.finished ? " on " + esc(P.finished.slice(0, 10)) : ""}. Your completion is recorded on your hub account.`) : (ar() ? "في فصول بعد ما خلصت. افتح المحتوى لتشوفها." : "Some chapters are still open. Open Contents to see which ones.")}</p>
-   <div class="brand" style="justify-content:center"><b>ABC</b> ABC Operations · Operations Hub</div></div></div>
+   <div class="brand" style="justify-content:center"><b>ABC</b> ABC Operations · Property Hub</div></div></div>
    <div class="pg r"><div class="cert"><h2 style="font-size:22px">${ar() ? "شو بعد؟" : "What next"}</h2><p class="lead" style="margin-inline:auto">${ar() ? "ارجع عالـHub وجرّب كل شي قريتو. فيك ترجع عالكتاب من tile الـHub Guidebooks." : "Go back to the hub and try what you read. You can reopen this book any time from the Hub Guidebooks tile."}</p></div></div>`;
 }
 function wireChapter(ch){

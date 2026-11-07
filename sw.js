@@ -1,7 +1,7 @@
-/* ABC Operations Hub — service worker
+/* ABC Property Hub — service worker
    • Caches the hub shell only (never /api or the embedded systems), network-first.
    • Shows push alerts on the laptop / phone lock screen and opens the right system on tap. */
-const CACHE = "abc-hub-v108";
+const CACHE = "abc-hub-v109";
 const SHELL = ["./", "./index.html", "./apps.js", "./manifest.webmanifest",
   "./icons/abc-192.png", "./icons/abc-512.png", "./icons/abc-180.png", "./icons/abc-48.png", "./icons/abc-logo-white.png",
   /* works offline: the checklists and the handover open without signal once visited */
@@ -59,7 +59,7 @@ self.addEventListener("push", e => {
       const id = (d.emergency || d.allClear).id;
       (await self.registration.getNotifications()).forEach(n => { if (n.tag && n.tag.startsWith(`emg-${id}-`) && n.tag !== d.tag) n.close(); });
     }
-    await self.registration.showNotification(d.title || "ABC Operations Hub", opts);
+    await self.registration.showNotification(d.title || "ABC Property Hub", opts);
     if (d.emergency || d.allClear) {
       const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       wins.forEach(w => w.postMessage({ type: d.emergency ? "emergency" : "allclear", id: (d.emergency || d.allClear).id }));

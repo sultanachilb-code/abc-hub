@@ -69,7 +69,7 @@ import { momentFor, momentsAdmin } from "./modules/moments.js";   // Message of 
 import { patrolSchema, patrolRoute, patrolPublic, patrolRun, patrolDay } from "./modules/patrol.js";   // Security Patrol — see docs/FEATURE-security-patrol.md
 import { execSchema, execRoute } from "./modules/exec.js";   // Executive Report feature — see docs/FEATURE-exec-report.md   // Budget (CAPEX / OPEX) feature — see docs/FEATURE-budget.md   // Emergency Alert feature: the 10-second pager (Durable Object)
 /* =====================================================================
-   ABC Operations Hub — backend (Cloudflare Worker + D1)
+   ABC Property Hub — backend (Cloudflare Worker + D1)
    Handles: hub accounts & roles, announcements, the daily brief,
    live tile badges, and single sign-in into connected systems.
    Static files (index.html, apps.js, icons…) are served as assets.
@@ -1141,15 +1141,15 @@ function welcomeMail(u, by, pw = "") {
   const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1EEF4;padding:24px 0"><tr><td align="center">
 <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="${F}color:#22163A;background:#fff;border-radius:14px;border:1px solid #E3DCEC">
 <tr><td style="background:#2A0F45;padding:26px 30px;border-radius:14px 14px 0 0">
-  <table role="presentation" width="100%"><tr><td><img src="${HUB_URL}/icons/abc-logo-white.png" height="42" alt="ABC"></td><td align="right" style="${F}color:#E9CF8A;font-size:12px;letter-spacing:2px;font-weight:700">ABC OPERATIONS HUB</td></tr></table>
+  <table role="presentation" width="100%"><tr><td><img src="${HUB_URL}/icons/abc-logo-white.png" height="42" alt="ABC"></td><td align="right" style="${F}color:#E9CF8A;font-size:12px;letter-spacing:2px;font-weight:700">ABC PROPERTY HUB</td></tr></table>
   <div style="${F}color:#fff;font-size:26px;font-weight:700;margin-top:18px">Welcome to the hub, ${first}</div>
   <div style="${F}color:#D9CCEA;font-size:15px;margin-top:4px">Every flagship. One hub.</div></td></tr>
 <tr><td style="${F}padding:26px 30px 8px;font-size:15px;line-height:1.55">
   <p style="margin:0 0 14px">Dear ${first},</p>
-  <p style="margin:0 0 14px">Your account on the <b>ABC Operations Hub</b> is ready. The hub brings the daily operations of the five flagships together in one place — shift handover, checklists, tenants, contractors, reports and the ABC platforms — on your phone and on your computer.</p>
+  <p style="margin:0 0 14px">Your account on the <b>ABC Property Hub</b> is ready. The hub brings the daily operations of the five flagships together in one place — shift handover, checklists, tenants, contractors, reports and the ABC platforms — on your phone and on your computer.</p>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F4F9;border-radius:10px;margin:6px 0 18px"><tr><td style="padding:14px 18px"><table role="presentation" width="100%">
     ${row("Your sign-in email", escH(u.email))}${row("Position", escH(pos))}${row("Flagship", escH(where || "—"))}${pw ? row("Password", `<span style="font-family:Consolas,Menlo,monospace;background:#fff;border:1px solid #E3DCEC;border-radius:6px;padding:2px 8px">${escH(pw)}</span><br><span style="font-weight:400;color:#6D6479;font-size:12px">You choose your own at the first sign-in</span>`) : row("Password", "Your current hub password")}</table></td></tr></table>
-  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px"><tr><td style="background:#4A1F73;border-radius:10px"><a href="${HUB_URL}" style="${F}display:inline-block;padding:13px 26px;color:#fff;text-decoration:none;font-weight:700;font-size:15px">Open the ABC Operations Hub</a></td></tr></table>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px"><tr><td style="background:#4A1F73;border-radius:10px"><a href="${HUB_URL}" style="${F}display:inline-block;padding:13px 26px;color:#fff;text-decoration:none;font-weight:700;font-size:15px">Open the ABC Property Hub</a></td></tr></table>
   <div style="${F}font-size:13px;letter-spacing:1.5px;font-weight:700;color:#7B4BB0;margin-bottom:8px">YOUR FIRST 5 MINUTES</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     ${step(1, "Sign in", pw ? "with your email and the password above." : "with your email and your current password.")}${pw ? step(2, "Choose your own password", "— the hub asks you at the first sign-in.") : step(2, "Forgot it?", "— ask " + escH(by.full_name) + " to set a new one.")}
@@ -1158,7 +1158,7 @@ function welcomeMail(u, by, pw = "") {
 </td></tr>
 <tr><td style="${F}padding:18px 30px 24px;font-size:13px;color:#6D6479;border-top:1px solid #EEE9F4">Questions or trouble signing in? Reply to this email or contact <b style="color:#4A1F73">${escH(by.full_name)}</b> · ${escH(by.email)}<br>
   <span style="font-size:12px">Keep your password private and do not forward this email.</span></td></tr></table></td></tr></table>`;
-  return { to: [u.email], from: by.email, replyTo: by.email, subject: "Welcome to the ABC Operations Hub", html };
+  return { to: [u.email], from: by.email, replyTo: by.email, subject: "Welcome to the ABC Property Hub", html };
 }
 async function sendWelcome(env, email, by, password = "") {
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(String(email || "").toLowerCase()).first();
@@ -1465,7 +1465,7 @@ async function relayScript(env, { to, cc = [], replyTo = "", subject, html, atta
   try {
     const r = await fetch(env.MAIL_RELAY_URL, {
       method: "POST", redirect: "follow",
-      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc, replyTo, subject, html, fromName: "ABC Operations Hub", attachment })
+      body: JSON.stringify({ key: env.MAIL_RELAY_KEY, to, cc, replyTo, subject, html, fromName: "ABC Property Hub", attachment })
     });
     const text = await r.text();
     let j = null; try { j = JSON.parse(text); } catch {}
@@ -1500,7 +1500,7 @@ function morningHtml({ user, site, ids, figures, down, anns }) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F4F9;padding:20px 0"><tr><td align="center">
   <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="width:620px;max-width:94%;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3DCEC">
     <tr><td style="background:#2A0F45;padding:22px 24px">
-      <div style="font:700 11px Arial,sans-serif;letter-spacing:2px;color:#C8A24A;text-transform:uppercase">ABC Operations Hub</div>
+      <div style="font:700 11px Arial,sans-serif;letter-spacing:2px;color:#C8A24A;text-transform:uppercase">ABC Property Hub</div>
       <div style="font:800 22px Arial,sans-serif;color:#fff;margin-top:6px">Good morning, ${escH(first)}</div>
       <div style="font:13px Arial,sans-serif;color:#CDBFE0;margin-top:4px">${escH(dateLabel)} · ${escH(scope)}</div></td></tr>
     <tr><td style="padding:20px 24px 6px">
@@ -1520,7 +1520,7 @@ const GH_OWNER = "https://github.com/sultanachilb-code/";
 const cfWorker = name => `https://dash.cloudflare.com/${CF_ACCOUNT}/workers/services/view/${name}/production`;
 const wd = name => `https://${name}.sultanachi-lb-61f.workers.dev`;
 const SEED = [
-  ["Operations Hub", "Hub", wd("operations-hub"), GH_OWNER + "abc-hub", cfWorker("operations-hub"), "", "This app"],
+  ["Property Hub", "Hub", wd("operations-hub"), GH_OWNER + "abc-hub", cfWorker("operations-hub"), "", "This app"],
   ["Hub database (D1)", "Hub", "", "", `https://dash.cloudflare.com/${CF_ACCOUNT}/workers/d1/databases/e7ae150f-de70-4376-a15b-65390159f65c`, "", "hub-db"],
   ["Snaglist Manager", "Systems", "https://abc-snaglist.sultanalachi-work.workers.dev", "", "", "snaglist", "Cloudflare account: sultanalachi-work — add its links"],
   ["Incident Report System", "Systems", wd("abc-incident-system"), GH_OWNER + "abc-incident-system", cfWorker("abc-incident-system"), "incidents", ""],
@@ -1706,7 +1706,7 @@ async function pushStatus(env, me, endpoint) {
 async function pushTest(env, me, b) {
   const row = await env.DB.prepare("SELECT * FROM push_subs WHERE endpoint = ? AND email = ?").bind(String(b.endpoint || ""), me.email).first();
   if (!row) throw fail("Notifications are not turned on for this device");
-  const r = await sendPush(env, row, { title: "ABC Operations Hub", body: "Test notification — this device will receive hub alerts.", tone: "info", url: "/", tag: "hub-test" });
+  const r = await sendPush(env, row, { title: "ABC Property Hub", body: "Test notification — this device will receive hub alerts.", tone: "info", url: "/", tag: "hub-test" });
   if (!r.ok) throw fail(r.gone ? "This device's subscription has expired — turn notifications on again" : `The push service refused the message (${r.status || r.error})`, 502);
   return { sent: true };
 }
