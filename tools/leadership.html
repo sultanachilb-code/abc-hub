@@ -69,7 +69,10 @@ table.cmp{width:100%;border-collapse:collapse;font-size:.85rem}
 </div>
 <script src="common.js"></script>
 <script>
-const app = $("#app"); let VIEW = "", TAB = "ov", D1 = null;
+const app = $("#app"); const UPL = new URLSearchParams(location.search); let VIEW = "", TAB = ["ov", "sc", "pk"].includes(UPL.get("tab")) ? UPL.get("tab") : "ov", D1 = null;
+/* Nov 2026: opened from the Performance Dashboard menu (?tab=…&embed=1) — the menu replaces the tabs */
+if (UPL.get("embed")) { const t = document.getElementById("tabs"); if (t) t.style.display = "none"; }
+document.querySelectorAll("#tabs [data-t]").forEach(b => b.classList.toggle("on", b.dataset.t === TAB));
 const pctS = v => v === null || v === undefined ? "—" : v + "%";
 const tone = (v, g, a) => v === null || v === undefined ? "" : v >= g ? "ok" : v >= a ? "mid" : "bad";
 const occ = v => v === null || v === undefined ? "—" : (Math.round(v * 1000) / 10) + "%";

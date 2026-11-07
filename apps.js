@@ -61,6 +61,7 @@ window.HUB = {
     "moments":         [],   /* Admin only */
     "seasons":         [],   /* Admin only */
     "leadership":      ["LEAD"],
+    "perf":            ["MM",  "OM",  "SMS",  "LEAD"],   // Performance Dashboard (Nov 2026): Performance + Monthly Pack + Executive Report + Snaglist Report
     "eod":             ["MM",  "OM"],
     "forms":           ["MM",  "OM",  "SMS",  "MS",  "MO"],
     "emergency":       ["MM",  "OM",  "SMS",  "MS",  "MO", "SECM", "HOS"],
@@ -238,15 +239,17 @@ window.HUB = {
       url: "/tools/feedback"
     },
     /* Leadership dashboards feature — see docs/FEATURE-leadership.md */
-    { id: "leadership", name: "Performance Dashboard", desc: "Every flagship's status, soft services and the monthly pack", group: "Dashboards", icon: "gauge", color: "#2A0F45", url: "/tools/leadership" },
+    { id: "leadership", name: "Flagship Status & Soft Services", desc: "Every flagship's status, soft services and the monthly pack", group: "Dashboards", hidden: true, icon: "gauge", color: "#2A0F45", url: "/tools/leadership" },
     /* Monthly operations pack feature — see docs/FEATURE-ops-pack.md */
-    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Reports", icon: "pack", color: "#2A0F45", url: "/tools/pack" },
+    { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Reports", hidden: true, icon: "pack", color: "#2A0F45", url: "/tools/pack" },
     /* Tenant Management feature — see docs/FEATURE-tenant-management.md */
     { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance" },
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
+    { id: "perf", name: "Performance Dashboard", desc: "Every flagship at a glance — flagship status, soft services, monthly packs, executive report, snaglist report and data updated", group: "Dashboards", icon: "chart", color: "#6B3FA0", url: "/tools/perf" },
+    /* Nov 2026: Performance Dashboard, Monthly Operations Pack, Executive Report, Snaglist Report and Data Accuracy Score have no tile — they open from the Performance Dashboard menu */
     { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing and contractor permits", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
     { id: "tpdb", name: "Tenant Portal Database", desc: "Every ABC Connect user linked to shop → brand → company → group — the recipients of Marketing, PM and Memo", group: "Tenant Management", icon: "users", color: "#1F5A96", url: "/tools/tpdb" },
     /* Malfunction Records — soft services and operations follow the service providers (see docs/FEATURE-malfunctions.md) */
@@ -278,7 +281,7 @@ window.HUB = {
       id: "exec",
       name: "Executive Report",
       desc: "Monthly executive summary — occupancy, leasing, CAPEX, QC",
-      group: "Reports",
+      group: "Reports", hidden: true,
       icon: "chart",
       color: "#0F5C7A",
       url: "/tools/exec"
@@ -300,7 +303,7 @@ window.HUB = {
       id: "accuracy",
       name: "Data Accuracy Score",
       desc: "When the GLA, property details, executive report and budget were last updated",
-      group: "Dashboards",
+      group: "Dashboards", hidden: true,
       icon: "gauge",
       color: "#2E6B4F",
       url: "/tools/accuracy"
@@ -329,7 +332,7 @@ window.HUB = {
       sso: true
     },
     /* Snaglist consolidated report — all flagships, from the Snaglist Manager (see docs/FEATURE-snaglist-report.md) */
-    { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Dashboards", icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
+    { id: "snagreport", name: "Snaglist Report", desc: "All flagships — findings open, added and solved, site visits, oldest open", group: "Dashboards", hidden: true, icon: "chart", color: "#4A1F73", url: "/tools/snagreport" },
     /* Cleaning headcount control — punching record PDF vs planned headcount (see docs/FEATURE-cleaning-control.md) */
     /* Cleaning Control — the cleaner app (own link) and the cleaning company's work against the schedule — see docs/FEATURE-cleaning-app.md */
     { id: "induction", name: "Operations Induction", desc: "Newcomer induction PowerPoint per flagship — the current team with photos, animations", group: "Property Overview & Info", icon: "users", color: "#4A1F73", url: "/tools/induction" },
