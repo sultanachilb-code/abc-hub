@@ -27,3 +27,11 @@ The Salesforce reports arrive by email in an ABC Microsoft 365 mailbox, `opsverd
 - `tools/admin.html` page `mb`
 - Settings: `meta mb:cfg`
 - Routes: `/api/admin/cc/mailbox` (GET), `…/save`, `…/connect`, `…/disconnect`, `…/test`, `…/run`
+
+## Handover Report → Shift Handover (Nov 2026)
+The daily Salesforce **Handover Report** (REQ- requests, all flagships; columns Request Name · Tenant Name · Valid From / To · Sub Maintenance ·
+Contractor · Description · Status) is recognised by its columns and goes straight into each flagship's Shift Handover of the day
+(`hoReportImport` in worker.js) — the same lines as "⤓ Import tenant requests": **Approved** only, each REQ once (already in → skipped),
+Today (running today) · Tomorrow · Coming up (later dates); finished ones are skipped. The flagship comes from the tenant name
+("ZARA Verdun Mall"). Approved requests also fill Contractors (`conImportRows`). Creates the day's handover when there is none yet.
+Arrival kept in `portal:last:handover`; tick **Handover Report** under "Reports expected every morning" for the 08:05 missing check.

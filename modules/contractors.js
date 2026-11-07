@@ -176,31 +176,7 @@ export async function contractorsRoute(env, p, method, b, url, d) {
 
   if (!editReg) throw err("Only the operations team can change contractors", 403);
 
-  if (p === "con/import") {   // approved Tenant Connect requests (from the Handover Report Excel)
-    const rows = (Array.isArray(b.rows) ? b.rows : []).slice(0, 1500);
-    const now = d.now(); let added = 0, updated = 0, skipped = 0;
-    const from = addDays(today, -1);
-    for (const r of rows) {
-      const req = /^REQ-?\d+$/i.test(r.req || "") ? String(r.req).toUpperCase() : "";
-      const f = r.from || {}, t = r.to || {};
-      if (!req || !isDay(f.day) || !/^approved/i.test(String(r.status || ""))) { skipped++; continue; }
-      const dayTo = isDay(t.day) && t.day >= f.day ? t.day : f.day;
-      if (dayTo < from) { skipped++; continue; }   // finished requests are not imported
-      const company = clip(r.contractor, 160) || clip(r.tenant, 160);
-      const cid = await contractorFor(env, site, company, "", now, me.full_name);
-      const cur = await env.DB.prepare("SELECT id FROM contractor_visits WHERE site = ? AND req = ?").bind(site, req).first();
-      const vals = [cid, company, clip(r.tenant, 160), clip(r.sub, 120), clip(r.desc, 500), f.day, dayTo, isHM(f.time) ? f.time : "", isHM(t.time) ? t.time : ""];
-      if (cur) {
-        await env.DB.prepare("UPDATE contractor_visits SET contractor_id=?, company=?, tenant=?, work=?, descr=?, day_from=?, day_to=?, time_from=?, time_to=?, deleted=0 WHERE id=?").bind(...vals, cur.id).run();
-        updated++;
-      } else {
-        await env.DB.prepare(`INSERT INTO contractor_visits (contractor_id, company, tenant, work, descr, day_from, day_to, time_from, time_to, site, req, src, created_at, created_name)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,'portal',?,?)`).bind(...vals, site, req, now, me.full_name).run();
-        added++;
-      }
-    }
-    return { added, updated, skipped };
-  }
+  if (p === "con/import") return conImportRows(env, d, site, b.rows, me.full_name, today);   // approved Tenant Connect requests (from the Handover Report Excel)
 
   if (p === "con/visit") {   // add / edit / delete a visit by hand
     if (b.remove) {
@@ -251,4 +227,31 @@ export async function contractorsRoute(env, p, method, b, url, d) {
     return { deleted: true };
   }
   throw err("Unknown request", 404);
+}
+
+/* approved Tenant Connect requests → contractor visits (the handover page import and, Nov 2026, the Report mailbox) */
+export async function conImportRows(env, d, site, rowsIn, byName, today) {
+    const rows = (Array.isArray(rowsIn) ? rowsIn : []).slice(0, 1500);
+    const now = d.now(); let added = 0, updated = 0, skipped = 0;
+    const from = addDays(today, -1);
+    for (const r of rows) {
+      const req = /^REQ-?\d+$/i.test(r.req || "") ? String(r.req).toUpperCase() : "";
+      const f = r.from || {}, t = r.to || {};
+      if (!req || !isDay(f.day) || !/^approved/i.test(String(r.status || ""))) { skipped++; continue; }
+      const dayTo = isDay(t.day) && t.day >= f.day ? t.day : f.day;
+      if (dayTo < from) { skipped++; continue; }   // finished requests are not imported
+      const company = clip(r.contractor, 160) || clip(r.tenant, 160);
+      const cid = await contractorFor(env, site, company, "", now, byName);
+      const cur = await env.DB.prepare("SELECT id FROM contractor_visits WHERE site = ? AND req = ?").bind(site, req).first();
+      const vals = [cid, company, clip(r.tenant, 160), clip(r.sub, 120), clip(r.desc, 500), f.day, dayTo, isHM(f.time) ? f.time : "", isHM(t.time) ? t.time : ""];
+      if (cur) {
+        await env.DB.prepare("UPDATE contractor_visits SET contractor_id=?, company=?, tenant=?, work=?, descr=?, day_from=?, day_to=?, time_from=?, time_to=?, deleted=0 WHERE id=?").bind(...vals, cur.id).run();
+        updated++;
+      } else {
+        await env.DB.prepare(`INSERT INTO contractor_visits (contractor_id, company, tenant, work, descr, day_from, day_to, time_from, time_to, site, req, src, created_at, created_name)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,'portal',?,?)`).bind(...vals, site, req, now, byName).run();
+        added++;
+      }
+    }
+    return { added, updated, skipped };
 }

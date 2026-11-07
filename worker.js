@@ -42,7 +42,8 @@ import { storageStatus, storageRun, d1Traffic, d1Top, gql } from "./modules/stor
 import { schedMailRoute, schedCcAdmin, schedMailRun } from "./modules/schedmail.js";   // Weekly schedule email — see docs/FEATURE-schedule-email.md
 import { todayRoute } from "./modules/today.js";   // Day to Day Operations timeline — see docs/FEATURE-day-to-day.md
 import { packRoute } from "./modules/pack.js";   // Monthly operations pack feature — see docs/FEATURE-ops-pack.md
-import { contractorsSchema, contractorsRoute, contractorsRun, dayList as conDayList } from "./modules/contractors.js";
+import { contractorsSchema, contractorsRoute, contractorsRun, dayList as conDayList, conImportRows } from "./modules/contractors.js";
+import { siteOf as ptSiteOf } from "./modules/portal.js";
 import { gateSchema, gateRoute, gateDay, gatePublic } from "./modules/gate.js";   // Loading Gate QR scanner — see docs/FEATURE-gate.md
 import { quickPassSchema, qpRoute, qpPublic, qpDay } from "./modules/quickpass.js";   // Quick Access Pass — see docs/FEATURE-quick-pass.md
 import { aiRoute, aiSchema, embedTexts } from "./modules/ai.js";
@@ -293,7 +294,8 @@ const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
 const RO_DEPS = { posKey: u => accessKey(u), posName: u => posLabel(u.position) || ROLES[u.role] || u.role, siteName: s => siteName(s), today: () => beirutToday() };
 /* Morning email */
 const MB_DEPS = { get SITES() { return SITES; }, canSite: (...a) => canSite(...a), isFull: (...a) => isFull(...a), now: () => nowIso(), today: () => beirutToday(),
-  raiseEvent: (...a) => raiseEvent(...a), audit: (...a) => audit(...a), notifyAdmins: (...a) => notifyAdmins(...a) };   // Report mailbox
+  raiseEvent: (...a) => raiseEvent(...a), audit: (...a) => audit(...a), notifyAdmins: (...a) => notifyAdmins(...a),
+  hoReport: (...a) => hoReportImport(...a), isHoReport: rows => !!hoReadRows(rows, true) };   // Report mailbox (+ Handover Report → Shift Handover, Nov 2026)
 const HUB_URL = "https://operations-hub.sultanachi-lb-61f.workers.dev";
 const beirutHM = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).replace(/^24/, "00");
 const MAIL_HOUR = 8;   // Beirut time
@@ -2782,6 +2784,93 @@ function cleanHandover(d) {
   out.notes = s(d.notes, 4000);
   return out;
 }
+/* =====================================================================
+   HANDOVER REPORT FROM THE REPORT MAILBOX (Nov 2026)
+   The daily Salesforce "Handover Report" (REQ- requests of all flagships) goes straight into each flagship's Shift Handover,
+   exactly like "⤓ Import tenant requests" on the page: Approved only, each REQ once, today / tomorrow / coming up.
+   ===================================================================== */
+const HO_MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function hoWhen(v) {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v)) { const t = new Date(Math.round(v.getTime() / 60000) * 60000).toISOString(); return { day: t.slice(0, 10), time: t.slice(11, 16) }; }   // sheet dates are read as UTC wall time
+  if (typeof v === "number" && v > 30000 && v < 80000) { const t = new Date(Math.round((v - 25569) * 864e5 / 60000) * 60000); return { day: t.toISOString().slice(0, 10), time: t.toISOString().slice(11, 16) }; }
+  const m = String(v).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:[,\sT]+(\d{1,2}):(\d{2}))?/);
+  if (!m) return null;
+  const y = m[3].length === 2 ? "20" + m[3] : m[3];
+  return { day: `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`, time: m[4] ? `${m[4].padStart(2, "0")}:${m[5]}` : "" };
+}
+function hoReadRows(rows, test) {
+  const hi = rows.findIndex(r => r.some(c => /request name/i.test(String(c || ""))) && r.some(c => /valid from/i.test(String(c || ""))) && r.some(c => /tenant/i.test(String(c || ""))));
+  if (hi < 0) return null;
+  if (test) return true;
+  const H0 = rows[hi].map(c => String(c || "").toLowerCase()), col = re => H0.findIndex(h => re.test(h));
+  const C = { status: col(/^status/), from: col(/valid from/), req: col(/request name/), tenant: col(/tenant/), to: col(/valid to/), sub: col(/sub maint|category|type/), contr: col(/contractor|supplier/), desc: col(/description/) };
+  const out = []; let status = "", from = null;
+  for (const r of rows.slice(hi + 1)) {
+    const req = String(r[C.req] ?? "").trim();
+    if (C.status >= 0 && r[C.status] != null && String(r[C.status]).trim()) status = String(r[C.status]).trim();
+    if (r[C.from] != null && String(r[C.from]).trim()) from = hoWhen(r[C.from]) || from;
+    if (!/^REQ-?\d+/i.test(req) || !from) continue;
+    out.push({ req: req.toUpperCase(), status: status.replace(/[^\w\s]/g, "").trim(), from: { ...from }, to: hoWhen(r[C.to]), account: String(r[C.tenant] ?? "").trim(),
+      sub: String(r[C.sub] ?? "").trim(), contractor: String(r[C.contr] ?? "").trim(), desc: String(r[C.desc] ?? "").trim() });
+  }
+  return out;
+}
+const hoNice = t => /[a-z]/.test(t) ? t : t.toLowerCase().replace(/(^|[\s\-\/&(.'])([a-z\u00C0-\u024F])/g, (m, a, b) => a + b.toUpperCase());
+const hoDmy = d => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+function hoTenant(account, siteName) {
+  let t = String(account || "").replace(/\s+/g, " ").trim();
+  for (const n of [siteName, siteName.replace(/Department Store/i, "DS")]) { const re = new RegExp("\\s*(ABC\\s+)?" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(\\s+\\S{1,6})*\\s*$", "i"); if (re.test(t)) { t = t.replace(re, ""); break; } }
+  return t.trim() || account;
+}
+function hoText(q) {
+  const at = w => `${hoDmy(w.day)}${w.time ? " " + w.time : ""}`;
+  const to = q.to ? (q.to.day === q.from.day ? (q.to.time || "") : at(q.to)) : "";
+  return `${hoNice(q.tenant)} : ${q.sub ? q.sub + " job" : "Job"}${q.contractor ? " by " + q.contractor : ""} from ${at(q.from)}${to ? " to " + to : ""}${q.desc ? ` [${q.desc}]` : ""} (${q.req})`;
+}
+async function hoReportImport(env, rows, from) {
+  const list = hoReadRows(rows) || [], day = beirutToday(), next = (() => { const t = new Date(day + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); })();
+  const per = {}; let unplaced = 0, notApproved = 0;
+  for (const q of list) {
+    if (!/^approved/i.test(q.status)) { notApproved++; continue; }
+    const site = ptSiteOf("", q.account, SITES); if (!site) { unplaced++; continue; }
+    (per[site] = per[site] || []).push({ ...q, tenant: hoTenant(q.account, SITES[site]) });
+  }
+  const res = {}, at = nowIso(), by = "Report mailbox";
+  for (const [site, L] of Object.entries(per)) {
+    let h = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+    let doc;
+    if (h) doc = cleanHandover(JSON.parse(h.doc));
+    else { const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first(); doc = cleanHandover(carryHandover(last ? JSON.parse(last.doc) : null, day)); }
+    const have = new Set();
+    for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) for (const x of doc[k]) { if (x.req) have.add(x.req); (String(x.text).match(/REQ-?\d+/gi) || []).forEach(r => have.add(r.toUpperCase())); }
+    const n = { today: 0, tomorrow: 0, upcoming: 0, dup: 0, past: 0 };
+    for (const q of L) {
+      if (have.has(q.req)) { n.dup++; continue; }
+      const endDay = q.to ? q.to.day : q.from.day;
+      const sec = q.from.day === day || (q.from.day < day && endDay >= day) ? "today" : q.from.day === next ? "tomorrow" : q.from.day > next ? "upcoming" : "";
+      if (!sec) { n.past++; continue; }
+      const span = q.from.time || (q.to && q.to.time) ? `${q.from.time || "—"}–${q.to && q.to.day !== q.from.day ? hoDmy(q.to.day).slice(0, 5) + " " : ""}${(q.to && q.to.time) || "—"}` : "";
+      doc[sec].push({ id: "m" + Math.random().toString(36).slice(2, 10), text: hoText(q), cctv: false, done: false, date: sec === "upcoming" ? q.from.day : "", src: "portal", req: q.req,
+        until: q.to && q.to.day > q.from.day ? q.to.day : q.from.day,
+        cols: { tenant: hoNice(q.tenant), req: q.req, task: [q.desc, q.sub].filter(Boolean).join(" · "), contractor: q.contractor || "", time: span, m: "" } });
+      have.add(q.req); n[sec]++;
+    }
+    doc.upcoming.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+    const added = n.today + n.tomorrow + n.upcoming;
+    if (added) {
+      const clean = JSON.stringify(cleanHandover(doc));
+      if (h) await env.DB.prepare("UPDATE handovers SET doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(clean, at, by, h.id).run();
+      else await env.DB.prepare(`INSERT INTO handovers (site, day, shift, doc, status, created_by, created_name, created_at, updated_at, updated_name, handoffs) VALUES (?,?,'DAY',?,'draft',?,?,?,?,?,'[]')`)
+        .bind(site, day, clean, "mailbox", by, at, at, by).run();
+    }
+    await conImportRows(env, { now: () => at }, site, L.map(q => ({ ...q, tenant: hoNice(q.tenant) })), by, day).catch(() => {});   // Contractors: approved requests fill the on-site list
+    res[site] = { ...n, added };
+  }
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('portal:last:handover', ?)").bind(JSON.stringify({ at, from, rows: list.length })).run();
+  return { rows: list.length, notApproved, unplaced, sites: res };
+}
+
 /* A new handover starts from the last one: unfinished follow-ups stay, yesterday's "tomorrow"
    becomes today, dated items arrive on their day (and the day before, under "Tomorrow"), finished events drop off, checklists reset. */
 function carryHandover(prev, day) {
