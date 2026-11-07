@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Portal Database · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<!-- Tenant Portal Database (Nov 2026): every ABC Connect user, linked to shop → brand → company → group — docs/FEATURE-tenant-portal-db.md
+     The recipients source of Marketing Participation, Preventive Maintenance and Memo. Data: /api/ops/portal/users (Active Users report + Account hierarchy). -->
+<style>
+:root{--us:#1F5A96;--S:#2E6B5E;--B:#7B4FB0;--C:#9A5B13;--G:#4A1D6E}
+.src{padding:12px 16px;margin-bottom:14px;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.src b{color:var(--text)}.src .sp{flex:1}
+.kv{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kv .card{padding:12px 14px;position:relative;overflow:hidden;cursor:pointer}
+.kv .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--k)}
+.kv .card.on{border-color:var(--brand-2);box-shadow:inset 0 0 0 1px var(--brand-2)}
+.kv b{display:block;font-size:1.6rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.kv small{font-size:.74rem;color:var(--muted)}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.sec{font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 0 10px;display:flex;align-items:center;gap:8px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.bar .inp{flex:1;min-width:180px}
+.panel{padding:14px 16px;margin-bottom:14px}.panel .sub{font-size:.76rem;color:var(--muted);line-height:1.5}
+.hb{display:grid;grid-template-columns:minmax(90px,42%) 1fr 34px;gap:8px;align-items:center;font-size:.8rem;margin:6px 0;cursor:pointer;border-radius:6px}
+.hb.on{background:rgba(138,92,192,.1)}.hb .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.hb .b{height:14px;border-radius:5px;background:var(--paper);overflow:hidden;display:flex}.hb .b i{display:block;height:100%}
+.hb .n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}.hb:hover .t{color:var(--brand-2)}
+.tw{overflow-x:auto}
+.ut{width:100%;border-collapse:collapse;font-size:.8rem}
+.ut th{font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.ut td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}.ut td small{display:block;color:var(--muted);font-size:.72rem}
+.lv{display:inline-block;font-size:.66rem;font-weight:800;border-radius:99px;padding:2px 8px;margin-right:4px;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c)}
+.tag{font-size:.72rem;font-weight:800;color:var(--alert)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chiprow button{font-size:.76rem;font-weight:800;padding:6px 11px;border-radius:99px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.chiprow button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.note{font-size:.78rem;color:var(--muted);padding:10px 12px;border-radius:12px;background:var(--paper);line-height:1.5;margin-top:8px}
+.warnnote{background:rgba(183,121,31,.1);color:#8A5A12}
+@media (max-width:1100px){ .kv{grid-template-columns:repeat(3,minmax(0,1fr))} .cols{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:600px){ .kv{grid-template-columns:1fr 1fr} .kv b{font-size:1.3rem} .ut .hide-s{display:none} }
+</style>
+</head>
+<body>
+<div class="top"><h1>🗂 Tenant Portal Database <small id="sub"></small></h1><span id="sitePick"></span></div>
+<div class="wrap"><div id="app"><div class="empty">Loading…</div></div></div>
+<input type="file" id="file" accept=".xlsx,.xls,.csv,.html" multiple hidden>
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search);
+const LVC = { Shop: "var(--S)", Brand: "var(--B)", Company: "var(--C)", Group: "var(--G)" };
+let ctx = null, site = UP.get("site") || "", U = null, q = "", lvF = UP.get("level") || "", logF = "", tenF = "", lim = 150;
+const days = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+const dt = v => v ? `${D.fmt(v.slice(0, 10))}${v.length > 10 ? " " + v.slice(11, 16) : ""}` : "";
+const sitesOf = u => u.sites && u.sites.length ? u.sites : u.site ? [u.site] : [];
+const lvlOf = u => u.level || "none";
+async function boot(){
+  try {
+    ctx = await api("ops/context" + (site && site !== "ALL" ? `?site=${site}` : ""));
+    if (!site) site = ctx.site;
+    const S = Object.entries(ctx.sites || {});
+    $("#sitePick").innerHTML = S.length > 1 ? `<select class="sel" id="siteSel" aria-label="Flagship"><option value="ALL" ${site === "ALL" ? "selected" : ""}>All flagships</option>${S.map(([c, n]) => `<option value="${c}" ${c === site ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
+    const sel = $("#siteSel"); if (sel) sel.onchange = () => { site = sel.value; tenF = ""; lim = 150; history.replaceState(null, "", `?site=${site}`); draw(); };
+    await load();
+  } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function load(){
+  try { U = await api("ops/portal/users"); draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function scope(){
+  const all = site === "ALL" || !site;
+  return U.users.filter(u => all || sitesOf(u).includes(site));
+}
+function bucket(u){ if (!u.login) return "never"; const n = days(u.login.slice(0, 10), U.today); return n <= 7 ? "7" : n <= 30 ? "30" : n <= 90 ? "90" : "old"; }
+function filtered(){
+  const s = q.toLowerCase();
+  return scope().filter(u => (!lvF || lvlOf(u) === lvF) && (!logF || bucket(u) === logF) && (!tenF || (u.company || "") === tenF)
+    && (!s || `${u.name} ${u.user} ${u.title} ${u.company} ${u.raw || ""}`.toLowerCase().includes(s)));
+}
+function draw(){
+  const SN = U.siteNames || {};
+  $("#sub").textContent = site === "ALL" || !site ? "All flagships" : SN[site] || "";
+  const A = scope(), F = filtered(), cnt = k => A.filter(u => lvlOf(u) === k).length;
+  const notLinked = [...new Set(U.users.filter(u => !u.level).map(u => (u.raw || u.company || "").trim()).filter(Boolean))];
+  const BK = [["7", "Last 7 days"], ["30", "8–30 days"], ["90", "31–90 days"], ["old", "Over 90 days"], ["never", "Never logged in"]];
+  const bc = {}; A.forEach(u => { const k = bucket(u); bc[k] = (bc[k] || 0) + 1; });
+  const perTen = {}; A.forEach(u => { const k = u.company || ""; if (k) perTen[k] = (perTen[k] || 0) + 1; });
+  const perSite = {}; U.users.forEach(u => { const ks = sitesOf(u); (ks.length ? ks : ["-"]).forEach(k => perSite[k] = (perSite[k] || 0) + 1); });
+  const bars = (rows, color, attr, on) => { const m = Math.max(1, ...rows.map(r => r[1]));
+    return rows.map(([lbl, n, key]) => `<div class="hb ${on === key ? "on" : ""}" ${attr}="${esc(key)}"><span class="t">${esc(lbl)}</span><span class="b"><i style="width:${n / m * 100}%;background:${color}"></i></span><span class="n">${n}</span></div>`).join(""); };
+  const covers = u => { const ks = sitesOf(u); return ks.length ? ks.map(k => SN[k] || k).join(" · ") : (U.lookupLast ? "Not linked" : "No flagship"); };
+  const lvTag = u => u.level ? `<span class="lv" style="--c:${LVC[u.level]}">${u.level}</span>` : `<span class="lv" style="--c:#B7791F">Not linked</span>`;
+  const head = `<div class="card src"><span>Portal users: <b>${U.last ? esc(dt(U.last.at)) : "not imported"}</b>${U.last ? ` · ${U.last.rows}` : ""}</span>
+      <span>Account hierarchy: <b>${U.lookupLast ? esc(dt(U.lookupLast.at)) : "not imported"}</b>${U.lookupLast ? ` · ${U.lookupLast.rows} contracts` : ""}</span>
+      <span class="sp"></span><button class="btn small ghost" id="impBtn" title="Salesforce: Active Users report and Account hierarchy (Tenant_Name · Parent_Tenant · Parent_Company · Parent_Group)">⤓ Import</button>
+      <a class="btn small ghost" href="/tools/portal">Portal Dashboard ›</a></div>
+    ${!U.lookupLast ? `<div class="note warnnote" style="margin:-4px 0 14px">⚠ The account hierarchy is not imported — only users whose account names their flagship are placed. Import the Account hierarchy report to link brand, company and group users.</div>`
+      : notLinked.length ? `<div class="note warnnote" style="margin:-4px 0 14px">⚠ <b>${notLinked.length} tenant${notLinked.length === 1 ? " is" : "s are"} still not linked</b> to their hierarchy (${U.users.filter(u => !u.level).length} users). Ask IT to add them in Salesforce, then import the new hierarchy. <button class="btn ghost small" data-lvf="none">Show them</button></div>` : ""}`;
+  if (!U.users.length){ $("#app").innerHTML = head + `<div class="card empty" style="padding:22px">Import the Active Users report (Salesforce) to build the database.</div>`; return wire(); }
+  $("#app").innerHTML = head + `<div class="kv">
+      <div class="card ${!lvF ? "on" : ""}" style="--k:var(--us)" data-lvf=""><b>${A.length}</b><small>users ${site === "ALL" || !site ? "in all flagships" : "covering " + esc(SN[site] || site)}</small></div>
+      ${["Shop", "Brand", "Company", "Group"].map(l => `<div class="card ${lvF === l ? "on" : ""}" style="--k:${LVC[l]}" data-lvf="${l}"><b>${cnt(l)}</b><small>${l.toLowerCase()} level</small></div>`).join("")}
+    </div>
+    <div class="cols"><div>
+      <div class="bar"><input class="inp" id="q" placeholder="Search name, email, title or tenant…" value="${esc(q)}">
+        <button class="btn small ghost" id="mail" title="Email everyone in this list (Bcc)">✉ Email these · ${F.length}</button><button class="btn small ghost" id="csv">⇣ Excel</button></div>
+      <div class="chiprow">${[["", "All"], ["Shop", "Shop"], ["Brand", "Brand"], ["Company", "Company"], ["Group", "Group"], ["none", "Not linked"]].map(([k, n]) => `<button data-lvf="${k}" class="${lvF === k ? "on" : ""}">${n}${k ? " · " + cnt(k) : ""}</button>`).join("")}
+        ${logF ? `<button class="on" data-logf="">${esc(BK.find(x => x[0] === logF)[1])} ×</button>` : ""}${tenF ? `<button class="on" data-tenf="">${esc(tenF)} ×</button>` : ""}</div>
+      <div class="card" style="padding:4px 6px"><div class="tw"><table class="ut"><thead><tr><th>Name</th><th>Level · covers</th><th>Last login</th><th class="hide-s">Title</th><th class="hide-s">Account</th></tr></thead>
+        <tbody>${F.slice(0, lim).map(u => `<tr><td><b>${esc(u.name || "—")}</b><small>${esc(u.user)}</small></td>
+          <td>${lvTag(u)}<b style="cursor:${u.tree ? "pointer" : "default"}" ${u.tree ? `data-utree="${esc(u.user)}"` : ""}>${esc(covers(u))}</b><small>${esc(u.tree ? [u.tree.group, u.tree.company, u.tree.brand].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(" › ") : u.company || "—")}${u.tree ? " · tap for the tree" : ""}</small></td>
+          <td>${u.login ? esc(dt(u.login)) + `<small>${days(u.login.slice(0, 10), U.today)} days ago</small>` : `<span class="tag">Never</span>`}</td><td class="hide-s">${esc(u.title)}</td><td class="hide-s">${esc(u.raw || u.company || "")}</td></tr>`).join("")
+          || `<tr><td colspan="5" style="padding:18px;color:var(--muted)">Nothing matches.</td></tr>`}</tbody></table></div></div>
+      ${F.length > lim ? `<div style="text-align:center;margin:12px 0"><button class="btn ghost small" id="more">Show more · ${F.length - lim} left</button></div>` : ""}
+    </div><div>
+      <div class="card panel"><div class="sec">Last login</div>${bars(BK.map(([k, l]) => [l, bc[k] || 0, k]), "var(--us)", "data-logf", logF)}<div class="sub" style="margin-top:8px">Tap a line to list those users.</div></div>
+      <div class="card panel"><div class="sec">Users per flagship</div>${bars([...Object.keys(SN).filter(k => perSite[k]).map(k => [SN[k], perSite[k], k]), ...(perSite["-"] ? [["No flagship", perSite["-"], "-"]] : [])], "var(--us)", "data-site", site)}<div class="sub" style="margin-top:8px">A brand, company or group user counts in every flagship where it has a running shop.</div></div>
+      <div class="card panel"><div class="sec">Users per tenant · top 12</div>${bars(Object.entries(perTen).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => [k, n, k]), "var(--B)", "data-tenf", tenF)}</div>
+      ${lvF === "none" && notLinked.length ? `<div class="card panel"><div class="sec">Accounts not linked · ${notLinked.length}</div><div class="sub">${notLinked.slice(0, 80).map(esc).join("<br>")}</div></div>` : ""}
+      <div class="note">This database is the recipients list of <b>Marketing Participation</b>, <b>Preventive Maintenance</b> and <b>Memo</b>: a memo to a shop also reaches its brand, company and group users when those levels are ticked.</div>
+    </div></div>`;
+  wire();
+}
+function showTree(user){
+  const u = (U.users || []).find(x => x.user === user); if (!u || !u.tree) return;
+  const T = u.tree, SN = U.siteNames || {}, d = document.getElementById("utree") || document.body.appendChild(Object.assign(document.createElement("dialog"), { id: "utree" }));
+  d.style.cssText = "border:0;border-radius:18px;padding:0;width:min(560px,calc(100% - 20px));max-height:88dvh";
+  const row = (lbl, v, on) => v ? `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)"><span style="width:84px;color:var(--muted);font-size:.74rem;font-weight:800;letter-spacing:.05em">${lbl.toUpperCase()}</span><b style="${on ? "color:var(--brand)" : ""}">${esc(v)}${on ? " ← this user" : ""}</b></div>` : "";
+  d.innerHTML = `<div style="padding:16px 18px 8px"><b style="font-size:1.05rem">${esc(u.name || u.user)}</b><div class="sub">${esc(u.title || "")} · ${esc(u.user)}</div></div>
+    <div style="padding:4px 18px 10px;max-height:60dvh;overflow:auto">${row("Group", T.group, u.level === "Group")}${row("Company", T.company, u.level === "Company")}${row("Brand", T.brand, u.level === "Brand")}
+      <div style="margin-top:10px;font-size:.74rem;font-weight:800;letter-spacing:.05em;color:var(--muted)">SHOPS${u.level === "Shop" ? " · THIS USER" : ""} · ${T.shops.length}</div>
+      ${T.shops.map(x => `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(x.shop)}</span><span class="sub">${esc(SN[x.site] || x.site || "—")}${x.running ? "" : " · ended"}</span></div>`).join("")}</div>
+    <div style="padding:12px 18px;border-top:1px solid var(--line);text-align:right"><button class="btn" id="utC">Close</button></div>`;
+  d.querySelector("#utC").onclick = () => d.close(); d.onclick = e => { if (e.target === d) d.close(); };
+  d.showModal();
+}
+function wire(){
+  $("#app").onclick = e => {
+    const t = e.target.closest("[data-lvf]"); if (t){ lvF = lvF === t.dataset.lvf && t.dataset.lvf ? "" : t.dataset.lvf; lim = 150; return draw(); }
+    const l = e.target.closest("[data-logf]"); if (l){ logF = logF === l.dataset.logf ? "" : l.dataset.logf; lim = 150; return draw(); }
+    const n = e.target.closest("[data-tenf]"); if (n){ tenF = tenF === n.dataset.tenf ? "" : n.dataset.tenf; lim = 150; return draw(); }
+    const s = e.target.closest("[data-site]"); if (s){ site = site === s.dataset.site ? "ALL" : s.dataset.site; const sel = $("#siteSel"); if (sel) sel.value = site; tenF = ""; lim = 150; return draw(); }
+    const tr = e.target.closest("[data-utree]"); if (tr) return showTree(tr.dataset.utree);
+    if (e.target.id === "more"){ lim += 150; return draw(); }
+    if (e.target.id === "impBtn") return $("#file").click();
+    if (e.target.id === "mail"){
+      const em = [...new Set(filtered().map(u => u.user))]; if (!em.length) return toast("Nobody in this list", true);
+      const href = "mailto:?bcc=" + em.join(",");
+      if (href.length < 1900) location.href = href;
+      else navigator.clipboard.writeText(em.join("; ")).then(() => toast(`${em.length} emails copied — paste them in Bcc`), () => toast("Too many emails for one link — use Excel", true));
+      return;
+    }
+    if (e.target.id === "csv"){
+      const SN = U.siteNames || {}, rows = [["Name", "Email", "Level", "Covers (flagships)", "Group", "Company", "Brand", "Account", "Title", "Last login", "User since"],
+        ...filtered().map(u => [u.name, u.user, u.level || "Not linked", sitesOf(u).map(k => SN[k] || k).join(" · "), u.tree ? u.tree.group : "", u.tree ? u.tree.company : "", u.tree ? u.tree.brand : "", u.raw || u.company || "", u.title, (u.login || "").slice(0, 10), (u.created || "").slice(0, 10)])];
+      const csv = rows.map(r => r.map(x => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })); a.download = `Tenant Portal Database${site && site !== "ALL" ? " - " + (SN[site] || site) : ""}.csv`; a.click();
+    }
+  };
+  const qi = $("#q"); if (qi) qi.oninput = () => { q = qi.value; lim = 150; const pos = qi.selectionStart; draw(); const n = $("#q"); if (n){ n.focus(); n.setSelectionRange(pos, pos); } };
+}
+$("#file").onchange = async e => {
+  const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return;
+  try {
+    toast(`Reading ${fs.length} file${fs.length > 1 ? "s" : ""}…`);
+    const files = await Promise.all(fs.map(f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res({ name: f.name, data: r.result }); r.onerror = () => rej(new Error("Could not read " + f.name)); r.readAsDataURL(f); })));
+    const r = await api("ops/portal/import", { site: site === "ALL" ? "" : site, files });
+    toast(r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} · ${f.added} new`).join(" | "));
+    load();
+  } catch (er){ toast(er.message, true); }
+};
+boot();
+window.hubRefresh = () => load();
+</script>
+</body>
+</html>

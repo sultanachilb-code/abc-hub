@@ -1,3 +1,4 @@
+import { portalAudience, PORTAL_LEVELS } from "./portal.js";
 /* =====================================================================
    MARKETING PARTICIPATION (Oct 2026, Upcoming - Testing) — docs/FEATURE-mkt.md
    The operations team sends a marketing activation memo to tenants on behalf of Marketing:
@@ -17,7 +18,7 @@ const escH = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": 
 const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, "");
 const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
 const token = () => [...crypto.getRandomValues(new Uint8Array(18))].map(b => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"[b % 57]).join("");
-const cleanEmails = v => [...new Set(String(v || "").split(/[\s,;]+/).map(x => x.trim().toLowerCase()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))].slice(0, 8).join(", ");
+const cleanEmails = v => [...new Set(String(v || "").split(/[\s,;]+/).map(x => x.trim().toLowerCase()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))].slice(0, 40).join(", ");   // Directory contacts + portal users (shop → group)
 const longDay = d => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "";
 export const MK_OFFERS = ["Up to 30%", "Up to 50%", "Up to 70%", "Buy 1 get 1", "Gift with purchase", "Other"];
 export const MK_REASONS = ["Brand policy / head office decision", "Stock not available", "Already running a promotion", "Under renovation / closing", "Budget", "Other"];
@@ -38,11 +39,13 @@ export async function mkSchema(env) {
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS mk_targets_token ON mk_targets (token)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS mk_targets_c ON mk_targets (campaign_id, site)")
   ]);
+  await env.DB.prepare("ALTER TABLE mk_campaigns ADD COLUMN levels TEXT NOT NULL DEFAULT '[]'").run().catch(() => {});   // Nov 2026: Tenant Portal Database levels
 }
 
 /* ---------- audience: GLA open tenants × sub-category, Directory contacts × position ---------- */
-async function audience(env, sites, depts, positions) {
+async function audience(env, sites, depts, positions, levels = [], d = null) {
   const D = new Set(depts.map(x => x.toLowerCase())), P = positions.map(x => x.toLowerCase());
+  const PA = levels.length && d ? await portalAudience(env, d.SITES, d.today()) : null;   // Nov 2026: + the Tenant Portal Database (shop / brand / company / group users)
   const out = [];
   for (const site of sites) {
     const units = (await env.DB.prepare("SELECT id, code, brand, dept, status FROM gla_units WHERE site = ? AND active = 1 AND section = 'Leasing' AND brand != '' ORDER BY seq, id").bind(site).all()).results || [];
@@ -57,7 +60,8 @@ async function audience(env, sites, depts, positions) {
     for (const t of byBrand.values()) {
       const mine = contacts.filter(c => t.ids.has(c.unit_id) || norm(c.tenant) === norm(t.brand));
       const pick = P.length ? mine.filter(c => P.some(p => String(c.position || "").toLowerCase().includes(p))) : mine;
-      out.push({ site, brand: t.brand, dept: t.dept, units: t.units.join(", ").slice(0, 80), emails: cleanEmails(pick.map(c => c.email).join(",")), contacts: mine.length });
+      const portal = PA ? PA(site, t.brand, levels) : [];
+      out.push({ site, brand: t.brand, dept: t.dept, units: t.units.join(", ").slice(0, 80), emails: cleanEmails([...pick.map(c => c.email), ...portal].join(",")), contacts: mine.length, portal: portal.length });
     }
   }
   return out.sort((a, b) => a.site.localeCompare(b.site) || a.brand.localeCompare(b.brand));
@@ -199,7 +203,7 @@ function statsOf(rows) {
   return s;
 }
 const campOut = (c, today) => ({ id: c.id, title: c.title, message: c.message, actFrom: c.act_from, actTo: c.act_to, start: c.start_day, end: c.end_day,
-  sites: JSON.parse(c.sites), depts: JSON.parse(c.depts), positions: JSON.parse(c.positions), memo: !!c.memo_key, memoName: c.memo_name,
+  sites: JSON.parse(c.sites), depts: JSON.parse(c.depts), positions: JSON.parse(c.positions), levels: JSON.parse(c.levels || "[]"), memo: !!c.memo_key, memoName: c.memo_name,
   by: c.created_by, at: c.created_at, launchedAt: c.launched_at, state: stateOf(c, today) });
 
 export async function mkRoute(env, p, method, b, url, d) {
@@ -235,10 +239,11 @@ export async function mkRoute(env, p, method, b, url, d) {
   }
   const pickSites = v => (Array.isArray(v) ? v : String(v || "").split(",")).filter(s => mySites.includes(s));
   const arr = v => (Array.isArray(v) ? v : String(v || "").split("|")).map(x => clip(x, 60)).filter(Boolean).slice(0, 40);
-  if (p === "mk/filters") return filters(env, pickSites(q("sites")));
+  const lvls = v => (Array.isArray(v) ? v : String(v || "").split("|")).filter(x => PORTAL_LEVELS.includes(x));
+  if (p === "mk/filters") return { ...(await filters(env, pickSites(q("sites")))), levels: PORTAL_LEVELS };
   if (p === "mk/audience") {
     const sites = pickSites(b.sites || q("sites")); if (!sites.length) throw err("Choose at least one flagship");
-    return { list: await audience(env, sites, arr(b.depts || q("depts")), arr(b.positions || q("positions"))) };
+    return { list: await audience(env, sites, arr(b.depts || q("depts")), arr(b.positions || q("positions")), lvls(b.levels || q("levels")), d) };
   }
   if (method !== "POST") throw err("Unknown request", 404);
   if (!ops) throw err("Only the operations team sends marketing activations", 403);
@@ -247,8 +252,8 @@ export async function mkRoute(env, p, method, b, url, d) {
     const sites = pickSites(b.sites); if (!sites.length) throw err("Choose at least one flagship");
     const start = isDay(b.start) ? b.start : today, end = isDay(b.end) ? b.end : "";
     if (!end) throw err("Set the reply-by date"); if (end < start) throw err("The reply-by date is before the start date"); if (end < today) throw err("The reply-by date has passed");
-    const depts = arr(b.depts), positions = arr(b.positions);
-    let list = await audience(env, sites, depts, positions);
+    const depts = arr(b.depts), positions = arr(b.positions), levels = lvls(b.levels);
+    let list = await audience(env, sites, depts, positions, levels, d);
     if (Array.isArray(b.only)) { const keep = new Set(b.only.map(String)); list = list.filter(t => keep.has(`${t.site}|${t.brand}`)); }
     const extra = b.extraEmails && typeof b.extraEmails === "object" ? b.extraEmails : {};
     for (const t of list) { const x = extra[`${t.site}|${t.brand}`]; if (x) t.emails = cleanEmails(x); }
@@ -262,9 +267,9 @@ export async function mkRoute(env, p, method, b, url, d) {
       await env.FILES.put(memoKey, bin, { httpMetadata: { contentType: "application/pdf" } });
     }
     const now = d.now();
-    const r = await env.DB.prepare(`INSERT INTO mk_campaigns (title, message, act_from, act_to, start_day, end_day, sites, depts, positions, memo_key, memo_name, created_by, created_email, created_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(title, txt(b.message, 3000), isDay(b.actFrom) ? b.actFrom : "", isDay(b.actTo) ? b.actTo : "", start, end,
-      JSON.stringify(sites), JSON.stringify(depts), JSON.stringify(positions), memoKey, memoName, me.full_name || me.email, me.email, now).run();
+    const r = await env.DB.prepare(`INSERT INTO mk_campaigns (title, message, act_from, act_to, start_day, end_day, sites, depts, positions, memo_key, memo_name, created_by, created_email, created_at, levels)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(title, txt(b.message, 3000), isDay(b.actFrom) ? b.actFrom : "", isDay(b.actTo) ? b.actTo : "", start, end,
+      JSON.stringify(sites), JSON.stringify(depts), JSON.stringify(positions), memoKey, memoName, me.full_name || me.email, me.email, now, JSON.stringify(levels)).run();
     const id = r.meta.last_row_id;
     for (let i = 0; i < list.length; i += 80) await env.DB.batch(list.slice(i, i + 80).map(t => env.DB.prepare(`INSERT INTO mk_targets (campaign_id, site, brand, units, dept, emails, token) VALUES (?,?,?,?,?,?,?)`)
       .bind(id, t.site, t.brand, t.units, t.dept, t.emails, token())));

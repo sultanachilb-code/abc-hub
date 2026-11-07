@@ -173,33 +173,63 @@ const usersBase = (results, SITES) => (results || []).map(u => ({ user: u.userna
   site: u.site, login: u.last_login, created: u.created }));
 const activeUsers = async (env, SITES) => usersBase((await env.DB.prepare("SELECT username, first, last, title, company, account, site, last_login, created, raw_account FROM portal_users WHERE active = 1 ORDER BY last_login DESC").all()).results, SITES);
 
+/* ---------- matching a GLA tenant to the account hierarchy (Tenant 360, recipients of Marketing / PM / Memo) ---------- */
+const bareOf = brand => String(brand || "").replace(/(\s+(TA|OT|TS|kiosk|\d+))+\s*$/i, "");   // the space tags the GLA adds ("ZARA TA", "LACOSTE OT", "RAYBAN 2 TA")
+const runOf = today => x => !x.end_day || x.end_day >= today;
+function nodeOf(L, brand, site, SITES, today) {
+  const bare = bareOf(brand);
+  for (const nm of bare !== brand && lkN(bare) ? [brand, bare] : [brand]) {
+    const b = lkN(nm); if (!b) continue;
+    const sn = lkN(nm + " " + (SITES[site] || ""));
+    /* best match first: "<brand> <flagship>" shop · the brand's shop · the brand · a shop starting with the brand (here), then the brand anywhere */
+    const tests = [x => x.site === site && lkN(x.shop) === sn, x => x.site === site && lkN(x.shop) === b, x => x.site === site && lkN(x.brand) === b,
+      x => x.site === site && lkN(x.shop).startsWith(sn), x => lkN(x.brand) === b || lkN(x.shop) === b];
+    for (const t of tests) { const hit = L.filter(t); if (hit.length) { const run = runOf(today); hit.sort((x, y) => run(y) - run(x) || String(y.end_day).localeCompare(String(x.end_day))); return { hit, n: hit[0] }; } }
+  }
+  return null;
+}
+function keysOf({ hit, n }) {   // normalised account name → level (this shop, its brand, company, group)
+  const keys = new Map([...new Set(hit.map(x => lkN(x.shop)))].map(k => [k, "Shop"]));
+  for (const [k, v] of [[lkN(n.brand), "Brand"], [lkN(n.company), "Company"], [lkN(n.grp), "Group"]]) if (k && !keys.has(k)) keys.set(k, v);
+  return keys;
+}
+export const PORTAL_LEVELS = ["Shop", "Brand", "Company", "Group"];
+/* the Tenant Portal Database as recipients: (site, brand, levels) → portal users' emails. Without the hierarchy: the users whose account is this shop. */
+export async function portalAudience(env, SITES, today) {
+  const L = (await env.DB.prepare("SELECT * FROM portal_lookup").all().catch(() => ({ results: [] }))).results || [];
+  const users = await activeUsers(env, SITES).catch(() => []);
+  const byKey = new Map(); for (const u of users) { const k = lkN(u.raw || u.company); if (!k) continue; if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(u); }
+  const memo = new Map();
+  return (site, brand, levels = PORTAL_LEVELS) => {
+    const lv = new Set(levels); if (!lv.size || !brand) return [];
+    const ck = site + "|" + brand;
+    if (!memo.has(ck)) {
+      const out = [];
+      const r = L.length ? nodeOf(L, brand, site, SITES, today) : null;
+      if (r) for (const [k, level] of keysOf(r)) for (const u of byKey.get(k) || []) out.push({ email: u.user, level, name: u.name });
+      if (!out.some(x => x.level === "Shop")) {   // shop users placed by their own account ("NI ITALIAN JAPANESE CAFE" at Verdun Mall)
+        const b = lkN(bareOf(brand)), b2 = lkN(brand);
+        for (const u of users) if (u.site === site && [lkN(u.company), lkN(u.raw)].some(k => k && (k === b || k === b2 || k.startsWith(b2) || k === lkN(bareOf(brand) + " " + (SITES[site] || "")))))
+          if (!out.some(x => x.email === u.user)) out.push({ email: u.user, level: "Shop", name: u.name });
+      }
+      memo.set(ck, out);
+    }
+    return [...new Set(memo.get(ck).filter(x => lv.has(x.level)).map(x => x.email))];
+  };
+}
+
 /* Tenant 360: the hierarchy of one tenant (its shop in this flagship → brand → company → group), the sister shops and the portal users at each level */
 export async function hierarchyFor(env, brand, site, SITES, today) {
   if (!lkN(brand)) return null;
   const L = (await env.DB.prepare("SELECT * FROM portal_lookup").all().catch(() => ({ results: [] }))).results || [];
   if (!L.length) return { imported: false };
-  /* the GLA name as written, then without the space tags the GLA adds ("ZARA TA", "LACOSTE OT", "RAYBAN 2 TA") */
-  const bare = String(brand).replace(/(\s+(TA|OT|TS|kiosk|\d+))+\s*$/i, "");
-  for (const nm of bare !== brand && lkN(bare) ? [brand, bare] : [brand]) { const r = await hierOf(env, L, nm, site, SITES, today); if (r) return r; }
-  return { imported: true, found: false };
-}
-async function hierOf(env, L, brand, site, SITES, today) {
-  const b = lkN(brand);
-  const run = x => !x.end_day || x.end_day >= today;
-  const sn = lkN(brand + " " + (SITES[site] || ""));
-  /* best match first: "<brand> <flagship>" shop · the brand's shop · the brand · a shop starting with the brand (here), then the brand anywhere */
-  const tests = [x => x.site === site && lkN(x.shop) === sn, x => x.site === site && lkN(x.shop) === b, x => x.site === site && lkN(x.brand) === b,
-    x => x.site === site && lkN(x.shop).startsWith(sn), x => lkN(x.brand) === b || lkN(x.shop) === b];
-  let hit = [];
-  for (const t of tests) { hit = L.filter(t); if (hit.length) break; }
-  if (!hit.length) return null;
-  hit.sort((x, y) => run(y) - run(x) || String(y.end_day).localeCompare(String(x.end_day)));
-  const n = hit[0], ck = lkN(n.company), bk = lkN(n.brand);
+  const r = nodeOf(L, brand, site, SITES, today);
+  if (!r) return { imported: true, found: false };
+  const { hit, n } = r, run = runOf(today), ck = lkN(n.company), bk = lkN(n.brand);
   const fam = L.filter(x => ck ? lkN(x.company) === ck : lkN(x.brand) === bk);
   const shops = [...new Map(fam.sort((x, y) => run(y) - run(x)).map(x => [x.shop, { shop: x.shop, brand: x.brand, site: x.site, siteName: SITES[x.site] || "", running: run(x), here: hit.some(h => h.shop === x.shop) }])).values()]
     .sort((x, y) => (y.here - x.here) || (y.running - x.running) || String(x.brand).localeCompare(String(y.brand)) || String(x.siteName).localeCompare(String(y.siteName)));
-  const keys = new Map([...new Set(hit.map(x => lkN(x.shop)))].map(k => [k, "Shop"]));
-  for (const [k, v] of [[bk, "Brand"], [ck, "Company"], [lkN(n.grp), "Group"]]) if (k && !keys.has(k)) keys.set(k, v);
+  const keys = keysOf(r);
   const users = (await activeUsers(env, SITES)).map(u => ({ u, lv: keys.get(lkN(u.raw || u.company)) })).filter(x => x.lv)
     .map(({ u, lv }) => ({ name: u.name || u.user, title: u.title, login: u.login, level: lv, account: u.raw || u.company }));
   const O = { Shop: 0, Brand: 1, Company: 2, Group: 3 };
