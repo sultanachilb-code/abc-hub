@@ -11,7 +11,11 @@
    Views: operations team + Directors / Advisor / CDSO (their flagships). History: Excel import (Liban Park monthly workbook).
    ===================================================================== */
 
+import { FF_HISTORY } from "../data/ff-history.js";   // Verdun monthly history from the Liban Park reports (no amounts)
 export const FF_SITES = ["VRM", "ACM", "DBS"];
+/* Nov 2026: the daily form also takes cars per hour, payments per machine (transactions, no amounts) and parking duration */
+export const FF_HOURS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];   // each = that hour → the next
+const DEFAULT_MACH = { VRM: { apm: ["East", "Central", "Store"], hh: ["Unesco", "Mallat", "TL"] } };
 export const DUR_BUCKETS = ["15 Minutes", "1 Hour", "2 Hours", "3 Hours", "4 Hours", "5 Hours", "6 Hours", "7 Hours", "8 Hours", "9 Hours", "10 Hours", "11 Hours", "12 Hours"];
 const KINDS = { tce: ["t", "c", "e"], users: ["u"], passes: ["p"] };   // Tickets · Cards · Employees | Users | Passes
 const DEFAULT_GATES = () => [
@@ -44,7 +48,10 @@ export async function ffSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS ff_req (token TEXT PRIMARY KEY, site TEXT NOT NULL, kind TEXT NOT NULL, period TEXT NOT NULL,
       created_at TEXT NOT NULL, expires TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT '', reminders INTEGER NOT NULL DEFAULT 0, done_at TEXT NOT NULL DEFAULT '', UNIQUE (site, kind, period))`),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS ff_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, site TEXT NOT NULL, period TEXT NOT NULL,
-      what TEXT NOT NULL, by_name TEXT NOT NULL DEFAULT '')`)
+      what TEXT NOT NULL, by_name TEXT NOT NULL DEFAULT '')`),
+    /* monthly figures from the Liban Park reports (history): kind ee {in,out} · adm {t,c,e,s} · soffa {in,out} · peak [13] · tx {apm:{name:n}, hh:{name:n}} */
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS ff_hist (site TEXT NOT NULL, month TEXT NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL, source TEXT NOT NULL DEFAULT '',
+      at TEXT NOT NULL DEFAULT '', PRIMARY KEY (site, month, kind))`)
   ]);
 }
 
@@ -56,7 +63,9 @@ export async function ffCfg(env) {
   const sites = {};
   for (const s of FF_SITES) {
     const x = (c.sites || {})[s] || {};
-    sites[s] = { on: x.on != null ? !!x.on : s !== "DBS", to: x.to || [], cc: x.cc || [], gates: Array.isArray(x.gates) && x.gates.length ? x.gates : DEFAULT_GATES() };
+    const dm = DEFAULT_MACH[s] || { apm: [], hh: [] };
+    sites[s] = { on: x.on != null ? !!x.on : s !== "DBS", to: x.to || [], cc: x.cc || [], gates: Array.isArray(x.gates) && x.gates.length ? x.gates : DEFAULT_GATES(),
+      apm: Array.isArray(x.apm) ? x.apm : dm.apm, hh: Array.isArray(x.hh) ? x.hh : dm.hh };
   }
   return { sites, revenue: !!c.revenue, updatedAt: c.updatedAt || "", updatedBy: c.updatedBy || "" };
 }
@@ -75,9 +84,18 @@ function cleanGates(list) {
   return out;
 }
 
+const cleanNames = (list, what) => { const out = [];
+  for (const n of (Array.isArray(list) ? list : []).slice(0, 12)) { const v = String(n || "").replace(/\s+/g, " ").trim().slice(0, 30); if (v && !out.includes(v)) out.push(v); }
+  return out; };
 /* ---------- figures ---------- */
-function computeDay(gates, raw, revenue) {
+function computeDay(gates, raw, revenue, sc) {
   const data = { g: {} };
+  /* Nov 2026 extras — kept only when something was typed */
+  const arr = (v, n) => { const a = Array.from({ length: n }, (_, i) => int((Array.isArray(v) ? v : [])[i])); return a.some(Boolean) ? a : null; };
+  const h = arr(raw.h, FF_HOURS.length); if (h) data.h = h;
+  const du = arr(raw.dur, DUR_BUCKETS.length); if (du) data.dur = du;
+  if (sc && raw.tx) { const pick = (names, v) => Object.fromEntries(names.map(n => [n, int((v || {})[n])])); const tx = { apm: pick(sc.apm || [], raw.tx.apm), hh: pick(sc.hh || [], raw.tx.hh) };
+    if ([...Object.values(tx.apm), ...Object.values(tx.hh)].some(Boolean)) data.tx = tx; }
   let entries = 0, noemp = 0, employees = 0, exits = 0;
   for (const g of gates) {
     const v = (raw.g || {})[g.id] || {}, o = {};
@@ -91,9 +109,10 @@ function computeDay(gates, raw, revenue) {
 }
 const dayOut = (r, gates, revenue) => ({ day: r.day, site: r.site, entries: r.entries, noemp: r.entries_noemp, employees: r.employees, exits: r.exits, free: r.free,
   ...(revenue ? { membership: r.membership, balance: r.balance } : {}), detail: !!r.detail, g: r.detail ? (JSON.parse(r.data || "{}").g || {}) : {},
+  ...(r.detail ? (({ h, tx, dur }) => ({ h: h || null, tx: tx || null, dur: dur || null }))(JSON.parse(r.data || "{}")) : {}),
   source: r.source, by: r.by_name, at: r.at, note: r.note });
 async function saveDay(env, site, day, raw, cfg, who, source, note = "") {
-  const c = computeDay(cfg.sites[site].gates, raw, cfg.revenue);
+  const c = computeDay(cfg.sites[site].gates, raw, cfg.revenue, cfg.sites[site]);
   if (!c.entries) throw err("The entries are all zero — please check the figures");
   const prev = await env.DB.prepare("SELECT entries FROM ff_days WHERE site = ? AND day = ?").bind(site, day).first();
   await env.DB.prepare(`INSERT OR REPLACE INTO ff_days (site, day, data, entries, entries_noemp, employees, exits, free, membership, balance, detail, source, by_name, at, note)
@@ -153,7 +172,7 @@ async function mailLinks(env, d, site, reqs, n, o = {}) {
 async function pending(env, site, today) {
   const yday = addDays(today, -1), list = [];
   if (!(await isDone(env, site, "day", yday))) list.push(await request(env, site, "day", yday, today));
-  if (today.slice(8) === "01") { const m = prevMonth(today.slice(0, 7)); if (!(await isDone(env, site, "dur", m))) list.push(await request(env, site, "dur", m, today)); }
+  /* Nov 2026: parking duration comes with the daily figures — no monthly request on the 1st any more */
   return list;
 }
 /* cron (every 2 minutes) */
@@ -191,7 +210,7 @@ export async function ffPublic(env, token, method, b, d) {
   let cur = null;
   if (r.kind === "day") { const x = await env.DB.prepare("SELECT * FROM ff_days WHERE site = ? AND day = ?").bind(r.site, r.period).first(); if (x && x.detail) cur = dayOut(x, sc.gates, cfg.revenue); }
   else { const x = await env.DB.prepare("SELECT data FROM ff_dur WHERE site = ? AND month = ?").bind(r.site, r.period).first(); if (x) cur = { dur: JSON.parse(x.data) }; }
-  return { kind: r.kind, period: r.period, site: r.site, siteName: d.SITES[r.site], gates: sc.gates, revenue: cfg.revenue, buckets: DUR_BUCKETS, current: cur };
+  return { kind: r.kind, period: r.period, site: r.site, siteName: d.SITES[r.site], gates: sc.gates, revenue: cfg.revenue, buckets: DUR_BUCKETS, hours: FF_HOURS, apm: sc.apm, hh: sc.hh, current: cur };
 }
 
 /* ---------- hub routes (ops/ff/...) ---------- */
@@ -207,6 +226,7 @@ export async function ffRoute(env, p, method, b, url, d) {
 
   if (p === "ff/context") return { sites: Object.fromEntries(view.map(s => [s, d.SITES[s]])), on: Object.fromEntries(view.map(s => [s, cfg.sites[s].on])),
     canEdit: Object.fromEntries(view.map(s => [s, canEdit(s)])), gates: Object.fromEntries(view.map(s => [s, cfg.sites[s].gates])), revenue: cfg.revenue,
+    mach: Object.fromEntries(view.map(s => [s, { apm: cfg.sites[s].apm, hh: cfg.sites[s].hh }])), hours: FF_HOURS,
     buckets: DUR_BUCKETS, today: d.today(), hour: d.hour(), schedule: { start: START_H, last: LAST_H }, settings: view.some(canEdit) };
 
   if (p === "ff/status") {   // Daily import: the last 14 days per flagship
@@ -239,6 +259,12 @@ export async function ffRoute(env, p, method, b, url, d) {
     if (!isMonth(from) || !isMonth(to)) throw err("Choose the months");
     const { results } = await env.DB.prepare("SELECT month, data, total, source, by_name, at FROM ff_dur WHERE site = ? AND month BETWEEN ? AND ? ORDER BY month").bind(s, from, to).all();
     return { site: s, buckets: DUR_BUCKETS, months: (results || []).map(r => ({ month: r.month, data: JSON.parse(r.data), total: r.total, source: r.source, by: r.by_name, at: r.at })) };
+  }
+  if (p === "ff/monthly" && method === "GET") {   // the 7 monthly reports: Liban Park history where it exists, otherwise the sum of the daily figures
+    const s = need(q.get("site")), from = q.get("from"), to = q.get("to");
+    if (!isMonth(from) || !isMonth(to) || to < from) throw err("Choose the months");
+    await histSeed(env, s);
+    return { site: s, hours: FF_HOURS, buckets: DUR_BUCKETS, apm: cfg.sites[s].apm, hh: cfg.sites[s].hh, months: await monthly(env, s, from, to, cfg.sites[s].gates) };
   }
   if (p === "ff/day" && method === "GET") {
     const s = need(q.get("site")), day = q.get("day"); if (!isDay(day)) throw err("Choose the day");
@@ -280,7 +306,7 @@ export async function ffRoute(env, p, method, b, url, d) {
     for (const [s, x] of Object.entries(b.sites || {})) {
       if (!FF_SITES.includes(s)) continue;
       if (!canEdit(s)) throw err(`Not allowed for ${d.SITES[s]}`, 403);
-      sites[s] = { on: !!x.on, to: emails(x.to), cc: emails(x.cc), gates: cleanGates(x.gates) };
+      sites[s] = { on: !!x.on, to: emails(x.to), cc: emails(x.cc), gates: cleanGates(x.gates), apm: cleanNames(x.apm), hh: cleanNames(x.hh) };
       if (sites[s].on && !sites[s].to.length) throw err(`${d.SITES[s]}: add the Liban Park email (To) or switch the flagship off`);
     }
     const revenue = "revenue" in b ? !!b.revenue : !!cur.revenue;
@@ -318,4 +344,44 @@ export async function ffRoute(env, p, method, b, url, d) {
     return { imported: ops.length, skipped };
   }
   throw err("Not found", 404);
+}
+
+/* ---------- monthly reports (Nov 2026) ---------- */
+async function histSeed(env, site) {
+  const H = FF_HISTORY[site]; if (!H) return;
+  const c = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind("ff:hist:" + site, new Date().toISOString()).run().catch(() => null);
+  if (!c || !c.meta || c.meta.changes !== 1) return;
+  const at = new Date().toISOString(), ops = [];
+  for (const [m, kinds] of Object.entries(H.months)) for (const [k, v] of Object.entries(kinds))
+    ops.push(env.DB.prepare("INSERT OR IGNORE INTO ff_hist (site, month, kind, data, source, at) VALUES (?,?,?,?,'liban-report',?)").bind(site, m, k, JSON.stringify(v), at));
+  for (const [m, a] of Object.entries(H.dur || {}))
+    ops.push(env.DB.prepare("INSERT OR IGNORE INTO ff_dur (site, month, data, total, source, by_name, at) VALUES (?,?,?,?,'import','Liban Park reports',?)").bind(site, m, JSON.stringify(a), a.reduce((x, y) => x + y, 0), at));
+  for (let i = 0; i < ops.length; i += 80) await env.DB.batch(ops.slice(i, i + 80));
+  await env.DB.prepare("INSERT INTO ff_log (at, site, period, what, by_name) VALUES (?,?,?,?,?)").bind(at, site, "import", `History loaded from the Liban Park reports · ${Object.keys(H.months).length} months`, "Hub").run().catch(() => {});
+}
+const monthDays = m => new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate();
+const addArr = (a, b) => a.map((x, i) => x + (b[i] || 0));
+async function monthly(env, site, from, to, gates) {
+  const [days, hist, dur] = await Promise.all([
+    env.DB.prepare("SELECT day, data, entries, exits, detail FROM ff_days WHERE site = ? AND day BETWEEN ? AND ?").bind(site, from + "-01", to + "-31").all(),
+    env.DB.prepare("SELECT month, kind, data FROM ff_hist WHERE site = ? AND month BETWEEN ? AND ?").bind(site, from, to).all(),
+    env.DB.prepare("SELECT month, data FROM ff_dur WHERE site = ? AND month BETWEEN ? AND ?").bind(site, from, to).all()]);
+  const G = Object.fromEntries(gates.map(g => [g.id, g])), M = {};
+  const mo = m => M[m] = M[m] || { month: m, mdays: monthDays(m), days: 0, ee: { in: 0, out: 0 }, adm: { t: 0, c: 0, e: 0, s: 0 }, soffa: { in: 0, out: 0 },
+    peak: FF_HOURS.map(() => 0), tx: { apm: {}, hh: {} }, dur: DUR_BUCKETS.map(() => 0), has: {}, src: {} };
+  for (const r of days.results || []) {
+    const x = mo(r.day.slice(0, 7)); x.days++; x.ee.in += r.entries; x.ee.out += r.exits; x.has.ee = 1;
+    if (!r.detail) continue;
+    const dt = JSON.parse(r.data || "{}");
+    for (const [gid, v] of Object.entries(dt.g || {})) { const g = G[gid]; if (!g) continue;
+      if (g.kind === "users") { x.soffa[g.dir] += v.u || 0; x.has.soffa = 1; if (g.dir === "in") x.adm.s += v.u || 0; }
+      else if (g.kind === "tce" && g.dir === "in") { x.adm.t += v.t || 0; x.adm.c += v.c || 0; x.adm.e += v.e || 0; x.has.adm = 1; } }
+    if (dt.h) { x.peak = addArr(x.peak, dt.h); x.has.peak = 1; }
+    if (dt.dur) { x.dur = addArr(x.dur, dt.dur); x.has.dur = 1; }
+    if (dt.tx) { for (const k of ["apm", "hh"]) for (const [n, v] of Object.entries(dt.tx[k] || {})) x.tx[k][n] = (x.tx[k][n] || 0) + v; x.has.tx = 1; }
+  }
+  for (const k of ["ee", "adm", "soffa", "peak", "dur", "tx"]) for (const x of Object.values(M)) if (x.has[k]) x.src[k] = "daily";
+  for (const r of hist.results || []) { const x = mo(r.month); x[r.kind] = JSON.parse(r.data); x.src[r.kind] = "report"; }   // Liban Park's own monthly report wins for that month
+  for (const r of dur.results || []) { const x = mo(r.month); x.dur = JSON.parse(r.data); x.src.dur = "report"; }
+  return Object.values(M).map(({ has, ...x }) => x).sort((a, b) => a.month.localeCompare(b.month));
 }

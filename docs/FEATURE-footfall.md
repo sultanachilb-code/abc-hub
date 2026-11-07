@@ -33,3 +33,16 @@ Files: `modules/footfall.js` · `tools/footfall.html` (hub object) · `tools/ffe
 
 ## Data
 `ff_days (site, day)` · `ff_dur (site, month)` · `ff_req` (links) · `ff_log` · `meta ff:cfg`.
+
+## Daily form extended · the 7 monthly reports (Nov 2026)
+- **Liban Park daily form** (yesterday's figures — their system releases the report at midnight) now also takes:
+  cars entering per hour 10:00 → 23:00 (`data.h`, 13 values; warns when they don't add up to the entries),
+  transactions per pay machine and per exit handheld (`data.tx = {apm:{name:n}, hh:{name:n}}`, no amounts) and
+  parking duration of the cars that left (`data.dur`, 13 buckets). The 1st-of-month duration request is gone.
+  The hub's "Correct / Enter the figures" dialog has the same sections.
+- **Settings per flagship**: pay machines and handhelds (names). Verdun starts with East · Central · Store and Unesco · Mallat · TL.
+- **History**: `data/ff-history.js` — Verdun monthly figures from the Liban Park reports (Total Entries & Exits 2017→, Admissions 2022→,
+  Soffa 2019→, Peak Times 2025→, Machine Transactions 2026, Parking Duration 2024→ into `ff_dur`). Loaded once into `ff_hist` (meta `ff:hist:VRM`).
+- **`ops/ff/monthly`**: per month ee / adm / soffa / peak / tx / dur — Liban Park's monthly report where it exists, otherwise the sum of the daily figures.
+- **Analysis**: landing page of icons (Entries & exits · Parking admissions · Peak times · Parking duration · Soffa · Machine transactions · Weekdays),
+  one flagship and year at a time; **⤓ Excel** rebuilds the 7 reports in Liban Park's layout (no amounts).
