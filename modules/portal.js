@@ -123,9 +123,10 @@ export function parseReport(rows) {
   return out.length ? out : null;
 }
 
-/* ---------- the Active Users report (portal users): Username + Last Login columns ---------- */
+/* ---------- the Active Users report (portal users): Username + Last Login / Active / Account Name columns ---------- */
 export function parseUsers(rows) {
-  const hi = rows.findIndex(r => r.some(h => /^username$/i.test(String(h || "").trim())) && r.some(h => /last login/i.test(String(h || ""))));
+  /* Nov 2026: the daily "Sample Report: Active Users" has First Name · Last Name · Title · Username · Account Name · Active (no Last Login) */
+  const hi = rows.findIndex(r => r.some(h => /^username$/i.test(String(h || "").trim())) && r.some(h => /last login|^active$|^account name$|^profile$/i.test(String(h || "").trim())));
   if (hi < 0) return null;
   const H = rows[hi].map(h => norm(h)), col = (...res) => { for (const re of res) { const i = H.findIndex(h => re.test(h)); if (i >= 0) return i; } return -1; };
   const C = { user: col(/^username$/), first: col(/first name/), last: col(/last name/), title: col(/^title$/), company: col(/company/), account: col(/^account/), branch: col(/branch/),
