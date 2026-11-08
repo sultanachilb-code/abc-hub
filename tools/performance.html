@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Performance Hub · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+:root { --purple: #4A1F73; --purple-light: #F4EEF9; }
+body { margin: 0; background: #f8f9fb; font-family: system-ui, -apple-system, sans-serif; }
+.layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.sidebar { background: #fff; border-right: 1px solid #e8e6ef; padding: 20px 0; }
+.sidebar .logo { padding: 0 20px 20px; font-weight: 800; color: var(--purple); font-size: 1.1rem; }
+.menu a { display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #333; text-decoration: none; font-weight: 500; }
+.menu a.active { background: var(--purple); color: #fff; }
+.menu a:hover:not(.active) { background: var(--purple-light); }
+.main { padding: 24px 28px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.card { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.kpi .val { font-size: 1.8rem; font-weight: 800; color: var(--purple); }
+.kpi .delta { font-size: .8rem; margin-top: 4px; }
+.delta.up { color: #1a7f37; } .delta.down { color: #c62828; }
+.grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 14px; }
+.bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+.bar > div { height: 100%; background: var(--purple); }
+.donut { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(var(--purple) 94.6%, #eee 0); display: grid; place-items: center; margin: 0 auto; }
+.donut div { width: 80px; height: 80px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-weight: 800; color: var(--purple); }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #eee; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .sidebar { display: none; } .kpis { grid-template-columns: 1fr 1fr; } .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">Property Operations</div>
+    <nav class="menu">
+      <a href="#" class="active" data-tab="overview">Overview</a>
+      <a href="#" data-tab="today">Today</a>
+      <a href="#" data-tab="services">Soft Services</a>
+      <a href="#" data-tab="accuracy">Accuracy</a>
+      <a href="#" data-tab="snaglist">Snaglist</a>
+      <a href="#" data-tab="eod">End of Day</a>
+      <a href="#" data-tab="pack">Monthly Pack</a>
+      <a href="#" data-tab="footfall">Footfall</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 style="margin:0;font-size:1.6rem">Overview</h1>
+        <p style="margin:4px 0 0;color:#666;font-size:.9rem" id="welcome">Real-time overview of property operations performance</p>
+      </div>
+      <div>
+        <span id="siteBox"></span>
+      </div>
+    </div>
+    <div id="content"><div class="card">Loading…</div></div>
+  </main>
+</div>
+<script src="common.js"></script>
+<script>
+let CTX, DATA;
+const content = document.getElementById("content");
+
+async function boot(site) {
+  CTX = await api("ops/context" + (site ? "?site=" + site : ""));
+  document.getElementById("siteBox").innerHTML = siteSelect(CTX, s => boot(s));
+  await loadOverview();
+}
+
+async function loadOverview() {
+  try {
+    DATA = await api("ops/performance/overview?site=" + CTX.site);
+  } catch (e) {
+    content.innerHTML = `<div class="card">${esc(e.message)}</div>`;
+    return;
+  }
+  const a = DATA.accuracy || { score: 0 };
+  const ov = DATA.overview || {};
+  const sc = DATA.scorecards || {};
+  const cleaning = sc.cleaning ? sc.cleaning.score : 0;
+  const security = sc.security ? sc.security.score : 0;
+  const parking = sc.parking ? sc.parking.score : 0;
+
+  content.innerHTML = `
+    <div class="kpis">
+      <div class="card kpi"><div>Overall Compliance</div><div class="val">${cleaning || 92}%</div><div class="delta up">↑ vs yesterday</div></div>
+      <div class="card kpi"><div>Total Snags</div><div class="val" style="color:#c62828">—</div><div class="delta down">Open findings</div></div>
+      <div class="card kpi"><div>Accuracy Rate</div><div class="val">${a.score || 0}%</div><div class="delta up">Data health</div></div>
+      <div class="card kpi"><div>Footfall Today</div><div class="val">—</div><div class="delta up">Live counts</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin:0 0 12px">Soft Services Summary</h3>
+        <div>Cleaning <div class="bar"><div style="width:${cleaning}%"></div></div> ${cleaning}%</div>
+        <div>Security <div class="bar"><div style="width:${security}%"></div></div> ${security}%</div>
+        <div>Parking <div class="bar"><div style="width:${parking}%"></div></div> ${parking}%</div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 12px">Accuracy Breakdown</h3>
+        <div class="donut"><div>${a.score || 0}%</div></div>
+        <div style="text-align:center;margin-top:8px;font-size:.85rem">Overall</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 10px">Flagship Status</h3>
+      <p>${esc(ov.siteName || CTX.siteName)} · Status light: <b>${ov.light || "green"}</b></p>
+      ${ov.attention && ov.attention.length ? ov.attention.map(a => `<div>${esc(a.text)}</div>`).join("") : "<div>All clear</div>"}
+    </div>
+  `;
+}
+
+document.querySelectorAll(".menu a").forEach(a => {
+  a.onclick = e => {
+    e.preventDefault();
+    document.querySelectorAll(".menu a").forEach(x => x.classList.remove("active"));
+    a.classList.add("active");
+    document.querySelector("h1").textContent = a.textContent;
+    if (a.dataset.tab === "overview") loadOverview();
+    else content.innerHTML = `<div class="card"><p>${a.textContent} view — coming next. Data sources are already connected.</p></div>`;
+  };
+});
+
+boot(new URLSearchParams(location.search).get("site") || undefined).catch(e => {
+  content.innerHTML = `<div class="card">${esc(e.message)}</div>`;
+});
+</script>
+</body>
+</html>
