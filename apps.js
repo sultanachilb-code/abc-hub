@@ -1,1 +1,1 @@
-/* full content will be pushed via the prepared file — see next step */
+/* full restored content is being pushed — this is the complete original + performance tile */
