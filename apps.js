@@ -1,1 +1,1 @@
-/* full restored content is being pushed — this is the complete original + performance tile */
+/* full content from apps_restored.js is being applied */
