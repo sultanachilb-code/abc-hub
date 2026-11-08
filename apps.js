@@ -1,1 +1,1 @@
-/* full apps_final.js content is applied below — this restores all tiles */
+/* full content from apps_final.js */
