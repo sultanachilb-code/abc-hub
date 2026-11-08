@@ -2058,10 +2058,52 @@ async function opsRoute(env, me, p, method, b, url) {
     const L = sitesOf(me), ctxL = { me, sitesOf, siteName, pullDay, today: beirutToday };
     const F = (await Promise.all(L.map(s => siteOverview(env, s, ctxL, beirutToday().slice(0, 7)).catch(() => null)))).filter(Boolean);
     return { today: beirutToday(), me: { name: me.full_name, role: me.role }, sites: sitesMap(me),
-      items: { status: lead && roleAllows(me, "leadership"), soft: lead && roleAllows(me, "leadership"), lpack: lead && roleAllows(me, "leadership"), pack: roleAllows(me, "pack"), exec: roleAllows(me, "exec"),
+      items: { status: lead && roleAllows(me, "leadership"), restroom: roleAllows(me, "restroom") || lead, soft: lead && roleAllows(me, "leadership"), lpack: lead && roleAllows(me, "leadership"), pack: roleAllows(me, "pack"),
         snag: roleAllows(me, "snagreport") && (isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS")), accuracy: roleAllows(me, "accuracy") || lead },
       flagships: F.map(f => ({ site: f.site, name: f.siteName, light: f.light, attention: f.attention, occupancy: f.gla.occupancy, vacantUnits: f.gla.vacantUnits, fitout: f.gla.fitout,
         active: f.gla.active, trend: f.trend.map(t => ({ day: t.day, restroom: t.restroom })), checklists: f.mtd.checklists, compliance: f.mtd.compliance, accuracy: f.accuracy })) };
+  }
+  if (p === "perf/restroom") {   // Performance Dashboard → Restroom Inspections (Nov 2026): the day's grid (restroom system) + the inspections (RR_DB) + 30-day history
+    const lead = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(me.role);
+    if (!(roleAllows(me, "restroom") || lead)) throw fail("Restroom inspections are for the Mall Manager, the Operations Manager and leadership", 403);
+    const L = sitesOf(me), one = L.includes(q("site")) ? q("site") : L[0], today = beirutToday(), day = isDay(q("day")) && q("day") <= today ? q("day") : today;
+    if (!one) throw fail("No flagship on your account", 403);
+    const RRN = { VRM: "verdun_mall", ACM: "achrafieh_mall", DBS: "dbayeh", VRS: "verdun_ds", ACS: "achrafieh_ds" }, f = RRN[one];
+    const dayAdd = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+    const m0 = day.slice(0, 8) + "01", pm0 = dayAdd(m0, -1).slice(0, 8) + "01", pm1 = dayAdd(m0, -1);
+    const rows = (st, ...b) => st.bind(...b).all().then(r => r.results || []).catch(() => []);
+    const [grid, hist, flags, week, logs, mLogs] = await Promise.all([
+      pullDay(env, "restroom", one, day),
+      rows(env.DB.prepare("SELECT day, data FROM daily_stats WHERE site = ? AND day BETWEEN ? AND ? ORDER BY day"), one, pm0, day),
+      Promise.all(L.map(s => (s === one ? Promise.resolve(null) : pullDay(env, "restroom", s, day)).then(r => ({ site: s, name: siteName(s), r })))),
+      Promise.all([1, 2, 3, 4, 5, 6].map(i => pullDay(env, "restroom", one, dayAdd(day, -i)))),
+      env.RR_DB && f ? rows(env.RR_DB.prepare("SELECT room_name, log_time, window_label, window_display, supervisor, role, comments, has_issues, equipment_issues, cleaning_issues FROM inspection_logs WHERE flagship = ? AND log_date = ? ORDER BY log_time"), f, day) : [],
+      env.RR_DB && f ? rows(env.RR_DB.prepare("SELECT log_date, log_time, window_display, has_issues FROM inspection_logs WHERE flagship = ? AND log_date BETWEEN ? AND ?"), f, pm0, day) : []
+    ]);
+    const tot = g => g && !g.error && g.totals ? g.totals : null;
+    /* missed per role and per room (closed windows without a check) */
+    const missedOf = g => { const out = { ops: 0, usm: 0, rooms: {} }; if (!g || g.error) return out;
+      for (const w of g.windows || []) if (w.state === "closed") for (const r of g.rooms || []) for (const role of ["ops", "usm"]) {
+        if (!((g.grid || {})[`${r.id}|${w.id}`] || {})[role]) { out[role]++; out.rooms[r.name] = (out.rooms[r.name] || 0) + 1; } }
+      return out; };
+    const mt = missedOf(grid), mostMissed = {};
+    for (const g of [grid, ...week]) for (const [k, v] of Object.entries(missedOf(g).rooms)) mostMissed[k] = (mostMissed[k] || 0) + v;
+    const H = hist.map(h => { let d = {}; try { d = JSON.parse(h.data); } catch {} return { day: h.day, rr: d.restroom || null }; });
+    const pctOf = list => { const a = list.reduce((x, h) => h.rr ? { d: x.d + (h.rr.done || 0), e: x.e + (h.rr.expected || 0) } : x, { d: 0, e: 0 }); return a.e ? Math.round(a.d * 1000 / a.e) / 10 : null; };
+    const tt = tot(grid), dueNow = tt ? tt.done + tt.missed + (tt.inProgress || 0) : 0;
+    const month = H.filter(h => h.day >= m0 && h.day < day), monthPct = pctOf(month.concat(tt ? [{ rr: { done: tt.done, expected: tt.done + tt.missed } }] : [])), lastPct = pctOf(H.filter(h => h.day >= pm0 && h.day <= pm1));
+    /* average delay after the window opens (minutes), this month */
+    const mins = t => { const m = /(\d{1,2}):(\d{2})/.exec(String(t || "")); return m ? +m[1] * 60 + +m[2] : null; };
+    const dl = mLogs.filter(l => l.log_date >= m0).map(l => { const a = mins(l.log_time), b = mins(l.window_display); return a != null && b != null && a >= b && a - b < 240 ? a - b : null; }).filter(x => x != null);
+    const issues = logs.filter(l => l.has_issues).map(l => { let a = []; try { a = [...JSON.parse(l.equipment_issues || "[]"), ...JSON.parse(l.cleaning_issues || "[]")]; } catch {}
+      return { room: l.room_name, time: String(l.log_time || "").slice(0, 5), by: l.supervisor, role: l.role === "ops" ? "OPS" : "Soft services", what: a.map(String).slice(0, 6), note: l.comments || "" }; });
+    const kinds = {}; issues.forEach(i => i.what.forEach(w => kinds[w] = (kinds[w] || 0) + 1));
+    return { site: one, siteName: siteName(one), day, today, sites: sitesMap(me), grid: grid && !grid.error ? { windows: grid.windows, rooms: grid.rooms, grid: grid.grid } : null, gridError: grid && grid.error ? grid.error : "",
+      totals: tt ? { done: tt.done, missed: tt.missed, issues: tt.issues, expectedDay: tt.expectedDay, dueNow } : null, missedOps: mt.ops, missedSS: mt.usm,
+      monthPct, lastPct, delay: dl.length ? Math.round(dl.reduce((a, b) => a + b, 0) / dl.length) : null, issues, kinds: Object.entries(kinds).sort((a, b) => b[1] - a[1]).slice(0, 4),
+      mostMissed: Object.entries(mostMissed).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([room, n]) => ({ room, n })),
+      trend: H.filter(h => h.day > dayAdd(day, -30) && h.day < day).map(h => ({ day: h.day, pct: h.rr && h.rr.expected ? Math.round(h.rr.done * 100 / h.rr.expected) : null })).concat(tt ? [{ day, pct: tt.done + tt.missed ? Math.round(tt.done * 100 / (tt.done + tt.missed)) : null }] : []),
+      flagships: flags.map(x => { const t = x.site === one ? tt : tot(x.r); return { site: x.site, name: x.name, pct: t && t.done + t.missed ? Math.round(t.done * 100 / (t.done + t.missed)) : null, done: t ? t.done : null, missed: t ? t.missed : null }; }) };
   }
   if (p.startsWith("lead/")) return leadershipRoute(env, p, method, b, url, { me, sitesOf, siteName, pullDay, today: beirutToday });   // Leadership dashboards feature
   /* ----- Tenant Management feature (modules/tenants.js) ----- */

@@ -248,7 +248,7 @@ window.HUB = {
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
-    { id: "perf", name: "Performance Dashboard", desc: "Every flagship at a glance — flagship status, soft services, monthly packs, executive report, snaglist report and data updated", group: "Dashboards", icon: "chart", color: "#6B3FA0", url: "/tools/perf" },
+    { id: "perf", name: "Performance Dashboard", desc: "Every flagship at a glance — flagship status, restroom inspections, soft services, monthly packs, snaglist report and data updated", group: "Dashboards", icon: "chart", color: "#6B3FA0", url: "/tools/perf" },
     /* Nov 2026: Performance Dashboard, Monthly Operations Pack, Executive Report, Snaglist Report and Data Accuracy Score have no tile — they open from the Performance Dashboard menu */
     { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing and contractor permits", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
     { id: "tpdb", name: "Tenant Portal Database", desc: "Every ABC Connect user linked to shop → brand → company → group — the recipients of Marketing, PM and Memo", group: "Tenant Management", icon: "users", color: "#1F5A96", url: "/tools/tpdb" },
@@ -281,7 +281,7 @@ window.HUB = {
       id: "exec",
       name: "Executive Report",
       desc: "Monthly executive summary — occupancy, leasing, CAPEX, QC",
-      group: "Reports", hidden: true,
+      group: "Reports",
       icon: "chart",
       color: "#0F5C7A",
       url: "/tools/exec"
@@ -351,7 +351,7 @@ window.HUB = {
       logo: "/logos/restroom.png",   /* replace the file in /logos to change the picture */
       name: "Restroom Inspection Dashboard",
       desc: "Restroom QR inspection findings and reports",
-      group: "Dashboards",
+      group: "Dashboards", hidden: true,   /* Nov 2026: inside the Performance Dashboard (Restroom Inspections) */
       icon: "qr",
       color: "#2F6F73",
       url: "https://abc-restroom-report.sultanachi-lb-61f.workers.dev/",
