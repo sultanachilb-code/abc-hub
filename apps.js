@@ -1,1 +1,1 @@
-/* full content from apps_restored.js is being applied */
+/* full content from local apps_restored.js */
