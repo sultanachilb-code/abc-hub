@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4a0080;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="120" fill="url(#grad)" rx="12"/>
+  <!-- Stylized black hole / G inspired mark -->
+  <circle cx="70" cy="60" r="35" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="70" cy="60" r="18" fill="#000000"/>
+  <path d="M70 25 Q95 40 70 60 Q45 80 70 95" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <!-- Grok text -->
+  <text x="130" y="75" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="bold" fill="#ffffff">Grok</text>
+  <text x="130" y="100" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#cccccc">Module · ABC Hub</text>
+</svg>
