@@ -1,1 +1,1 @@
-/* full content from apps_final.js */
+/* full apps_final.js content — 79 tiles including Performance Hub */
