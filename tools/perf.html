@@ -6,156 +6,226 @@
 <title>Performance Dashboard · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
-<!-- Performance Dashboard (Nov 2026) — one icon for Performance (flagship status, soft services, leadership pack), Monthly Operations Pack,
-     Executive Report, Snaglist Report and Data updated. Light frost glass, a named menu on the left (no tabs), each page opens beside the menu.
+<!-- Performance Dashboard (Nov 2026, v2) — full width, layered background (blurred mall photo · frosted veil · colour glows) under light-frost glass with purple borders.
+     Named menu (no tabs): Overview · Flagship status · Restroom Inspections (native page) · Soft services · Monthly Pack · Leadership Pack · Snaglist Report · Data updated.
      docs/FEATURE-performance-dashboard.md -->
 <style>
-:root{--acc:#6B3FA0;--edge:#C9B2E6;--t:#22163A;--t2:#6B6478;--glass:rgba(255,255,255,.55)}
+:root{--acc:#6B3FA0;--acc2:#8E63C7;--edge:#C9B2E6;--t:#22163A;--t2:#6B6478;--okc:#2FB36B;--wc:#E0A030;--bc:#E14B4B}
 html,body{min-height:100%}
-body.pf{margin:0;color:var(--t);background:radial-gradient(900px 600px at 15% 10%,#FFFFFF 0,transparent 60%),radial-gradient(900px 600px at 85% 30%,#DCD3EA 0,transparent 55%),linear-gradient(135deg,#F3F1F7,#E4E0EC 55%,#D3CCE0);background-attachment:fixed}
-.g{background:var(--glass);border:1.5px solid var(--edge);border-radius:22px;backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);box-shadow:0 8px 28px rgba(74,31,115,.10),inset 0 1px 0 rgba(255,255,255,.9)}
-.app{max-width:1280px;margin:0 auto;padding:16px;display:grid;grid-template-columns:100px minmax(0,1fr);gap:14px}
+body.pf{margin:0;color:var(--t);background:#E9E3F2;overflow-x:hidden}
+.bgl{position:fixed;inset:-40px;background:url(/tools/induction/cover_VRM.jpg) center/cover;filter:brightness(2.6) saturate(.55) blur(10px);transform:scale(1.05);z-index:-3}
+.veil{position:fixed;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.62),rgba(243,239,250,.48) 50%,rgba(225,214,242,.55));z-index:-2}
+.orb{position:fixed;border-radius:50%;filter:blur(70px);z-index:-1;opacity:.55;pointer-events:none}
+.o1{width:520px;height:520px;background:#B79BE0;left:-120px;top:-80px}.o2{width:460px;height:460px;background:#F1C9A0;right:-100px;top:20%}.o3{width:520px;height:520px;background:#CDB8F0;left:35%;bottom:-220px}
+.g{background:rgba(255,255,255,.42);border:1.5px solid var(--edge);border-radius:22px;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%);box-shadow:0 10px 34px rgba(74,31,115,.12),inset 0 1px 0 rgba(255,255,255,.85)}
+.app{min-height:100dvh;padding:16px 18px;display:grid;grid-template-columns:104px minmax(0,1fr);gap:16px}
 .rail{padding:12px 6px;display:flex;flex-direction:column;gap:4px;align-self:start;position:sticky;top:16px}
-.rail a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:14px;color:var(--t2);font-size:.68rem;font-weight:700;text-align:center;line-height:1.15;cursor:pointer;text-decoration:none}
-.rail a i{font-style:normal;font-size:1.15rem;width:36px;height:36px;border-radius:11px;display:grid;place-items:center}
-.rail a:hover{background:rgba(107,63,160,.08)}.rail a.on{color:var(--acc)}.rail a.on i{background:var(--acc);color:#fff}
+.rail a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:14px;color:var(--t2);font-size:.68rem;font-weight:700;text-align:center;line-height:1.15;cursor:pointer;text-decoration:none}
+.rail a i{font-style:normal;font-size:1.15rem;width:38px;height:38px;border-radius:12px;display:grid;place-items:center}
+.rail a:hover{background:rgba(107,63,160,.08)}.rail a.on{color:var(--acc)}.rail a.on i{background:var(--acc);color:#fff;box-shadow:0 6px 16px rgba(107,63,160,.35)}
 .rail hr{border:0;border-top:1.5px solid var(--edge);margin:4px 8px}
-.topb{display:flex;gap:10px;align-items:center;padding:10px 14px;margin-bottom:14px;flex-wrap:wrap}
-.av{width:32px;height:32px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:900;font-size:.68rem;flex:none}
-.chip{background:rgba(255,255,255,.7);border:1.5px solid var(--edge);border-radius:99px;padding:6px 12px;font-size:.8rem;font-weight:600;color:var(--t)}
-.chip.al{color:#B3261E;cursor:pointer}
-select.chip{font:inherit;font-size:.8rem;font-weight:600}
+.topb{display:flex;gap:10px;align-items:center;padding:10px 16px;margin-bottom:16px;flex-wrap:wrap}
+.av{width:34px;height:34px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:900;font-size:.68rem;flex:none}
+.chip{background:rgba(255,255,255,.65);border:1.5px solid var(--edge);border-radius:99px;padding:6px 12px;font-size:.8rem;font-weight:600;color:var(--t)}
+.chip.al{color:#B3261E;cursor:pointer}.chip.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--okc);margin-right:6px;box-shadow:0 0 0 3px rgba(47,179,107,.25)}
+select.chip,input.chip{font:inherit;font-size:.8rem;font-weight:600}
 .sp{flex:1}
-.main{padding:20px}
-.main h1{margin:0;font-size:1.5rem;font-weight:700}.sub{color:var(--t2);font-size:.86rem;margin:2px 0 16px}
-.row{display:grid;grid-template-columns:1fr 1.35fr 1.1fr;gap:14px}
-.card{background:rgba(255,255,255,.6);border:1.5px solid var(--edge);border-radius:18px;padding:16px;min-width:0}
-.lbl{font-size:.7rem;color:var(--t2);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
-.big{font-size:2.1rem;font-weight:800;margin:4px 0}.mini{font-size:.78rem;color:var(--t2)}
-.pbar{height:7px;border-radius:9px;background:#EDE6F6;overflow:hidden;margin:10px 0 6px}.pbar i{display:block;height:100%;background:var(--acc)}
-.bars{display:flex;gap:6px;align-items:flex-end;height:118px;margin-top:8px}
+.pf h1{margin:0;font-size:1.6rem;font-weight:800}.sub{color:var(--t2);font-size:.88rem;margin:2px 0 16px}
+.grid12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.p{padding:16px 18px;min-width:0}
+.lbl{font-size:.7rem;color:var(--t2);text-transform:uppercase;letter-spacing:.07em;font-weight:800}
+.big{font-size:2.2rem;font-weight:800;margin:2px 0}.mini{font-size:.8rem;color:var(--t2)}
+.upc{color:var(--okc);font-weight:800;font-size:.8rem}.dnc{color:var(--bc);font-weight:800;font-size:.8rem}
+.pbar{height:7px;border-radius:9px;background:rgba(107,63,160,.12);overflow:hidden;margin:10px 0 6px}.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+.bars{display:flex;gap:5px;align-items:flex-end;height:140px;margin-top:10px}
 .bars div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;font-size:.58rem;color:var(--t2);min-width:0}
-.bars b{display:block;width:100%;max-width:22px;border-radius:7px;background:#6E6680;min-height:3px}.bars b.on{background:var(--acc)}.bars b.nd{background:#E4DCEF}
-.att{margin-top:6px;max-height:150px;overflow:auto}.att .it{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #E6DCF3;font-size:.82rem}
-.att .it:last-child{border:0}.att .d{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
-.flags{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:12px;margin-top:14px}
-.fc{background:rgba(255,255,255,.6);border:1.5px solid var(--edge);border-radius:18px;padding:12px;text-align:center}
-.fc .tg{display:flex;justify-content:space-between;font-size:.68rem;color:var(--t2)}
-.ring{--v:0;width:86px;height:86px;margin:8px auto;border-radius:50%;background:conic-gradient(var(--acc) calc(var(--v)*1%),#EDE6F6 0);display:grid;place-items:center}
-.ring span{width:68px;height:68px;border-radius:50%;background:#F4F0FA;display:grid;place-items:center;font-weight:800;font-size:1rem}
-.fc b{display:block;font-size:.84rem}.fc small{color:var(--t2);font-size:.72rem;display:block}
-.fc button{margin-top:8px;width:100%;background:var(--acc);color:#fff;border:0;border-radius:99px;padding:6px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:12px;margin-top:14px}
-.tile{background:rgba(255,255,255,.55);border:1.5px solid var(--edge);border-radius:18px;padding:14px;cursor:pointer;transition:transform .2s,box-shadow .2s;text-align:left;font:inherit;color:inherit}
-.tile:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(74,31,115,.12)}
-.tile .e{font-size:1.4rem}.tile b{display:block;margin-top:6px;font-size:.95rem}.tile small{color:var(--t2);font-size:.76rem;display:block;margin-top:2px}
-.foot{margin-top:14px;display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;font-size:.8rem;color:var(--t2);padding:10px 14px}
+.bars b{display:block;width:100%;max-width:20px;border-radius:7px;background:rgba(107,63,160,.35);min-height:3px}.bars b.on{background:var(--acc)}.bars b.lo{background:rgba(225,75,75,.6)}.bars b.nd{background:rgba(107,63,160,.1)}
+.ring{--v:0;--c:var(--acc);width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--v)*1%),rgba(107,63,160,.12) 0);display:grid;place-items:center;flex:none}
+.ring span{width:86px;height:86px;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;font-weight:800;font-size:1.2rem}
+.rk{display:flex;gap:14px;align-items:center;margin-top:6px}
+.flags{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.fc{text-align:center;padding:14px}.fc .ring{margin:6px auto}.fc b{display:block}.fc small{color:var(--t2);font-size:.74rem;display:block}
+.btnp{margin-top:10px;background:var(--acc);color:#fff;border:0;border-radius:99px;padding:7px 14px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.tg{display:flex;justify-content:space-between;font-size:.7rem;color:var(--t2)}
+.att{max-height:170px;overflow:auto}.att .it{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(201,178,230,.6);font-size:.84rem}.att .it:last-child{border:0}.att .d{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}
+.tile{padding:14px;cursor:pointer;transition:transform .2s;text-align:left;font:inherit;color:inherit}.tile:hover{transform:translateY(-3px)}.tile .e{font-size:1.4rem}.tile b{display:block;margin-top:6px}.tile small{color:var(--t2);font-size:.76rem;display:block}
+.foot{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;font-size:.8rem;color:var(--t2);padding:10px 16px}
 .foot b{color:var(--t)}.foot .stale b{color:#B3261E}.foot .due b{color:#B7791F}
+/* restroom */
+.hg{overflow-x:auto}.hg table{border-collapse:separate;border-spacing:4px;width:100%;min-width:720px;font-size:.74rem}
+.hg th{color:var(--t2);font-weight:700;font-size:.68rem;text-align:center}.hg th.rm,.hg td.rm{text-align:left;white-space:nowrap;font-weight:700;color:var(--t);font-size:.78rem}
+.hg td.c{height:34px;border-radius:9px;text-align:center}
+.hg .s{display:flex;gap:3px;justify-content:center;align-items:center;height:100%}
+.hg .s i{width:13px;height:13px;border-radius:4px;display:block}
+.k-ok{background:var(--okc)}.k-ms{background:var(--bc)}.k-pr{background:var(--wc)}.k-up{background:rgba(107,63,160,.15)}.k-is{outline:2px solid #B7791F;outline-offset:1px}
+.hg td.now{box-shadow:inset 0 0 0 2px var(--acc)}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:.74rem;color:var(--t2)}.leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.cmp .r{display:grid;grid-template-columns:minmax(90px,150px) 1fr 48px;gap:10px;align-items:center;font-size:.82rem;margin:8px 0;cursor:pointer}
+.cmp .tr{height:12px;border-radius:7px;background:rgba(107,63,160,.12);overflow:hidden;position:relative}.cmp .tr i{position:absolute;inset:0 auto 0 0;border-radius:7px}
+.lst .it{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(201,178,230,.6);font-size:.84rem}.lst .it:last-child{border:0}.lst small{color:var(--t2)}
+.lst{max-height:330px;overflow:auto}
 .frame{padding:0;overflow:hidden}
-.frame .fh{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1.5px solid var(--edge);flex-wrap:wrap}
+.frame .fh{display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1.5px solid var(--edge);flex-wrap:wrap}
 .frame .fh b{font-size:1rem}.frame .fh a{color:var(--acc);font-weight:700;font-size:.82rem;cursor:pointer;text-decoration:none}
-.frame iframe{display:block;width:100%;height:calc(100dvh - 170px);border:0;background:#fff}
+.frame iframe{display:block;width:100%;height:calc(100dvh - 150px);border:0;background:#fff}
 .empty2{padding:30px;text-align:center;color:var(--t2)}
-@media (max-width:980px){ .row{grid-template-columns:1fr} }
+@media (max-width:1200px){ .c3{grid-column:span 6} .c4,.c8{grid-column:span 12} }
 @media (max-width:760px){
   .app{grid-template-columns:1fr;padding:10px}
-  .rail{flex-direction:row;overflow-x:auto;position:sticky;top:0;z-index:5;border-radius:18px}
-  .rail a{min-width:76px}.rail hr{display:none}
-  .main{padding:14px}.frame iframe{height:calc(100dvh - 210px)}
+  .rail{flex-direction:row;overflow-x:auto;top:0;z-index:5}.rail a{min-width:80px}.rail hr{display:none}
+  .c3,.c6{grid-column:span 12}.frame iframe{height:calc(100dvh - 210px)}
 }
 </style>
 </head>
 <body class="pf">
+<div class="bgl"></div><div class="veil"></div><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
 <div class="app">
   <nav class="g rail" id="rail"></nav>
-  <div style="min-width:0">
-    <div class="g topb"><span class="av">ABC</span><b id="hi">Welcome</b><span class="sp"></span><span class="chip al hidden" id="alertChip"></span><select class="chip" id="siteF" aria-label="Flagship"></select></div>
-    <div id="view"><div class="g main"><div class="empty2">Loading…</div></div></div>
-  </div>
+  <main style="min-width:0">
+    <div class="g topb"><span class="av">ABC</span><b id="hi">Welcome</b><span class="chip live">Live</span><span class="sp"></span><span class="chip al hidden" id="alertChip"></span><select class="chip" id="siteF" aria-label="Flagship"></select><span class="chip" id="today"></span></div>
+    <div id="view"><div class="g p"><div class="empty2">Loading…</div></div></div>
+  </main>
 </div>
 <script src="common.js"></script>
 <script>
 const UP = new URLSearchParams(location.search);
-let S = null, PAGE = UP.get("page") || "overview", SITE = "", SNAG = null;
-/* the menu: every page this user may open — each opens beside the menu */
+let S = null, PAGE = UP.get("page") || "overview", SITE = UP.get("site") || "", SNAG = null, RR = null, RRDAY = "";
 const PAGES = [
   { k: "overview", n: "Overview", i: "◉" },
   { k: "status", n: "Flagship status", i: "🏢", url: () => "/tools/leadership?tab=ov&embed=1" },
+  { k: "restroom", n: "Restroom Inspections", i: "🚻" },
   { k: "soft", n: "Soft services", i: "🧹", url: () => "/tools/leadership?tab=sc&embed=1" },
   { k: "pack", n: "Monthly Pack", i: "📄", url: () => `/tools/pack${SITE ? "?site=" + SITE : ""}` },
   { k: "lpack", n: "Leadership Pack", i: "🗂", url: () => "/tools/leadership?tab=pk&embed=1" },
-  { k: "exec", n: "Executive Report", i: "📈", url: () => `/tools/exec${SITE ? "?site=" + SITE : ""}` },
   { k: "snag", n: "Snaglist Report", i: "🧾", url: () => "/tools/snagreport" },
   { k: "accuracy", n: "Data updated", i: "🕒", url: () => `/tools/accuracy${SITE ? "?site=" + SITE : ""}`, sep: true }
 ];
 const allowed = p => p.k === "overview" || (S && S.items[p.k]);
 const occ = v => v == null ? "—" : Math.round(v * 1000) / 10 + "%";
 const ago = d => { if (!d) return "never"; const n = Math.round((Date.now() - Date.parse(d)) / 864e5); return n <= 0 ? "today" : n === 1 ? "1 day" : n + " days"; };
-const LIGHT = { green: ["#2FB36B", "On track"], amber: ["#E0A030", "Attention"], red: ["#E14B4B", "Action"] };
+const LIGHT = { green: ["var(--okc)", "On track"], amber: ["var(--wc)", "Attention"], red: ["var(--bc)", "Action"] };
+const tone = v => v == null ? "var(--acc)" : v >= 95 ? "var(--okc)" : v >= 85 ? "var(--wc)" : "var(--bc)";
 
 async function boot(){
-  try { S = await api("ops/perf/summary"); } catch (e){ $("#view").innerHTML = `<div class="g main"><div class="empty2">${esc(e.message)}</div></div>`; return; }
+  try { S = await api("ops/perf/summary"); } catch (e){ $("#view").innerHTML = `<div class="g p"><div class="empty2">${esc(e.message)}</div></div>`; return; }
   $("#hi").textContent = `Welcome, ${(S.me.name || "").split(" ")[0] || ""}`;
+  $("#today").textContent = D.fmt(S.today, { weekday: "short", year: "numeric" });
   const F = S.flagships;
   $("#siteF").innerHTML = (F.length > 1 ? `<option value="">All my flagships</option>` : "") + F.map(f => `<option value="${f.site}">${esc(f.name)}</option>`).join("");
-  $("#siteF").value = SITE; $("#siteF").onchange = () => { SITE = $("#siteF").value; show(PAGE); };
-  const act = F.filter(f => f.light === "red");
-  const ch = $("#alertChip"); if (act.length){ ch.classList.remove("hidden"); ch.textContent = act.length > 2 ? `✦ ${act.length} flagships need action` : `✦ ${act.map(f => f.name).join(", ")} need${act.length === 1 ? "s" : ""} action`; ch.onclick = () => { SITE = act[0].site; $("#siteF").value = SITE; show("overview"); }; }
-  if (S.items.snag) api(`ops/snag/report`).then(r => { SNAG = r; if (PAGE === "overview") overview(); }).catch(() => {});
+  if (F.length === 1) SITE = F[0].site;
+  $("#siteF").value = SITE; $("#siteF").onchange = () => { SITE = $("#siteF").value; RR = null; show(PAGE); };
+  const act = F.filter(f => f.light === "red"), ch = $("#alertChip");
+  if (act.length){ ch.classList.remove("hidden"); ch.textContent = act.length > 2 ? `✦ ${act.length} flagships need action` : `✦ ${act.map(f => f.name).join(", ")} need${act.length === 1 ? "s" : ""} action`;
+    ch.onclick = () => { SITE = act[0].site; $("#siteF").value = SITE; show("overview"); }; }
+  if (S.items.snag) api("ops/snag/report").then(r => { SNAG = r; if (PAGE === "overview") overview(); }).catch(() => {});
+  if (S.items.restroom) loadRR(true);
   if (!allowed(PAGES.find(p => p.k === PAGE) || {})) PAGE = "overview";
   show(PAGE);
+}
+async function loadRR(quiet){
+  const site = SITE || (S.flagships[0] || {}).site;
+  try { RR = await api(`ops/perf/restroom?site=${site}${RRDAY ? "&day=" + RRDAY : ""}`); } catch (e){ RR = { error: e.message }; }
+  if (PAGE === "restroom") restroom(); else if (PAGE === "overview" && quiet) overview();
 }
 function rail(){
   $("#rail").innerHTML = PAGES.filter(allowed).map(p => `${p.sep ? "<hr>" : ""}<a data-p="${p.k}" class="${PAGE === p.k ? "on" : ""}"><i>${p.i}</i>${esc(p.n)}</a>`).join("");
   $("#rail").querySelectorAll("[data-p]").forEach(a => a.onclick = () => show(a.dataset.p));
 }
 function show(k){
-  PAGE = k; history.replaceState(null, "", k === "overview" ? location.pathname : `?page=${k}`); rail();
+  PAGE = k; history.replaceState(null, "", k === "overview" ? location.pathname : `?page=${k}${SITE ? "&site=" + SITE : ""}`); rail(); scrollTo(0, 0);
   if (k === "overview") return overview();
+  if (k === "restroom") { if (!RR || (RR.site && SITE && RR.site !== SITE)) { $("#view").innerHTML = `<div class="g p"><div class="empty2">Loading the inspections…</div></div>`; return loadRR(); } return restroom(); }
   const p = PAGES.find(x => x.k === k);
   $("#view").innerHTML = `<div class="g frame"><div class="fh"><a data-back>‹ Overview</a><b>${p.i} ${esc(p.n)}</b><span class="sp"></span><a href="${p.url()}" target="_blank" rel="noopener">Open full screen ↗</a></div><iframe src="${p.url()}" title="${esc(p.n)}"></iframe></div>`;
   $("#view [data-back]").onclick = () => show("overview");
 }
+
+/* ---------- overview ---------- */
 function overview(){
   const F = S.flagships.filter(f => !SITE || f.site === SITE);
-  if (!F.length){ $("#view").innerHTML = `<div class="g main"><div class="empty2">No flagship on your account.</div></div>`; return; }
+  if (!F.length){ $("#view").innerHTML = `<div class="g p"><div class="empty2">No flagship on your account.</div></div>`; return; }
   const oc = F.map(f => f.occupancy).filter(v => v != null), avgOcc = oc.length ? oc.reduce((a, b) => a + b, 0) / oc.length : null;
-  /* restroom checks done, last 14 days, average of the flagships shown */
   const days = (F[0].trend || []).map(t => t.day);
   const tr = days.map(d => { const v = F.map(f => (f.trend.find(t => t.day === d) || {}).restroom).filter(x => x != null); return { d, v: v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null }; });
   const att = F.flatMap(f => f.attention.map(a => ({ ...a, name: f.name }))).sort((a, b) => (a.tone === "alert" ? 0 : 1) - (b.tone === "alert" ? 0 : 1));
   const n = c => F.filter(f => f.light === c).length;
   const sn = SNAG ? (SITE ? SNAG.sites.filter(s => s.site === SITE) : SNAG.sites) : null, snT = sn ? sn.reduce((a, s) => ({ open: a.open + (s.openTotal || 0), added: a.added + (s.added || 0), solved: a.solved + (s.solved || 0) }), { open: 0, added: 0, solved: 0 }) : null;
   const ac = {}; F.forEach(f => (f.accuracy ? f.accuracy.items : []).forEach(i => { const o = ac[i.name]; if (!o || (i.at || "") < (o.at || "")) ac[i.name] = i; }));
-  const accItem = k => Object.values(ac).find(i => (i.name || "").toLowerCase().includes(k));
-  const ex = accItem("executive");
+  /* restroom today: the flagships shown (from the restroom page data: every flagship of the user) */
+  const rf = RR && RR.flagships ? RR.flagships.filter(x => (!SITE || x.site === SITE) && x.done != null) : [];
+  const rDone = rf.reduce((a, x) => a + x.done, 0), rMiss = rf.reduce((a, x) => a + x.missed, 0), rPct = rDone + rMiss ? Math.round(rDone * 100 / (rDone + rMiss)) : null;
+  const rIss = RR && RR.totals && (!SITE || RR.site === SITE) ? RR.totals.issues : null;
   const T = {
     status: `${n("green")} on track · ${n("amber")} attention · ${n("red")} action`,
+    restroom: rPct != null ? `${rPct}% today · ${rMiss} missed` : "Today's checks, missed windows and issues",
     soft: "Cleaning, Security and Parking scores",
     pack: "One page per flagship · this month vs last",
     lpack: "A4 management pack · Download PDF",
-    exec: ex ? `updated ${ago(ex.at)}${ex.at ? " ago" : ""}`.replace("today ago", "today") : "Occupancy, leasing, CAPEX, QC",
     snag: snT ? `${snT.open} open · +${snT.added} added · ${snT.solved} solved this month` : "Findings open, added and solved",
-    accuracy: "When the key data was last updated"
+    accuracy: (() => { const o = Object.values(ac).sort((a, b) => (a.at || "").localeCompare(b.at || ""))[0]; return o ? `${o.name}: ${ago(o.at)}${o.at ? " ago" : ""}`.replace("today ago", "today") : "When the key data was last updated"; })()
   };
-  $("#view").innerHTML = `<div class="g main"><h1>Performance Dashboard</h1><div class="sub">${SITE ? esc(F[0].name) : "Every flagship at a glance"} — tap a ring or an icon to open its page</div>
-    <div class="row">
-      <div class="card"><div class="lbl">${SITE ? "Occupancy" : "Average occupancy"}</div><div class="big">${occ(avgOcc)}</div>
+  $("#view").innerHTML = `<h1>Performance Dashboard</h1><div class="sub">${SITE ? esc(F[0].name) : "Every flagship at a glance"} — tap a ring or an icon to open its page</div>
+    <div class="grid12">
+      <div class="g p c3"><div class="lbl">${SITE ? "Occupancy" : "Average occupancy"}</div><div class="big">${occ(avgOcc)}</div>
         <div class="pbar"><i style="width:${avgOcc != null ? Math.round(avgOcc * 100) : 0}%"></i></div>
         <div class="mini">${F.reduce((a, f) => a + (f.vacantUnits || 0), 0)} vacant units · ${F.reduce((a, f) => a + (f.fitout || 0), 0)} in fit-out · ${F.reduce((a, f) => a + (f.active || 0), 0)} active tenants</div></div>
-      <div class="card"><div class="lbl">Restroom checks done · last 14 days</div><div class="bars">${tr.map((t, i) => `<div><b class="${t.v == null ? "nd" : i === tr.length - 1 ? "on" : ""}" style="height:${t.v == null ? 4 : Math.max(4, t.v)}%" title="${esc(D.fmt(t.d))}: ${t.v == null ? "no data" : t.v + "%"}"></b>${i % 2 ? "" : D.parse(t.d).getUTCDate()}</div>`).join("")}</div></div>
-      <div class="card"><div class="lbl">Needs attention · ${att.length}</div><div class="att">${att.slice(0, 12).map(a => `<div class="it"><span class="d" style="background:${a.tone === "alert" ? "#E14B4B" : "#E0A030"}"></span><span><b>${esc(a.name)}</b> · ${esc(a.text)}</span></div>`).join("") || `<div class="it"><span class="d" style="background:#2FB36B"></span>All clear ✓</div>`}</div></div>
-    </div>
-    <div class="flags">${F.map(f => { const L = LIGHT[f.light] || LIGHT.green, v = f.occupancy != null ? Math.round(f.occupancy * 100) : 0;
-      return `<div class="fc"><div class="tg"><span style="color:${L[0]}">●</span><span>${L[1]}</span></div><div class="ring" style="--v:${v}"><span>${occ(f.occupancy)}</span></div><b>${esc(f.name)}</b><small>occupancy${f.compliance != null ? ` · compliance ${f.compliance}%` : ""}</small>
-        <button data-open="${f.site}">Open ›</button></div>`; }).join("")}</div>
-    <div class="tiles">${PAGES.filter(p => p.k !== "overview" && allowed(p)).map(p => `<button class="tile" data-p2="${p.k}"><span class="e">${p.i}</span><b>${esc(p.n)}</b><small>${esc(T[p.k] || "")}</small></button>`).join("")}</div>
-    ${Object.keys(ac).length ? `<div class="g foot"><span>🕒 Data last updated${SITE ? "" : " (oldest flagship)"}:</span>${Object.values(ac).map(i => `<span class="${i.state}">${esc(i.name)} <b>${esc(ago(i.at))}</b></span>`).join("")}</div>` : ""}
-  </div>`;
+      ${S.items.restroom ? `<div class="g p c3" style="cursor:pointer" data-go="restroom"><div class="lbl">Restroom inspections today</div><div class="rk"><div class="ring" style="--v:${rPct || 0};--c:${tone(rPct)}"><span>${rPct == null ? "…" : rPct + "%"}</span></div>
+        <div class="mini">${rPct == null ? "Loading…" : `<b style="color:var(--t);font-size:1rem">${rDone}</b> done<br><b style="color:var(--bc);font-size:1rem">${rMiss}</b> missed${rIss != null ? `<br><b style="color:#B7791F;font-size:1rem">${rIss}</b> issues` : ""}`}</div></div></div>` : ""}
+      <div class="g p ${S.items.restroom ? "c3" : "c6"}"><div class="lbl">Restroom checks done · last 14 days</div><div class="bars">${tr.map((t, i) => `<div><b class="${t.v == null ? "nd" : i === tr.length - 1 ? "on" : t.v < 85 ? "lo" : ""}" style="height:${t.v == null ? 4 : Math.max(4, t.v)}%" title="${esc(D.fmt(t.d))}: ${t.v == null ? "no data" : t.v + "%"}"></b>${i % 2 ? "" : D.parse(t.d).getUTCDate()}</div>`).join("")}</div></div>
+      <div class="g p c3"><div class="lbl">Needs attention · ${att.length}</div><div class="att">${att.slice(0, 14).map(a => `<div class="it"><span class="d" style="background:${a.tone === "alert" ? "var(--bc)" : "var(--wc)"}"></span><span><b>${esc(a.name)}</b> · ${esc(a.text)}</span></div>`).join("") || `<div class="it"><span class="d" style="background:var(--okc)"></span>All clear ✓</div>`}</div></div>
+      <div class="c12 flags">${F.map(f => { const L = LIGHT[f.light] || LIGHT.green, v = f.occupancy != null ? Math.round(f.occupancy * 100) : 0, r = rf.find(x => x.site === f.site);
+        return `<div class="g fc"><div class="tg"><span style="color:${L[0]}">●</span><span>${L[1]}</span></div><div class="ring" style="--v:${v}"><span>${occ(f.occupancy)}</span></div><b>${esc(f.name)}</b><small>occupancy${r && r.pct != null ? ` · restrooms ${r.pct}%` : f.compliance != null ? ` · compliance ${f.compliance}%` : ""}</small>
+          <button class="btnp" data-open="${f.site}">Open ›</button></div>`; }).join("")}</div>
+      <div class="c12 tiles">${PAGES.filter(p => p.k !== "overview" && allowed(p)).map(p => `<button class="g tile" data-p2="${p.k}"><span class="e">${p.i}</span><b>${esc(p.n)}</b><small>${esc(T[p.k] || "")}</small></button>`).join("")}</div>
+      ${Object.keys(ac).length ? `<div class="g foot c12"><span>🕒 Data last updated${SITE ? "" : " (oldest flagship)"}:</span>${Object.values(ac).map(i => `<span class="${i.state}">${esc(i.name)} <b>${esc(ago(i.at))}</b></span>`).join("")}</div>` : ""}
+    </div>`;
   $("#view").querySelectorAll("[data-p2]").forEach(b => b.onclick = () => show(b.dataset.p2));
-  $("#view").querySelectorAll("[data-open]").forEach(b => b.onclick = () => { SITE = b.dataset.open; $("#siteF").value = SITE; show(S.items.status ? "status" : S.items.pack ? "pack" : "overview"); });
+  $("#view").querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
+  $("#view").querySelectorAll("[data-open]").forEach(b => b.onclick = () => { SITE = b.dataset.open; $("#siteF").value = SITE; RR = null; show(S.items.status ? "status" : "overview"); });
 }
-window.hubRefresh = () => boot();
+
+/* ---------- restroom inspections ---------- */
+function restroom(){
+  if (!RR || RR.error){ $("#view").innerHTML = `<div class="g p"><div class="empty2">${esc(RR ? RR.error : "Loading…")}</div></div>`; return; }
+  const R0 = RR, t = R0.totals, G = R0.grid, live = R0.day === R0.today;
+  const due = t ? t.done + t.missed : 0, pct = due ? Math.round(t.done * 100 / due) : null;
+  const nowW = G ? G.windows.findIndex(w => w.state === "open") : -1;
+  const cell = (r, w, wi) => { const c = (G.grid || {})[`${r.id}|${w.id}`] || {};
+    const sq = role => { const x = c[role]; return x ? `<i class="k-ok${x.issues ? " k-is" : ""}" title="${role === "ops" ? "OPS" : "Soft services"} · ${esc(x.time || "")} · ${esc(x.by || "")}${x.issues ? " · issue reported" : ""}"></i>`
+      : `<i class="${w.state === "closed" ? "k-ms" : w.state === "open" ? "k-pr" : "k-up"}" title="${role === "ops" ? "OPS" : "Soft services"} · ${w.state === "closed" ? "missed" : w.state === "open" ? "in progress" : "upcoming"}"></i>`; };
+    return `<td class="c ${wi === nowW ? "now" : ""}"><div class="s">${sq("ops")}${sq("usm")}</div></td>`; };
+  const trend = R0.trend || [];
+  const diff = R0.monthPct != null && R0.lastPct != null ? Math.round((R0.monthPct - R0.lastPct) * 10) / 10 : null;
+  $("#view").innerHTML = `<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px"><div><h1>🚻 Restroom Inspections</h1><div class="sub" style="margin-bottom:0">${esc(R0.siteName)} · ${esc(D.fmt(R0.day, { weekday: "long", year: "numeric" }))}${live ? " · updates live" : ""}</div></div><span class="sp"></span>
+      <input type="date" class="chip" id="rrDay" value="${R0.day}" max="${R0.today}">${live ? "" : `<button class="chip" id="rrToday">Today</button>`}<button class="chip" id="rrSys">Open the inspection system ↗</button></div>
+    <div class="grid12" style="margin-top:12px">
+      <div class="g p c3"><div class="lbl">Done ${live ? "so far today" : "that day"}</div><div class="rk"><div class="ring" style="--v:${pct || 0};--c:${tone(pct)}"><span>${pct == null ? "—" : pct + "%"}</span></div>
+        <div class="mini">${t ? `<b style="color:var(--t);font-size:1.05rem">${t.done}</b> of ${due} due${live ? " by now" : ""}<br>${t.expectedDay} for the whole day` : esc(R0.gridError || "No data")}</div></div></div>
+      <div class="g p c3"><div class="lbl">Missed</div><div class="big" style="color:var(--bc)">${t ? t.missed : "—"}</div><div class="mini">OPS ${R0.missedOps} · Soft services ${R0.missedSS}</div>
+        <div class="pbar"><i style="width:${due ? Math.round((t.missed / due) * 100) : 0}%;background:var(--bc)"></i></div><div class="mini">${R0.mostMissed[0] ? `worst this week: ${esc(R0.mostMissed[0].room)} (${R0.mostMissed[0].n})` : "no restroom missed this week ✓"}</div></div>
+      <div class="g p c3"><div class="lbl">Issues reported</div><div class="big" style="color:#B7791F">${R0.issues.length}</div><div class="mini">${R0.kinds.length ? R0.kinds.map(([k, n]) => `${n} ${esc(k)}`).join(" · ") : "nothing reported ✓"}</div></div>
+      <div class="g p c3"><div class="lbl">This month</div><div class="big">${R0.monthPct == null ? "—" : R0.monthPct + "%"}</div>${diff != null ? `<span class="${diff >= 0 ? "upc" : "dnc"}">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff)}% vs last month</span>` : ""}
+        <div class="mini" style="margin-top:6px">${R0.delay != null ? `checks done on average ${R0.delay} min after the window opens` : "done of the checks expected"}</div></div>
+      <div class="g p c8"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div class="lbl">${live ? "Today" : esc(D.fmt(R0.day))} · restroom by time window</div>
+        <div class="leg"><span><i class="k-ok"></i>Done</span><span><i class="k-pr"></i>In progress</span><span><i class="k-ms"></i>Missed</span><span><i class="k-up"></i>Upcoming</span><span><i style="outline:2px solid #B7791F"></i>Issue</span><span>each cell: OPS | Soft services</span></div></div>
+        ${G ? `<div class="hg"><table><tr><th class="rm">Restroom</th>${G.windows.map((w, i) => `<th>${esc(w.label)}${w.display ? `<br><span style="font-weight:600">${esc(w.display)}</span>` : ""}${i === nowW ? `<br><span style="color:var(--acc)">now</span>` : ""}</th>`).join("")}</tr>
+          ${G.rooms.map(r => `<tr><td class="rm">${esc(r.name)}</td>${G.windows.map((w, wi) => cell(r, w, wi)).join("")}</tr>`).join("")}</table></div>` : `<div class="empty2">${esc(R0.gridError || "The inspection system did not answer — try again.")}</div>`}</div>
+      <div class="c4" style="display:grid;gap:16px;align-content:start">
+        ${R0.flagships.length > 1 ? `<div class="g p cmp"><div class="lbl">All flagships · ${live ? "today" : esc(D.fmt(R0.day))}</div>${R0.flagships.map(f => `<div class="r" data-rs="${f.site}"><span${f.site === R0.site ? ` style="font-weight:800;color:var(--acc)"` : ""}>${esc(f.name)}</span><span class="tr"><i style="width:${f.pct || 0}%;background:${tone(f.pct)}"></i></span><b>${f.pct == null ? "—" : f.pct + "%"}</b></div>`).join("")}</div>` : ""}
+        <div class="g p lst"><div class="lbl">Most missed · last 7 days</div>${R0.mostMissed.map(m => `<div class="it"><span>${esc(m.room)}</span><b style="color:${m.n >= 5 ? "var(--bc)" : "var(--t)"}">${m.n}</b></div>`).join("") || `<div class="it"><span>No restroom missed ✓</span></div>`}</div>
+      </div>
+      <div class="g p c8"><div class="lbl">Done · last 30 days</div><div class="bars">${trend.map((x, i) => `<div><b class="${x.pct == null ? "nd" : i === trend.length - 1 ? "on" : x.pct < 88 ? "lo" : ""}" style="height:${x.pct == null ? 4 : Math.max(4, x.pct)}%" title="${esc(D.fmt(x.day))}: ${x.pct == null ? "no data" : x.pct + "%"}"></b>${i % 3 ? "" : D.parse(x.day).getUTCDate()}</div>`).join("")}</div></div>
+      <div class="g p c4 lst"><div class="lbl">Issues reported ${live ? "today" : "that day"} · ${R0.issues.length}</div>${R0.issues.map(i => `<div class="it"><span><b>${esc(i.room)}</b>${i.what.length ? " · " + esc(i.what.join(", ")) : ""}${i.note ? `<br><small>${esc(i.note)}</small>` : ""}</span><small style="white-space:nowrap;text-align:right">${esc(i.time)}<br>${esc(i.by)} · ${esc(i.role)}</small></div>`).join("") || `<div class="it"><span>Nothing reported ✓</span></div>`}</div>
+    </div>`;
+  $("#rrDay").onchange = e => { RRDAY = e.target.value === R0.today ? "" : e.target.value; RR = null; show("restroom"); };
+  const tb = $("#rrToday"); if (tb) tb.onclick = () => { RRDAY = ""; RR = null; show("restroom"); };
+  $("#rrSys").onclick = () => hubOpen("restroom");
+  $("#view").querySelectorAll("[data-rs]").forEach(r => r.onclick = () => { SITE = r.dataset.rs; $("#siteF").value = SITE; RR = null; show("restroom"); });
+}
+window.hubRefresh = () => { RR = null; boot(); };
+setInterval(() => { if (PAGE === "restroom" && RR && !RRDAY && !document.hidden) loadRR(); }, 120000);   // live: refresh every 2 minutes
 boot();
 </script>
 </body>

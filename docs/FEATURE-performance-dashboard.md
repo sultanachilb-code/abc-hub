@@ -8,3 +8,13 @@ One tile (**Dashboards → Performance Dashboard**, `/tools/perf`) replaces the 
 - Data: `/api/ops/perf/summary` → pages this user may open (same access as each old tile) + `siteOverview` per flagship (modules/leadership.js).
 - Access: MM, OM, SMS, LEAD (and admins); each menu item follows the old tile's access — e.g. a Senior Mall Supervisor sees Overview and Snaglist Report.
 - Both packs are kept for now (Monthly Pack = pack.html, Leadership Pack = the leadership A4 pack) — to be merged later.
+
+## v2 (8 Nov 2026)
+- **Full width** (no centred column) over **layers**: the Verdun Mall aerial photo (`/tools/induction/cover_VRM.jpg`) brightened and blurred · a frosted white veil · three soft colour glows — the glass cards are see-through on top.
+- **Executive Report** is back as its own tile (Reports) — not in this menu.
+- **Restroom Inspections** (redesign, native page — the old "Restroom Inspection Dashboard" tile, a link to the separate system, is hidden; "Open the inspection system ↗" opens it):
+  - cards: done so far (of the checks due by now · whole day), missed (OPS vs Soft services, worst restroom this week), issues reported (most frequent problems), this month vs last month + average minutes after the window opens;
+  - grid: restroom × time window, each cell OPS | Soft services (done / in progress / missed / upcoming, gold ring = issue), current window outlined;
+  - all flagships today (tap to switch), most missed restrooms last 7 days, done last 30 days, issues reported with problems, comments, who and when; any past day with the date picker; refreshes every 2 minutes.
+  - Data: `/api/ops/perf/restroom` — the day's grid from the restroom system (`/api/hubday`), the inspections from `RR_DB.inspection_logs` (issues, delay), `daily_stats` (30 days, month vs last month), the last 7 days' grids (most missed).
+- Overview: "Restroom inspections today" ring (all flagships shown) and restroom % on each flagship ring.
