@@ -90,6 +90,27 @@ td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
 .sw.part{background:#E0B451}.sw.part::after{left:12px}
 .lp-pos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.lp-pos button{border:1px solid var(--cline);background:var(--ccard);color:inherit;border-radius:99px;padding:7px 12px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}
 .lp-pos button.on{background:#4A1F73;color:#fff;border-color:#4A1F73}.lp-pos button i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#C8A24A;margin-left:6px;vertical-align:1px}
+.po-pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px}.po-pos h5{margin:0 0 5px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#8A7F98}
+.po-pos button{display:block;width:100%;text-align:left;border:1px solid var(--cline);background:var(--ccard);color:inherit;border-radius:12px;padding:7px 10px;font:inherit;cursor:pointer;margin-bottom:5px}
+.po-pos button b{display:block;font-size:.8rem}.po-pos button small{display:block;font-size:.68rem;color:#8A7F98}.po-pos button.psec{border-left:3px solid #1F5A96}
+.po-pos button.on{background:#4A1F73;color:#fff;border-color:#4A1F73}.po-pos button.on small{color:#E9CF8A}
+.po-fl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.po-fl button{border:1px solid var(--cline);background:var(--ccard);color:inherit;border-radius:99px;padding:7px 13px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}
+.po-fl button.on{background:#2A0F45;color:#fff;border-color:#2A0F45}.po-fl button:disabled{opacity:.4;cursor:not-allowed}.po-fl button i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#C8A24A;margin-left:6px;vertical-align:1px}
+.po-title{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:6px 0 10px}.po-title h2{margin:0;font-size:1.15rem}
+.po-card{padding:14px;margin-bottom:14px}.po-h{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.po-h b{font-size:.95rem}.po-h .mut{font-size:.76rem}
+.po-g{border-top:1px solid var(--cline);padding:8px 0}.po-gh{display:flex;gap:8px;align-items:center;margin-bottom:4px}.po-gh b{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:#6B3FA0}
+.po-tl{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px 12px}.po-tl label{display:flex;gap:8px;align-items:center;font-size:.82rem;padding:3px 4px;border-radius:7px;cursor:pointer}
+.po-tl input{accent-color:#6B3FA0;width:16px;height:16px;flex:none}.po-tl label.ov{background:rgba(200,162,74,.16);color:#8A6200;font-weight:700}.po-tl label.off{opacity:.5}
+.po-ov{font-size:.66rem;font-weight:800;border-radius:99px;padding:2px 8px;background:rgba(200,162,74,.18);color:#8A6200}
+.po-sys{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.po-sys h4{margin:0 0 6px;font-size:.8rem}
+.po-ob{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;font-size:.82rem}.po-ob span:first-child{flex:1}.po-ob.ov{background:rgba(200,162,74,.16)}
+.po-seg{display:inline-flex;border:1px solid var(--cline);border-radius:9px;overflow:hidden}.po-seg button{border:0;background:var(--ccard);color:#8A7F98;min-width:38px;padding:4px 6px;font:inherit;font-size:.74rem;font-weight:800;cursor:pointer;border-left:1px solid var(--cline)}
+.po-seg button:first-child{border-left:0}.po-seg button.vE{background:#E5F4EA;color:#1F8A4C}.po-seg button.vV{background:#EEF4FC;color:#1F5A96}.po-seg button.vO{background:#FFF6E0;color:#8A6200}.po-seg button.vN{background:#F1EEF4;color:#6B6478}
+.is-row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--cline)}.is-row b{font-size:.82rem}
+.is-ch{display:flex;gap:5px;flex-wrap:wrap}.is-ch button{border:1px solid var(--cline);background:var(--ccard);color:#8A7F98;border-radius:99px;padding:4px 10px;font:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
+.is-ch button.psec{border-color:#9DB8D9}.is-ch button.ct{border-style:dashed}.is-ch button.on{background:#6B3FA0;color:#fff;border-color:#6B3FA0}.is-ch button.psec.on{background:#1F5A96;border-color:#1F5A96}.is-ch button.ct.on{background:#C8A24A;border-color:#C8A24A;color:#2A0F45}
+.is-ct>div{display:flex;gap:6px;margin-bottom:6px}.is-ct input,.is-in{border:1px solid var(--cline);border-radius:9px;padding:7px 9px;font:inherit;font-size:.82rem;background:var(--ccard);color:inherit;width:100%;min-width:0}
+@media(max-width:700px){.is-row{grid-template-columns:1fr}}
 .lp-wrap{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px;align-items:start}
 .lp-lib{position:sticky;top:64px;max-height:calc(100dvh - 80px);overflow:auto}.lp-lib h4{font-size:.66rem;letter-spacing:.1em;color:#8A7F98;margin:10px 0 6px}.lp-lib h4:first-child{margin-top:0}
 .lp-li{display:flex;gap:8px;align-items:center;border:1px dashed var(--cline);border-radius:12px;padding:7px 8px;margin-bottom:6px;cursor:grab;font-size:.8rem;font-weight:700;background:var(--ccard)}
@@ -174,7 +195,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#hm").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
-  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["ws", "🎚", "Tools & access"], ["lp", "🧱", "Landing pages"], ["rp", "📑", "Reports"], ["bk", "💾", "Data & backup"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["lp", "🧭", "Positions & landing pages"], ["is", "🚨", "Incident Report settings"], ["ws", "🎚", "Tool switches & folders"], ["rp", "📑", "Reports"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["em", "📮", "Email Control"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
@@ -215,7 +236,7 @@ function go(p){
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE)); if (LAY) drawNav();
   const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ hm, ss, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, lp, rp, pc, tl, bk, ex, an, fc, se, mm, em })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ hm, ss, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, lp, is, rp, pc, tl, bk, ex, an, fc, se, mm, em })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -239,7 +260,7 @@ const PG = () => Object.fromEntries(NAV.filter(n => n[0] !== "sep").map(n => [n[
 const SEC_ICON = { People: "👥", Platform: "⚙️", Content: "📣" };
 const PDESC = { em: "Every email the hub sends — ON / OFF", ov: "Today at a glance", pr: "Positions, roles and flagships", us: "Accounts, sign-in and access", ur: "Who uses which tool", sec: "Sign-ins and two-step", hi: "Every change, by whom",
   al: "Free-plan allowances", db: "Tables and file storage", sy: "Connected systems and automatic jobs", mb: "Emails imported from IT reports", pc: "Projects and repositories", ss: "One hub account for Snaglist, Incidents, Restroom", tl: "Switch tools on / off, folders",
-  ws: "Each tool on / off and who sees it", lp: "Home page of each position — drag the objects", rp: "Build, schedule and send reports", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
+  ws: "Each tool on / off and its folder", is: "Who receives the Incident Report emails", lp: "Each position: tools, home page, emails, system rights — per flagship", rp: "Build, schedule and send reports", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
 function defaultLayout(){
   const sections = []; let cur = { id: "s-glance", name: "At a glance", icon: "🏠", size: "card", closed: false, items: [] };
   for (const n of NAV){ if (n[0] === "sep"){ if (cur.items.length) sections.push(cur); cur = { id: "s-" + n[1].toLowerCase().replace(/[^a-z]+/g, ""), name: n[1], icon: SEC_ICON[n[1]] || "", size: "card", closed: false, items: [] }; } else cur.items.push(n[0]); }
@@ -713,9 +734,10 @@ async function mb(){
 /* ---------- Tools & access (Nov 2026): Tools control + Who sees what in one page ----------
    One row per tool: master ON / OFF, then who sees it by group; ⋯ More = name, folder, exact positions, usage, ↺ default.
    Folder rows switch the whole folder. Saved as the tool's entry in meta tools:cfg (applied in /me and roleAllows). Administrators always see everything. */
-const WS_GROUPS = [["ops", "Operations team", ["SMS", "MS", "MO", "WH", "SEC"], "Senior Mall Supervisor · Mall Supervisor · Mall Officer · Warehouse · Security staff"],
+const WS_GROUPS_OLD = [["ops", "Operations team", ["SMS", "MS", "MO", "WH", "SEC"], "Senior Mall Supervisor · Mall Supervisor · Mall Officer · Warehouse · Security staff"],
   ["secm", "Security Manager", ["SECM"], "one per flagship — sees his flagship"], ["hos", "Head of Security", ["HOS"], "all security in ABC — every flagship"],
   ["mgmt", "Management", ["MM", "OM"], "Mall Manager / Senior · Operations Manager / Deputy"], ["lead", "Leadership", ["LEAD"], "Property Advisor · Mall Director · CDSO"]];
+const WS_GROUPS = [];   // Nov 2026: who sees each tool is set per position (and flagship) in Positions & landing pages
 let WSQ = "", WSF = "", WSS = "", WSO = new Set(), WSC = new Set();   // WSC: folders opened below the Folders table
 async function tl(){ PAGE = "ws"; history.replaceState(null, "", "#ws"); return ws(); }   // the old "Tools control" link opens Tools & access
 async function ws(){
@@ -740,7 +762,7 @@ async function ws(){
             (open ? `<tr class="wsdet" data-det="${a.id}"><td colspan="${WS_GROUPS.length + 3}"><div class="wsd">
               <div><label>NAME ON THE TILE</label><input data-nm value="${esc(c.name || "")}" placeholder="${esc(a.name)}" maxlength="60"></div>
               <div><label>FOLDER</label><select class="sel2" data-fo>${folders().concat(c.group && !folders().includes(c.group) ? [c.group] : []).map(x => `<option ${x === grpOf(a) ? "selected" : ""}>${esc(x)}</option>`).join("")}<option value="__new">＋ New folder…</option></select></div>
-              <div style="grid-column:span 2"><label>EXACT POSITIONS</label><div class="acc" data-acc>${Object.entries(T.keys).map(([k, n]) => `<span data-k="${k}" class="${acc.includes(k) ? "on" : ""}" title="${esc(n)}">${esc(n)}</span>`).join("")}</div></div>
+              <div style="grid-column:span 2"><label>WHO SEES IT</label><div class="mut" style="padding-top:6px">Set per position and flagship in <a href="#lp" data-golp style="font-weight:800">🧭 Positions &amp; landing pages</a></div></div>
               <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut">${u.n || 0} opens · ${u.people || 0} people in 7 days · id ${esc(a.id)}${c.group ? ` · moved from ${esc(a.group)}` : ""}</span><span style="flex:1"></span>${Object.keys(c).length ? `<button class="b r" data-reset>↺ Default (everything)</button>` : ""}</div>
             </div></td></tr>` : ""); };
     /* folder switches (Folders table at the top): ON / OFF for everyone + one switch per group — built from the folders that exist, so a new folder appears by itself */
@@ -774,7 +796,8 @@ async function ws(){
       const nm = tr.querySelector("[data-nm]"); nm.onchange = () => run(() => save(id, { name: nm.value.trim() === a.name ? "" : nm.value.trim() }, "Name saved"));
       tr.querySelector("[data-fo]").onchange = e => { let v = e.target.value; if (v === "__new"){ v = prompt("Name of the new folder"); if (!v) return draw(); }
         run(() => save(id, { group: v === a.group ? "" : v }, `Moved to ${v}`)); };
-      tr.querySelector("[data-acc]").onclick = e => { const k = e.target.closest("[data-k]"); if (!k) return; k.classList.toggle("on");
+      const gl = tr.querySelector("[data-golp]"); if (gl) gl.onclick = e => { e.preventDefault(); go("lp"); };
+      if (tr.querySelector("[data-acc]")) tr.querySelector("[data-acc]").onclick = e => { const k = e.target.closest("[data-k]"); if (!k) return; k.classList.toggle("on");
         const on = [...tr.querySelectorAll("[data-k].on")].map(x => x.dataset.k); run(() => save(id, { access: same(on, defAcc(a)) ? null : on }, "Saved")); };
       const rs = tr.querySelector("[data-reset]"); if (rs) rs.onclick = () => run(() => save(id, { off: false, group: "", access: null, name: "" }, "Back to the default")); });
     /* folder row: ON / OFF for everyone, and one switch per group */
@@ -788,10 +811,10 @@ async function ws(){
           const next = ALL.filter(k => cur.has(k)); if (same(next, was)) continue; await save(a.id, { access: same(next, defAcc(a)) ? null : next }); n++; }
         toast(`${g}: ${turnOn ? "shown to" : "hidden from"} ${grp[1]}${n ? ` · ${n} tool${n === 1 ? "" : "s"} changed` : ""}`); }); });
   };
-  V(head("Tools &amp; access", "Each tool: ON / OFF for everyone, who sees it by group, and ⋯ More for its name, folder and exact positions — one setting for all five flagships. Administrators always see everything.") +
+  V(head("Tool switches &amp; folders", "Each tool: ON / OFF for everyone, and ⋯ More for its name and folder. Who sees each tool is set per position in 🧭 Positions &amp; landing pages. Administrators always see everything.", `<button class="b g" onclick="go('lp')">🧭 Positions &amp; landing pages</button>`) +
     `<div class="flt"><input id="wsQ" placeholder="Search tools…" value="${esc(WSQ)}"><select class="sel2" id="wsF"><option value="">All folders</option>${folders().map(g => `<option ${g === WSF ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
       <select class="sel2" id="wsS"><option value="">All tools</option><option value="off" ${WSS === "off" ? "selected" : ""}>Switched off</option><option value="changed" ${WSS === "changed" ? "selected" : ""}>Changed here</option><option value="hidden" ${WSS === "hidden" ? "selected" : ""}>Not home tiles</option></select></div>
-    <p class="mut" style="margin:0 0 10px;line-height:1.6">${WS_GROUPS.map(([, n, , who]) => `<b>${n}</b>: ${esc(who)}`).join("<br>")}<br><span class="sw part" style="display:inline-block;vertical-align:middle;transform:scale(.75)"></span> = some positions of the group see it — set them in ⋯ More, or tap to give it to the whole group.</p>
+
     <div id="wsBody"></div>`);
   $("#wsQ").oninput = e => { WSQ = e.target.value.toLowerCase(); draw(); };
   $("#wsF").onchange = e => { WSF = e.target.value; draw(); };
@@ -799,22 +822,46 @@ async function ws(){
   draw();
 }
 
-/* ---------- landing pages by position (Nov 2026): Admin arranges the home page of each position ----------
-   Drag an object from the left into a section (or ＋), drag to reorder, ⇔ size, ✕ remove. Saved per position (meta landing:pos). */
-let LPD = null, LPP = "SECM", LPW = {}, LDR = null, HMD = null, HMP = "SECM", HDR = null;
+/* ---------- Positions & landing pages (Nov 2026, docs/FEATURE-positions.md) ----------
+   One page per position of the hierarchy: who sees what (hub tools), home layout, landing page, emails received automatically,
+   and the rights inside Incident Report and Snaglist. "All flagships" is the default; one flagship can be changed on its own
+   (gold dot = differs from the default). Positions covering several flagships have one setup. Admins only.
+   Landing page: drag an object from the left into a section (or ＋), drag to reorder, ⇔ size, ✕ remove, then Save. Everything else saves on each click. */
+let LPD = null, LPP = "SECM", LPW = {}, LDR = null, HMD = null, HMP = "SECM", HDR = null, POSD = null, LPS = "ALL", POSQ = "";
 async function lp(){
-  [LPD, HMD] = await Promise.all([api("admin/cc/lp"), api("admin/cc/home").catch(() => null)]); LPW = {};
+  const ids = ((window.HUB || {}).APPS || []).map(a => a.id).join(",");
+  [LPD, HMD, POSD] = await Promise.all([api("admin/cc/lp"), api("admin/cc/home").catch(() => null), api("admin/cc/pos?apps=" + encodeURIComponent(ids))]); LPW = {};
+  if (POSD.pos[LPP] && POSD.pos[LPP].multi) LPS = "ALL";
+  lpDraw();
+}
+const lpMulti = () => LPP === "ADMIN" || !!(POSD && POSD.pos[LPP] && POSD.pos[LPP].multi);
+const lpSite = () => lpMulti() ? "ALL" : LPS;
+const lpWK = () => LPP + "|" + lpSite();
+/* the stored value for this position — flagship first, then the default (undefined = not set here) */
+const posDig = (o, ...k) => k.reduce((a, x) => (a && typeof a === "object" ? a[x] : undefined), o);
+function posVal(part, id, sub, site = lpSite()){
+  const C = POSD.cfg, path = sub ? [part, sub, id] : [part, id];
+  const v = site !== "ALL" ? posDig(C.site, site, LPP, ...path) : undefined;
+  if (v !== undefined) return v;
+  const d = posDig(C.def, LPP, ...path);
+  return d !== undefined ? d : posDig(POSD.base, LPP, ...path);
+}
+const posIsOver = (part, id, sub) => lpSite() !== "ALL" && posDig(POSD.cfg.site, lpSite(), LPP, ...(sub ? [part, sub, id] : [part, id])) !== undefined;
+const siteHasOver = (k, site) => !!(posDig(POSD.cfg.site, site, k) || posDig(LPD.siteLayouts, site, k) || posDig(HMD && HMD.siteHomes, site, k));
+async function posSave(body, msg){
+  try { const r = await api("admin/cc/pos?apps=", { key: LPP, site: lpSite(), ...body }); POSD.cfg = r.cfg; if (msg) toast(msg); } catch (e){ toast(e.message, true); }
   lpDraw();
 }
 /* Home layout (Nov 2026): the order of the home sections, each ON / OFF, and the Day to Day timeline lanes — per position, saved on every change (meta home:pos) */
 const HM_DEF = ["brief", "moment", "d2d", "fu", "tools"];
-const hmCur = () => { const h = (HMD.homes || {})[HMP] || {}, o = (h.order || []).filter(x => HMD.sections[x]); return { order: [...o, ...HM_DEF.filter(x => !o.includes(x))], off: h.off || [], lanesOff: h.lanesOff || [] }; };
+const hmSaved = () => (lpSite() !== "ALL" && (HMD.siteHomes || {})[lpSite()] && HMD.siteHomes[lpSite()][HMP]) || (HMD.homes || {})[HMP];
+const hmCur = () => { const h = hmSaved() || {}, o = (h.order || []).filter(x => HMD.sections[x]); return { order: [...o, ...HM_DEF.filter(x => !o.includes(x))], off: h.off || [], lanesOff: h.lanesOff || [] }; };
 const HM_SUB = { brief: "The landing page built below (KPIs, incidents, patrol…)", moment: "Announcement at the top of the day", d2d: "Shifts, deadlines, patrol rounds, restroom windows + tool tiles", fu: "Flagged Outlook emails to act on", tools: "Folders of tools (style chosen in Profile)" };
 function hmHtml(){
   if (!HMD) return "";
-  const H = hmCur(), sv = HMD.homes[HMP];
-  return `<div class="card" id="hmCard" style="padding:14px;margin-bottom:16px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:4px"><b style="font-size:.95rem">🏠 Home layout</b>
-      <select class="sel2" id="hmPos" style="width:auto;min-width:200px">${Object.entries(HMD.positions).map(([k, n]) => `<option value="${k}" ${k === HMP ? "selected" : ""}>${esc(n)}${HMD.homes[k] ? " ●" : ""}</option>`).join("")}</select>
+  if (!HMD.positions[HMP]) return "";
+  const H = hmCur(), siteSv = lpSite() !== "ALL" && (HMD.siteHomes || {})[lpSite()] && HMD.siteHomes[lpSite()][HMP], sv = siteSv || HMD.homes[HMP];
+  return `<div class="card" id="hmCard" style="padding:14px;margin-bottom:16px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:4px"><b style="font-size:.95rem">🏠 Home layout</b>${siteSv ? `<span class="po-ov">${esc(POSD.sites[lpSite()])} only</span>` : ""}
       <button class="b g" id="hmDef" style="margin-left:auto">↺ Default</button></div>
     <p class="mut" style="margin:0 0 10px">Drag the sections to reorder · switch any section or timeline lane ON / OFF — what is OFF disappears from the home page. ${sv ? `Saved by ${esc(sv.by || "")} · ${esc(dt(sv.at))}` : "Not changed — this position sees the standard home page."}</p>
     ${H.order.map((k, i) => { const on = !H.off.includes(k);
@@ -823,14 +870,15 @@ function hmHtml(){
         (k === "d2d" && on ? `<div class="hm-l">${Object.entries(HMD.lanes).map(([l, n]) => `<button class="hm-c ${H.lanesOff.includes(l) ? "" : "on"}" data-hl="${l}">${esc(n)}</button>`).join("")}</div>` : ""); }).join("")}</div>`;
 }
 async function hmSave(next, msg){
-  try { const r = await api("admin/cc/home", { key: HMP, home: next }); HMD.homes = r.homes; toast(msg || "Saved"); } catch (e){ toast(e.message, true); }
+  try { const r = await api("admin/cc/home", { key: HMP, site: lpSite(), home: next }); HMD.homes = r.homes; if (r.siteHomes) HMD.siteHomes = r.siteHomes; toast(msg || "Saved"); } catch (e){ toast(e.message, true); }
   hmPaint();
 }
 function hmPaint(){ const c = $("#hmCard"); if (!c) return; c.outerHTML = hmHtml(); hmBind(); }
 function hmBind(){
   const c = $("#hmCard"); if (!c) return; const H = hmCur();
-  c.querySelector("#hmPos").onchange = e => { HMP = e.target.value; hmPaint(); };
-  c.querySelector("#hmDef").onclick = () => { if (!HMD.homes[HMP]) return toast("Already the standard home page"); if (confirm(`Put the standard home page back for ${HMD.positions[HMP]}?`)) hmSave(null, "Back to the standard home page"); };
+  c.querySelector("#hmDef").onclick = () => { const own = lpSite() !== "ALL" ? (HMD.siteHomes || {})[lpSite()] && HMD.siteHomes[lpSite()][HMP] : HMD.homes[HMP];
+    if (!own) return toast(lpSite() !== "ALL" ? "This flagship already follows All flagships" : "Already the standard home page");
+    if (confirm(lpSite() !== "ALL" ? `${POSD.sites[lpSite()]}: follow the All flagships home layout again?` : `Put the standard home page back for ${HMD.positions[HMP]}?`)) hmSave(null, "Back to the default"); };
   c.querySelectorAll("[data-hs]").forEach(b => b.onclick = () => { const k = b.dataset.hs, off = H.off.includes(k) ? H.off.filter(x => x !== k) : [...H.off, k]; hmSave({ ...H, off }, `${HMD.sections[k]}: ${off.includes(k) ? "OFF" : "ON"}`); });
   c.querySelectorAll("[data-hl]").forEach(b => b.onclick = () => { const k = b.dataset.hl, lo = H.lanesOff.includes(k) ? H.lanesOff.filter(x => x !== k) : [...H.lanesOff, k]; hmSave({ ...H, lanesOff: lo }, `${HMD.lanes[k]}: ${lo.includes(k) ? "OFF" : "ON"}`); });
   const move = (from, to) => { if (to < 0 || to >= H.order.length || from === to) return; const o = H.order.slice(), [x] = o.splice(from, 1); o.splice(to, 0, x); hmSave({ ...H, order: o }, "Order saved"); };
@@ -840,8 +888,11 @@ function hmBind(){
     r.ondragover = ev => ev.preventDefault(); r.ondrop = ev => { ev.preventDefault(); if (HDR != null){ const f = HDR; HDR = null; move(f, i); } }; });
 }
 const lpCopy = x => JSON.parse(JSON.stringify(x));
-const lpCur = () => LPW[LPP] = LPW[LPP] || lpCopy(LPD.layouts[LPP] || LPD.starters[LPP] || { sections: [{ name: "Today", items: [] }] });
+const lpSiteSaved = () => lpSite() !== "ALL" ? posDig(LPD.siteLayouts, lpSite(), LPP) : null;
+const lpSaved = () => lpSiteSaved() || LPD.layouts[LPP];
+const lpCur = () => LPW[lpWK()] = LPW[lpWK()] || lpCopy(lpSaved() || LPD.starters[LPP] || { sections: [{ name: "Today", items: [] }] });
 function lpState(k){
+  const ss = lpSiteSaved(); if (ss) return `${esc(POSD.sites[lpSite()])} only · saved by ${esc(ss.by || "")} · ${esc(dt(ss.at))}`;
   const s = LPD.layouts[k];
   if (s) return `Saved by ${esc(s.by || "")} · ${esc(dt(s.at))}`;
   if (LPD.builtIn.includes(k)) return "Not saved yet — this position already uses the ready page shown here";
@@ -857,11 +908,37 @@ function lpDraw(){
       <small>${no ? "Hidden — this position can't open the tool (Who sees what)" : w.kind === "kpi" ? "KPI table of the person's flagships" : w.kind === "todo" ? "Red / amber items to act on" : w.kind === "shortcut" ? "Opens the tool" : "Live figure of the person's flagship"}</small>
       ${it.w === "kpi" ? `<small style="color:#6B3FA0">${(it.opts && it.opts.rows ? it.opts.rows.length : Object.keys(LPD.kpiItems).length)} of ${Object.keys(LPD.kpiItems).length} KPIs · opens on ${({ today: "Today", "7d": "7 days", month: "Month" })[(it.opts && it.opts.period) || "month"]}</small>` : ""}
       <div class="tl2">${it.w === "kpi" ? `<button data-kopt title="Rows and period">⚙ KPIs</button>` : ""}<button data-mv="-1" title="Move left">◀</button><button data-mv="1" title="Move right">▶</button><button data-sz title="Size: small · half · full">⇔ ${sz === 4 ? "full" : sz === 2 ? "half" : "small"}</button><button data-del title="Remove">✕</button></div></div>`; };
-  V(head("Landing pages", "The home page of each position — the same for all flagships, every person sees his own flagship's figures",
-      `<button class="b g" id="lpPrev">👁 Preview</button><select class="sel2" id="lpCopy"><option value="">Copy from…</option>${Object.entries(LPD.positions).filter(([k]) => k !== LPP).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select><button class="b g" id="lpDef">↺ Default</button><button class="b" id="lpSave">Save for ${esc(LPD.positions[LPP])}</button>`) +
-    `<div class="lp-pos">${Object.entries(LPD.positions).map(([k, n]) => `<button data-p="${k}" class="${k === LPP ? "on" : ""}">${esc(n)}${LPD.layouts[k] ? "<i title='Saved'></i>" : ""}</button>`).join("")}</div>
-    <p class="mut" style="margin:-4px 0 12px">${lpState(LPP)}${LPW[LPP] && JSON.stringify(LPW[LPP]) !== JSON.stringify(LPD.layouts[LPP] || LPD.starters[LPP]) ? ` · <b style="color:#B26A00">changes not saved</b>` : ""}</p>
-    ${hmHtml()}<div class="lp-wrap"><div class="card lp-lib">${groups.map(g => `<h4>${esc(g.toUpperCase())}</h4>` + Object.entries(W).filter(([, w]) => w.group === g).map(([k, w]) => {
+  const P = POSD.pos, multi = lpMulti(), site = lpSite(), pn = LPP === "ADMIN" ? "Administrator" : P[LPP].n, LPN = LPD.positions[LPP];
+  const groupsP = [...new Set(Object.values(P).map(x => x.g))];
+  const cnt = k => { const c = POSD.people[k] || {}; return site === "ALL" || P[k].multi ? (c.all || 0) : (c[site] || 0); };
+  const chips = `<div class="po-pos">${groupsP.map(g => `<div><h5>${esc(g)}</h5>${Object.entries(P).filter(([, x]) => x.g === g).filter(([k, x]) => !POSQ || (x.n + " " + k).toLowerCase().includes(POSQ)).map(([k, x]) =>
+      `<button data-p="${k}" class="${k === LPP ? "on" : ""} ${x.sec ? "psec" : ""}"><b>${esc(x.n)}</b><small>${esc(x.sub || "")}${x.sub ? " · " : ""}${cnt(k)} ${cnt(k) === 1 ? "person" : "people"}</small></button>`).join("")}</div>`).join("")}
+      <div><h5>Other</h5><button data-p="ADMIN" class="${LPP === "ADMIN" ? "on" : ""}"><b>Administrator</b><small>home layout only</small></button></div></div>`;
+  const flags = `<div class="po-fl">${[["ALL", "All flagships"], ...Object.entries(POSD.sites)].map(([c, n]) => `<button data-fl="${c}" class="${c === site ? "on" : ""}" ${multi && c !== "ALL" ? "disabled" : ""}>${esc(n.replace(/^ABC\s+/i, ""))}${c !== "ALL" && LPP !== "ADMIN" && siteHasOver(LPP, c) ? "<i title='Differs from All flagships'></i>" : ""}</button>`).join("")}
+      <span class="mut" style="font-size:.78rem">${multi ? (LPP === "ADMIN" ? "One home layout for the administrators." : `${esc(pn)} covers several flagships — one setup for all of them.`) : site === "ALL" ? "Default for every flagship — choose one flagship to change it only there." : `Only ${esc(POSD.sites[site])} — what differs from All flagships is marked in gold.`}</span>
+      ${site !== "ALL" && siteHasOver(LPP, site) ? `<button class="b r" id="poReset" style="margin-left:auto">↺ ${esc(POSD.sites[site])} back to All flagships</button>` : ""}</div>`;
+  /* who sees what: the visible hub tools, by folder */
+  const APPS = ((window.HUB || {}).APPS || []).filter(a => !a.hidden), off = new Set(POSD.off || []);
+  const order = (window.HUB || {}).GROUPS || [], folders = [...new Set(APPS.map(a => a.group))].sort((x, y) => ((order.indexOf(x) + 1) || 99) - ((order.indexOf(y) + 1) || 99));
+  const toolsCard = LPP === "ADMIN" ? "" : `<div class="card po-card"><div class="po-h"><b>👁 Who sees what</b><span class="mut">${APPS.filter(a => !off.has(a.id) && posVal("tools", a.id)).length} of ${APPS.length} tools · the systems open with the same hub account</span></div>
+    ${folders.map(g => { const G = APPS.filter(a => a.group === g), on = G.filter(a => posVal("tools", a.id)).length;
+      return `<div class="po-g"><div class="po-gh"><b>${esc(g)}</b><span class="mut">${on}/${G.length}</span><button class="b g" data-tg="${esc(g)}" data-v="${on === G.length ? 0 : 1}" style="padding:2px 9px;font-size:.72rem">${on === G.length ? "Untick all" : "Tick all"}</button></div><div class="po-tl">${G.map(a => { const v = !!posVal("tools", a.id), o = posIsOver("tools", a.id);
+        return `<label class="${o ? "ov" : ""} ${off.has(a.id) ? "off" : ""}" title="${off.has(a.id) ? "Switched off for everyone (Tool switches & folders)" : o ? "Differs from All flagships" : ""}"><input type="checkbox" data-tool="${esc(a.id)}" ${v ? "checked" : ""} ${off.has(a.id) ? "disabled" : ""}>${esc(a.name)}${off.has(a.id) ? " · off" : ""}</label>`; }).join("")}</div></div>`; }).join("")}</div>`;
+  const mailCard = LPP === "ADMIN" ? "" : `<div class="card po-card"><div class="po-h"><b>📨 Emails received automatically</b><span class="mut">${multi ? "for every flagship the position covers" : site === "ALL" ? "for the person's own flagship" : "for " + esc(POSD.sites[site])} · added in Cc when the hub sends them</span></div>
+    <div class="po-tl">${Object.entries(POSD.mails).map(([k, n]) => `<label class="${posIsOver("mail", k) ? "ov" : ""}"><input type="checkbox" data-mail="${k}" ${posVal("mail", k) ? "checked" : ""}>${esc(n)}</label>`).join("")}</div>
+    <p class="mut" style="margin:8px 0 0;font-size:.76rem">Incident Report emails are chosen per incident type in <a href="#is" data-gois style="font-weight:800">🚨 Incident Report settings</a>.</p></div>`;
+  const VL = { E: ["✎", "Create / edit"], V: ["👁", "View only"], O: ["own", "Only their own"], N: ["—", "No access"] };
+  const sysCard = LPP === "ADMIN" ? "" : `<div class="card po-card"><div class="po-h"><b>🔌 Rights in the connected systems</b><span class="mut">one hub account opens them — applied the next time the person opens the system</span></div>
+    <div class="po-sys">${Object.entries(POSD.objects).map(([sys, objs]) => `<div><h4>${esc(POSD.sysNames[sys])}</h4>${objs.map(([id, n]) => { const v = posVal("sys", id, sys), o = posIsOver("sys", id, sys);
+      return `<div class="po-ob ${o ? "ov" : ""}"><span>${esc(n)}</span><span class="po-seg">${Object.entries(VL).map(([x, [ic, t]]) => `<button data-sys="${sys}" data-ob="${id}" data-val="${x}" class="${v === x ? "on v" + x : ""}" title="${t}">${ic}</button>`).join("")}</span></div>`; }).join("")}</div>`).join("")}</div>
+    <p class="mut" style="margin:8px 0 0;font-size:.76rem">✎ create / edit · 👁 view only · own = only their own · — no access. A position with — everywhere gets no account in that system.</p></div>`;
+  V(head("Positions &amp; landing pages", "Each position of the hierarchy: who sees what, its home page, the emails it receives and its rights in Incident Report and Snaglist — for all flagships, or one flagship",
+      `<button class="b g" onclick="go('ws')">🎚 Tool switches &amp; folders</button>`) + chips + flags +
+    `<div class="po-title"><h2>${esc(pn)}</h2><span class="mut">${site === "ALL" ? (multi ? "" : "default for every flagship") : "only at " + esc(POSD.sites[site])}</span></div>` +
+    toolsCard + mailCard + sysCard + hmHtml() + (LPN ? "" : "") +
+    `<div class="po-h" style="margin:18px 0 8px;${LPN ? "" : "display:none"}"><b style="font-size:1rem">🧱 Landing page</b><span class="mut">${LPN ? lpState(LPP) : ""}${LPW[lpWK()] && JSON.stringify(LPW[lpWK()]) !== JSON.stringify(lpSaved() || LPD.starters[LPP]) ? ` · <b style="color:#B26A00">changes not saved</b>` : ""}</span>
+      ${LPN ? `<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="b g" id="lpPrev">👁 Preview</button><select class="sel2" id="lpCopy"><option value="">Copy from…</option>${Object.entries(LPD.positions).filter(([k]) => k !== LPP).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select><button class="b g" id="lpDef">↺ Default</button><button class="b" id="lpSave">Save${site !== "ALL" ? " for " + esc(POSD.sites[site]) : ""}</button></span>` : ""}</div>
+    <div class="lp-wrap" style="${LPN ? "" : "display:none"}"><div class="card lp-lib">${groups.map(g => `<h4>${esc(g.toUpperCase())}</h4>` + Object.entries(W).filter(([, w]) => w.group === g).map(([k, w]) => {
         const u = used.has(k) && !w.many, no = w.app && !ok[k];
         return `<div class="lp-li ${u ? "used" : ""} ${no ? "no" : ""}" draggable="${!u && !no}" data-w="${k}"><span class="ic">${w.icon}</span><span>${esc(w.name)}<small>${no ? "can't open the tool" : u ? "on the page" : w.kind === "kpi" ? "wide table" : w.kind === "todo" ? "list" : w.kind === "shortcut" ? "any tool" : "tile"}</small></span><button data-add="${k}" title="Add to the last section">＋</button></div>`; }).join("")).join("")}</div>
       <div>${L.sections.map((s, si) => `<div class="lp-sec" data-sec="${si}"><div class="lp-sh"><input value="${esc(s.name)}" data-name="${si}" maxlength="40"><button data-up="${si}" title="Move the section up">▲</button><button data-dn="${si}" title="Move the section down">▼</button><button data-rm="${si}" title="Remove the section">✕</button></div>
@@ -870,6 +947,23 @@ function lpDraw(){
   const v = $("#main");
   hmBind();
   v.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { LPP = b.dataset.p; HMP = b.dataset.p; lpDraw(); });
+  v.querySelectorAll("[data-fl]").forEach(b => b.onclick = () => { if (b.disabled) return; LPS = b.dataset.fl; lpDraw(); });
+  v.querySelectorAll("[data-tool]").forEach(c => c.onchange = () => { const a = ((window.HUB || {}).APPS || []).find(x => x.id === c.dataset.tool);
+    posSave({ part: "tools", id: c.dataset.tool, value: c.checked }, `${a ? a.name : c.dataset.tool}: ${c.checked ? "shown to" : "hidden from"} ${POSD.pos[LPP].n}${lpSite() !== "ALL" ? " at " + POSD.sites[lpSite()] : ""}`); });
+  v.querySelectorAll("[data-tg]").forEach(b => b.onclick = () => { const g = b.dataset.tg, val = b.dataset.v === "1";
+    const ids = ((window.HUB || {}).APPS || []).filter(a => !a.hidden && a.group === g && !(POSD.off || []).includes(a.id)).map(a => a.id);
+    posSave({ part: "tools", ids, value: val }, `${g}: ${val ? "all shown" : "all hidden"}`); });
+  v.querySelectorAll("[data-mail]").forEach(c => c.onchange = () => posSave({ part: "mail", id: c.dataset.mail, value: c.checked }, `${POSD.mails[c.dataset.mail]}: ${c.checked ? "ON" : "OFF"}`));
+  v.querySelectorAll("[data-sys]").forEach(b => b.onclick = () => posSave({ part: "sys", sys: b.dataset.sys, id: b.dataset.ob, value: b.dataset.val }, "Saved"));
+  const gi = v.querySelector("[data-gois]"); if (gi) gi.onclick = e => { e.preventDefault(); go("is"); };
+  const rs = $("#poReset"); if (rs) rs.onclick = async () => {
+    if (!confirm(`${POSD.sites[lpSite()]}: put ${POSD.pos[LPP].n} back to the All flagships setup (tools, emails, rights, home layout and landing page)?`)) return;
+    try { const r = await api("admin/cc/pos?apps=", { key: LPP, site: lpSite(), reset: true }); POSD.cfg = r.cfg;
+      if (posDig(LPD.siteLayouts, lpSite(), LPP)) { const x = await api("admin/cc/lp", { key: LPP, site: lpSite(), layout: null }); LPD.siteLayouts = x.siteLayouts || {}; }
+      if (HMD && posDig(HMD.siteHomes, lpSite(), LPP)) { const x = await api("admin/cc/home", { key: LPP, site: lpSite(), home: null }); HMD.siteHomes = x.siteHomes || {}; }
+      delete LPW[lpWK()]; toast("Back to All flagships"); } catch (e){ toast(e.message, true); }
+    lpDraw(); };
+  if (!LPD.positions[LPP]) return;
   const add = (k, si, ii) => {
     const put = app => { const S = L.sections[si] || L.sections[L.sections.length - 1]; if (!S) return; S.items.splice(ii == null ? S.items.length : ii, 0, { w: k, size: W[k].size || 1, ...(app ? { app } : {}) }); lpDraw(); };
     if (k !== "shortcut") return put();
@@ -911,18 +1005,72 @@ function lpDraw(){
   v.querySelectorAll("[data-up]").forEach(b => b.onclick = () => { const i = +b.dataset.up; if (i){ [L.sections[i - 1], L.sections[i]] = [L.sections[i], L.sections[i - 1]]; lpDraw(); } });
   v.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => { const i = +b.dataset.dn; if (i < L.sections.length - 1){ [L.sections[i + 1], L.sections[i]] = [L.sections[i], L.sections[i + 1]]; lpDraw(); } });
   $("#lpSec").onclick = () => { L.sections.push({ name: "New section", items: [] }); lpDraw(); };
-  $("#lpCopy").onchange = e => { const k = e.target.value; if (!k) return; LPW[LPP] = lpCopy(LPW[k] || LPD.layouts[k] || LPD.starters[k] || { sections: [] }); toast(`Copied from ${LPD.positions[k]} — press Save to keep it`); lpDraw(); };
+  $("#lpCopy").onchange = e => { const k = e.target.value; if (!k) return; LPW[lpWK()] = lpCopy(LPW[k + "|" + lpSite()] || posDig(LPD.siteLayouts, lpSite(), k) || LPD.layouts[k] || LPD.starters[k] || { sections: [] }); toast(`Copied from ${LPD.positions[k]} — press Save to keep it`); lpDraw(); };
   $("#lpDef").onclick = async () => {
-    if (LPD.starters[LPP] && LPD.layouts[LPP] && JSON.stringify(LPW[LPP] && LPW[LPP].sections) !== JSON.stringify(LPD.starters[LPP].sections)){ LPW[LPP] = lpCopy(LPD.starters[LPP]); lpDraw(); return toast("The starting page is loaded — Save to keep it, or ↺ again to remove the saved page"); }
-    if (!LPD.layouts[LPP]){ delete LPW[LPP]; lpDraw(); return toast("Back to the default"); }
+    if (lpSite() !== "ALL") {   /* one flagship: back to the All flagships page */
+      if (!lpSiteSaved()){ delete LPW[lpWK()]; lpDraw(); return toast("This flagship follows the All flagships page"); }
+      if (!confirm(`${POSD.sites[lpSite()]}: use the All flagships page of ${LPD.positions[LPP]} again?`)) return;
+      try { const r = await api("admin/cc/lp", { key: LPP, site: lpSite(), layout: null }); LPD.siteLayouts = r.siteLayouts || {}; delete LPW[lpWK()]; toast("Back to All flagships"); lpDraw(); } catch (e){ toast(e.message, true); }
+      return;
+    }
+    if (LPD.starters[LPP] && LPD.layouts[LPP] && JSON.stringify(LPW[lpWK()] && LPW[lpWK()].sections) !== JSON.stringify(LPD.starters[LPP].sections)){ LPW[lpWK()] = lpCopy(LPD.starters[LPP]); lpDraw(); return toast("The starting page is loaded — Save to keep it, or ↺ again to remove the saved page"); }
+    if (!LPD.layouts[LPP]){ delete LPW[lpWK()]; lpDraw(); return toast("Back to the default"); }
     if (!confirm(`Remove the saved page of ${LPD.positions[LPP]}? ${LPD.builtIn.includes(LPP) ? "It goes back to the ready page." : LPD.legacy[LPP] ? "It goes back to the old brief." : "The position will have no brief again."}`)) return;
-    try { const r = await api("admin/cc/lp", { key: LPP, layout: null }); LPD.layouts = r.layouts; delete LPW[LPP]; toast("Back to the default"); lpDraw(); } catch (e){ toast(e.message, true); } };
+    try { const r = await api("admin/cc/lp", { key: LPP, layout: null }); LPD.layouts = r.layouts; delete LPW[lpWK()]; toast("Back to the default"); lpDraw(); } catch (e){ toast(e.message, true); } };
   $("#lpSave").onclick = async () => {
     if (!L.sections.some(s => s.items.length)) return toast("Add at least one object", true);
-    try { const r = await api("admin/cc/lp", { key: LPP, layout: L }); LPD.layouts = r.layouts; LPW[LPP] = lpCopy(r.layouts[LPP]); toast(`Saved — every ${LPD.positions[LPP]} sees it at the next refresh`); lpDraw(); } catch (e){ toast(e.message, true); } };
+    try { const r = await api("admin/cc/lp", { key: LPP, site: lpSite(), layout: L }); LPD.layouts = r.layouts; if (r.siteLayouts) LPD.siteLayouts = r.siteLayouts; LPW[lpWK()] = lpCopy(lpSaved());
+      toast(`Saved — ${lpSite() !== "ALL" ? "every " + LPD.positions[LPP] + " at " + POSD.sites[lpSite()] : "every " + LPD.positions[LPP]} sees it at the next refresh`); lpDraw(); } catch (e){ toast(e.message, true); } };
   $("#lpPrev").onclick = () => { try { localStorage.setItem("hub.briefAs", JSON.stringify(LPP)); localStorage.setItem("hub.briefFold", "false"); } catch {}
-    if (LPW[LPP] && JSON.stringify(LPW[LPP]) !== JSON.stringify(LPD.layouts[LPP])) toast("Preview shows the SAVED page — save first to see your changes");
+    if (LPW[lpWK()] && JSON.stringify(LPW[lpWK()]) !== JSON.stringify(lpSaved())) toast("Preview shows the SAVED page — save first to see your changes");
     window.open("/", "_blank"); };
+}
+
+/* ---------- Incident Report settings (Nov 2026, docs/FEATURE-positions.md) ----------
+   Moved from the Incident system's Admin screen: who is emailed for each incident type (by hub position, plus email-only contacts
+   such as Legal or Internal Audit), Customer Service and CCTV inboxes per flagship, the Ops desk phone, and the daily / weekly reports.
+   The Incident system reads it from the hub. Saved with one button (meta inc:cfg). */
+let ISD = null, ISW = null;
+async function is(){
+  ISD = await api("admin/cc/inc"); ISW = JSON.parse(JSON.stringify(ISD.cfg)); isDraw();
+}
+function isDraw(){
+  const C = ISW, P = ISD.pos, PK = Object.keys(P), S = ISD.sites;
+  const chipsFor = (g, tag) => `<div class="is-ch">${PK.map(k => `<button data-g="${tag}" data-pk="${k}" class="${(g.pos || []).includes(k) ? "on" : ""} ${P[k].sec ? "psec" : ""}" title="${esc(P[k].n)}">${esc(P[k].n)}</button>`).join("")}
+    ${(C.contacts || []).map(c => `<button data-g="${tag}" data-ck="${c.id}" class="ct ${(g.contacts || []).includes(c.id) ? "on" : ""}" title="${esc(c.email)}">✉ ${esc(c.label)}</button>`).join("")}</div>`;
+  const changed = JSON.stringify(ISW) !== JSON.stringify(ISD.cfg);
+  V(head("Incident Report settings", "Who receives the Incident Report emails. The Incident system's users now come from the hub (Positions &amp; landing pages → rights); these settings replace its Admin screen.",
+      `<button class="b g" onclick="go('lp')">🧭 Positions &amp; landing pages</button><button class="b" id="isSave" ${changed ? "" : "disabled"}>Save</button>`) +
+    (ISD.migrated ? `<div class="al warn" style="margin-bottom:12px"><div class="m"><b>Copied from the Incident system.</b> Its old “Position” list was matched to hub positions (Security Manager → Security Manager + Head of Security, Property Manager → Mall Manager, Mall Director → Mall Director + CDSO, Supervisor → Senior Mall Supervisor + Mall Supervisor). Legal, Internal Audit and the other email-only people became contacts. Check and press Save.</div></div>` : "") +
+    (!ISD.ready ? `<div class="al warn" style="margin-bottom:12px"><div class="m"><b>Not set yet.</b> Until you save here, the Incident system keeps its own settings.</div></div>` : "") +
+    `<div class="card po-card"><div class="po-h"><b>✉ Email-only contacts</b><span class="mut">people who receive incident emails without a hub account (Legal, Internal Audit, Security Director…)</span></div>
+      <div class="is-ct">${(C.contacts || []).map((c, i) => `<div><input data-cl="${i}" value="${esc(c.label)}" placeholder="Name or role" maxlength="60"><input data-ce="${i}" value="${esc(c.email)}" placeholder="email@abc.com.lb" type="email"><button class="b r" data-cx="${i}" title="Remove">✕</button></div>`).join("") || `<p class="mut" style="margin:0">No contacts yet.</p>`}</div>
+      <button class="b g" id="isAddC" style="margin-top:8px">＋ Contact</button></div>
+    <div class="card po-card"><div class="po-h"><b>🚨 Emails per incident type</b><span class="mut">escalation alert, SLA breach, PIR overdue, incident report, pledge — sent to the ticked positions <b>of the incident's flagship</b> (Head of Security, Advisor… cover all theirs) and to the ticked contacts</span></div>
+      ${ISD.types.map(t => `<div class="is-row"><b>${esc(t)}</b>${chipsFor(C.cc[t] || {}, "cc:" + t)}</div>`).join("")}</div>
+    <div class="card po-card"><div class="po-h"><b>🏬 Per flagship</b><span class="mut">Customer Service: well-being follow-up (Medical case, Tripping / Falling) · CCTV team: blacklist cards and footage requests</span></div>
+      <div class="tw"><table style="min-width:640px"><thead><tr><th>Flagship</th><th>Customer Service email</th><th>Customer Service Cc</th><th>CCTV team email</th></tr></thead><tbody>
+      ${Object.entries(S).map(([c, n]) => `<tr><td><b>${esc(n)}</b></td><td><input class="is-in" data-cs="${c}" value="${esc((C.cs[c] || {}).email || "")}" type="email"></td><td><input class="is-in" data-csc="${c}" value="${esc((C.cs[c] || {}).cc || "")}" placeholder="comma separated"></td><td><input class="is-in" data-cctv="${c}" value="${esc(C.cctv[c] || "")}" type="email"></td></tr>`).join("")}</tbody></table></div></div>
+    <div class="card po-card"><div class="po-h"><b>📊 Daily digest &amp; weekly compliance report</b><span class="mut">all flagships · the ticked positions everywhere + the ticked contacts</span></div>
+      <div class="is-row"><b>Daily digest</b>${chipsFor(C.digest || {}, "digest")}</div><div class="is-row"><b>Weekly compliance</b>${chipsFor(C.weekly || {}, "weekly")}</div>
+      <div class="is-row"><b>Ops desk phone</b><input class="is-in" id="isPh" value="${esc(C.phone || "")}" placeholder="+961 …" style="max-width:220px"><span class="mut" style="font-size:.76rem">printed in the incident report email</span></div></div>
+    <p class="mut" style="font-size:.76rem">${ISD.cfg.at ? `Saved by ${esc(ISD.cfg.by || "")} · ${esc(dt(ISD.cfg.at))}` : ""}</p>`);
+  const m = $("#main"), up = () => { const b = $("#isSave"); if (b) b.disabled = JSON.stringify(ISW) === JSON.stringify(ISD.cfg); };
+  m.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { const tag = b.dataset.g, g = tag.startsWith("cc:") ? (C.cc[tag.slice(3)] = C.cc[tag.slice(3)] || { pos: [], contacts: [] }) : (C[tag] = C[tag] || { pos: [], contacts: [] });
+    const [arr, v] = b.dataset.pk ? ["pos", b.dataset.pk] : ["contacts", b.dataset.ck]; g[arr] = g[arr] || [];
+    g[arr] = g[arr].includes(v) ? g[arr].filter(x => x !== v) : [...g[arr], v]; b.classList.toggle("on"); up(); });
+  m.querySelectorAll("[data-cl]").forEach(i => i.oninput = () => { C.contacts[+i.dataset.cl].label = i.value; up(); });
+  m.querySelectorAll("[data-ce]").forEach(i => i.oninput = () => { C.contacts[+i.dataset.ce].email = i.value.trim(); up(); });
+  m.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { const c = C.contacts.splice(+b.dataset.cx, 1)[0];
+    for (const g of [...Object.values(C.cc), C.digest, C.weekly]) if (g && g.contacts) g.contacts = g.contacts.filter(x => x !== c.id); isDraw(); });
+  $("#isAddC").onclick = () => { C.contacts = C.contacts || []; C.contacts.push({ id: "c" + Date.now().toString(36), label: "", email: "" }); isDraw(); };
+  m.querySelectorAll("[data-cs]").forEach(i => i.oninput = () => { const c = i.dataset.cs; C.cs[c] = { ...(C.cs[c] || {}), email: i.value.trim() }; up(); });
+  m.querySelectorAll("[data-csc]").forEach(i => i.oninput = () => { const c = i.dataset.csc; C.cs[c] = { ...(C.cs[c] || {}), cc: i.value }; up(); });
+  m.querySelectorAll("[data-cctv]").forEach(i => i.oninput = () => { C.cctv[i.dataset.cctv] = i.value.trim(); up(); });
+  $("#isPh").oninput = e => { C.phone = e.target.value; up(); };
+  $("#isSave").onclick = async () => {
+    const bad = (C.contacts || []).find(c => !c.label.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)); if (bad) return toast("Each contact needs a name and a valid email", true);
+    try { const r = await api("admin/cc/inc", { cfg: C }); ISD.cfg = r.cfg; ISD.ready = true; ISD.migrated = false; ISW = JSON.parse(JSON.stringify(r.cfg)); toast("Saved — the Incident system uses it within a minute"); isDraw(); } catch (e){ toast(e.message, true); } };
 }
 
 /* ---------- data & backup ---------- */
@@ -1115,7 +1263,7 @@ async function pr(){
   }
   const role = e ? e.role || "SUPERVISOR" : "SUPERVISOR";
   const posF = r => r === "MANAGER" ? `<label>Position</label><select id="uP">${Object.entries(d.titles).map(([c, t]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(t.label)}</option>`).join("")}</select>`
-    : r === "SECURITY" ? `<label>Position</label><select id="uP"><option value="">Security staff</option><option value="SM" ${e && e.position === "SM" ? "selected" : ""}>Security Manager · this flagship</option><option value="HOS" ${e && e.position === "HOS" ? "selected" : ""}>Head of Security · every flagship</option></select>`
+    : r === "SECURITY" ? `<label>Position</label><select id="uP"><option value="">Security staff</option><option value="SM" ${e && e.position === "SM" ? "selected" : ""}>Security Manager · this flagship</option><option value="HOS" ${e && e.position === "HOS" ? "selected" : ""}>Head of Security · every flagship</option><option value="SV" ${e && e.position === "SV" ? "selected" : ""}>Site Visit Officer · every flagship</option></select>`
         : r === "SUPERVISOR" ? `<label>Position</label><select id="uP">${Object.entries(d.positions).map(([c, n]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
   const siteF = r => d.multiRoles.includes(r) ? `<label>Flagships</label><div>${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<label class="mut" style="display:flex;gap:6px"><input type="checkbox" class="uS" value="${c}" ${e && (e.sites || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
     : r === "ADVISOR" ? `<p class="mut">All five flagships.</p>` : r === "EXTERNAL" ? `<p class="mut">Not linked to a flagship — the systems below decide what they see.</p>` : `<label>Flagship${r === "ADMIN" ? " (optional)" : ""}</label><select id="uF">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${((e && e.site) || (PTAB !== "LEAD" ? PTAB : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;

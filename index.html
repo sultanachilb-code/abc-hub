@@ -2607,7 +2607,7 @@ async function loadBrief(fresh){
 const SENIOR_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];
 const seniorView = () => !!(ME && ME.user && SENIOR_ROLES.includes(ME.user.role));
 const briefOn = () => seniorView() || !!(ME && ME.landing);   // Landing pages by position (Nov 2026): any position with a page built in Admin Control
-const LP_NAMES = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
+const LP_NAMES = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse", SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", SV: "Site Visit Officer", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
 const LP_OLD = { manager: "MM", advisor: "ADVISOR", director: "DIRECTOR", cdso: "CDSO" };
 const showD2D = () => !!(ME && ME.user) && (ME.user.role === "ADMIN" || !seniorView());   // Admin sees both the brief and the timeline
 /* ---------- Brief by role (Oct 2026, docs/FEATURE-brief-by-role.md) ----------

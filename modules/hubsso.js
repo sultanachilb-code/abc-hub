@@ -13,12 +13,13 @@ export const SSO_APPS = {
   incidents: { name: "Incident Report System" },
   restroom: { name: "Restroom Inspection Dashboard" }
 };
+import { posKeyOf, posSiteOf, sysRightsOf, POS } from "./positions.js";   // Positions & landing pages: rights per position inside each system (Nov 2026)
 export const SNAG_ROLES = { ADMIN: "Admin", FULL_ACCESS: "Full Access", MANAGER: "Manager", SUPERVISOR: "Supervisor", HEAD: "Head", AUDIT: "Audit", SITE_VISIT: "Site Visit" };
 const SNAG_NEEDS_SITE = ["MANAGER", "SUPERVISOR", "AUDIT"];
-export const INC_ROLES = ["Admin", "Property Advisor", "Security Manager", "Mall Director", "Mall Manager", "Supervisor"];
+export const INC_ROLES = ["Admin", "Property Advisor", "Head of Security", "Security Manager", "Mall Director", "Mall Manager", "Supervisor"];
 export const INC_POSITIONS = ["Security Manager", "Security Director", "Property Manager", "Mall Director", "Supervisor", "Customer Service", "CCTV Team", "Legal", "Internal Audit", "Property Advisor"];
 const INC_SITE = { VRM: "Verdun Mall", ACM: "Achrafieh Mall", DBS: "Dbayeh Mall", ACS: "Achrafieh DS", VRS: "Verdun DS" };   // the Incident system's own flagship names
-const INC_ALL = ["Admin", "Property Advisor", "Security Manager"];
+const INC_ALL = ["Admin", "Property Advisor", "Head of Security"];   // Nov 2026: the Security Manager covers one flagship, the Head of Security all of them
 
 const parse = s => { try { const v = JSON.parse(s || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; } };
 const codes = (list, SITES) => [...new Set((Array.isArray(list) ? list : []).map(x => String(x).toUpperCase()).filter(c => SITES[c]))];
@@ -28,28 +29,36 @@ export async function ssoSchema(env) {
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS sso_ended (email TEXT NOT NULL, sid TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (email, sid))").run();
 }
 
-/* ---------- which account a hub user gets in each system (the table agreed on 31 Oct 2026) ---------- */
+/* ---------- which account a hub user gets in each system ----------
+   Nov 2026: the position's rights (Admin Control → Positions & landing pages) decide it — what each object allows travels in the pass. */
 function autoAccount(u, app, d) {
-  const r = u.role, site = u.site_code || "", wh = r === "SUPERVISOR" && u.position === "WH";
-  const mine = d.sitesOf(u);
+  const r = u.role;
   if (r === "EXTERNAL") return null;
+  if (app === "restroom") return r === "SUPERVISOR" && u.position === "WH" ? null : { view: true };
+  const k = posKeyOf(u);
+  if (r === "ADMIN") return app === "snaglist" ? { role: "ADMIN" } : app === "incidents" ? { role: "Admin", scope: "ALL" } : null;
+  if (!k) return null;
+  const rt = sysRightsOf(k, posSiteOf(u), app), has = x => !!rt && !!rt[x] && rt[x] !== "N";
+  if (!rt || Object.values(rt).every(v => v === "N")) return null;
+  const multi = POS[k].multi, site = u.site_code || "", mine = d.sitesOf(u);
+  const allSites = ["ADVISOR", "HOS", "SV"].includes(k);
   if (app === "snaglist") {
-    if (r === "ADMIN") return { role: "ADMIN" };
-    if (r === "ADVISOR") return { role: "FULL_ACCESS", sites: [] };   // every flagship
-    if (r === "DIRECTOR" || r === "CDSO") return { role: "FULL_ACCESS", sites: mine };   // the flagships ticked on their hub account (CDSO: the department stores)
-    if (r === "MANAGER" && site) return { role: "MANAGER", site };
-    if (r === "SUPERVISOR" && site && !wh) return { role: "SUPERVISOR", site };
-    return null;   // Warehouse, Security
+    let role = null;
+    if (rt.svpost === "E" && !has("my") && !has("flag")) role = "SITE_VISIT";
+    else if (multi) role = has("svall") ? "FULL_ACCESS" : null;   // Full Access with "Own snaglists" — = view only (Head of Security: site-visit activity of every flagship)
+    else if (!site) role = null;
+    else role = has("flag") ? "MANAGER" : has("my") ? "SUPERVISOR" : has("svall") ? "FULL_ACCESS" : null;
+    if (!role) return null;
+    const wide = role === "FULL_ACCESS";
+    return { role, site: SNAG_NEEDS_SITE.includes(role) ? site : "", sites: wide ? (allSites ? [] : multi ? mine : [site]) : [], rights: rt, pos: k };
   }
   if (app === "incidents") {
-    if (r === "ADMIN") return { role: "Admin", scope: "ALL" };
-    if (r === "ADVISOR") return { role: "Property Advisor", scope: "ALL" };
-    if (r === "DIRECTOR" || r === "CDSO") return { role: "Mall Director", scope: mine.map(c => INC_SITE[c]).join(",") };
-    if (r === "MANAGER" && site) return { role: "Mall Manager", scope: INC_SITE[site] };
-    if ((r === "SUPERVISOR" && !wh || r === "SECURITY") && site) return { role: "Supervisor", scope: INC_SITE[site] };   // Security falls under operations
-    return null;
+    const role = k === "ADVISOR" ? "Property Advisor" : ["DIRECTOR", "CDSO"].includes(k) ? "Mall Director" : k === "HOS" ? "Head of Security"
+      : k === "SECM" ? "Security Manager" : ["MM", "OM"].includes(k) ? "Mall Manager" : "Supervisor";
+    const scope = allSites ? "ALL" : (multi ? mine : site ? [site] : []).map(c => INC_SITE[c]).filter(Boolean).join(",");
+    if (!scope) return null;
+    return { role, scope, rights: rt, pos: k, position: POS[k].n };
   }
-  if (app === "restroom") return wh ? null : { view: true };
   return null;
 }
 /* null = no access · { acct, force } — force: set by hand in the hub, so the system updates an existing account too */
@@ -58,14 +67,15 @@ export function sysAccess(u, app, d) {
   const c = parse(u.sys)[app] || {};
   if (c.m === "none") return null;
   if (c.m === "set") {
-    if (app === "snaglist") { if (!SNAG_ROLES[c.role]) return null; return { acct: { role: c.role, site: c.site || "", sites: c.sites || [], position: c.position || "" }, force: true }; }
+    const k = posKeyOf(u), rt = k ? sysRightsOf(k, posSiteOf(u), app) : null, extra = rt ? { rights: rt, pos: k } : {};
+    if (app === "snaglist") { if (!SNAG_ROLES[c.role]) return null; return { acct: { role: c.role, site: c.site || "", sites: c.sites || [], position: c.position || "", ...extra }, force: true }; }
     if (app === "incidents") { if (!INC_ROLES.includes(c.role)) return null;
       const all = INC_ALL.includes(c.role) || (c.sites || []).includes("ALL");
-      return { acct: { role: c.role, scope: all ? "ALL" : (c.sites || []).map(x => INC_SITE[x]).filter(Boolean).join(","), position: c.position || "" }, force: true }; }
+      return { acct: { role: c.role, scope: all ? "ALL" : (c.sites || []).map(x => INC_SITE[x]).filter(Boolean).join(","), position: c.position || "", ...extra }, force: true }; }
     return { acct: { view: true }, force: true };
   }
   const a = autoAccount(u, app, d);
-  if (a && app === "snaglist") a.position = d.posLabel(u.position) || "";
+  if (a && app === "snaglist") a.position = d.posLabel(u.position) || (a.pos && POS[a.pos] ? POS[a.pos].n : "");
   return a ? { acct: a, force: false } : null;
 }
 export function sysSummary(u, d) {
@@ -98,6 +108,13 @@ export function cleanSys(raw, role, SITES) {
 
 /* ---------- sign-in policy (Admin Control) ---------- */
 export async function ssoPolicy(env) {
+  /* Nov 2026: Snaglist and Incidents are run from the hub (users, rights, settings) — once, both switch to "Hub sign-in only" (Admin Control → Hub sign-in can switch them back) */
+  const claim = await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('sso:hubonly-nov26', ?)").bind(new Date().toISOString()).run().catch(() => null);
+  if (claim && claim.meta && claim.meta.changes === 1) {
+    const r0 = await env.DB.prepare("SELECT v FROM meta WHERE k = 'sso:policy'").first().catch(() => null), p0 = parse(r0 && r0.v), at = new Date().toISOString();
+    for (const a of ["snaglist", "incidents"]) p0[a] = { hubOnly: true, at };
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('sso:policy', ?)").bind(JSON.stringify(p0)).run().catch(() => {});
+  }
   const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'sso:policy'").first().catch(() => null);
   return parse(r && r.v);
 }

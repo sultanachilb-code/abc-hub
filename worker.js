@@ -10,6 +10,7 @@ export { PhoneHub } from "./modules/phone.js";
 import { chatSchema, chatRoute, chatDeps, chatSync, chatRun, chatPostTeam } from "./modules/chat.js";
 import { cleanSchema, cleanRoute, cleanPublic, cleanGate, cleanDay, cleanRun, clMode } from "./modules/cleaners.js";   // Cleaner Access (the Cleaner QR system in the hub) — docs/FEATURE-cleaner-access.md
 import { ffSchema, ffRoute, ffPublic, ffRun } from "./modules/footfall.js";   // Footfall: Liban Park daily car counts per flagship — docs/FEATURE-footfall.md
+import { posCfg, posCfgNow, posAdmin, toolOverride, autoRecipients, incAdmin, incServer, AUTO_MAILS } from "./modules/positions.js";   // Positions & landing pages + Incident Report settings — docs/FEATURE-positions.md
 import { ssoSchema, SSO_APPS, sysAccess, sysSummary, cleanSys, ssoServer, ssoEnd, extAllowed, ssoPolicy, ssoPolicySet, SNAG_ROLES, INC_ROLES, INC_POSITIONS } from "./modules/hubsso.js";   // One hub account for every system — docs/FEATURE-hub-sign-in.md
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
@@ -128,7 +129,7 @@ const TITLES = {
   DOM: { label: "Deputy Operations Manager", slot: "OM", rank: -1 }
 };
 const SLOTS = { MM: "Mall Manager / Senior Mall Manager", OM: "Operations Manager / Deputy Operations Manager" };
-const SEC_POSITIONS = { SM: { label: "Security Manager" }, HOS: { label: "Head of Security" } };   // Nov 2026: Security Manager (one flagship) · Head of Security (every flagship)   // Security role: the Head of Security sees every flagship
+const SEC_POSITIONS = { SM: { label: "Security Manager" }, HOS: { label: "Head of Security" }, SV: { label: "Site Visit Officer" } };   // Nov 2026: Site Visit Officer — one person, every flagship   // Nov 2026: Security Manager (one flagship) · Head of Security (every flagship)   // Security role: the Head of Security sees every flagship
 const posLabel = p => (POSITIONS[p] || TITLES[p] || SEC_POSITIONS[p] || {}).label || "";
 /* Which flagships an account can open */
 function sitesOf(u) {
@@ -138,7 +139,7 @@ function sitesOf(u) {
     const list = String(u.sites || "").split(",").filter(c => SITES[c]);
     return list.length ? list : (SITES[u.site_code] ? [u.site_code] : []);
   }
-  if (u.role === "SECURITY" && u.position === "HOS") return Object.keys(SITES);   // Head of Security: every flagship (Oct 2026)
+  if (u.role === "SECURITY" && (u.position === "HOS" || u.position === "SV")) return Object.keys(SITES);   // Head of Security, Site Visit Officer: every flagship   // Head of Security: every flagship (Oct 2026)
   return SITES[u.site_code] ? [u.site_code] : [];
 }
 const canSite = (u, site) => sitesOf(u).includes(site);
@@ -654,6 +655,7 @@ export default {
     ctx.waitUntil((async () => {
       if (!env.DB) return;
       await ensureSchema(env);
+      await toolsCfg(env).catch(() => {}); await posCfg(env).catch(() => {});   // who sees what, for the automatic emails and alerts
       await taskReminders(env).catch(e => console.error("tasks", e && e.message));
       await remindersRun(env, { raiseEvent, pullDay, now: nowIso }).catch(e => console.error("reminders", e && e.message));   // Reminders feature
       await emergencyRun(env, { raiseEvent, sendPush, now: nowIso, siteName }).catch(e => console.error("emergency", e && e.message));   // Emergency Alert feature
@@ -723,8 +725,10 @@ async function route(request, env, ctx, url) {
     const s = await readSession(request, env).catch(() => null); if (s && s._sid && !s._viewAs) await ssoEnd(env, s.email, s._sid);
     return json({ ok: true, data: {} }, 200, { "set-cookie": CLEAR });
   }
-  if (path === "sso/alive" || path === "sso/policy") {   // asked by Snaglist / Incidents / Restroom, server to server
+  if (path === "sso/alive" || path === "sso/policy" || path === "sso/inc-cfg") {   // asked by Snaglist / Incidents / Restroom, server to server
     if (!env.HUB_KEY || !same(request.headers.get("x-hub-key") || "", env.HUB_KEY)) throw fail("Not authorised", 403);
+    if (path === "sso/inc-cfg") return ok(await incServer(env, { sitesOf }));   // the Incident system's email recipients (Incident Report settings)
+    await posCfg(env).catch(() => {});
     return ok(await ssoServer(env, path, url, ssoDeps));
   }
   if (path === "viewas-stop" && method === "POST") return json({ ok: true, data: {} }, 200, { "set-cookie": "hub_viewas=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" });   // Admin Control: back to my admin
@@ -769,6 +773,7 @@ async function route(request, env, ctx, url) {
 
   /* ----- signed-in routes ----- */
   await toolsCfg(env).catch(() => {});   // Admin Control: tools switched off / moved / limited (kept 60 s in memory)
+  await posCfg(env).catch(() => {});   // Admin Control: Positions & landing pages (kept 30 s in memory)
   if (me.role === "EXTERNAL" && !extAllowed(path)) throw fail("External accounts open only the systems given to them", 403);
   if (me._viewAs && (method !== "GET" || path === "sso")) throw fail(`View as ${me.full_name} is read-only — press “Back to my admin” to make changes`, 403);
   if (path === "me") {
@@ -912,7 +917,14 @@ async function route(request, env, ctx, url) {
     if (a.startsWith("cc/mailctl/")) return ok(await mailCtlRoute(env, a.slice(3), method, body, { isAdmin: true, me, today: beirutToday, audit }));   // Email Control
     if (a.startsWith("cc/mailbox")) return ok(await mbRoute(env, a, method, body, me, { ...MB_DEPS, hubUrl: HUB_URL }));   // Report mailbox
     if (a === "cc/home") return ok(await homeAdmin(env, method, body, me));   // Home layout by position (Landing pages → Home layout)
-    if (a === "cc/lp") return ok(await lpAdmin(env, method, body, me, { allows: (u, app) => roleAllows(u, app) }));   // Landing pages by position
+    if (a === "cc/lp") return ok(await lpAdmin(env, method, body, me, { allows: (u, app) => roleAllows(u, app), SITES }));   // Landing pages by position (and by flagship)
+    if (a === "cc/pos") return ok(await posAdmin(env, method, body, me, { SITES, audit, legacyAllows: (u, app) => legacyAllows(u, app),
+      appIds: () => (url.searchParams.get("apps") || "").split(",").filter(x => /^[a-z0-9-]{2,40}$/.test(x)).slice(0, 300),
+      offApps: () => Object.entries(toolsCfgNow()).filter(([, c]) => c && c.off).map(([k]) => k) }));   // Positions & landing pages
+    if (a === "cc/inc") return ok(await incAdmin(env, method, body, me, { audit, incFetch: async path => {   // Incident Report settings (moved from the Incident system)
+      const c = CONNECTORS.incidents, init = { headers: { "x-hub-key": env.HUB_KEY || "" } };
+      const r = c.binding && env[c.binding] ? await env[c.binding].fetch(c.base + path, init) : await fetch(c.base + path, init);
+      const j = await r.json().catch(() => null); return j && j.ok ? j.data : null; } }));
     if (a.startsWith("cc/")) {   // Admin Control Center (modules/admincc.js)
       const r = await admRoute(env, a, method, body, url, { me, listUsers, requiredRoles, d1Traffic, storageStatus, mailQuota, gql, audit, notifyAdmins, viewAsCookie, ssoAdmin: { apps: SSO_APPS, policy: ssoPolicy, set: ssoPolicySet, ready: id => ssoReady(env, id, CONNECTORS[id]) },
         CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, pmRun, mkRun, jobDeps: { ...PM_DEPS, hour: () => 10, raiseEvent },
@@ -1301,6 +1313,7 @@ async function ssoLink(env, me, appId) {
   const c = CONNECTORS[String(appId || "")];
   if (!c || !c.sso) throw fail("This system does not support hub sign-in yet", 404);
   if (!env.HUB_KEY) throw fail("HUB_KEY is not set on the hub", 500);
+  await posCfg(env).catch(() => {});   // the position's rights travel in the pass
   const acc = SSO_APPS[appId] ? sysAccess(me, appId, ssoDeps) : { acct: null, force: false };
   if (!acc) throw fail(`Your hub account has no access to ${SSO_APPS[appId].name} — ask the administrator`, 403);
   if (!(await ssoReady(env, String(appId), c))) throw fail("This system does not accept hub sign-in yet — opening its own sign-in page", 404);
@@ -1473,8 +1486,17 @@ const PM_DEPS = { SITES, siteName: s => SITES[s] || s, hubUrl: HUB_URL, now: () 
     const k = msgs[0] && msgs[0].kind; if (k) { const g = await mailGate(env, k); if (!g.ok) return { sent: 0, off: true, error: g.error }; }   // Email Control
     const q = await outlookBulk(env, msgs).catch(() => null); if (q) { if (k) await mailLog(env, k, msgs[0].to, msgs.length); return q; }
     let n = 0; for (const m of msgs) { const r = await relay(env, m); if (r.ok) n++; } return { sent: n }; } };
+/* Positions & landing pages: the positions that receive this flagship email automatically (e.g. the Security Manager) are added in Cc */
+async function withAuto(env, m) {
+  if (!m || !m.site || !AUTO_MAILS[m.kind] || m.noAuto) return m;
+  const add = await autoRecipients(env, m.kind, m.site, { sitesOf }).catch(() => []);
+  const have = new Set([...(m.to || []), ...(m.cc || []), ...(m.bcc || [])].map(x => String(x).toLowerCase()));
+  const extra = add.filter(e => !have.has(String(e).toLowerCase()));
+  return extra.length ? { ...m, cc: [...(m.cc || []), ...extra] } : m;
+}
 async function relay(env, m) {
   if (m && m.kind) { const g = await mailGate(env, m.kind); if (!g.ok) return { ok: false, off: true, error: g.error }; }   // Email Control: switched OFF / paused
+  m = await withAuto(env, m);
   const o = await outlookSend(env, m).catch(e => { console.error("outlook", e && e.message); return null; });
   const r = o || await relayScript(env, m);
   if (r && r.ok && m && m.kind) await mailLog(env, m.kind, m.to || m.bcc);
@@ -1483,6 +1505,7 @@ async function relay(env, m) {
 /* the outlookSend handed to modules: same Email Control switch + log */
 async function outlookSendG(env, m) {
   if (m && m.kind) { const g = await mailGate(env, m.kind); if (!g.ok) return { ok: false, off: true, error: g.error }; }
+  m = await withAuto(env, m);
   const r = await outlookSend(env, m);
   if (r && r.ok && m && m.kind) await mailLog(env, m.kind, (m.to && m.to.length ? m.to : m.bcc));
   return r;
@@ -1654,8 +1677,13 @@ async function notificationsFor(env, me) {
 /* Upcoming - Testing: everything in the testing folder is open to everyone while it is tested (Oct 2026) — keep TESTING in apps.js in line */
 const TESTING_OPEN = new Set(["guide", "quickpass", "induction", "beforeafter", "cleanctl", "coverage", "keybox", "pm", "mkt", "tlist", "memo"]);
 const roleAllows = (u, app) => { if (u.role === "ADMIN" || u.is_admin) return true;   // administrators see every tool, also with their real role (to test) — the rights inside follow the role
-  const c = toolsCfgNow()[app];   // Admin Control → Tools control (switched off / who sees it)
+  const c = toolsCfgNow()[app];   // Admin Control → Tools control (switched off for everyone)
   if (c && c.off) return false;
+  const o = toolOverride(u, app); if (o !== undefined) return o;   // Admin Control → Positions & landing pages (per position, per flagship)
+  return legacyAllows(u, app); };
+/* the rules before Positions & landing pages: Tools control "who sees it", then apps.js ACCESS */
+const legacyAllows = (u, app) => { if (u.role === "ADMIN" || u.is_admin) return true;
+  const c = toolsCfgNow()[app];
   if (c && Array.isArray(c.access)) return c.access.includes(accessKey(u));
   return TESTING_OPEN.has(app) || !APP_ACCESS[app] || APP_ACCESS[app].includes(accessKey(u)); };
 
@@ -2558,7 +2586,7 @@ async function opsRoute(env, me, p, method, b, url) {
         else if (!R.to.length) mail = { sent: false, error: "No group email or manager for this flagship" };
         else {
           const html = String(b.mail.html).slice(0, 250000), subject = String(b.mail.subject || `ABC ${siteName(site)} | Handover ${b.day}`).slice(0, 200);
-          const r = await relay(env, { kind: "handover", from: me.email, to: R.to, cc: R.cc, replyTo: me.email, subject, html });
+          const r = await relay(env, { kind: "handover", site, from: me.email, to: R.to, cc: R.cc, replyTo: me.email, subject, html });
           mail = r.ok ? { sent: true, to: R.to, cc: R.cc, at: nowIso() } : { sent: false, error: r.error };
         }
         const L2 = JSON.parse((await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first()).handoffs || "[]");

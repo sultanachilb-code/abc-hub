@@ -8,6 +8,7 @@
    Route: GET /api/brief/role?as=&site=&period=today|7d|month · POST /api/brief/settings (admin)
    ===================================================================== */
 import { DEADLINES } from "./today.js";
+import { posSiteOf } from "./positions.js";
 import { lpKeyOf, layoutFor, landingData, LP_POSITIONS, LP_USER, LEGACY } from "./landing.js";   // Landing pages by position (Nov 2026)
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const rows = async q => { try { return (await q.all()).results || []; } catch (e) { console.error("rolebrief", e && e.message); return []; } };
@@ -354,7 +355,7 @@ export async function roleBriefRoute(env, p, method, b, url, d) {
   /* Landing pages (Nov 2026): the position's page built in Admin Control → Landing pages */
   const OLD = { manager: "MM", advisor: "ADVISOR", director: "DIRECTOR", cdso: "CDSO" };
   const asKey = me.role === "ADMIN" ? (LP_POSITIONS[q("as")] ? q("as") : OLD[q("as")] || "ADVISOR") : lpKeyOf(me);
-  const layout = await layoutFor(env, asKey);
+  const layout = await layoutFor(env, asKey, me.role === "ADMIN" ? (/^[A-Z]{3}$/.test(q("site")) ? q("site") : "") : posSiteOf(me));   // a page changed for one flagship (Positions & landing pages)
   if (layout) {
     const fake = me.role === "ADMIN" ? LP_USER[asKey] : me;
     const lpSites = me.role === "ADMIN" ? (asKey === "DIRECTOR" ? MALL_SITES : asKey === "CDSO" ? DS_SITES : mine) : mine;
