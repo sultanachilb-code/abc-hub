@@ -121,7 +121,7 @@ export async function automationRun(env, deps, now = new Date()) {
       await env.DB.prepare("INSERT OR REPLACE INTO daily_stats (site, day, data, at) VALUES (?,?,?,?)").bind(site, t.day, JSON.stringify(snapshotOf(R)), now.toISOString()).run();
       const to = people.filter(u => deps.canSite(u, site)).map(u => u.email);
       if (to.length && env.MAIL_RELAY_URL) {
-        const r = await deps.relay(env, { kind: "eod", to, subject: `End of Day Report — ABC ${deps.SITES[site]} — ${t.day}`, html: eodEmailHtml(R, deps.hubUrl) });
+        const r = await deps.relay(env, { kind: "eod", site, to, subject: `End of Day Report — ABC ${deps.SITES[site]} — ${t.day}`, html: eodEmailHtml(R, deps.hubUrl) });
         if (r.ok) out.eod++;
       }
     }

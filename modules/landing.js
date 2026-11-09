@@ -9,19 +9,21 @@
    ===================================================================== */
 import { managerBrief, kpiBrief, KPI_ITEMS, MGR_ITEMS, briefConfig } from "./rolebrief.js";
 import { patrolDay } from "./patrol.js";
+import { posSiteOf } from "./positions.js";   // Nov 2026: a landing page / home layout can be changed for one flagship (Positions & landing pages)
 
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const one = async q => { try { return await q.first(); } catch { return null; } };
 
-export const LP_POSITIONS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer",
-  SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
+export const LP_POSITIONS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse",
+  SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", SV: "Site Visit Officer", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
 /* a pretend account of each position — used to check what it may open (Admin preview, builder) */
 export const LP_USER = { MM: { role: "MANAGER", position: "MM" }, OM: { role: "MANAGER", position: "OM" }, SMS: { role: "SUPERVISOR", position: "SMS" },
-  MS: { role: "SUPERVISOR", position: "MS" }, MO: { role: "SUPERVISOR", position: "MO" }, SEC: { role: "SECURITY", position: "" }, SECM: { role: "SECURITY", position: "SM" },
+  MS: { role: "SUPERVISOR", position: "MS" }, MO: { role: "SUPERVISOR", position: "MO" }, WH: { role: "SUPERVISOR", position: "WH" }, SV: { role: "SECURITY", position: "SV" },
+  SEC: { role: "SECURITY", position: "" }, SECM: { role: "SECURITY", position: "SM" },
   HOS: { role: "SECURITY", position: "HOS" }, ADVISOR: { role: "ADVISOR" }, DIRECTOR: { role: "DIRECTOR" }, CDSO: { role: "CDSO" } };
 export const lpKeyOf = u => !u ? null : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
-  : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO"].includes(u.position) ? u.position : null)
-  : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : "SEC")
+  : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : null)
+  : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : u.position === "SV" ? "SV" : "SEC")
   : ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? u.role : null;
 /* the old briefs, used when a position has no saved page */
 export const LEGACY = { MM: "manager", OM: "manager", ADVISOR: "advisor", DIRECTOR: "director", CDSO: "cdso" };
@@ -76,12 +78,29 @@ export async function lpAll(env) {
   }
   CACHE = v; CACHE_AT = Date.now(); return v;
 }
-export async function layoutFor(env, key) {
+/* changed for one flagship: meta 'landing:site' = { VRM: { KEY: layout } } · 'home:site' = { VRM: { KEY: home } } */
+const SCACHE = {};
+async function siteAll(env, k) {
+  const c = SCACHE[k]; if (c && Date.now() - c.at < 60000) return c.v;
+  let v = {}; try { v = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k))) || {}).v || "{}"); } catch {}
+  SCACHE[k] = { at: Date.now(), v }; return v;
+}
+async function siteSave(env, k, site, key, val) {
+  const raw = await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k));
+  let all = {}; try { all = JSON.parse((raw && raw.v) || "{}"); } catch {}
+  all[site] = all[site] || {};
+  if (val === null) delete all[site][key]; else all[site][key] = val;
+  if (!Object.keys(all[site]).length) delete all[site];
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind(k, JSON.stringify(all)).run();
+  delete SCACHE[k]; return all;
+}
+export async function layoutFor(env, key, site) {
   if (!key) return null;
+  if (site) { const s = ((await siteAll(env, "landing:site"))[site] || {})[key]; if (s) return s; }
   const all = await lpAll(env);
   return all[key] || (BUILT_IN.includes(key) ? STARTERS[key] : null);
 }
-export const hasLanding = async (env, u) => !!(await layoutFor(env, lpKeyOf(u)));
+export const hasLanding = async (env, u) => !!(await layoutFor(env, lpKeyOf(u), posSiteOf(u)));
 function clean(layout, apps) {
   const secs = (Array.isArray(layout && layout.sections) ? layout.sections : []).slice(0, 12).map(s => ({
     name: String(s.name || "").replace(/\s+/g, " ").trim().slice(0, 40) || "Section",
@@ -106,7 +125,9 @@ export async function homeAll(env) {
   let v = {}; try { v = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'home:pos'"))) || {}).v || "{}"); } catch {}
   HCACHE = v; HCACHE_AT = Date.now(); return v;
 }
-export const homeFor = async (env, u) => { const k = homeKeyOf(u); return k ? ((await homeAll(env))[k] || null) : null; };
+export const homeFor = async (env, u) => { const k = homeKeyOf(u); if (!k) return null;
+  const st = k !== "ADMIN" ? posSiteOf(u) : ""; if (st) { const h = ((await siteAll(env, "home:site"))[st] || {})[k]; if (h) return h; }
+  return (await homeAll(env))[k] || null; };
 function cleanHome(h) {
   const ids = Object.keys(HOME_SECTIONS), order = [...new Set((Array.isArray(h && h.order) ? h.order : []).filter(x => ids.includes(x)))];
   ids.forEach(x => { if (!order.includes(x)) order.push(x); });
@@ -117,6 +138,10 @@ function cleanHome(h) {
 export async function homeAdmin(env, method, b, me) {
   if (method === "POST") {
     const key = String(b.key || "").toUpperCase(); if (!HOME_KEYS[key]) throw err("Choose a position");
+    const site = b.site && b.site !== "ALL" ? String(b.site).toUpperCase() : "";
+    if (site) { if (!/^[A-Z]{3}$/.test(site)) throw err("Unknown flagship");
+      const all = await siteSave(env, "home:site", site, key, b.home === null ? null : { ...cleanHome(b.home), at: new Date().toISOString(), by: me.full_name || me.email });
+      return { saved: true, homes: await homeAll(env), siteHomes: all }; }
     const raw = await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'home:pos'"));
     let all = {}; try { all = JSON.parse((raw && raw.v) || "{}"); } catch {}
     if (b.home === null) delete all[key];
@@ -125,13 +150,17 @@ export async function homeAdmin(env, method, b, me) {
     HCACHE = null;
     return { saved: true, homes: all };
   }
-  return { positions: HOME_KEYS, sections: HOME_SECTIONS, lanes: HOME_LANES, homes: await homeAll(env) };
+  return { positions: HOME_KEYS, sections: HOME_SECTIONS, lanes: HOME_LANES, homes: await homeAll(env), siteHomes: await siteAll(env, "home:site") };
 }
 
 /* Admin Control → Landing pages */
 export async function lpAdmin(env, method, b, me, d) {
   if (method === "POST") {
     const key = String(b.key || "").toUpperCase(); if (!LP_POSITIONS[key]) throw err("Choose a position");
+    const site = b.site && b.site !== "ALL" ? String(b.site).toUpperCase() : "";
+    if (site) { if (!d.SITES || !d.SITES[site]) throw err("Unknown flagship");
+      const all = await siteSave(env, "landing:site", site, key, b.layout === null ? null : { ...clean(b.layout, d.appIds), at: new Date().toISOString(), by: me.full_name || me.email });
+      return { saved: true, layouts: await lpAll(env), siteLayouts: all }; }
     const raw = await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'landing:pos'"));
     let all = {}; try { all = JSON.parse((raw && raw.v) || "{}"); } catch {}
     if (b.layout === null) delete all[key];
@@ -141,7 +170,7 @@ export async function lpAdmin(env, method, b, me, d) {
     return { saved: true, layouts: all };
   }
   const allows = Object.fromEntries(Object.keys(LP_POSITIONS).map(k => [k, Object.fromEntries(Object.entries(WIDGETS).map(([w, x]) => [w, !x.app || d.allows(LP_USER[k], x.app)]))]));
-  return { positions: LP_POSITIONS, widgets: WIDGETS, layouts: await lpAll(env), starters: STARTERS, builtIn: BUILT_IN, legacy: LEGACY, allows, kpiItems: KPI_ITEMS };
+  return { positions: LP_POSITIONS, widgets: WIDGETS, layouts: await lpAll(env), siteLayouts: await siteAll(env, "landing:site"), starters: STARTERS, builtIn: BUILT_IN, legacy: LEGACY, allows, kpiItems: KPI_ITEMS };
 }
 
 /* ---------- the figures ---------- */
