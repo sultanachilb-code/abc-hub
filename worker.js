@@ -956,6 +956,11 @@ async function route(request, env, ctx, url) {
       await audit(env, { me, tool: "people", ref: "welcome", label: "Welcoming email", action: "edit", changes: [{ field: "welcoming email", before: "", after: `sent to ${sent.length}` }] }).catch(() => {});
       return ok({ sent: sent.length, failed });
     }
+    if (a === "users/sys-preview" && method === "POST") {   // what this person gets in each system, worked out from role + position + flagship (nothing saved)
+      const u = { email: "preview@abc.com.lb", role: ROLES[body.role] ? body.role : "SUPERVISOR", site_code: SITES[body.site] ? body.site : "",
+        sites: (Array.isArray(body.sites) ? body.sites : []).filter(c => SITES[c]).join(","), position: String(body.position || ""), sys: "" };
+      return ok({ sys: sysSummary(u, ssoDeps), sites: SITES });
+    }
     if (a === "users/welcome-preview" && method === "POST") {   // the email as it will look, from the form (nothing saved)
       const u = { email: String(body.email || "name@abc.com.lb").toLowerCase(), full_name: String(body.name || "New colleague"), role: ROLES[body.role] ? body.role : "SUPERVISOR",
         site_code: body.site || null, sites: (Array.isArray(body.sites) ? body.sites : []).join(","), position: String(body.position || "") };
