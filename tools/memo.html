@@ -137,6 +137,7 @@ function drawGroup(){
       <div class="crow"><input class="inp" id="fT" style="flex:1;min-width:220px" value="${esc(F.title)}" placeholder="Subject — e.g. Mall evacuation awareness session">
         <select class="sel" id="fC">${L.cats.map(c => `<option ${F.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
       <textarea class="inp" id="fB" placeholder="Dear Valued Partners,&#10;…">${esc(F.body)}</textarea>
+      <span class="mut" style="margin-top:-4px">Sent exactly as written · empty line = new paragraph · start a line with <b>-</b> for a point · <b>**text**</b> for bold</span>
       <div class="crow"><button class="btn ghost small" id="fF">📎 ${F.file ? esc(F.file.name) + " · change" : "Attach file"}</button>${F.file ? `<button class="btn ghost small" id="fFx">Remove</button>` : ""}<span class="mut">PDF, image, Word or Excel · up to 8 MB</span></div>
       <div class="rec"><b>Recipients</b>
         <div class="dots"><label><input type="checkbox" data-all ${F.all ? "checked" : ""}> All tenants</label>
@@ -152,7 +153,7 @@ function drawGroup(){
     </div></div>` : ""}
     <div class="fbar"><span class="mut">Sort by:</span><select class="sel" id="srt" style="width:auto"><option value="latest">Latest memos</option><option value="waiting" ${SORT === "waiting" ? "selected" : ""}>Most waiting</option></select><span style="flex:1"></span><input class="inp" id="fq" placeholder="🔍 Search this feed…" value="${esc(Q)}"></div>
     <div>${feed.map(m => `<div class="post"><div class="ph">${logo().replace('class="lg"', 'class="lg av"')}<div><b>Operations Team</b> <span class="ref">· ${esc(m.ref)}${m.cat ? " · " + esc(m.cat) : ""}</span><small>${esc(fdl(m.at))} · by ${esc(m.by)}${m.closed ? " · closed" : ""}</small></div></div>
-        <div class="tt">${esc(m.title)}</div><div class="bd" data-bd>${esc(m.body)}</div>${m.body.split("\n").length > 4 || m.body.length > 320 ? `<span class="xp" data-xp>Expand post</span>` : ""}
+        <div class="tt">${esc(m.title)}</div><div class="bd" data-bd>${esc(m.body).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>${m.body.split("\n").length > 4 || m.body.length > 320 ? `<span class="xp" data-xp>Expand post</span>` : ""}
         <div class="chips">${tags(m).map(t => `<span>${esc(t)}</span>`).join("")}</div>
         ${m.file ? `<a class="att" href="/api/ops/memo/file?id=${m.id}" target="_blank">📄 ${esc(m.file.name)}</a>` : ""}
         <div class="pf"><span class="ack" data-open="${m.id}">${m.mode === "reply" ? "💬 Reply" : "👍 Acknowledge"} · <b>${m.stats.done} / ${m.stats.invited}</b></span>
@@ -229,7 +230,7 @@ function draw(){
         ${m.auto && m.max ? `reminder every ${m.every} day${m.every === 1 ? "" : "s"}, up to ${m.max} times` : "no automatic reminder"}${m.file ? ` · <a href="/api/ops/memo/file?id=${m.id}" target="_blank">📎 ${esc(m.file.name)}</a>` : ""}</span></div>
       <div class="acts">${C.ops && live ? `<button class="btn small" id="rem" ${waitN ? "" : "disabled"}>🔔 Remind waiting (${waitN})</button>` : ""}<button class="btn ghost small" id="csv">⇣ Export</button>
         ${C.ops ? `<button class="btn ghost small" id="set">⚙ Reminders</button><button class="btn ghost small" id="cls">${m.closed ? "Re-open" : "Close"}</button>` : ""}</div></div>
-    <details style="margin-top:8px"><summary class="mut" style="cursor:pointer">Show the memo text</summary><div class="memo">${esc(m.body)}</div></details>
+    <details style="margin-top:8px"><summary class="mut" style="cursor:pointer">Show the memo text</summary><div class="memo">${esc(m.body).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div></details>
     <div class="sites">${C.sites.length > 1 ? card({ site: "", name: "All flagships", ...C.total }) : ""}${C.sites.map(card).join("")}</div>
     <div class="ft">${[["all", "All"], ["ack", "Acknowledged"], ["reply", "Replied"], ["wait", "Waiting"], ["unread", "Not opened"], ["mail", "No email"]].filter(([k]) => m.mode === "reply" ? k !== "ack" || F.ack.length : k !== "reply").map(([k, n]) => `<span data-f="${k}" class="${FIL === k ? "on" : ""}">${n} · ${F[k].length}</span>`).join("")}</div>
     <div class="tw"><table class="t"><thead><tr><th>Tenant</th><th>Answer</th><th>${m.mode === "reply" ? "Reply" : "Note"}</th><th>Emails sent</th><th></th></tr></thead><tbody>

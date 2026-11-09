@@ -59,7 +59,7 @@ function draw(){
   let name = ""; try { name = localStorage.getItem("memo:name") || ""; } catch {}
   $("#app").innerHTML = `<div class="ref">${esc(D.ref)}${D.cat ? " · " + esc(D.cat) : ""}</div><h1>${esc(D.title)}</h1>
     <div class="sub">To ${esc(D.brand)} (${esc(D.units)}) · ${esc(day(D.sent))}${D.replyBy ? ` · ${isReply ? "reply" : "acknowledge"} by <b>${esc(day(D.replyBy))}</b>` : ""}</div>
-    <div class="msg">${esc(D.body)}</div>
+    <div class="msg">${esc(D.body).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>
     ${D.file ? `<a class="file" href="/api/memo-ext/${TK}/file" target="_blank" rel="noopener">📎 ${esc(D.file.name)}</a>` : ""}
     ${done ? `<div class="done">✓ ${D.state === "reply" ? "Your reply was received" : "Acknowledged"} on ${esc(day(D.at))} by ${esc(D.by)}${D.reply ? `<div class="rp">${esc(D.reply)}</div>` : ""}${D.replyFile ? `<div class="rp">📎 ${esc(D.replyFile)}</div>` : ""}</div>
         ${D.open && isReply ? `<div class="switch"><a id="chg">Change my reply</a></div>` : ""}`
