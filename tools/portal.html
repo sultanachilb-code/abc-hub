@@ -6,6 +6,7 @@
 <title>Portal Dashboard · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
+<link rel="stylesheet" href="dash.css">
 <!-- Tenant portal follow-up: Breaches & Penalties · Violations · ABC Requests (Salesforce reports by email) — see docs/FEATURE-portal-followup.md -->
 <style>
 :root{--bp:#A33B3B;--vr:#C07A12;--nr:#2F6F7E;--mk:#B4428C;--cp:#3A6EA5;--us:#5B8C3A}
@@ -178,7 +179,7 @@ function draw(){
     mk: of("mk").filter(mkReview).length, cp: of("cp").filter(x => cpLive(x, nowL())).length, users: U && U.users ? U.users.filter(u => P.all || (u.sites && u.sites.length ? u.sites : [u.site]).some(x => P.sites.includes(x))).length : "" };
   const tk = { vr: "var(--vr)", bp: "var(--bp)", nr: "var(--nr)", mk: "var(--mk)", cp: "var(--cp)", users: "var(--us)" };
   const lastTxt = k => { const l = P.last[k]; const lab = k === "users" ? "Portal Users" : P.kinds[k].label; return `<span class="it" style="--k:${tk[k]}"><i></i>${esc(lab)}: ${l ? `<b>${esc(ago(l.at))}</b> · ${l.rows}` : "<b>not yet</b>"}</span>`; };
-  const tabsH = `<div class="tabs" role="tablist">${TABS.filter(([k]) => k !== "users" || P.can.users).map(([k, n]) => `<button role="tab" data-tab="${k}" class="${tab === k ? "on" : ""}" style="--k:${tk[k] || "var(--brand)"}">${k !== "overview" ? "<i></i>" : ""}${esc(n)}${cnt[k] !== "" && cnt[k] != null ? ` <em>${cnt[k]}${k === "cp" ? " live" : ""}</em>` : ""}</button>`).join("")}</div>`;
+  const tabsH = UP.get("embed") ? "" : `<div class="tabs" role="tablist">${TABS.filter(([k]) => k !== "users" || P.can.users).map(([k, n]) => `<button role="tab" data-tab="${k}" class="${tab === k ? "on" : ""}" style="--k:${tk[k] || "var(--brand)"}">${k !== "overview" ? "<i></i>" : ""}${esc(n)}${cnt[k] !== "" && cnt[k] != null ? ` <em>${cnt[k]}${k === "cp" ? " live" : ""}</em>` : ""}</button>`).join("")}</div>`;
   const src = `<div class="card src">${["vr", "bp", "nr", "mk", "cp", ...(P.can.users ? ["users"] : [])].map(lastTxt).join("")}<span class="sp"></span>
       ${P.can.users ? `<a class="btn small ghost" href="/tools/tpdb?site=${site}">🗂 Tenant Portal Database ›</a>` : ""}
       ${P.can.import ? `<button class="btn small ghost" id="impBtn" title="Salesforce report exports (.xls / .xlsx / .csv): Violations, Breaches & Penalties, ABC Requests, Marketing Requests, Contractor Permits, Active Users">⤓ Import reports</button>` : ""}</div>`;

@@ -6,6 +6,7 @@
 <title>Tenant 360 · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
+<link rel="stylesheet" href="dash.css">
 <!-- Tenant 360 (v3, Oct 2026): one screen — overview (open vs total, ABC Connect penalties & violations posted in the period) + a tenant search;
      picking a tenant opens his KPI board (compliance, sales & score card, ABC Connect, employees), each row opens its details.
      Sales are never saved: the Sales Performance file is read in this page only. See docs/FEATURE-tenant-360.md -->
@@ -53,6 +54,19 @@ dialog.dl::backdrop{background:rgba(20,8,35,.45)}
 .dl .b{padding:4px 18px 18px;overflow:auto;max-height:70vh}
 .mo{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 10px}.mo button{border:1px solid var(--line);border-radius:99px;padding:5px 10px;font-size:.76rem;font-weight:800}.mo button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 .spark{display:flex;align-items:flex-end;gap:5px;height:70px;margin:6px 0}.spark div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}.spark i{display:block;width:100%;border-radius:5px 5px 0 0;min-height:3px}.spark small{font-size:.66rem;color:var(--muted)}
+/* board in the dashboard look (Nov 2026) */
+.tb3{margin-top:4px}.ph3{display:flex;gap:16px;align-items:center;flex-wrap:wrap}.ph3 h2{font-size:1.3rem;margin:0}.ph3 p{color:var(--muted);font-size:.84rem;margin-top:2px}
+.lgo3{width:60px;height:60px;border-radius:16px;background:var(--d-pl,#F1EAFA);color:var(--d-acc,#6B3FA0);display:grid;place-items:center;font-weight:900;font-size:1.3rem;flex:none}
+.x3{display:flex;gap:6px;flex-wrap:wrap}.pill3{border-radius:8px;padding:3px 10px;font-weight:800;font-size:.74rem}.pill3.g{background:var(--d-okl,#E6F8F2);color:var(--d-ok,#13B38A)}.pill3.b{background:var(--d-pl,#F1EAFA);color:var(--d-acc,#6B3FA0)}.pill3.r{background:var(--d-badl,#FDEDED);color:var(--d-bad,#FA5A5A)}
+.kv3{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.kv3>div{background:var(--d-bg,#F6F4FA);border-radius:12px;padding:12px 14px}.kv3 small{display:block;color:var(--muted);font-size:.72rem}.kv3 b{font-size:1.25rem}.kv3 em{font-style:normal;font-size:.74rem;font-weight:800;margin-left:6px;color:var(--muted)}.kv3 em.up{color:var(--ok)}.kv3 em.dn{color:var(--alert)}
+.g3{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:22px;margin-top:22px}.s7{grid-column:span 7}.s5{grid-column:span 5}.s4{grid-column:span 4}
+.hh{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.hh b{font-size:1rem}.hh span{color:var(--muted);font-size:.78rem}
+.kc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.kc button{background:var(--d-bg,#F6F4FA);border-radius:12px;padding:10px;text-align:left;font-size:.78rem;color:var(--muted)}.kc b{display:block;font-size:1.2rem;color:var(--text)}.kc small{font-size:.7rem}
+.sc3{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:.82rem;background:var(--d-pl,#F1EAFA);color:var(--d-acc,#6B3FA0);flex:none}
+.tl3{border-left:2px solid var(--line);margin-left:6px;padding-left:16px;max-height:360px;overflow:auto}.tl3>div{position:relative;margin-bottom:12px}.tl3>div::before{content:"";position:absolute;left:-23px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--d-acc,#6B3FA0);border:2px solid var(--surface)}
+.tl3 b{display:block;font-size:.85rem}.tl3 small{color:var(--muted);font-size:.74rem}
+.go{cursor:pointer}.hier{border:0!important;border-radius:14px!important;box-shadow:var(--d-shadow);margin-top:22px!important}
+@media (max-width:1100px){.s7,.s5,.s4{grid-column:span 12}.kv3{grid-template-columns:1fr 1fr}}
 @media (max-width:760px){.k4{grid-template-columns:1fr 1fr}.ph .x{margin-left:0}table.k th:nth-child(3),table.k td:nth-child(3){display:none}}
 @media print{.top,.noprint{display:none!important}body{background:#fff}.ph{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .hier .hm{color:var(--mut,#6b6478);margin:4px 0 0;font-size:.88rem}
@@ -85,8 +99,14 @@ const dd = d => d ? new Date(String(d).length <= 10 ? d + "T12:00:00" : d).toLoc
 const tone = (v, g, a) => v == null ? "" : v >= g ? "g" : v >= a ? "a" : "r";
 const pill = (v, t, delta, sub) => `<span class="c ${t || ""}">${v}</span>${delta ? `<span class="d ${delta > 0 ? "up" : "dn"}">${delta > 0 ? "▲" : "▼"}${esc(String(Math.abs(delta)).replace(/^(\d+\.\d)\d+$/, "$1"))}</span>` : ""}${sub ? `<small>${sub}</small>` : ""}`;
 
+function salesFromParent(){   /* opened inside the Tenant Dashboard: use the sales file already read there (memory only) */
+  try { const X = parent !== window && parent.TD_SALES; if (!X || SD) return;
+    const D = X.D, units = D.units.filter(u => /mall$|department store$/i.test(u)), mine = (CTX.siteName || "").toLowerCase();
+    SBU = units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0];
+    SD = { D, file: X.file }; SM = D.upTo || 12; $("#upB").textContent = "✓ " + X.file.slice(0, 26); } catch {}
+}
 async function boot(s){
-  CTX = await api("ops/context" + (s || site ? "?site=" + (s || site) : "")); site = CTX.site;
+  CTX = await api("ops/context" + (s || site ? "?site=" + (s || site) : "")); site = CTX.site; salesFromParent();
   $("#sub").textContent = CTX.siteName; $("#sitePick").innerHTML = siteSelect(CTX, x => { location.search = "?site=" + x; });
   await loadO();
   const id = Number(UP.get("unit")) || 0; if (id) openUnit(id); else drawO();
@@ -142,6 +162,7 @@ $("#sfile").onchange = async e => { const file = e.target.files[0]; e.target.val
     const units = D.units.filter(u => /mall$|department store$/i.test(u)), mine = (CTX.siteName || "").toLowerCase();
     SBU = units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0];
     SD = { D, file: file.name }; SM = D.upTo || 12; $("#upB").textContent = "✓ " + file.name.slice(0, 26); toast("Sales loaded — not saved");
+    try { if (parent !== window && parent.tdSalesSet) parent.tdSalesSet({ D, file: file.name }); } catch {}   // the Tenant Dashboard keeps it for this visit
     if (U) drawU();
   } catch (er){ toast(er.message, true); } };
 function salesFor(brand){
@@ -180,21 +201,59 @@ function drawU(){
       <tr><td>Sales / m²</td><td>${pill("$" + f0(S.sqm), S.sqm >= S.catSqm ? "g" : "a", Math.round(S.sqm - S.sqmP))}</td><td><small>Category $${f0(S.catSqm)} · LY $${f0(S.sqmP)}</small></td><td></td></tr>
       <tr><td>Rank in category</td><td>${pill(S.rank + " / " + S.of, S.rank <= Math.ceil(S.of / 3) ? "g" : S.rank <= Math.ceil(S.of * 2 / 3) ? "a" : "r")}</td><td><small>by sales / m² in ${esc(S.cat)}</small></td><td></td></tr>`;
   }
-  $("#app").innerHTML = `<div class="ph"><div class="lgo">${esc(initials(u.brand || u.code))}</div><div style="min-width:0"><h2>${esc(u.brand || u.code)}</h2>
-      <p>${esc([u.code, u.dept, u.area ? Math.round(u.area) + " m²" : "", U.group ? "Group " + U.group : "", U.sku ? "SKU " + U.sku : "", cEnd ? "contract ends " + dd(cEnd) : "", u.status].filter(Boolean).join(" · "))}</p></div>
-      <div class="x noprint">${emails.length ? `<a href="mailto:${esc(emails.join(","))}">✉ Email</a>` : ""}<button id="prt">🖨 Print</button><button id="cls">✕ Close</button></div></div>
-    <div class="box"><h3><span>Tenant KPIs</span>${U.canSales && SD && !S.missing ? `<span class="per">YTD to <select id="ytm">${MNL.slice(0, SD.D.upTo || 12).map((m, i) => `<option value="${i + 1}" ${i + 1 === SM ? "selected" : ""}>${m}</option>`).join("")}</select></span>` : `<span>tap a row for the details</span>`}</h3>
-      <table class="k"><thead><tr><th>KPI</th><th>Value</th><th>Compared with</th><th></th></tr></thead><tbody>
-        <tr class="sec"><td colspan="4">Compliance · hub</td></tr>
-        <tr class="go" data-d="comp"><td>Compliance score (${MNL[new Date().getMonth()]})</td><td>${pill(now ?? "—", tone(now, 90, 75), now != null && last != null ? now - last : 0, last != null ? `${MNL[(new Date().getMonth() + 11) % 12]} ${last}` : "")}</td><td><small>Flagship average ${O && O.kpi.compliance != null ? O.kpi.compliance : "—"}</small></td><td class="more">Details ›</td></tr>
-        <tr class="go" data-d="viol"><td>Tenant compliance violations</td><td>${pill(monthViol, monthViol ? (monthViol >= 3 ? "r" : "a") : "g", 0, "this month")}</td><td><small>12 months: ${viol.length}</small></td><td class="more">›</td></tr>
-        <tr class="go" data-d="fb"><td>Tenant feedback</td><td>${pill(fb.length, fb.length - pos > pos ? "a" : fb.length ? "g" : "", 0, `${pos} positive · ${fb.length - pos} negative`)}</td><td><small>last 12 months</small></td><td class="more">›</td></tr>
-        ${U.canSales ? `<tr class="sec"><td colspan="4">Sales & score card · ${SD ? esc(SD.file) + " · not saved" : "Sales Performance file"}</td></tr>${sales}` : ""}
-        <tr class="sec"><td colspan="4">ABC Connect · portal</td></tr>
-        ${pRow("vr", "Violations")}${pRow("bp", "Penalties")}${pRow("nr", "ABC Requests")}
-        <tr class="sec"><td colspan="4">People · Tenants Directory</td></tr>
-        <tr class="go" data-d="emp"><td>Employees</td><td>${pill(U.contacts.length, U.contacts.length ? "" : "a", 0, esc([...new Set(U.contacts.map(x => x.position).filter(Boolean))].slice(0, 3).join(" · ")))}</td><td></td><td class="more">See them ›</td></tr>
-      </tbody></table></div>${hierBox(U.hierarchy)}`;
+  /* Nov 2026 — the tenant board in the dashboard look: profile + figures, then one card per subject (every row still opens its details) */
+  const scTone = v => v == null ? "" : v >= 90 ? "var(--ok)" : v >= 75 ? "var(--warn)" : "var(--alert)";
+  const allP = ["bp", "vr", "nr"].flatMap(k => (P[k].items || []).map(x => ({ ...x, k }))).sort((x, y) => String(y.day).localeCompare(String(x.day)));
+  const KL = { bp: "Breach / penalty", vr: "Violation", nr: "ABC Request" };
+  const st = x => `<span class="chip" style="${x.open ? "background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)" : "background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)"}">${esc(x.status || (x.open ? "Open" : "Closed"))}</span>`;
+  const tl = [   /* everything about this tenant, newest first */
+    ...allP.map(x => ({ d: x.day, t: `${KL[x.k]} ${x.name}`, s: x.subject })),
+    ...U.feedback.map(f => ({ d: f.day, t: f.category === "Customer Feedback" ? `Customer feedback · ${f.description}` : `Compliance · ${f.description || f.category}`, s: f.action || "" })),
+    ...(U.marketing || []).filter(m => m.at).map(m => ({ d: String(m.at).slice(0, 10), t: `Marketing: ${m.answer === "yes" ? "Participating" : m.answer === "no" ? "Not participating" : "—"}`, s: m.title })),
+    ...(U.announcements || []).map(x => ({ d: x.date, t: `Announcement · ${x.type}`, s: x.subject })),
+    ...(U.works || []).map(w => ({ d: String(w.received || "").slice(0, 10), t: `Works form · ${w.type || ""}`, s: w.subject })),
+    ...(U.history || []).map(h => ({ d: h.date, t: `GLA · ${h.kind}`, s: h.note }))
+  ].filter(x => x.d).sort((x, y) => String(y.d).localeCompare(String(x.d))).slice(0, 14);
+  const salesChart = () => { if (!S || S.missing) return ""; const mx = Math.max(1, ...S.cur.slice(0, 12), ...S.prev.slice(0, 12));
+    return `<div class="spark" style="height:120px">${MN.map((m, i) => `<div title="${MNL[i]}: ${money(S.cur[i] || 0)} · last year ${money(S.prev[i] || 0)}"><span style="display:flex;gap:2px;align-items:flex-end;height:100%;width:100%"><i style="height:${(S.prev[i] || 0) / mx * 100}%;background:var(--d-acc2,#C9B2E6);flex:1"></i><i style="height:${i < SM ? (S.cur[i] || 0) / mx * 100 : 0}%;background:var(--d-acc,#6B3FA0);flex:1"></i></span><small>${m[0]}</small></div>`).join("")}</div>`; };
+  const fit = U.fitout, con = U.contract;
+  $("#app").innerHTML = `<div class="tb3 dc"><div class="ph3"><div class="lgo3">${esc(initials(u.brand || u.code))}</div><div style="min-width:0"><h2>${esc(u.brand || u.code)}</h2>
+      <p>${esc([u.code, u.dept, u.area ? Math.round(u.area) + " m²" : "", U.group ? "Group " + U.group : "", U.sku ? "SKU " + U.sku : ""].filter(Boolean).join(" · "))}</p></div>
+      <span style="flex:1"></span><span class="pill3 ${/^open/i.test(u.status || "") ? "g" : "b"}">${esc(u.status || "—")}</span>${U.compliance && U.compliance.repeats.length ? `<span class="pill3 r">Repeat offender</span>` : ""}
+      <span class="x3 noprint">${emails.length ? `<a class="btn ghost small" href="mailto:${esc(emails.join(","))}">✉ Email</a>` : ""}<button class="btn ghost small" id="prt">🖨 Print</button><button class="btn ghost small" id="cls">✕ Close</button></span></div>
+      <div class="kv3">
+        <div class="go" data-d="comp"><small>Compliance · ${MNL[new Date().getMonth()]}</small><b style="color:${scTone(now)}">${now ?? "—"}</b>${now != null && last != null && now !== last ? `<em class="${now > last ? "up" : "dn"}">${now > last ? "▲" : "▼"} ${Math.abs(now - last)}</em>` : ""}</div>
+        <div class="${S && !S.missing ? "go" : ""}" data-d="${S && !S.missing ? "sales" : ""}"><small>Sales YTD</small><b>${S && !S.missing ? money(S.c) : "—"}</b>${S && !S.missing && isFinite(S.dp) ? `<em class="${S.dp >= 0 ? "up" : "dn"}">${S.dp >= 0 ? "▲" : "▼"} ${Math.abs(S.dp).toFixed(1)}%</em>` : ""}</div>
+        <div><small>Sales / m²</small><b>${S && !S.missing ? "$" + f0(S.sqm) : "—"}</b>${S && !S.missing ? `<em>category $${f0(S.catSqm)}</em>` : ""}</div>
+        <div><small>Score card · rank in category</small><b>${S && !S.missing ? S.rank + " / " + S.of : "—"}</b>${S && !S.missing ? `<em>${esc(S.cat)}</em>` : ""}</div></div>
+      ${U.canSales && !SD ? `<div class="salesup" style="margin-top:12px">🔒 Sales are not saved in the hub — <button class="btn small" id="up2">⇡ Load the Leasing Sales Performance file</button> to see this tenant's sales.</div>` : U.canSales && S && S.missing ? `<p class="muted" style="font-size:.78rem;margin-top:10px">${esc(u.brand)} is not in ${esc(SD.file)} (${esc(SBU)}), or is under ${MIN_SQM} m².</p>` : ""}</div>
+    <div class="g3">
+      <div class="dc s7"><div class="hh"><b>ABC Connect · last 12 months</b><span>${P.bp.open + P.vr.open + P.nr.open} open</span></div>
+        <div class="kc"><button data-d="vr" class="go">Violations <b>${P.vr.open}</b><small>of ${P.vr.total}</small></button><button data-d="bp" class="go">Penalties <b>${P.bp.open}</b><small>of ${P.bp.total}</small></button><button data-d="nr" class="go">Requests <b>${P.nr.open}</b><small>of ${P.nr.total}</small></button></div>
+        <div class="tw"><table class="k"><thead><tr><th>Ref</th><th>Type</th><th>Subject</th><th>Date</th><th>Status</th></tr></thead><tbody>
+          ${allP.slice(0, 8).map(x => `<tr><td>${x.link ? `<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.name)}</a>` : esc(x.name)}</td><td>${KL[x.k]}</td><td style="text-align:left">${esc(x.subject || "")}</td><td>${esc(dd(x.day))}</td><td>${st(x)}</td></tr>`).join("") || `<tr><td colspan="5"><small>Nothing in the last 12 months 👍</small></td></tr>`}</tbody></table></div></div>
+      <div class="dc s5">${U.canSales ? `<div class="hh"><b>Monthly sales</b><span>${S && !S.missing ? `${S.year} vs ${S.prevYear}` : "file not loaded"}</span></div>${salesChart() || `<p class="muted" style="font-size:.82rem">The chart appears when the sales file is loaded.</p>`}
+          ${S && !S.missing ? `<p class="muted" style="font-size:.76rem">YTD to <select id="ytm">${MNL.slice(0, SD.D.upTo || 12).map((m, i) => `<option value="${i + 1}" ${i + 1 === SM ? "selected" : ""}>${m}</option>`).join("")}</select> · category ${esc(S.cat)} ${pc(S.catGrowth)} · <a href="#" data-d="sales" class="go">by month ›</a></p><div class="salesup" style="font-size:.74rem">🔒 ${esc(SD.file)} · on this device · not saved</div>` : ""}`
+        : `<div class="hh"><b>Contract</b></div>${con ? `<p><b>${esc(con.no)}</b> · ${esc(con.type || "")}</p><p class="muted" style="font-size:.82rem">${esc(dd(con.start))} → ${esc(dd(con.end))}${con.daysLeft != null ? ` · ${con.daysLeft} days left` : ""}</p>` : `<p class="muted">Not in the Contracts report.</p>`}`}</div>
+      <div class="dc s4"><div class="hh"><b>Compliance history</b><span class="go" data-d="comp">details ›</span></div>
+        ${(U.trend || []).slice().reverse().slice(0, 6).map(t => `<div class="row"><span class="sc3" style="color:${scTone(t.score)};background:color-mix(in srgb,${scTone(t.score) || "var(--muted)"} 14%,transparent)">${t.score ?? "—"}</span><div class="m"><b>${MNL[Number(t.month.slice(5)) - 1]}</b></div></div>`).join("")}
+        <div class="row go" data-d="viol"><div class="m"><b>Violations · 12 months</b><small>${viol.length} recorded · ${monthViol} this month</small></div><span class="more">›</span></div>
+        <div class="row go" data-d="fb"><div class="m"><b>Customer feedback</b><small>${fb.length} · ${pos} positive</small></div><span class="more">›</span></div></div>
+      <div class="dc s4"><div class="hh"><b>Employees &amp; contacts</b><span class="go" data-d="emp">${U.contacts.length} ›</span></div>
+        ${U.contacts.slice(0, 5).map(x => `<div class="row"><span class="sc3">${esc(initials(x.name || x.position || "?"))}</span><div class="m"><b>${esc(x.name || "—")}</b><small>${esc([x.position, x.mobile].filter(Boolean).join(" · "))}</small></div></div>`).join("") || `<p class="muted" style="font-size:.82rem">No contact in the Tenants Directory yet.</p>`}</div>
+      <div class="dc s4"><div class="hh"><b>Timeline</b><span>newest first</span></div><div class="tl3">${tl.map(x => `<div><b>${esc(x.t)}</b><small>${esc([x.s, dd(x.d)].filter(Boolean).join(" · "))}</small></div>`).join("") || `<p class="muted" style="font-size:.82rem">Nothing yet.</p>`}</div></div>
+      ${U.canSales && con ? `<div class="dc s4"><div class="hh"><b>Contract</b><span>${con.daysLeft != null ? con.daysLeft + " days left" : ""}</span></div><p><b>${esc(con.no)}</b> · ${esc(con.type || "")} · ${esc(con.status || "")}</p><p class="muted" style="font-size:.82rem">${esc(dd(con.start))} → ${esc(dd(con.end))}${con.departure ? ` · leaves ${esc(dd(con.departure))}` : ""}</p></div>` : ""}
+      ${fit ? `<div class="dc s4"><div class="hh"><b>Fit-out</b><span>target ${esc(dd(fit.target))}</span></div>${fit.milestones.map(m => `<div class="row"><span class="sc3" style="color:${m.done ? "var(--ok)" : "var(--muted)"}">${m.done ? "✓" : "·"}</span><div class="m"><b>${esc(m.label)}</b>${m.date ? `<small>${esc(dd(m.date))}</small>` : ""}</div></div>`).join("")}</div>` : ""}
+      ${(U.pm || []).length || (U.marketing || []).length ? `<div class="dc s4"><div class="hh"><b>Preventive maintenance &amp; marketing</b></div>
+        ${(U.pm || []).map(r => `<div class="row"><div class="m"><b>PM ${esc(r.month)}</b><small>${r.ok}/${r.n} certificates approved${r.done ? " · completed" : r.deadline ? " · due " + esc(dd(r.deadline)) : ""}</small></div></div>`).join("")}
+        ${(U.marketing || []).map(m => `<div class="row"><div class="m"><b>${esc(m.title)}</b><small>${m.answer === "yes" ? "Participating" + (m.offer ? " · " + esc(m.offer) : "") : m.answer === "no" ? "Not participating" + (m.reason ? " · " + esc(m.reason) : "") : "No answer yet"}</small></div></div>`).join("")}</div>` : ""}
+      ${(U.contractors || []).length || (U.gate || []).length ? `<div class="dc s4"><div class="hh"><b>Contractors &amp; loading gate</b></div>
+        ${(U.contractors || []).slice(0, 5).map(v => `<div class="row"><div class="m"><b>${esc(v.company || "—")}</b><small>${esc([v.work, v.req, dd(v.from) + (v.to && v.to !== v.from ? " → " + dd(v.to) : ""), v.time].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
+        ${(U.gate || []).slice(0, 4).map(g => `<div class="row"><div class="m"><b>${g.decision === "in" ? "✓ Approved in" : "✕ Rejected"} · ${esc(g.contractor || "")}</b><small>${esc([dd(g.day), g.req, g.reason].filter(Boolean).join(" · "))}</small></div></div>`).join("")}</div>` : ""}
+      ${(U.handhelds || []).length || U.evacuation ? `<div class="dc s4"><div class="hh"><b>Devices &amp; safety</b></div>
+        ${(U.handhelds || []).map(h => `<div class="row"><div class="m"><b>${esc(h.model || "Handheld")} · ${esc(h.serial || "")}</b><small>${esc([h.connection, h.status, h.crm].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
+        ${U.evacuation ? `<div class="row"><div class="m"><b>Evacuation</b><small>${esc([U.evacuation.corridor && "corridor " + U.evacuation.corridor, U.evacuation.assembly && "assembly " + U.evacuation.assembly, U.evacuation.note].filter(Boolean).join(" · "))}</small></div></div>` : ""}</div>` : ""}
+    </div>${hierBox(U.hierarchy)}`;
   $("#cls").onclick = () => drawO(); $("#prt").onclick = () => print();
   const up = $("#up2"); if (up) up.onclick = () => $("#sfile").click();
   const ym = $("#ytm"); if (ym) ym.onchange = e => { SM = Number(e.target.value); drawU(); };
