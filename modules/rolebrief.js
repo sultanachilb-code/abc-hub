@@ -348,6 +348,12 @@ export async function roleBriefRoute(env, p, method, b, url, d) {
     }
     return { cfg: cfgAll, audiences: AUDIENCES, mgrItems: MGR_ITEMS, kpiItems: KPI_ITEMS };
   }
+  /* Performance Dashboard → Flagship status (Nov 2026): every KPI for every flagship of the person, in one table (as the Property Advisor's KPI table) */
+  if (p === "brief/kpi") {
+    if (!["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(me.role)) throw err("Flagship status is for leadership", 403);
+    const per = ["today", "7d", "month"].includes(url.searchParams.get("period")) ? url.searchParams.get("period") : "month";
+    return kpiBrief(env, d.sitesOf(me), per, d, allOn(KPI_ITEMS));
+  }
   if (p !== "brief/role") throw err("Unknown request", 404);
   let aud = audienceOf(me);
   const q = k => url.searchParams.get(k) || "";
