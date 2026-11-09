@@ -1328,7 +1328,7 @@ async function pr(){
   }
   const role = e ? e.role || "SUPERVISOR" : "SUPERVISOR";
   const posF = r => r === "MANAGER" ? `<label>Position</label><select id="uP">${Object.entries(d.titles).map(([c, t]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(t.label)}</option>`).join("")}</select>`
-    : r === "SECURITY" ? `<label>Position</label><select id="uP"><option value="">Security staff</option><option value="SM" ${e && e.position === "SM" ? "selected" : ""}>Security Manager · this flagship (a mall: also its department store)</option><option value="HOS" ${e && e.position === "HOS" ? "selected" : ""}>Head of Security · every flagship</option><option value="SV" ${e && e.position === "SV" ? "selected" : ""}>Site Visit Officer · every flagship</option></select>`
+    : r === "SECURITY" ? `<label>Position</label><select id="uP"><option value="">Security staff</option><option value="SM" ${e && e.position === "SM" ? "selected" : ""}>Security Manager · this flagship (+ its DS)</option><option value="HOS" ${e && e.position === "HOS" ? "selected" : ""}>Head of Security · every flagship</option><option value="SV" ${e && e.position === "SV" ? "selected" : ""}>Site Visit Officer · every flagship</option></select>`
         : r === "SUPERVISOR" ? `<label>Position</label><select id="uP">${Object.entries(d.positions).map(([c, n]) => `<option value="${c}" ${e && e.position === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
   const siteF = r => d.multiRoles.includes(r) ? `<label>Flagships</label><div>${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<label class="mut" style="display:flex;gap:6px"><input type="checkbox" class="uS" value="${c}" ${e && (e.sites || []).includes(c) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
     : r === "ADVISOR" ? `<p class="mut">All five flagships.</p>` : r === "EXTERNAL" ? `<p class="mut">Not linked to a flagship — the systems below decide what they see.</p>` : `<label>Flagship${r === "ADMIN" ? " (optional)" : ""}</label><select id="uF">${r === "ADMIN" ? `<option value="">All flagships</option>` : ""}${FLAGS.filter(f => f[0] !== "LEAD").map(([c, n]) => `<option value="${c}" ${((e && e.site) || (PTAB !== "LEAD" ? PTAB : "")) === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
@@ -1347,16 +1347,29 @@ async function pr(){
     const det = k === "snaglist" ? `<div class="sysD" ${m === "set" ? "" : "hidden"} style="display:grid;gap:5px;margin-top:5px"><select class="sR" data-k="${k}">${Object.entries(SN).map(([v, n]) => `<option value="${v}" ${c.role === v ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
         <select class="sF"><option value="">Flagship (Manager, Supervisor, Audit)</option>${SITE_OPTS(c.site)}</select><span class="mut">Full Access: flagships (none ticked = all)</span>${siteChecks("sFS", c.sites)}</div>`
       : k === "incidents" ? `<div class="sysD" ${m === "set" ? "" : "hidden"} style="display:grid;gap:5px;margin-top:5px"><select class="sR">${(d.incRoles || []).map(v => `<option ${c.role === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
-        <label class="mut" style="display:flex;gap:5px"><input type="checkbox" class="sAll" ${(c.sites || []).includes("ALL") ? "checked" : ""}> All flagships</label>${siteChecks("sFS", c.sites)}
-        <select class="sPo"><option value="">Email position: none</option>${(d.incPositions || []).map(v => `<option ${c.position === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></div>` : "";
+        <label class="mut" style="display:flex;gap:5px"><input type="checkbox" class="sAll" ${(c.sites || []).includes("ALL") ? "checked" : ""}> All flagships</label>${siteChecks("sFS", c.sites)}</div>` : "";
     return `<div class="sysB" data-k="${k}" style="border-top:1px solid var(--cline);padding-top:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:.82rem">${esc((d.ssoApps || {})[k] || k)}</b>
       <select class="sM" style="width:auto">${r === "EXTERNAL" ? "" : `<option value="auto" ${m === "auto" ? "selected" : ""}>Auto · ${esc(autoTxt(k, r))}</option>`}<option value="set" ${m === "set" ? "selected" : ""}>${k === "restroom" ? "Dashboard" : "Choose the role"}</option><option value="none" ${m === "none" ? "selected" : ""}>No access</option></select></div>${det}</div>`; };
-  const sysF = r => `<div style="border:1px solid var(--cline);border-radius:12px;padding:10px 12px;display:grid;gap:6px"><b style="font-size:.84rem">Systems · opened from the hub with no password</b>${Object.keys(d.ssoApps || {}).map(k => sysRow(k, r)).join("")}</div>`;
+  /* Nov 2026: the systems follow the hierarchy — a read-only summary worked out from role + position + flagship;
+     per-system choices only as an exception (closed unless this person already has one, or is an external account) */
+  const hasExc = r => r === "EXTERNAL" || !!(e && e.sysCfg && Object.values(e.sysCfg).some(c => c && c.m && c.m !== "auto"));
+  const sysF = r => `<div style="border:1px solid var(--cline);border-radius:12px;padding:10px 12px;display:grid;gap:6px"><b style="font-size:.84rem">Systems · opened from the hub with no password</b>
+    ${r === "EXTERNAL" ? `<span class="mut">An external account sees only the systems chosen below.</span>` : `<div id="sysSum" class="mut">Working it out…</div><span class="mut" style="font-size:.72rem">Set by the position — rights in <a href="#lp" data-golp2 style="font-weight:800">🧭 Positions &amp; landing pages</a>, emails in Incident Report settings.</span>`}
+    <details id="sysExc" ${hasExc(r) ? "open" : ""}><summary style="cursor:pointer;font-size:.78rem;font-weight:800;color:#6B3FA0">${r === "EXTERNAL" ? "Systems for this account" : "Exception for this person"}</summary><div style="display:grid;gap:6px;margin-top:6px">${Object.keys(d.ssoApps || {}).map(k => sysRow(k, r)).join("")}</div></details></div>`;
+  const sysLine = (k, a) => !a ? `<span style="opacity:.6">No access</span>` : k === "snaglist" ? `${esc(SN[a.role] || a.role)} · ${esc(a.site ? (d.sites[a.site] || a.site) : a.sites && a.sites.length ? a.sites.map(c => d.sites[c] || c).join(", ") : "all flagships")}`
+    : k === "incidents" ? `${esc(a.role)} · ${esc(a.scope === "ALL" ? "all flagships" : a.scope.split(",").join(", "))}` : "Dashboard (view)";
+  let SYSQ = 0;
+  const sysSum = async () => { const box = $("#sysSum"); if (!box) return; const q = ++SYSQ;
+    try { const x = await api("admin/users/sys-preview", { role: R(), position: $("#uP") ? $("#uP").value : "", site: $("#uF") ? $("#uF").value : "", sites: [...document.querySelectorAll(".uS:checked")].map(i => i.value) });
+      if (q !== SYSQ || !$("#sysSum")) return;
+      $("#sysSum").innerHTML = Object.entries(d.ssoApps || {}).map(([k, n]) => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:.78rem"><b style="color:var(--ctext)">${esc(n.replace(/ (Manager|System|Dashboard)$/, ""))}</b><span style="text-align:right">${sysLine(k, x.sys[k])}</span></div>`).join(""); } catch (er){ if ($("#sysSum")) $("#sysSum").textContent = er.message; } };
   const readSys = () => Object.fromEntries([...document.querySelectorAll("#uSys .sysB")].map(b => { const k = b.dataset.k, m = b.querySelector(".sM").value, o = { m };
     if (m === "set" && k !== "restroom"){ o.role = b.querySelector(".sR").value; const fs = [...b.querySelectorAll(".sFS:checked")].map(i => i.value);
-      if (k === "snaglist"){ o.site = b.querySelector(".sF").value; o.sites = fs; } else { o.sites = b.querySelector(".sAll").checked ? ["ALL"] : fs; o.position = b.querySelector(".sPo").value; } }
+      if (k === "snaglist"){ o.site = b.querySelector(".sF").value; o.sites = fs; } else { o.sites = b.querySelector(".sAll").checked ? ["ALL"] : fs; o.position = ""; } }
     return [k, o]; }));
-  const wireSys = () => { const box = $("#uSys"); if (box) box.onchange = ev => { const m = ev.target.closest(".sM"); if (m){ const det = m.closest(".sysB").querySelector(".sysD"); if (det) det.hidden = m.value !== "set"; } }; };
+  const wireSys = () => { const box = $("#uSys"); if (box) box.onchange = ev => { const m = ev.target.closest(".sM"); if (m){ const det = m.closest(".sysB").querySelector(".sysD"); if (det) det.hidden = m.value !== "set"; } };
+    const gl = document.querySelector("[data-golp2]"); if (gl) gl.onclick = ev => { ev.preventDefault(); go("lp"); };
+    sysSum(); };
   V(head("People &amp; roles", "Add people, roles, flagships, administrator access, two-step and the morning email", `<button class="b" data-new='${esc(JSON.stringify({ role: PTAB === "LEAD" ? "ADVISOR" : "SUPERVISOR", site: PTAB !== "LEAD" ? PTAB : "", position: "MO" }))}'>＋ Add a person</button><button class="b g" id="welBulk">✉ Welcoming email to existing people</button>`) +
     `<div class="flt">${FLAGS.map(([c, n]) => { const k = c === "LEAD" ? U.filter(u => u.active && (d.multiRoles.includes(u.role) || d.allSiteRoles.includes(u.role) || u.isAdmin)).length : U.filter(u => u.active && u.site === c && !d.multiRoles.includes(u.role) && !d.allSiteRoles.includes(u.role) && u.role !== "ADMIN").length;
       return `<span data-pt="${c}" class="${PTAB === c ? "on" : ""}">${esc(n)} · ${k}</span>`; }).join("")}<span data-pt="EXT" class="${PTAB === "EXT" ? "on" : ""}">External accounts · ${U.filter(u => u.active && u.role === "EXTERNAL").length}</span></div>
@@ -1381,6 +1394,8 @@ async function pr(){
   const R = () => $("#uR").value; let RES = null;
   $("#uR").onchange = () => { $("#uNote").textContent = ACCESS_NOTE[R()]; $("#uPB").innerHTML = posF(R()); $("#uSB").innerHTML = siteF(R()); $("#uSys").innerHTML = sysF(R()); wireSys(); if (R() === "ADMIN") $("#uA").checked = true; if (R() === "EXTERNAL") $("#uM").checked = false; };
   wireSys();
+  /* the summary follows the position and flagship as they are chosen */
+  const uf = $("#uForm"); if (uf) uf.addEventListener("change", ev => { if (ev.target.closest("#uPB,#uSB")) sysSum(); });
   $("#main").querySelectorAll("[data-pt]").forEach(x => x.onclick = () => { PTAB = x.dataset.pt; PED = null; pr(); });
   $("#main").querySelectorAll("[data-new]").forEach(x => x.onclick = () => { PED = JSON.parse(x.dataset.new); pr().then(() => { $("#uN").focus(); }); });
   $("#main").querySelectorAll("[data-ed]").forEach(x => x.onclick = () => { PED = U.find(u => u.email === x.dataset.ed); pr().then(() => $("#uForm").scrollIntoView({ behavior: "smooth" })); });
