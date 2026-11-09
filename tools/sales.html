@@ -6,6 +6,7 @@
 <title>Tenant Sales & Score Card · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <link rel="stylesheet" href="tools.css">
+<link rel="stylesheet" href="dash.css">
 <!-- Tenant sales analysis + tenant score card. The sales file is read in this page only — nothing is saved (like the Executive Report).
      See docs/FEATURE-tenant-sales.md -->
 <style>
@@ -59,8 +60,11 @@ const MIN_SQM = 20;   // tenants below 20 m² are left out of the comparisons (k
 let ctx = null, site = "", S = null, BU = "", M = 0, tab = "ten", q = "", sortK = "c", sortD = -1, card = null;
 const f0 = v => Math.round(v).toLocaleString("en-US"), pc = v => isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(1) + "%" : "—";
 const cls = v => isFinite(v) ? (v >= 0 ? "up" : "dn") : "";
+const UPS = new URLSearchParams(location.search);
 async function boot(){
-  try { ctx = await api("ops/context"); site = ctx.site; draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  try { ctx = await api("ops/context" + (UPS.get("site") ? "?site=" + UPS.get("site") : "")); site = ctx.site;
+    try { const X = parent !== window && parent.TD_SALES; if (X) return useD(X.D, X.file); } catch {}   // already read in the Tenant Dashboard (memory only)
+    draw(); } catch (e){ $("#app").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 /* ---------- read the Leasing Sales Performance YTD workbook (in this page only) ---------- */
 async function load(file){
@@ -69,12 +73,16 @@ async function load(file){
     const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
     const sheets = wb.SheetNames.map(n => ({ name: n, grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) }));
     const D = SalesLocal.parse(sheets);
-    S = { D, file: file.name }; M = D.upTo || 12;
-    const units = D.units.filter(u => /mall$|department store$/i.test(u));
-    const mine = (ctx.siteName || "").toLowerCase();
-    BU = units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0];
-    card = null; draw();
+    try { if (parent !== window && parent.tdSalesSet) parent.tdSalesSet({ D, file: file.name }); } catch {}
+    useD(D, file.name);
   } catch (e){ toast(e.message, true); }
+}
+function useD(D, fileName){
+  S = { D, file: fileName }; M = D.upTo || 12;
+  const units = D.units.filter(u => /mall$|department store$/i.test(u));
+  const mine = (ctx.siteName || "").toLowerCase();
+  BU = units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0];
+  card = null; draw();
 }
 /* ---------- figures for one business unit ---------- */
 function build(){

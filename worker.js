@@ -238,6 +238,7 @@ const APP_ACCESS = {
   patrol: ["MM", "OM", "SMS", "MS", "MO", "SEC","SECM", "HOS", "LEAD"],   // push only: "Quick Pass to approve" goes to the operations team (anyone can open the tile and ask)
   leadership: ["LEAD"],
   perf: ["MM", "OM", "SMS", "LEAD"],   // Performance Dashboard
+  tdash: ["MM", "OM", "SMS", "MS", "MO", "LEAD"],   // Tenant Dashboard (Nov 2026): Portal Dashboard + Tenant Sales & Score Card + Tenant 360 + Tenant Compliance
   eod: ["MM",  "OM"],
   forms: ["MM",  "OM",  "SMS",  "MS",  "MO"],
   emergency: ["MM",  "OM",  "SMS",  "MS",  "MO", "SECM", "HOS"],
@@ -2125,6 +2126,10 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("exec/")) return execRoute(env, p, method, b, url, { site, can, me, now: nowIso, siteName, glaAsOf,
     sites: sitesMap(me) });
 
+  if (p === "tdash/items") {   // Tenant Dashboard: which pages this user has
+    return { items: { t360: roleAllows(me, "tenant360"), compliance: roleAllows(me, "compliance"), sales: roleAllows(me, "sales"), portal: roleAllows(me, "portal"),
+      tpdb: roleAllows(me, "tpdb"), mkt: roleAllows(me, "mkt"), memo: roleAllows(me, "memo") }, me: { name: me.full_name, position: posLabel(me.position) || ROLES[me.role] || me.role } };
+  }
   if (p === "perf/summary") {   // Performance Dashboard (Nov 2026): one page for Performance + Monthly Pack + Executive Report + Snaglist Report — which pages this user has, and each flagship's status
     const lead = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(me.role);
     const L = sitesOf(me), ctxL = { me, sitesOf, siteName, pullDay, today: beirutToday };

@@ -228,7 +228,7 @@ window.HUB = {
     { id: "evacuation", name: "Tenant Evacuation Plan", desc: "Service corridor and assembly point for every active tenant", group: "Access and Security", icon: "exit", color: "#2E7D32", url: "/tools/evacuation" },
     /* Tenant Management feature: announcements first, then feedback, compliance and fit-out */
     /* Tenant 360 — one page per unit with everything the hub knows about the tenant (see docs/FEATURE-tenant-360.md) */
-    { id: "tenant360", name: "Tenant 360", desc: "Pick a tenant: compliance, sales & score card, ABC Connect and employees on one board", group: "Tenant Management", icon: "users", color: "#4A1F73", url: "/tools/tenant360" },
+    { id: "tenant360", name: "Tenant 360", desc: "Pick a tenant: compliance, sales & score card, ABC Connect and employees on one board", group: "Tenant Management", icon: "users", color: "#4A1F73", url: "/tools/tenant360", hidden: true },
     { id: "tenants", name: "Tenant Announcements", desc: "Opening, closure and relocation emails with photos", group: "Day to Day Operations", icon: "storeIn", color: "#2F6F73", url: "/tools/tenants" },
     {
       id: "feedback",
@@ -244,14 +244,15 @@ window.HUB = {
     /* Monthly operations pack feature — see docs/FEATURE-ops-pack.md */
     { id: "pack", name: "Monthly Operations Pack", desc: "One page per flagship — this month against last month", group: "Reports", hidden: true, icon: "pack", color: "#2A0F45", url: "/tools/pack" },
     /* Tenant Management feature — see docs/FEATURE-tenant-management.md */
-    { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance" },
+    { id: "compliance", name: "Tenant Compliance", desc: "Monthly score and repeat offenders", group: "Tenant Management", icon: "shield", color: "#A0442F", url: "/tools/compliance", hidden: true },
     { id: "fitout", name: "Fit-out Tracker", desc: "Milestones from Reserved to Open", group: "Tenant Management", icon: "box", color: "#8A5A1F", url: "/tools/fitout" },
     /* Tenants Directory feature — see docs/FEATURE-directory.md */
     { id: "contracts", name: "Contracts Near Ending", desc: "Daily Salesforce report by email — departures, ends and renewals", group: "Tenant Management", icon: "scroll", color: "#8A3B5A", url: "/tools/contracts" },
     /* Tenant portal follow-up — see docs/FEATURE-portal-followup.md */
     { id: "perf", name: "Performance Dashboard", desc: "Every flagship at a glance — flagship status, restroom inspections, soft services, monthly packs, snaglist report and data updated", group: "Dashboards", icon: "chart", color: "#6B3FA0", url: "/tools/perf" },
+    { id: "tdash", name: "Tenant Dashboard", desc: "Every tenant on one dashboard — Tenant 360, compliance, sales & score card and ABC Connect (violations, penalties, requests, marketing, contractor permits)", group: "Dashboards", icon: "users", color: "#6B3FA0", url: "/tools/tenants" },
     /* Nov 2026: Performance Dashboard, Monthly Operations Pack, Executive Report, Snaglist Report and Data Accuracy Score have no tile — they open from the Performance Dashboard menu */
-    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing and contractor permits", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal" },
+    { id: "portal", name: "Portal Dashboard", desc: "ABC Connect: violations, breaches, requests, marketing and contractor permits", group: "Dashboards", icon: "megaphone", color: "#6B2E8C", url: "/tools/portal", hidden: true },
     { id: "tpdb", name: "Tenant Portal Database", desc: "Every ABC Connect user linked to shop → brand → company → group — the recipients of Marketing, PM and Memo", group: "Tenant Management", icon: "users", color: "#1F5A96", url: "/tools/tpdb" },
     /* Malfunction Records — soft services and operations follow the service providers (see docs/FEATURE-malfunctions.md) */
     { id: "malfunctions", name: "Malfunction Records", desc: "Malfunctions handled by service providers — reported, attended, fixed", group: "Day to Day Operations", icon: "bolt", color: "#B5452B", url: "/tools/malfunctions" },
@@ -299,7 +300,7 @@ window.HUB = {
     },
     /* Data Accuracy Score feature — see docs/FEATURE-accuracy.md */
     /* Tenant Sales & Score Card — sales file read on the page only, never saved (see docs/FEATURE-tenant-sales.md) */
-    { id: "sales", name: "Tenant Sales & Score Card", desc: "YTD vs last year, sales / m², categories and a score card per tenant — file not saved", group: "Dashboards", icon: "chart", color: "#7B4BB0", url: "/tools/sales" },
+    { id: "sales", name: "Tenant Sales & Score Card", desc: "YTD vs last year, sales / m², categories and a score card per tenant — file not saved", group: "Dashboards", icon: "chart", color: "#7B4BB0", url: "/tools/sales", hidden: true },
     {
       id: "accuracy",
       name: "Data Accuracy Score",
