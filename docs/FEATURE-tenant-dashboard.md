@@ -1,6 +1,6 @@
 # Tenant Dashboard (Nov 2026)
 
-One dashboard for **Portal Dashboard + Tenant Sales & Score Card + Tenant 360 + Tenant Compliance**, in the white dashboard look of the Performance Dashboard (light / dark). Page: `tools/tenants.html`; app `tdash` in Dashboards (MM, OM, SMS, MS, MO, leadership). The four old tiles are hidden but still open from links.
+One dashboard for **Portal Dashboard + Tenant Sales & Score Card + Tenant 360 + Tenant Compliance**, in the white dashboard look of the Performance Dashboard (light / dark). Page: `tools/tenantdash.html`; app `tdash` in Dashboards (MM, OM, SMS, MS, MO, leadership). The four old tiles are hidden but still open from links.
 
 ## Left menu (one page each, no tabs)
 - **Tenants:** Overview · Tenant 360 · Compliance · Sales & Score Card

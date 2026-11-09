@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant Dashboard · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<link rel="stylesheet" href="dash.css">
+<!-- Tenant Dashboard (Nov 2026) — one dashboard for Portal Dashboard + Tenant Sales & Score Card + Tenant 360 + Tenant Compliance,
+     in the white dashboard look (as the Performance Dashboard). Left menu with names, one page each (no tabs):
+     Tenants (Overview · Tenant 360 · Compliance · Sales & Score Card) · ABC Connect (Violations · Breaches & Penalties · ABC Requests ·
+     Marketing · Contractor Permits · Tenant Portal Database) · Data (Import reports & sales).
+     Overview is drawn here; the other pages are the existing tools inside the frame (every feature kept), styled by dash.css.
+     Sales are never saved: the Leasing Sales Performance file is read on this device and shared in memory with Tenant 360 and Sales (window.TD_SALES).
+     docs/FEATURE-tenant-dashboard.md -->
+<style>
+
+.pd{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100dvh}
+.side{background:var(--d-card);border-right:1px solid var(--d-line);padding:18px 14px;position:sticky;top:0;height:100dvh;overflow:auto;display:flex;flex-direction:column}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.02rem;margin:2px 8px 18px;color:var(--d-txt)}.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6B3FA0,#2A0F45);display:grid;place-items:center;flex:none}.logo img{height:18px}
+.side h6{margin:14px 10px 6px;font-size:.66rem;letter-spacing:.1em;color:var(--d-mut);text-transform:uppercase}
+.side a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:var(--d-txt);font-weight:600;font-size:.87rem;margin-bottom:2px;cursor:pointer;text-decoration:none}
+.side a:hover{background:var(--d-pl);color:var(--d-acc)}.side a.on{background:var(--d-acc);color:#fff;box-shadow:0 6px 16px rgba(107,63,160,.3)}.side a span{width:20px;text-align:center;flex:none}
+.me{margin-top:auto;background:var(--d-pl);border-radius:12px;padding:12px;display:flex;gap:10px;align-items:center}.me b{display:block;font-size:.84rem}.me small{color:var(--d-mut);font-size:.74rem}
+.av{width:38px;height:38px;border-radius:50%;background:var(--d-acc);color:#fff;display:grid;place-items:center;font-weight:800;font-size:.8rem;flex:none}
+.mn{padding:0 24px 30px;min-width:0}
+.tb{display:flex;align-items:center;gap:10px;min-height:68px;position:sticky;top:0;background:var(--d-bg);z-index:5;flex-wrap:wrap;padding:8px 0}
+.tb h1{font-size:1.15rem;margin:0;font-weight:800}.tb .sp{flex:1}
+.ib{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--d-card);border:1px solid var(--d-line);cursor:pointer;font-size:1rem}
+.al{background:var(--d-badl);color:var(--d-bad);border:0;border-radius:10px;padding:8px 12px;font-weight:700;font-size:.8rem;cursor:pointer}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin:6px 0 22px}
+.tile{border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;border:0;font:inherit;transition:transform .15s}.tile:hover{transform:translateY(-3px)}
+.tile .ic{font-size:1.9rem;margin-bottom:6px}.tile small{display:block;font-weight:700;font-size:.8rem}.tile b{display:block;font-size:1.35rem;margin-top:2px}.tile em{display:block;font-style:normal;font-size:.7rem;opacity:.8;margin-top:2px}
+.t1{background:var(--t1b);color:var(--t1c)}.t2{background:var(--t2b);color:var(--t2c)}.t3{background:var(--t3b);color:var(--t3c)}.t4{background:var(--t4b);color:var(--t4c)}.t5{background:var(--t5b);color:var(--t5c)}.t6{background:var(--t6b);color:var(--t6c)}
+.g12{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:22px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.dc h3{margin:0;font-size:1.02rem}.dc .sub{color:var(--d-mut);font-size:.82rem;margin:2px 0 14px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.big{font-size:1.5rem;font-weight:800}.mut{color:var(--d-mut)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:.76rem;border-radius:99px;padding:2px 9px}.up{background:var(--d-okl);color:var(--d-ok)}.dn{background:var(--d-badl);color:var(--d-bad)}.nt{background:var(--d-pl);color:var(--d-acc)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.rev{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:20px;align-items:center}
+.kv{display:flex;gap:12px;align-items:flex-start;margin:6px 0 14px}.kv .ic{width:42px;height:42px;border-radius:10px;background:var(--d-pl);display:grid;place-items:center;font-size:1.1rem;flex:none}
+.obtn{display:block;width:100%;text-align:center;border:1px solid var(--d-acc);color:var(--d-acc);border-radius:10px;padding:9px;font-weight:700;margin-top:12px;background:none;cursor:pointer;font:inherit;font-weight:700}
+.obtn:hover{background:var(--d-acc);color:#fff}
+.hero{background:linear-gradient(135deg,#6B3FA0,#4A1F73)!important;color:#fff}.hero .sub{color:#E3D4F5!important}
+.bar{height:8px;border-radius:99px;background:var(--d-line);overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+.list{display:flex;flex-direction:column;gap:10px;max-height:330px;overflow:auto}.li{display:flex;align-items:center;gap:12px}.li .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:.95rem}
+.li b{display:block;font-size:.86rem}.li small{color:var(--d-mut);font-size:.76rem}
+.pill2{border-radius:8px;padding:3px 10px;font-weight:700;font-size:.74rem;white-space:nowrap}.pg{background:var(--d-okl);color:var(--d-ok)}.pa{background:var(--d-warnl);color:var(--d-warn)}.pr{background:var(--d-badl);color:var(--d-bad)}
+.tw{overflow-x:auto}.tw table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:620px}.tw th{text-align:left;color:var(--d-mut);font-weight:700;font-size:.74rem;padding:10px 8px;border-bottom:1px solid var(--d-line)}.tw td{padding:12px 8px;border-bottom:1px solid var(--d-line)}
+.tw tr[data-open]{cursor:pointer}.tw tr[data-open]:hover td{background:var(--d-pl)}
+.foot{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;font-size:.8rem;color:var(--d-mut);margin-top:22px}.foot b{color:var(--d-txt)}.foot .stale b{color:var(--d-bad)}.foot .due b{color:var(--d-warn)}
+.frm{padding:0!important;overflow:hidden}.frm .fh{display:flex;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--d-line);flex-wrap:wrap}
+.frm .fh b{font-size:1rem}.frm .fh a{color:var(--d-acc);font-weight:700;font-size:.82rem;cursor:pointer;text-decoration:none}
+.frm iframe{display:block;width:100%;height:calc(100dvh - 150px);border:0;background:var(--d-bg)}
+.kt td,.kt th{text-align:center}.kt td:first-child,.kt th:first-child{text-align:left;font-weight:600}
+.kt th.kh{cursor:pointer;color:var(--d-acc);font-size:.8rem}.kt th.kh:hover{text-decoration:underline}.kt tr.kst td{background:var(--d-bg)}
+.kv2{display:inline-block;min-width:54px;border-radius:8px;padding:4px 8px;font-weight:800}.kt small.kup,.kt small.kdn{display:block;font-size:.68rem;font-weight:700;margin-top:2px}.kup{color:var(--d-ok)}.kdn{color:var(--d-bad)}
+.empty2{padding:30px;text-align:center;color:var(--d-mut)}
+.c5{grid-column:span 5}.c7{grid-column:span 7}
+.side a em{margin-left:auto;font-style:normal;font-size:.68rem;font-weight:800;background:var(--d-badl);color:var(--d-bad);border-radius:99px;padding:1px 7px}.side a.on em{background:#fff}
+.srch{border:1px solid var(--d-line);background:var(--d-card);color:var(--d-txt);border-radius:10px;padding:8px 12px;font:inherit;font-size:.86rem;min-width:240px}
+.seg{display:inline-flex;background:var(--d-card);border:1px solid var(--d-line);border-radius:10px;overflow:hidden}.seg button{border:0;background:none;padding:7px 12px;font:inherit;font-weight:700;font-size:.78rem;color:var(--d-mut);cursor:pointer}.seg button.on{background:var(--d-acc);color:#fff}
+.lock{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--d-mut);background:var(--d-pl);border-radius:10px;padding:8px 12px;margin-top:12px}.lock b{color:var(--d-acc);cursor:pointer;margin-left:auto}
+.pb{background:var(--d-pl);color:var(--d-blue)}.pp{background:var(--d-pl);color:var(--d-acc)}
+.tw tbody tr{cursor:pointer}.tw tbody tr:hover td{background:var(--d-pl)}
+.drop{border:2px dashed var(--d-line);border-radius:14px;padding:26px;text-align:center;color:var(--d-mut);cursor:pointer;font-weight:600}.drop:hover{border-color:var(--d-acc);color:var(--d-acc)}
+@media(max-width:1200px){.tiles{grid-template-columns:repeat(3,1fr)}.c3,.c5,.c7{grid-column:span 6}.c4,.c6,.c8{grid-column:span 12}.rev{grid-template-columns:1fr}}
+@media(max-width:820px){.pd{grid-template-columns:1fr}.side{position:sticky;top:0;height:auto;z-index:8;flex-direction:row;overflow-x:auto;padding:8px;gap:4px;border-right:0;border-bottom:1px solid var(--d-line)}
+  .side h6,.logo,.me{display:none}.side a{white-space:nowrap;margin:0}.mn{padding:0 12px 20px}.tb{position:static}.tiles{grid-template-columns:repeat(2,1fr)}.c3,.c5,.c7{grid-column:span 12}.frm iframe{height:calc(100dvh - 200px)}.srch{min-width:0;flex:1}}
+</style>
+</head>
+<body class="dash">
+<div class="pd">
+  <nav class="side" id="side"></nav>
+  <main class="mn">
+    <div class="tb"><h1 id="ttl">Tenant Dashboard</h1><span class="sp"></span>
+      <input class="srch" id="q" placeholder="🔎 Find a tenant, unit or group…" autocomplete="off">
+      <span id="sitePick"></span><span class="seg" id="perSeg"><button data-per="month">This month</button><button data-per="ytd">YTD</button></span><button class="ib" id="thm" title="Light / dark">🌙</button></div>
+    <div id="view"><div class="dc"><div class="empty2">Loading…</div></div></div>
+  </main>
+</div>
+<input type="file" id="sfile" accept=".xlsx,.xlsm" hidden>
+<script src="exec-sales.js"></script>
+<script src="common.js"></script>
+<script>
+const UP = new URLSearchParams(location.search), MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MIN_SQM = 20;   // as in Tenant Sales & Score Card: kiosks / ATMs under 20 m² are left out
+let CTX = null, IT = null, site = (UP.get("site") || "").toUpperCase(), PAGE = UP.get("page") || "overview", PER = "ytd";
+let O = null, C = null, P = null, MK = null, TF = "all", LEAD = "top", Q = "";
+window.TD_SALES = null;   // { D, file } — the sales file read on this device (shared with Tenant 360 and Sales & Score Card, never saved)
+const nk = s => String(s || "").toLowerCase().replace(/&/g, "and").replace(/\b(s\.?a\.?r?\.?l|sarl|sal|co|ltd|llc|the)\b/g, "").replace(/[^a-z0-9]+/g, "");
+const f0 = v => Math.round(v || 0).toLocaleString("en-US"), pc = v => isFinite(v) ? (v > 0 ? "+" : "") + v.toFixed(1) + "%" : "—";
+const money = v => { const a = Math.abs(v || 0); return (v < 0 ? "−$" : "$") + (a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e4 ? Math.round(a / 1e3) + "k" : f0(a)); };
+const PAGES = [
+  { k: "overview", n: "Overview", i: "📊", g: "Tenants" },
+  { k: "t360", n: "Tenant 360", i: "👤", g: "Tenants", need: "t360", url: x => `/tools/tenant360?site=${site}${x ? "&unit=" + x : ""}` },
+  { k: "compliance", n: "Compliance", i: "🛡", g: "Tenants", need: "compliance", url: () => `/tools/compliance?site=${site}` },
+  { k: "sales", n: "Sales & Score Card", i: "💰", g: "Tenants", need: "sales", url: () => `/tools/sales?site=${site}` },
+  { k: "vr", n: "Violations", i: "⚠️", g: "ABC Connect", need: "portal", url: () => `/tools/portal?site=${site}&tab=vr&embed=1` },
+  { k: "bp", n: "Breaches & Penalties", i: "⚖️", g: "ABC Connect", need: "portal", url: () => `/tools/portal?site=${site}&tab=bp&embed=1` },
+  { k: "nr", n: "ABC Requests", i: "📨", g: "ABC Connect", need: "portal", url: () => `/tools/portal?site=${site}&tab=nr&embed=1` },
+  { k: "mk", n: "Marketing", i: "📣", g: "ABC Connect", need: "portal", url: () => `/tools/portal?site=${site}&tab=mk&embed=1` },
+  { k: "cp", n: "Contractor Permits", i: "🧰", g: "ABC Connect", need: "portal", url: () => `/tools/portal?site=${site}&tab=cp&embed=1` },
+  { k: "tpdb", n: "Tenant Portal Database", i: "🗂", g: "ABC Connect", need: "tpdb", url: () => `/tools/tpdb?site=${site}` },
+  { k: "import", n: "Import reports & sales", i: "⬆️", g: "Data" }
+];
+const allowed = p => !p.need || (IT && IT.items[p.need]);
+
+/* light / dark — the hub's own setting */
+function themeNow(){ const a = document.documentElement.getAttribute("data-theme"); return a || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); }
+function themeBtn(){ $("#thm").textContent = themeNow() === "dark" ? "☀️" : "🌙"; }
+$("#thm").onclick = () => { const t = themeNow() === "dark" ? "light" : "dark"; try { localStorage.setItem("hub.theme", JSON.stringify(t)); } catch {} document.documentElement.setAttribute("data-theme", t); themeBtn();
+  document.querySelectorAll("iframe").forEach(f => { try { f.contentDocument.documentElement.setAttribute("data-theme", t); } catch {} }); };
+themeBtn();
+
+async function boot(){
+  [CTX, IT] = await Promise.all([api("ops/context" + (site ? "?site=" + site : "")), api("ops/tdash/items")]); site = CTX.site;
+  $("#sitePick").innerHTML = siteSelect(CTX, x => { site = x; O = C = P = MK = null; show(PAGE); });
+  const ss = $("#sitePick select"); if (ss) ss.classList.add("chip2");
+  await load(); show(PAGE);
+}
+async function load(){
+  const month = new Date(Date.now() + 2 * 36e5).toISOString().slice(0, 7);
+  [O, C, P, MK] = await Promise.all([
+    IT.items.t360 ? api(`ops/t360/overview?site=${site}&period=${PER === "ytd" ? "ytd" : month}`).catch(() => null) : null,
+    IT.items.compliance ? api(`ops/compliance?site=${site}&month=${month}`).catch(() => null) : null,
+    IT.items.portal ? api(`ops/portal/data?site=${site}`).catch(() => null) : null,
+    IT.items.mkt ? api("ops/mk/list").catch(() => null) : null]);
+}
+const items = k => P ? P.items.filter(x => x.kind === k && (x.site === site || x.allSites)) : [];
+function side(){
+  const L = PAGES.filter(allowed), badge = { vr: items("vr").filter(x => x.followUp).length, nr: items("nr").filter(x => x.followUp).length, compliance: C ? C.repeatOffenders : 0 };
+  let g = "";
+  $("#side").innerHTML = `<div class="logo"><i><img src="/icons/abc-logo-white.png" alt="ABC"></i>Property Hub</div>` +
+    L.map(p => { const h = p.g !== g ? `<h6>${esc(p.g)}</h6>` : ""; g = p.g; return h + `<a data-p="${p.k}" class="${PAGE === p.k ? "on" : ""}"><span>${p.i}</span>${esc(p.n)}${badge[p.k] ? `<em>${badge[p.k]}</em>` : ""}</a>`; }).join("") +
+    `<div class="me"><div class="av">${esc(initials(IT.me.name || ""))}</div><div><b>${esc(IT.me.name || "")}</b><small>${esc(IT.me.position || "")} · ${esc(CTX.siteName || "")}</small></div></div>`;
+  $("#side").querySelectorAll("[data-p]").forEach(a => a.onclick = () => show(a.dataset.p));
+}
+function show(k, arg){
+  const p = PAGES.find(x => x.k === k && allowed(x)) || PAGES[0]; PAGE = p.k; side(); scrollTo(0, 0);
+  history.replaceState(null, "", `?site=${site}${PAGE === "overview" ? "" : "&page=" + PAGE}`);
+  $("#ttl").textContent = PAGE === "overview" ? "Tenant Dashboard" : p.n;
+  $("#perSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.per === PER)); $("#perSeg").style.display = PAGE === "overview" ? "" : "none";
+  if (PAGE === "overview") return O || C || P ? overview() : (async () => { $("#view").innerHTML = `<div class="dc"><div class="empty2">Loading…</div></div>`; await load(); overview(); })();
+  if (PAGE === "import") return importPage();
+  $("#view").innerHTML = `<div class="dc frm"><div class="fh"><a data-back>‹ Overview</a><b>${p.i} ${esc(p.n)}</b><span class="sp"></span><a href="${p.url(arg)}" target="_blank" rel="noopener">Open full screen ↗</a></div><iframe src="${p.url(arg)}" title="${esc(p.n)}"></iframe></div>`;
+  $("#view [data-back]").onclick = () => show("overview");
+}
+$("#perSeg").querySelectorAll("button").forEach(b => b.onclick = async () => { PER = b.dataset.per; O = null; await load(); show("overview"); });
+$("#q").oninput = () => { Q = $("#q").value.trim().toLowerCase(); if (PAGE !== "overview") show("overview"); else drawTable(); };
+
+/* ---------- sales (on this device only) ---------- */
+function salesBU(){ const D = TD_SALES.D, units = D.units.filter(u => /mall$|department store$/i.test(u)), mine = (CTX.siteName || "").toLowerCase();
+  return units.find(u => u.toLowerCase() === mine) || units.find(u => mine && u.toLowerCase().includes(mine.split(" ")[0])) || units[0] || D.units[0]; }
+function salesAgg(){
+  if (!TD_SALES) return null;
+  const D = TD_SALES.D, BU = salesBU(), M = D.upTo || 12, R = D.rows.filter(r => r.bu === BU), ten = {}, ytd = a => a.slice(0, M).reduce((s, v) => s + v, 0);
+  const cur = Array(12).fill(0), prev = Array(12).fill(0);
+  for (const r of R){ const k = r.ten.toLowerCase(), x = ten[k] = ten[k] || { name: r.ten, cat: r.cat || "Other", cur: Array(12).fill(0), prev: Array(12).fill(0), space: 0 };
+    r.cur.forEach((v, i) => { x.cur[i] += v; cur[i] += v; }); r.prev.forEach((v, i) => { x.prev[i] += v; prev[i] += v; }); x.space += r.space; }
+  const T = Object.values(ten).map(x => ({ ...x, c: ytd(x.cur), p: ytd(x.prev) })).filter(x => x.space >= MIN_SQM && (x.c || x.p))
+    .map(x => ({ ...x, sqm: x.c / x.space, sqmP: x.p / x.space, dp: x.p > 0 ? (x.c / x.p - 1) * 100 : NaN }));
+  const tc = T.reduce((s, x) => s + x.c, 0), tp = T.reduce((s, x) => s + x.p, 0), sp = T.reduce((s, x) => s + x.space, 0);
+  return { BU, M, year: D.year, prevYear: D.prevYear, cur, prev, T, tc, tp, sp, sqm: sp ? tc / sp : 0, sqmP: sp ? tp / sp : 0, dp: tp ? (tc / tp - 1) * 100 : NaN, by: new Map(T.map(x => [nk(x.name), x])) };
+}
+const salesOf = (A, brand) => { if (!A) return null; const b = nk(brand); return A.by.get(b) || A.T.find(x => { const n = nk(x.name); return b.length >= 4 && (n.startsWith(b) || b.startsWith(n)); }) || null; };
+$("#sfile").onchange = async e => { const file = e.target.files[0]; e.target.value = ""; if (!file) return;
+  try { toast("Reading the sales file…"); await xlsxReady(); const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    TD_SALES = { D: SalesLocal.parse(wb.SheetNames.map(n => ({ name: n, grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) }))), file: file.name };
+    toast("Sales loaded on this device — not saved"); show(PAGE === "import" ? "overview" : PAGE); } catch (er){ toast(er.message, true); } };
+window.tdSalesSet = x => { TD_SALES = x; };   // Tenant 360 / Sales & Score Card read a file → the whole dashboard has it
+
+/* ---------- charts ---------- */
+function barsSvg(a, b, W = 560, H = 220){
+  const n = 12, mx = Math.max(1, ...a, ...b), L = 40, B = H - 22, w = (W - L) / n, y = v => B - v / mx * (B - 12);
+  let s = [0, .5, 1].map(f => `<line x1="${L}" y1="${y(mx * f)}" x2="${W}" y2="${y(mx * f)}" stroke="var(--d-line)"/><text x="0" y="${y(mx * f) + 4}" font-size="10" fill="var(--d-mut)">${money(mx * f)}</text>`).join("");
+  for (let i = 0; i < n; i++){ const x = L + i * w, bw = Math.max(3, w / 2 - 3);
+    if (b[i]) s += `<rect x="${x + 2}" y="${y(b[i])}" width="${bw}" height="${B - y(b[i])}" rx="4" fill="var(--d-acc2)"><title>${MN[i]} last year: ${money(b[i])}</title></rect>`;
+    if (a[i]) s += `<rect x="${x + bw + 4}" y="${y(a[i])}" width="${bw}" height="${B - y(a[i])}" rx="4" fill="var(--d-acc)"><title>${MN[i]} this year: ${money(a[i])}</title></rect>`;
+    s += `<text x="${x + w / 2 - 6}" y="${H - 5}" font-size="9" fill="var(--d-mut)">${MN[i][0]}</text>`; }
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Sales per month">${s}</svg>`;
+}
+function donutSvg(parts){ const tot = parts.reduce((a, p) => a + p[0], 0) || 1, Cc = 2 * Math.PI * 44; let off = 0;
+  return `<svg viewBox="0 0 120 120" width="112" aria-hidden="true"><circle cx="60" cy="60" r="44" fill="none" stroke="var(--d-pl)" stroke-width="16"/>${parts.map(([v, c]) => { const l = v / tot * Cc, s = `<circle cx="60" cy="60" r="44" fill="none" stroke="${c}" stroke-width="16" stroke-dasharray="${l} ${Cc}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`; off += l; return s; }).join("")}</svg>`; }
+
+/* ---------- overview ---------- */
+function overview(){
+  const K = O ? O.kpi : null, A = salesAgg(), today = (O && O.today) || new Date().toISOString().slice(0, 10), wk = new Date(Date.parse(today) + 7 * 864e5).toISOString().slice(0, 10);
+  const vr = items("vr"), bp = items("bp"), nr = items("nr"), cp = items("cp");
+  const live = cp.filter(x => x.from && x.from <= today && (!x.to || x.to >= today)), week = cp.filter(x => x.from && x.from > today && x.from <= wk);
+  const wv = vr.filter(x => x.followUp).length, wb = bp.filter(x => x.followUp).length, wn = nr.filter(x => x.followUp).length;
+  const cd = K && K.compliance != null && K.compliancePrev != null ? K.compliance - K.compliancePrev : 0, comp = C ? C.average : K ? K.compliance : null;
+  const camp = MK && MK.list ? MK.list.find(c => c.state === "live" && (c.sites || []).includes(site)) || MK.list.find(c => (c.sites || []).includes(site) && c.state !== "draft") : null;
+  /* compliance: main reasons this month */
+  const why = {}; (C ? C.tenants : []).forEach(t => (t.entries || []).filter(e => e.category !== "Customer Feedback").forEach(e => { const k = e.description || e.category || "Other"; why[k] = (why[k] || 0) + 1; }));
+  const whyL = Object.entries(why).sort((a, b) => b[1] - a[1]).slice(0, 3), whyMx = Math.max(1, ...whyL.map(x => x[1]));
+  const ok70 = C && C.activeTenants ? Math.round((C.activeTenants - C.tenants.filter(t => t.score < 70).length) * 100 / C.activeTenants) : null;
+  const tile = (cls, ic, t, b, em, go) => `<button class="tile ${cls}" ${go ? `data-go="${go}"` : ""}><div class="ic">${ic}</div><small>${t}</small><b>${b}</b><em>${em || "&nbsp;"}</em></button>`;
+  const leaders = A ? A.T.filter(x => isFinite(x.dp)).sort((a, b) => LEAD === "top" ? b.dp - a.dp : a.dp - b.dp).slice(0, 5) : null;
+  const lowC = C ? C.tenants.slice(0, 5) : [];
+  $("#view").innerHTML = `
+    <div class="tiles">
+      ${tile("t1", "🏬", "Open tenants", K ? `${K.open} / ${K.total}` : "—", K ? `${K.fit} in fit-out · ${Math.max(0, K.total - K.open - K.fit)} other` : "", "t360")}
+      ${tile("t5", "🛡", "Compliance score", comp ?? "—", cd ? `${cd > 0 ? "▲" : "▼"} ${Math.abs(cd)} vs last month` : C ? `${C.repeatOffenders} repeat offender${C.repeatOffenders === 1 ? "" : "s"}` : "", "compliance")}
+      ${tile("t4", "⚠️", "Violations", P ? vr.length : "—", P ? `${wv} waiting follow-up` : "", "vr")}
+      ${tile("t2", "⚖️", "Breaches & penalties", P ? bp.length : "—", P ? `${wb} waiting` : "", "bp")}
+      ${tile("t3", "📨", "ABC Requests", P ? nr.length : "—", P ? `${wn} to answer` : "", "nr")}
+      ${tile("t6", "🧰", "Contractor permits", P ? live.length : "—", P ? `live now · ${week.length} next 7 days` : "", "cp")}
+    </div>
+    <div class="g12">
+      <div class="dc c8"><div class="hd"><div><h3>Tenant sales</h3><div class="sub">${A ? `Monthly sales · ${A.year} vs ${A.prevYear} · ${esc(A.BU)}` : "From the Leasing Sales Performance file"}</div></div>
+        ${A ? `<span class="mut" style="font-size:.78rem"><span class="dot" style="background:var(--d-acc)"></span>${A.year} <span class="dot" style="background:var(--d-acc2);margin-left:8px"></span>${A.prevYear}</span>` : ""}</div>
+        ${A ? `<div class="rev">${barsSvg(A.cur.map((v, i) => i < A.M ? v : 0), A.prev)}<div><div class="big">${money(A.tc)}</div><div class="mut">Sales YTD (to ${MN[A.M - 1]})</div>
+            <div style="margin:10px 0"><span class="badge ${A.dp >= 0 ? "up" : "dn"}">${A.dp >= 0 ? "▲" : "▼"} ${pc(Math.abs(A.dp)).replace("+", "")} vs last year</span></div>
+            <div class="mut" style="font-size:.8rem">Sales / m²</div><div style="font-weight:800;font-size:1.05rem">$${f0(A.sqm)} <span class="mut" style="font-weight:600;font-size:.8rem">vs $${f0(A.sqmP)}</span></div>
+            ${allowed(PAGES[3]) ? `<button class="obtn" data-go="sales">Sales &amp; Score Card ›</button>` : ""}</div></div>
+          <div class="lock">🔒 ${esc(TD_SALES.file)} — read on this device, never saved in the hub.<b id="supl">Another file</b></div>`
+        : `<div class="drop" id="supl">⇡ Import the Leasing Sales Performance file to see the sales<br><small class="mut">read on this device only — never saved in the hub</small></div>`}</div>
+      <div class="c4" style="display:grid;gap:22px;align-content:start">
+        <div class="dc"><div class="hd"><div><h3>ABC Connect follow-up</h3><div class="big" style="margin-top:6px">${P ? wv + wb + wn : "—"} <span class="mut" style="font-size:.85rem">waiting</span></div>
+          ${P && P.last && P.last.vr ? `<span class="badge nt">updated ${esc(dd(String(P.last.vr.at || "").slice(0, 10)))}</span>` : ""}</div>${P ? donutSvg([[wv, "var(--d-bad)"], [wb, "var(--d-warn)"], [wn, "var(--d-blue)"]]) : ""}</div>
+          <div class="mut" style="font-size:.76rem"><span class="dot" style="background:var(--d-bad)"></span>Violations ${wv} <span class="dot" style="background:var(--d-warn);margin-left:8px"></span>Breaches ${wb} <span class="dot" style="background:var(--d-blue);margin-left:8px"></span>Requests ${wn}</div></div>
+        <div class="dc" ${camp ? `style="cursor:pointer" data-hub="mkt"` : ""}><div class="hd"><div><h3>Marketing participation</h3><div class="sub" style="margin-bottom:6px">${camp ? esc(camp.title) + (camp.end ? " · reply by " + esc(dd(camp.end)) : "") : "No campaign for this flagship"}</div></div>${camp ? `<span class="pill2 ${camp.state === "live" ? "pp" : "pg"}">${esc(camp.state)}</span>` : ""}</div>
+          ${camp ? (() => { const s = camp.stats, t = Math.max(1, s.invited); return `<div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:4px"><span>Participating ${s.yes}</span><span>Not ${s.no}</span><span>No answer ${s.wait}</span></div>
+            <div class="bar" style="height:12px;display:flex"><i style="width:${s.yes / t * 100}%;background:var(--d-ok);border-radius:0"></i><i style="width:${s.no / t * 100}%;background:var(--d-bad);border-radius:0"></i></div>`; })() : ""}</div>
+      </div>
+      <div class="dc c6 hero" data-go="compliance" style="cursor:pointer"><h3>Tenant compliance · ${esc(C ? MNL[Number(C.month.slice(5)) - 1] : "")}</h3><div class="sub">Monthly score per tenant — 100 = nothing recorded</div>
+        <div style="display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap"><div><div class="big" style="font-size:2.1rem">${comp ?? "—"}</div><div style="color:#E3D4F5;font-size:.8rem">average score${ok70 != null ? ` · ${ok70} % of tenants ≥ 70` : ""}</div></div>
+          <div style="flex:1;min-width:200px"><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:4px"><span>Repeat offenders</span><b>${C ? C.repeatOffenders : "—"}</b></div><div class="bar" style="background:rgba(255,255,255,.2)"><i style="width:${Math.min(100, (C ? C.repeatOffenders : 0) * 10)}%;background:#E9CF8A"></i></div>
+          ${whyL.map(([k, n]) => `<div style="display:flex;justify-content:space-between;font-size:.8rem;margin:8px 0 4px"><span>${esc(k)}</span><b>${n}</b></div><div class="bar" style="background:rgba(255,255,255,.2)"><i style="width:${n / whyMx * 100}%;background:#fff"></i></div>`).join("") || `<div style="font-size:.8rem;margin-top:8px">No violation recorded this month 👍</div>`}</div></div></div>
+      ${leaders ? `<div class="dc c6"><div class="hd"><div><h3>Sales growth ${LEAD === "top" ? "leaders" : "laggards"}</h3><div class="sub">YTD vs last year · tenants ≥ ${MIN_SQM} m²</div></div><span class="seg"><button data-lead="top" class="${LEAD === "top" ? "on" : ""}">Top</button><button data-lead="bottom" class="${LEAD === "bottom" ? "on" : ""}">Bottom</button></span></div>
+          <div class="list">${leaders.map((x, i) => `<div class="li" data-find="${esc(x.name)}" style="cursor:pointer"><div class="ic" style="background:${x.dp >= 0 ? "var(--d-okl)" : "var(--d-badl)"};color:${x.dp >= 0 ? "var(--d-ok)" : "var(--d-bad)"};font-weight:800">${i + 1}</div><div><b>${esc(x.name)}</b><small>${esc(x.cat)} · ${f0(x.space)} m²</small></div><div style="margin-left:auto;text-align:right;font-weight:800;color:${x.dp >= 0 ? "var(--d-ok)" : "var(--d-bad)"}">${pc(x.dp)}<br><small class="mut">$${f0(x.sqm)}/m²</small></div></div>`).join("")}</div></div>`
+      : `<div class="dc c6"><h3>Lowest compliance this month</h3><div class="sub">Import the sales file to see the sales leaders here</div><div class="list">${lowC.map(t => `<div class="li" data-find="${esc(t.tenant)}" style="cursor:pointer"><div class="ic" style="background:${t.score >= 90 ? "var(--d-okl)" : t.score >= 75 ? "var(--d-warnl)" : "var(--d-badl)"};color:${t.score >= 90 ? "var(--d-ok)" : t.score >= 75 ? "var(--d-warn)" : "var(--d-bad)"};font-weight:800">${t.score}</div><div><b>${esc(t.tenant)}</b><small>${t.violations} violation${t.violations === 1 ? "" : "s"}${t.repeats.length ? " · repeats: " + esc(t.repeats.map(r => r.what + " ×" + r.n).join(", ")) : ""}</small></div></div>`).join("") || `<div class="li"><div class="ic" style="background:var(--d-okl)">✓</div><div><b>All tenants at 100</b><small>nothing recorded this month</small></div></div>`}</div></div>`}
+      <div class="dc c4"><h3>Tenants needing attention</h3><div class="sub">Penalties and violations posted ${PER === "ytd" ? "this year" : "this month"}</div><div class="list" style="max-height:420px;overflow:auto">
+        ${O ? O.attention.slice(0, 15).map(a => `<div class="li" data-unit="${a.id}" style="cursor:pointer"><div class="ic" style="background:${a.bp ? "var(--d-badl)" : "var(--d-warnl)"}">${a.bp ? "⛔" : "⚠️"}</div><div><b>${esc(a.brand)}</b><small>${[a.bp ? `${a.bp} breach${a.bp === 1 ? "" : "es"}` : "", a.vr ? `${a.vr} violation${a.vr === 1 ? "" : "s"}` : "", a.waiting ? `${a.waiting} waiting` : ""].filter(Boolean).join(" · ")}</small></div></div>`).join("")
+          || `<div class="li"><div class="ic" style="background:var(--d-okl)">✓</div><div><b>All clear</b><small>no penalty or violation posted</small></div></div>` : `<div class="mut">—</div>`}</div></div>
+      <div class="dc c8"><div class="hd"><div><h3>Tenants</h3><div class="sub" id="tsub"></div></div><span class="seg" id="tseg">${[["all", "All"], ["open", "Open"], ["fit", "Fit-out"], ["att", "Attention"]].map(([k, n]) => `<button data-tf="${k}" class="${TF === k ? "on" : ""}">${n}</button>`).join("")}</span></div>
+        <div class="tw" style="max-height:520px;overflow:auto"><table><thead><tr><th>Unit</th><th>Tenant</th><th>Category</th><th>Status</th><th>Compliance</th>${A ? "<th>Sales / m²</th>" : ""}<th>ABC Connect</th></tr></thead><tbody id="tbody"></tbody></table></div></div>
+    </div>`;
+  drawTable();
+  const V = $("#view");
+  V.querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
+  V.querySelectorAll("[data-hub]").forEach(b => b.onclick = () => hubOpen(b.dataset.hub));
+  V.querySelectorAll("[data-lead]").forEach(b => b.onclick = e => { e.stopPropagation(); LEAD = b.dataset.lead; overview(); });
+  V.querySelectorAll("[data-unit]").forEach(b => b.onclick = () => show("t360", b.dataset.unit));
+  V.querySelectorAll("[data-find]").forEach(b => b.onclick = () => { const u = O && O.units.find(x => nk(x.brand) === nk(b.dataset.find)); if (u) show("t360", u.id); else { $("#q").value = b.dataset.find; Q = b.dataset.find.toLowerCase(); drawTable(); } });
+  V.querySelectorAll("[data-tf]").forEach(b => b.onclick = () => { TF = b.dataset.tf; V.querySelectorAll("[data-tf]").forEach(x => x.classList.toggle("on", x === b)); drawTable(); });
+  const su = $("#supl"); if (su) su.onclick = () => $("#sfile").click();
+}
+const MNL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const dd = d => d ? new Date(String(d).length <= 10 ? d + "T12:00:00" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+function drawTable(){
+  const tb = $("#tbody"); if (!tb || !O) { if (tb) tb.innerHTML = `<tr><td colspan="7" class="mut">Tenant list not available</td></tr>`; return; }
+  const A = salesAgg(), CM = new Map((C ? C.tenants : []).map(t => [nk(t.tenant), t])), att = new Set(O.attention.map(a => a.id));
+  const fu = {}; (P ? P.items : []).filter(x => x.followUp && ["vr", "bp", "nr"].includes(x.kind)).forEach(x => { const k = nk(x.tenant || x.account); fu[k] = (fu[k] || 0) + 1; });
+  const L = O.units.filter(u => (TF === "all" || (TF === "open" && /^open/i.test(u.status || "")) || (TF === "fit" && /fit/i.test(u.status || "")) || (TF === "att" && att.has(u.id)))
+    && (!Q || (u.brand + " " + u.code + " " + u.group + " " + u.dept).toLowerCase().includes(Q)));
+  $("#tsub").textContent = `${L.length} of ${O.units.length} tenants · tap a tenant to open Tenant 360`;
+  tb.innerHTML = L.slice(0, 300).map(u => { const c = CM.get(nk(u.brand)), sc = c ? c.score : C ? 100 : null, s = salesOf(A, u.brand), w = fu[nk(u.brand)] || 0;
+    const st = /^open/i.test(u.status || "") ? "pg" : /fit/i.test(u.status || "") ? "pb" : "pa";
+    return `<tr data-unit="${u.id}"><td>${esc(u.code)}</td><td><b>${esc(u.brand)}</b>${u.group ? `<br><small class="mut">${esc(u.group)}</small>` : ""}</td><td>${esc(u.dept || "")}</td><td><span class="pill2 ${st}">${esc(u.status || "—")}</span></td>
+      <td><b style="color:${sc == null ? "var(--d-mut)" : sc >= 90 ? "var(--d-txt)" : sc >= 75 ? "var(--d-warn)" : "var(--d-bad)"}">${sc ?? "—"}</b></td>
+      ${A ? `<td>${s ? `$${f0(s.sqm)} <small style="color:${s.dp >= 0 ? "var(--d-ok)" : "var(--d-bad)"}">${isFinite(s.dp) ? (s.dp >= 0 ? "▲" : "▼") + Math.abs(Math.round(s.dp)) + "%" : ""}</small>` : "—"}</td>` : ""}
+      <td>${w ? `<span class="pill2 ${w > 1 ? "pr" : "pa"}">${w} waiting</span>` : `<span class="pill2 pg">Clear</span>`}</td></tr>`; }).join("") || `<tr><td colspan="7" class="mut">No tenant found</td></tr>`;
+  tb.querySelectorAll("[data-unit]").forEach(r => r.onclick = () => show("t360", r.dataset.unit));
+}
+
+/* ---------- import ---------- */
+function importPage(){
+  const last = P && P.last ? Object.entries(P.last).filter(([, v]) => v && v.at) : [];
+  $("#view").innerHTML = `<div class="g12">
+    <div class="dc c6"><h3>ABC Connect reports</h3><div class="sub">Violations, breaches & penalties, ABC Requests, marketing, contractor permits, portal users — from the Salesforce report emails or a file</div>
+      <div class="list">${last.map(([k, v]) => `<div class="li"><div class="ic" style="background:var(--d-pl)">📄</div><div><b>${esc((P.kinds[k] || {}).label || (k === "users" ? "Portal users" : k))}</b><small>last import ${esc(dd(String(v.at).slice(0, 10)))}${v.rows != null ? " · " + v.rows + " rows" : ""}</small></div></div>`).join("") || `<div class="mut">No import yet</div>`}</div>
+      ${allowed(PAGES[4]) ? `<button class="obtn" data-go="vr">Open ABC Connect → Import</button>` : ""}</div>
+    <div class="dc c6"><h3>Sales file</h3><div class="sub">The Leasing Sales Performance file — read on this device, never saved in the hub</div>
+      ${TD_SALES ? `<div class="lock" style="margin-top:0">✓ ${esc(TD_SALES.file)} is loaded for this visit</div>` : ""}
+      <div class="drop" id="supl" style="margin-top:12px">⇡ Choose the sales file (.xlsx)</div></div></div>`;
+  $("#supl").onclick = () => $("#sfile").click();
+  $("#view").querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
+}
+window.hubRefresh = async () => { await load(); show(PAGE); };
+boot().catch(e => $("#view").innerHTML = `<div class="dc"><div class="empty2">${esc(e.message)}</div></div>`);
+</script>
+</body>
+</html>
