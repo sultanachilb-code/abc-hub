@@ -115,21 +115,51 @@ const filtOf = b => {
 };
 
 /* ---------- the email ---------- */
+/* the memo text as the author wrote it (Nov 2026): blank line = new paragraph, line break kept, "-" / "•" / "1." lines = bullets, **bold** — Outlook-safe HTML */
+export function memoBody(txt, size = 15) {
+  const F = `font-family:Calibri,Arial,sans-serif;font-size:${size}px;line-height:1.55;`;
+  const inl = x => escH(x).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const out = [];
+  for (const block of String(txt || "").replace(/\r/g, "").split(/\n[ \t]*\n/)) {
+    let para = [], list = [];
+    const flushP = () => { if (para.length) out.push(`<p style="margin:0 0 12px;${F}">${para.map(inl).join("<br>")}</p>`); para = []; };
+    const flushL = () => { if (list.length) out.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 12px 6px">${list.map(x => `<tr><td valign="top" style="padding:0 8px 6px 0;color:#6B3FA0;${F}">${x.n || "•"}</td><td style="padding:0 0 6px;${F}">${inl(x.t)}</td></tr>`).join("")}</table>`); list = []; };
+    for (const raw of block.split("\n")) {
+      const line = raw.replace(/\s+$/, ""); if (!line.trim()) continue;
+      const m = /^\s*(?:([-•–*])|(\d{1,2}[.)]))\s+(.*)$/.exec(line);
+      if (m && !(m[1] === "*" && /^\*/.test(m[3]))) { flushP(); list.push({ n: m[2] || "", t: m[3] }); }
+      else { flushL(); para.push(line.trim()); }
+    }
+    flushL(); flushP();
+  }
+  return out.join("");
+}
+export function memoMail(d, m, t, kind) { return mail(d, m, t, kind); }
 function mail(d, m, t, kind) {
-  const link = `${d.hubUrl}/memo/${t.token}`, sn = d.siteName(t.site), F = "font-family:Calibri,Arial,sans-serif;";
-  const ask = m.mode === "reply" ? "Reply to this memo" : "Acknowledge this memo";
-  const head = kind === "reminder" ? `Reminder · ${m.ref}` : m.ref;
-  const html = `<div style="${F}max-width:640px;color:#22163A"><div style="background:#4A1F73;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><b style="font-size:18px">ABC ${escH(sn)}</b><br><span style="opacity:.85">Memo ${escH(m.ref)}${m.cat ? " · " + escH(m.cat) : ""}</span></div>
-    <div style="border:1px solid #e4deec;border-top:0;padding:18px 20px;border-radius:0 0 10px 10px">
-    ${kind === "reminder" ? `<p style="background:#FFF3DC;color:#8A6418;padding:8px 12px;border-radius:8px"><b>Reminder:</b> we have not received your ${m.mode === "reply" ? "reply" : "acknowledgement"} yet.</p>` : ""}
-    <p>Dear ${escH(t.brand)} team,</p>
-    <p style="font-size:16px"><b>${escH(m.title)}</b></p>
-    <div style="white-space:pre-line;line-height:1.5">${escH(m.body)}</div>
-    ${m.file_name ? `<p>📎 Attachment: <b>${escH(m.file_name)}</b> (open it from the memo page)</p>` : ""}
-    ${m.reply_by ? `<p><b>${m.mode === "reply" ? "Reply" : "Acknowledge"} by ${escH(longDay(m.reply_by))}</b></p>` : ""}
-    <p><a href="${link}" style="display:inline-block;background:#4A1F73;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">${ask}</a></p>
-    <p style="font-size:12px;color:#777">This link is personal to ${escH(t.brand)} (${escH(t.units)}) — no password needed.</p>
-    <p>Kind regards,<br>ABC ${escH(sn)} — Operations Team</p></div></div>`;
+  const link = `${d.hubUrl}/memo/${t.token}`, sn = d.siteName(t.site), F = "font-family:Calibri,Arial,sans-serif;", rep = m.mode === "reply", rem = kind === "reminder";
+  const btn = rep ? "Reply to the memo" : "✓ Read &amp; acknowledge the memo";
+  const head = rem ? `Reminder · ${m.ref}` : m.ref;
+  const cell = (k, v, top) => `<td style="padding:8px 12px;color:#6B6478;${top ? "border-top:1px solid #E4DEEC;" : ""}${F}font-size:13px;width:110px">${k}</td><td style="padding:8px 12px;font-weight:bold;${top ? "border-top:1px solid #E4DEEC;" : ""}${F}font-size:13px">${v}</td>`;
+  const greet = /^\s*(dear|to whom|hello|hi)\b/i.test(m.body || "") ? "" : `<p style="margin:0 0 12px;${F}font-size:15px">Dear ${escH(t.brand)} team,</p>`;
+  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F0F7"><tr><td align="center" style="padding:20px 10px">
+<table role="presentation" width="680" cellpadding="0" cellspacing="0" style="width:680px;max-width:100%;background:#FFFFFF;border:1px solid #E4DEEC;${F}color:#22163A">
+<tr><td style="background:#2A0F45;padding:18px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="color:#FFFFFF;font-size:20px;font-weight:bold;${F}">ABC ${escH(sn)}</td><td align="right" style="color:#E9CF8A;font-size:12px;letter-spacing:1px;${F}">${rem ? "REMINDER · " : ""}MEMO</td></tr></table></td></tr>
+<tr><td style="background:#C8A24A;height:4px;line-height:4px;font-size:0">&nbsp;</td></tr>
+${rem ? `<tr><td style="padding:16px 24px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF3DC;border-left:4px solid #C8A24A"><tr><td style="padding:10px 14px;${F}font-size:14px;color:#6E4F10"><b>Reminder:</b> we have not received your ${rep ? "reply" : "acknowledgement"} yet.</td></tr></table></td></tr>` : ""}
+<tr><td style="padding:18px 24px 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E4DEEC;background:#FAF8FC">
+  <tr>${cell("Memo no.", escH(m.ref))}${cell("Date", escH(longDay(m.sent_day || d.today())))}</tr>
+  <tr>${cell("To", `${escH(t.brand)}${t.units ? ` (${escH(t.units)})` : ""}`, 1)}${cell("Category", escH(m.cat || "—"), 1)}</tr>
+  <tr><td style="padding:8px 12px;color:#6B6478;border-top:1px solid #E4DEEC;${F}font-size:13px">Subject</td><td colspan="3" style="padding:8px 12px;font-weight:bold;border-top:1px solid #E4DEEC;color:#2A0F45;${F}font-size:15px">${escH(m.title)}</td></tr></table></td></tr>
+<tr><td style="padding:14px 24px 4px">${greet}${memoBody(m.body)}</td></tr>
+${m.file_name ? `<tr><td style="padding:4px 24px 8px"><table role="presentation" cellpadding="0" cellspacing="0" style="border:1px solid #E4DEEC;background:#FAF8FC"><tr><td style="padding:10px 12px;font-size:20px">📄</td><td style="padding:10px 12px 10px 0;${F}font-size:14px"><b>${escH(m.file_name)}</b><br><span style="color:#6B6478;font-size:12px">Attachment — open it from the memo page below</span></td></tr></table></td></tr>` : ""}
+<tr><td style="padding:14px 24px 6px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EEF9;border-left:4px solid #6B3FA0"><tr><td style="padding:14px 16px;${F}font-size:14px">
+  <b style="color:#2A0F45">Action required:</b> please ${rep ? "reply to this memo" : "acknowledge that you have read this memo"}${m.reply_by ? ` <b>by ${escH(longDay(m.reply_by))}</b>` : ""}.</td></tr></table></td></tr>
+<tr><td align="center" style="padding:14px 24px 22px">
+  <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${link}" style="height:46px;v-text-anchor:middle;width:310px;" arcsize="18%" fillcolor="#6B3FA0" stroke="f"><center style="color:#ffffff;font-family:Calibri,Arial;font-size:16px;font-weight:bold;">${btn}</center></v:roundrect><![endif]-->
+  <!--[if !mso]><!--><a href="${link}" style="display:inline-block;background:#6B3FA0;color:#FFFFFF;text-decoration:none;${F}font-size:16px;font-weight:bold;padding:13px 28px;border-radius:8px">${btn}</a><!--<![endif]-->
+  <div style="font-size:12px;color:#6B6478;margin-top:10px;${F}">This link is personal to ${escH(t.brand)}${t.units ? ` (${escH(t.units)})` : ""} — no password needed.</div></td></tr>
+<tr><td style="background:#FAF8FC;border-top:1px solid #E4DEEC;padding:12px 24px;font-size:12px;color:#6B6478;${F}">ABC ${escH(sn)} · Operations Team</td></tr>
+</table></td></tr></table>`;
   return { kind: "memo", to: t.emails.split(/,\s*/), subject: `ABC ${sn} · ${head} · ${m.title}`, html };
 }
 async function sendTo(env, d, m, list, kind) {
