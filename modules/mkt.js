@@ -1,3 +1,4 @@
+import { mailGate } from "./mailctl.js";
 import { portalAudience, PORTAL_LEVELS } from "./portal.js";
 /* =====================================================================
    MARKETING PARTICIPATION (Oct 2026, Upcoming - Testing) — docs/FEATURE-mkt.md
@@ -147,7 +148,7 @@ export function mail(d, c, t, kind, style = "B", arabic = true) {
       <tr><td style="${F}padding:24px 28px 22px;font-size:13px;line-height:1.6;color:#444">${sign}</td></tr>
       <tr><td style="${F}padding:14px 28px;background:#F6F3FA;font-size:11px;color:#8A7FA0;line-height:1.5">${foot}</td></tr>`);
   }
-  return { to: t.emails.split(/,\s*/), subject, html };
+  return { kind: "marketing", to: t.emails.split(/,\s*/), subject, html };
 }
 /* a sample for the admin preview */
 export function mailPreview(d, style, kind = "launch", arabic = true) {
@@ -248,6 +249,7 @@ export async function mkRoute(env, p, method, b, url, d) {
   if (method !== "POST") throw err("Unknown request", 404);
   if (!ops) throw err("Only the operations team sends marketing activations", 403);
   if (p === "mk/create") {
+    { const g = await mailGate(env, "marketing"); if (!g.ok) throw err(g.error, 409); }   // Email Control: switched OFF
     const title = clip(b.title, 120); if (!title) throw err("Give the activation a title");
     const sites = pickSites(b.sites); if (!sites.length) throw err("Choose at least one flagship");
     const start = isDay(b.start) ? b.start : today, end = isDay(b.end) ? b.end : "";
@@ -279,6 +281,7 @@ export async function mkRoute(env, p, method, b, url, d) {
   }
   const c = await campaign(b.id);
   if (p === "mk/remind") {
+    { const g = await mailGate(env, "marketing"); if (!g.ok) throw err(g.error, 409); }   // Email Control: switched OFF
     if (stateOf(c, today) !== "open") throw err(stateOf(c, today) === "scheduled" ? "This activation has not started yet" : "This activation is closed");
     let rows = ((await env.DB.prepare("SELECT * FROM mk_targets WHERE campaign_id = ? AND answer = ''").bind(c.id).all()).results || []).filter(r => mySites.includes(r.site));
     if (b.site) rows = rows.filter(r => r.site === b.site);

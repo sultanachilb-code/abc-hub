@@ -211,7 +211,7 @@ export async function patrolRun(env, d) {
       await d.raiseEvent(env, { site, app: "patrol", tone: X.done < X.total || X.issues ? "warn" : "ok",
         title: `Patrol ${X.name} report · ${X.done}/${X.total} checked`, body: `${X.total - X.done} missed · ${X.issues} issue${X.issues === 1 ? "" : "s"}${X.guards.length ? " · " + X.guards.join(", ") : ""}` }).catch(() => {});
       const to = await d.recipients(env, site).catch(() => []);
-      if (to.length && env.MAIL_RELAY_URL) await d.relay(env, { to, subject: `Security Patrol · ${d.siteName(site)} · ${X.name} · ${X.done}/${X.total} checked${X.issues ? ` · ${X.issues} issue${X.issues === 1 ? "" : "s"}` : ""}`,
+      if (to.length && env.MAIL_RELAY_URL) await d.relay(env, { kind: "patrol", to, subject: `Security Patrol · ${d.siteName(site)} · ${X.name} · ${X.done}/${X.total} checked${X.issues ? ` · ${X.issues} issue${X.issues === 1 ? "" : "s"}` : ""}`,
         html: roundEmailHtml(d.siteName(site), now.day, X, P, d.hubUrl) }).catch(() => {});
     }
   }

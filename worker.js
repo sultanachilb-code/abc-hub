@@ -60,6 +60,7 @@ import { mbSchema, mbRoute, mbRun } from "./modules/mailbox.js";   // Report mai
 import { admSchema, admRoute, admRun, logSignin, lockedMsg, passwordFailed, passwordOk, touchSeen, toolsCfg, toolsCfgNow, VIEWAS_MIN, ADMIN_UNLOCK_H } from "./modules/admincc.js";   // Admin Control Center — docs/FEATURE-admin-cc.md   // Marketing Participation (activation memos + Yes/No answers) — docs/FEATURE-mkt.md   // Preventive Maintenance (tenant certificates) — docs/FEATURE-pm.md
 import { keyboxSchema, keyboxRoute, keyboxRun } from "./modules/keybox.js";   // Key Box: vacant units' keys — docs/FEATURE-keybox.md
 import { followupSchema, followupRoute, followupRun } from "./modules/followups.js";   // Follow-ups: personal flags from the Outlook add-in — docs/FEATURE-followups.md
+import { mailCtlSchema, mailCtlRoute, mailGate, mailLog } from "./modules/mailctl.js";   // Email Control — docs/FEATURE-email-control.md
 import { outlookSchema, outlookSend, outlookRun, outlookCallback, outlookRoute, outlookAdmin, outlookAddinStart, outlookBulk } from "./modules/outlook.js";   // Outlook sending (Microsoft Graph, each user's own mailbox) — docs/FEATURE-outlook-send.md   // Operations Induction deck per flagship
 import { roleBriefRoute } from "./modules/rolebrief.js";
 import { lpAdmin, hasLanding, homeAdmin, homeFor } from "./modules/landing.js";
@@ -411,6 +412,7 @@ async function ensureSchema(env) {
   await pmSchema(env);   // Preventive Maintenance
   await mkSchema(env);   // Marketing Participation
   await memoSchema(env);   // Memo
+  await mailCtlSchema(env);   // Email Control
   await tlSchema(env);   // Tenant List
   await admSchema(env);   // Admin Control Center
   await mbSchema(env);   // Report mailbox
@@ -676,12 +678,12 @@ export default {
       await mbRun(env, MB_DEPS).catch(e => console.error("mailbox", e && e.message));   // Report mailbox: 07:00–08:00 import + 08:05 missing check
       await pushRun(env).catch(e => console.error("push", e && e.message));
       await chatRun(env).catch(e => console.error("chat", e && e.message));
-      await rrMailRun(env, { outlookSend, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));
+      await rrMailRun(env, { outlookSend: outlookSendG, notifyAdmins }).catch(e => console.error("rrmail", e && e.message));
       await lkAlertRun(env, { today: beirutToday, hour: beirutHour, SITES, notifyAdmins }).catch(e => console.error("lkalert", e && e.message));   // Portal: tenants not linked to the account hierarchy (daily, admins)
-      await roRun(env, { ...RO_DEPS, outlookSend, hubUrl: HUB_URL }).catch(e => console.error("rollout", e && e.message));   // Hub Training & Rollout: session reminders
-      await rpRun(env, { SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend, hubUrl: HUB_URL }).catch(e => console.error("reports", e && e.message));   // Report builder: scheduled reports
-      await ffRun(env, { SITES, today: beirutToday, hour: beirutHour, outlookSend, raiseEvent, hubUrl: HUB_URL }).catch(e => console.error("footfall", e && e.message));   // Footfall: Liban Park emails 09:00 → 14:00
-      await cleanRun(env, { SITES, today: beirutToday, hour: beirutHour, opsGroups, outlookSend }).catch(e => console.error("cleaners", e && e.message));   // Cleaner Access: 21:00 reports, monthly verification   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
+      await roRun(env, { ...RO_DEPS, outlookSend: outlookSendG, hubUrl: HUB_URL }).catch(e => console.error("rollout", e && e.message));   // Hub Training & Rollout: session reminders
+      await rpRun(env, { SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend: outlookSendG, hubUrl: HUB_URL }).catch(e => console.error("reports", e && e.message));   // Report builder: scheduled reports
+      await ffRun(env, { SITES, today: beirutToday, hour: beirutHour, outlookSend: outlookSendG, raiseEvent, hubUrl: HUB_URL }).catch(e => console.error("footfall", e && e.message));   // Footfall: Liban Park emails 09:00 → 14:00
+      await cleanRun(env, { SITES, today: beirutToday, hour: beirutHour, opsGroups, outlookSend: outlookSendG }).catch(e => console.error("cleaners", e && e.message));   // Cleaner Access: 21:00 reports, monthly verification   // Restroom Inspection emails through Outlook   // Hub Chat: messages and files kept 1 month
       await admRun(env, { CONNECTORS, today: beirutToday, hour: beirutHour, MAIL_HOUR, requiredRoles, d1Traffic, storageStatus, gql, notifyAdmins, raiseEvent }).catch(e => console.error("admincc", e && e.message));   // Admin Control: heartbeat + hourly health check
       if (beirutHour() === 3) await historyClean(env);   // Change history feature
       await twofaClean(env).catch(() => {});   // Two-step login feature
@@ -840,7 +842,7 @@ async function route(request, env, ctx, url) {
   }
   if (path.startsWith("rp/")) {   // Report builder (modules/reports.js): Admin builds; people with access subscribe and open the runs
     if (me.role === "EXTERNAL") throw fail("Not allowed", 403);
-    return ok(await rpRoute(env, path, method, body, url, { me, isAdmin: isAdminUser, SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend, hubUrl: HUB_URL }));
+    return ok(await rpRoute(env, path, method, body, url, { me, isAdmin: isAdminUser, SITES, siteName, sitesOf, today: beirutToday, hm: beirutHM, opsGroups, outlookSend: outlookSendG, hubUrl: HUB_URL }));
   }
   if (path.startsWith("brief/")) return ok(await roleBriefRoute(env, path, method, body, url, { me, today: beirutToday, siteName, sitesOf,
     system: async (id, s2) => CONNECTORS[id] && CONNECTORS[id].stats ? pull(env, id, CONNECTORS[id], s2) : null,
@@ -907,6 +909,7 @@ async function route(request, env, ctx, url) {
       const m = mailPreview({ hubUrl: HUB_URL, siteName: s => SITES[s] || s }, url.searchParams.get("style") || "B", url.searchParams.get("kind") === "reminder" ? "reminder" : "launch", url.searchParams.get("arabic") !== "0");
       return new Response(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#F1EEF4"><div style="font:12px Segoe UI,Arial;color:#6D6479;padding:10px 14px;background:#fff;border-bottom:1px solid #E6E1EC"><b>Subject:</b> ${m.subject.replace(/</g, "&lt;")}</div>${m.html}</body>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
     }
+    if (a.startsWith("cc/mailctl/")) return ok(await mailCtlRoute(env, a.slice(3), method, body, { isAdmin: true, me, today: beirutToday, audit }));   // Email Control
     if (a.startsWith("cc/mailbox")) return ok(await mbRoute(env, a, method, body, me, { ...MB_DEPS, hubUrl: HUB_URL }));   // Report mailbox
     if (a === "cc/home") return ok(await homeAdmin(env, method, body, me));   // Home layout by position (Landing pages → Home layout)
     if (a === "cc/lp") return ok(await lpAdmin(env, method, body, me, { allows: (u, app) => roleAllows(u, app) }));   // Landing pages by position
@@ -978,7 +981,7 @@ async function route(request, env, ctx, url) {
       const site = SITES[String(body.site || "").toUpperCase()] ? String(body.site).toUpperCase() : (me.site_code || "VRM");
       if (!env.MAIL_RELAY_URL) throw fail("Mail relay not set up — add MAIL_RELAY_URL and MAIL_RELAY_KEY to the hub");
       const R = await eodReport(env, me, site, beirutDate());
-      const r = await relay(env, { from: me.email, to: [me.email], subject: `End of Day Report — ABC ${SITES[site]} — ${beirutDate()} (test)`, html: eodEmailHtml(R, HUB_URL) });
+      const r = await relay(env, { from: me.email, to: [me.email], kind: "eod", subject: `End of Day Report — ABC ${SITES[site]} — ${beirutDate()} (test)`, html: eodEmailHtml(R, HUB_URL) });
       if (!r.ok) throw fail(r.error || "The email could not be sent");
       return ok({ to: me.email });
     }
@@ -1175,7 +1178,7 @@ function welcomeMail(u, by, pw = "") {
 </td></tr>
 <tr><td style="${F}padding:18px 30px 24px;font-size:13px;color:#6D6479;border-top:1px solid #EEE9F4">Questions or trouble signing in? Reply to this email or contact <b style="color:#4A1F73">${escH(by.full_name)}</b> · ${escH(by.email)}<br>
   <span style="font-size:12px">Keep your password private and do not forward this email.</span></td></tr></table></td></tr></table>`;
-  return { to: [u.email], from: by.email, replyTo: by.email, subject: "Welcome to the ABC Property Hub", html };
+  return { kind: "welcome", to: [u.email], from: by.email, replyTo: by.email, subject: "Welcome to the ABC Property Hub", html };
 }
 async function sendWelcome(env, email, by, password = "") {
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(String(email || "").toLowerCase()).first();
@@ -1418,7 +1421,7 @@ async function morningRun(env, { only = null, force = false } = {}) {
     for (const u of list) {
       const html = morningHtml({ user: u, site, ids, figures, down, anns: anns.announcements });
       const subject = `Morning brief — ${site === "ALL" ? "All flagships" : SITES[site] || site} — ${new Date().toLocaleDateString("en-GB", { timeZone: "Asia/Beirut", weekday: "short", day: "numeric", month: "short" })}`;
-      const r = await relay(env, { to: [u.email], subject, html });
+      const r = await relay(env, { kind: "morning", to: [u.email], subject, html });
       r.ok ? sent++ : errors.push(`${u.email}: ${r.error}`);
     }
   }
@@ -1466,17 +1469,29 @@ async function handoverRecipients(env, site, shift) {
    otherwise the old mail relay (Google Apps Script, ~100 recipients a day). m.from = the person who pressed send. */
 /* Preventive Maintenance: shared helpers (bulk tenant emails go through the Outlook queue when it is set up) */
 const PM_DEPS = { SITES, siteName: s => SITES[s] || s, hubUrl: HUB_URL, now: () => nowIso(), today: () => beirutToday(), readSheet: (n, d) => readSheet(n, d),
-  sendMany: async (env, msgs) => { const q = await outlookBulk(env, msgs).catch(() => null); if (q) return q; let n = 0; for (const m of msgs) { const r = await relay(env, m); if (r.ok) n++; } return { sent: n }; } };
+  sendMany: async (env, msgs) => {
+    const k = msgs[0] && msgs[0].kind; if (k) { const g = await mailGate(env, k); if (!g.ok) return { sent: 0, off: true, error: g.error }; }   // Email Control
+    const q = await outlookBulk(env, msgs).catch(() => null); if (q) { if (k) await mailLog(env, k, msgs[0].to, msgs.length); return q; }
+    let n = 0; for (const m of msgs) { const r = await relay(env, m); if (r.ok) n++; } return { sent: n }; } };
 async function relay(env, m) {
+  if (m && m.kind) { const g = await mailGate(env, m.kind); if (!g.ok) return { ok: false, off: true, error: g.error }; }   // Email Control: switched OFF / paused
   const o = await outlookSend(env, m).catch(e => { console.error("outlook", e && e.message); return null; });
-  if (o) return o;
-  return relayScript(env, m);
+  const r = o || await relayScript(env, m);
+  if (r && r.ok && m && m.kind) await mailLog(env, m.kind, m.to || m.bcc);
+  return r;
+}
+/* the outlookSend handed to modules: same Email Control switch + log */
+async function outlookSendG(env, m) {
+  if (m && m.kind) { const g = await mailGate(env, m.kind); if (!g.ok) return { ok: false, off: true, error: g.error }; }
+  const r = await outlookSend(env, m);
+  if (r && r.ok && m && m.kind) await mailLog(env, m.kind, (m.to && m.to.length ? m.to : m.bcc));
+  return r;
 }
 async function notifyAdmins(env, title, body, tone = "warn") {
   const { results } = await env.DB.prepare("SELECT email FROM users WHERE active = 1 AND (role = 'ADMIN' OR is_admin = 1)").all();
   for (const u of results || []) await raiseEvent(env, { app: "admin", email: u.email, tone, title, body }).catch(() => {});
   const to = (results || []).map(u => u.email);
-  if (to.length) await relay(env, { to, subject: title, html: `<p style="font-family:Calibri,Arial">${escH(body)}</p>` });
+  if (to.length) await relay(env, { kind: "admin", to, subject: title, html: `<p style="font-family:Calibri,Arial">${escH(body)}</p>` });
 }
 async function relayScript(env, { to, cc = [], replyTo = "", subject, html, attachment = null }) {
   try {
@@ -2164,11 +2179,11 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("qp/")) return qpRoute(env, p, method, b, url, { site, me, can, canSite, now: nowIso, today: beirutToday, raiseEvent, siteName, hubUrl: HUB_URL });   // Quick Access Pass
   if (p.startsWith("ff/")) {   // Footfall (modules/footfall.js)
     if (isWarehouse(me) || me.role === "SECURITY" || !roleAllows(me, "footfall")) throw fail("Not allowed", 403);
-    return ffRoute(env, p, method, b, url, { me, SITES, sitesOf, today: beirutToday, hour: beirutHour, outlookSend, raiseEvent, audit, hubUrl: HUB_URL });
+    return ffRoute(env, p, method, b, url, { me, SITES, sitesOf, today: beirutToday, hour: beirutHour, outlookSend: outlookSendG, raiseEvent, audit, hubUrl: HUB_URL });
   }
   if (p.startsWith("cleaners/")) {   // Cleaner Access (modules/cleaners.js)
     if (isWarehouse(me)) throw fail("Not allowed", 403);
-    return cleanRoute(env, p, method, b, url, { me, SITES, sitesOf, canSite, today: beirutToday, opsGroups, outlookSend, raiseEvent, audit, hubUrl: HUB_URL });
+    return cleanRoute(env, p, method, b, url, { me, SITES, sitesOf, canSite, today: beirutToday, opsGroups, outlookSend: outlookSendG, raiseEvent, audit, hubUrl: HUB_URL });
   }
   if (p === "gate/cleaner" || p === "gate/cleaner-in") {   // the Loading Gate page inside the hub: a cleaner badge
     if (!canSite(me, site) || isWarehouse(me)) throw fail("Not allowed", 403);
@@ -2543,7 +2558,7 @@ async function opsRoute(env, me, p, method, b, url) {
         else if (!R.to.length) mail = { sent: false, error: "No group email or manager for this flagship" };
         else {
           const html = String(b.mail.html).slice(0, 250000), subject = String(b.mail.subject || `ABC ${siteName(site)} | Handover ${b.day}`).slice(0, 200);
-          const r = await relay(env, { from: me.email, to: R.to, cc: R.cc, replyTo: me.email, subject, html });
+          const r = await relay(env, { kind: "handover", from: me.email, to: R.to, cc: R.cc, replyTo: me.email, subject, html });
           mail = r.ok ? { sent: true, to: R.to, cc: R.cc, at: nowIso() } : { sent: false, error: r.error };
         }
         const L2 = JSON.parse((await env.DB.prepare("SELECT handoffs FROM handovers WHERE id = ?").bind(id).first()).handoffs || "[]");

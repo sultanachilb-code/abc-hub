@@ -164,7 +164,7 @@ async function mailLinks(env, d, site, reqs, n, o = {}) {
      <p>Thank you,<br><b>Mall Operations — ABC</b></p>`);
   const what = reqs.map(r => r.kind === "day" ? fmtDay(r.period) : "Parking duration " + fmtMonth(r.period)).join(" + ");
   const subject = `${o.testTo ? "[TEST] " : ""}${n ? `Reminder ${n} — ` : ""}ABC ${String(name).replace(/^ABC\s+/i, "")} — Parking figures — ${what}`;
-  const s = await d.outlookSend(env, { from: FROM, to, cc, subject, html }).catch(e => ({ ok: false, error: e.message }));
+  const s = await d.outlookSend(env, { kind: "footfall", from: FROM, to, cc, subject, html }).catch(e => ({ ok: false, error: e.message }));
   if (!(s && s.ok)) return { sent: false, why: (s && s.error) || "Outlook is not connected in the hub" };
   if (!o.testTo) for (const r of reqs) await env.DB.prepare("UPDATE ff_req SET sent_at = CASE WHEN sent_at = '' THEN ? ELSE sent_at END, reminders = ? WHERE token = ?").bind(new Date().toISOString(), n, r.token).run();
   return { sent: true, to, cc };

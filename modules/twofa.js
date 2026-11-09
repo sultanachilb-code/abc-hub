@@ -133,7 +133,7 @@ async function sendEmailCode(env, deps, u) {
   if (st.email_sent && Date.now() - Date.parse(st.email_sent) < EMAIL_GAP_S * 1000) throw err(`A code was just sent — wait ${EMAIL_GAP_S} seconds before asking for another.`, 429);
   if (!deps.relay) throw err("Email is not set up on the hub.", 500);
   const code = String(100000 + (new DataView(rand(4).buffer).getUint32(0) % 900000));
-  const r = await deps.relay(env, { to: [u.email], subject: `${code} is your ABC Property Hub sign-in code`, html: emailCodeHtml(u.full_name.split(" ")[0], code) });
+  const r = await deps.relay(env, { kind: "signin", to: [u.email], subject: `${code} is your ABC Property Hub sign-in code`, html: emailCodeHtml(u.full_name.split(" ")[0], code) });
   if (!r.ok) throw err("The code could not be emailed right now. Try another way, or ask your administrator.", 502);
   const now = new Date();
   await env.DB.prepare("UPDATE user_2fa SET email_code = ?, email_exp = ?, email_sent = ?, email_tries = 0 WHERE email = ?")
