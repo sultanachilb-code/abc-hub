@@ -51,3 +51,9 @@ The Incident system reads the resolved addresses from `GET /api/sso/inc-cfg` (x-
   - The role comes from the rights: "Flagship snaglists" ✎/👁 = Manager, "Own" = Supervisor, "Post site visits" only = Site Visit, all site visits = Full Access.
   - Head of Security = Full Access with no own lists, which means view only of every flagship's site-visit activity.
   - Create, transfer, keep, delete, post, close and report are checked against the rights.
+
+## Security Manager: mall + department store (Nov 2026)
+The Security Manager of a mall is also responsible for security at the department store of the same site: **Verdun Mall → Verdun DS** and **Achrafieh Mall → Achrafieh DS** (`SEC_COVER` in worker.js). Dbayeh DS has its own Security Manager.
+- `sitesOf` gives him both flagships: hub data, the flagship picker, the automatic emails of both, and the Incident Report scope (both flagships).
+- In Incident Report settings, "Security Manager" ticked for a type reaches him for incidents at the department store too.
+- Hierarchy page: the Verdun DS and Achrafieh DS Security Manager boxes are dotted links to the mall's Security Manager. The Head of Security's list shows "Verdun Mall + Verdun DS".

@@ -55,7 +55,7 @@ function autoAccount(u, app, d) {
   if (app === "incidents") {
     const role = k === "ADVISOR" ? "Property Advisor" : ["DIRECTOR", "CDSO"].includes(k) ? "Mall Director" : k === "HOS" ? "Head of Security"
       : k === "SECM" ? "Security Manager" : ["MM", "OM"].includes(k) ? "Mall Manager" : "Supervisor";
-    const scope = allSites ? "ALL" : (multi ? mine : site ? [site] : []).map(c => INC_SITE[c]).filter(Boolean).join(",");
+    const scope = allSites ? "ALL" : (multi || k === "SECM" ? mine : site ? [site] : []).map(c => INC_SITE[c]).filter(Boolean).join(",");   // Security Manager: his mall + its department store
     if (!scope) return null;
     return { role, scope, rights: rt, pos: k, position: POS[k].n };
   }

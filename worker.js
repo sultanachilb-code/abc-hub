@@ -129,6 +129,9 @@ const TITLES = {
   DOM: { label: "Deputy Operations Manager", slot: "OM", rank: -1 }
 };
 const SLOTS = { MM: "Mall Manager / Senior Mall Manager", OM: "Operations Manager / Deputy Operations Manager" };
+/* Nov 2026: the Security Manager of a mall is also responsible for security at the department store of the same site.
+   Verdun Mall → Verdun DS · Achrafieh Mall → Achrafieh DS. Dbayeh DS has its own Security Manager. */
+const SEC_COVER = { VRM: ["VRS"], ACM: ["ACS"] };
 const SEC_POSITIONS = { SM: { label: "Security Manager" }, HOS: { label: "Head of Security" }, SV: { label: "Site Visit Officer" } };   // Nov 2026: Site Visit Officer — one person, every flagship   // Nov 2026: Security Manager (one flagship) · Head of Security (every flagship)   // Security role: the Head of Security sees every flagship
 const posLabel = p => (POSITIONS[p] || TITLES[p] || SEC_POSITIONS[p] || {}).label || "";
 /* Which flagships an account can open */
@@ -139,7 +142,8 @@ function sitesOf(u) {
     const list = String(u.sites || "").split(",").filter(c => SITES[c]);
     return list.length ? list : (SITES[u.site_code] ? [u.site_code] : []);
   }
-  if (u.role === "SECURITY" && (u.position === "HOS" || u.position === "SV")) return Object.keys(SITES);   // Head of Security, Site Visit Officer: every flagship   // Head of Security: every flagship (Oct 2026)
+  if (u.role === "SECURITY" && (u.position === "HOS" || u.position === "SV")) return Object.keys(SITES);
+  if (u.role === "SECURITY" && u.position === "SM" && SEC_COVER[u.site_code]) return [u.site_code, ...SEC_COVER[u.site_code]].filter(c => SITES[c]);   // the mall's Security Manager also covers its department store   // Head of Security, Site Visit Officer: every flagship   // Head of Security: every flagship (Oct 2026)
   return SITES[u.site_code] ? [u.site_code] : [];
 }
 const canSite = (u, site) => sitesOf(u).includes(site);
@@ -1078,7 +1082,7 @@ async function listUsers(env) {
     users: (results || []).map(u => ({ ...userOut(u), ext: u.ext || "", active: !!u.active, lastLoginAt: u.last_login_at || "", isAdmin: u.role === "ADMIN" || !!u.is_admin, welcomed: W.get(u.email) || null,
       morningEmail: !!u.morning_email, morningEligible: isFull(u), sysCfg: (() => { try { return JSON.parse(u.sys || "{}"); } catch { return {}; } })(), sys: sysSummary(u, ssoDeps) })),
     ssoApps: Object.fromEntries(Object.entries(SSO_APPS).map(([k, v]) => [k, v.name])), snagRoles: SNAG_ROLES, incRoles: INC_ROLES, incPositions: INC_POSITIONS,
-    sites: SITES, roles: ROLES,
+    sites: SITES, roles: ROLES, secCover: SEC_COVER,
     positions: Object.fromEntries(Object.entries(POSITIONS).map(([k, v]) => [k, v.label])),
     titles: Object.fromEntries(Object.entries(TITLES).map(([k, v]) => [k, { label: v.label, slot: v.slot }])),
     slots: SLOTS, multiRoles: MULTI_ROLES, allSiteRoles: ALL_SITE_ROLES, opsGroups: await opsGroups(env)
