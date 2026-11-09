@@ -1317,6 +1317,25 @@ async function pull(env, id, c, site, extra = "") {
   }
 }
 
+/* Performance Dashboard (white, Nov 2026): malfunctions and parking footfall of a flagship — this month vs last month */
+async function perfExtra(env, site, today) {
+  const m0 = today.slice(0, 8) + "01", d = new Date(Date.parse(m0 + "T12:00:00Z") - 864e5).toISOString().slice(0, 10), pm0 = d.slice(0, 8) + "01";
+  const q1 = (sql, ...b) => env.DB.prepare(sql).bind(...b).first().catch(() => null);
+  const qa = (sql, ...b) => env.DB.prepare(sql).bind(...b).all().then(r => r.results || []).catch(() => []);
+  const [mfOpen, mfFixed, mfFixedLast, mfDays, ff] = await Promise.all([
+    q1("SELECT COUNT(*) AS n FROM mf_records WHERE site = ? AND deleted = 0 AND status NOT IN ('Fixed','Closed')", site),
+    q1("SELECT COUNT(*) AS n FROM mf_records WHERE site = ? AND deleted = 0 AND status IN ('Fixed','Closed') AND COALESCE(NULLIF(fixed_at,''), NULLIF(closed_at,''), updated_at) >= ?", site, m0),
+    q1("SELECT COUNT(*) AS n FROM mf_records WHERE site = ? AND deleted = 0 AND status IN ('Fixed','Closed') AND COALESCE(NULLIF(fixed_at,''), NULLIF(closed_at,''), updated_at) >= ? AND COALESCE(NULLIF(fixed_at,''), NULLIF(closed_at,''), updated_at) < ?", site, pm0, m0),
+    q1("SELECT AVG(julianday(COALESCE(NULLIF(fixed_at,''), NULLIF(closed_at,''))) - julianday(found_at)) AS d FROM mf_records WHERE site = ? AND deleted = 0 AND status IN ('Fixed','Closed') AND COALESCE(NULLIF(fixed_at,''), NULLIF(closed_at,'')) >= ?", site, m0),
+    qa("SELECT day, entries FROM ff_days WHERE site = ? AND day >= ? AND day <= ? ORDER BY day", site, pm0, today)
+  ]);
+  const ffThis = ff.filter(r => r.day >= m0), ffLast = ff.filter(r => r.day < m0);
+  const sum = L => L.reduce((a, r) => a + (r.entries || 0), 0);
+  return { mfOpen: mfOpen ? mfOpen.n : null, mfFixed: mfFixed ? mfFixed.n : null, mfFixedLast: mfFixedLast ? mfFixedLast.n : null, mfDays: mfDays && mfDays.d != null ? Math.round(mfDays.d * 10) / 10 : null,
+    ffMonth: ffThis.length ? sum(ffThis) : null, ffDaysThis: ffThis.length, ffLastMonth: ffLast.length ? sum(ffLast) : null, ffDaysLast: ffLast.length,
+    ffSeries: ffThis.map(r => [Number(r.day.slice(8)), r.entries || 0]), ffSeriesLast: ffLast.map(r => [Number(r.day.slice(8)), r.entries || 0]) };
+}
+
 /* ---------- single sign-in ---------- */
 async function ssoLink(env, me, appId) {
   const c = CONNECTORS[String(appId || "")];
@@ -2110,11 +2129,14 @@ async function opsRoute(env, me, p, method, b, url) {
     const lead = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(me.role);
     const L = sitesOf(me), ctxL = { me, sitesOf, siteName, pullDay, today: beirutToday };
     const F = (await Promise.all(L.map(s => siteOverview(env, s, ctxL, beirutToday().slice(0, 7)).catch(() => null)))).filter(Boolean);
-    return { today: beirutToday(), me: { name: me.full_name, role: me.role }, sites: sitesMap(me),
+    return { today: beirutToday(), me: { name: me.full_name, role: me.role, position: posLabel(me.position) || ROLES[me.role] || me.role }, sites: sitesMap(me),
       items: { status: lead && roleAllows(me, "leadership"), restroom: roleAllows(me, "restroom") || lead, soft: lead && roleAllows(me, "leadership"), lpack: lead && roleAllows(me, "leadership"), pack: roleAllows(me, "pack"),
         snag: roleAllows(me, "snagreport") && (isFull(me) || (me.role === "SUPERVISOR" && me.position === "SMS")), accuracy: roleAllows(me, "accuracy") || lead },
-      flagships: F.map(f => ({ site: f.site, name: f.siteName, light: f.light, attention: f.attention, occupancy: f.gla.occupancy, vacantUnits: f.gla.vacantUnits, fitout: f.gla.fitout,
-        active: f.gla.active, trend: f.trend.map(t => ({ day: t.day, restroom: t.restroom })), checklists: f.mtd.checklists, compliance: f.mtd.compliance, accuracy: f.accuracy })) };
+      flagships: await Promise.all(F.map(async f => ({ site: f.site, name: f.siteName, light: f.light, attention: f.attention, occupancy: f.gla.occupancy, vacantUnits: f.gla.vacantUnits, fitout: f.gla.fitout,
+        active: f.gla.active, trend: f.trend.map(t => ({ day: t.day, restroom: t.restroom, incidents: t.incidents })), checklists: f.mtd.checklists, compliance: f.mtd.compliance, accuracy: f.accuracy,
+        restroomMonth: f.mtd.restroom, incidentsMonth: f.mtd.incidents, pirsOverdue: f.today ? f.today.pirsOverdue : null, repeatOffenders: f.mtd.repeatOffenders, violations: f.mtd.violations,
+        ...(await perfExtra(env, f.site, beirutToday()).catch(() => ({}))) }))) ,
+      items2: { reports: roleAllows(me, "reports"), exec: roleAllows(me, "exec"), footfall: roleAllows(me, "footfall") || lead, malfunctions: roleAllows(me, "malfunctions") || lead } };
   }
   if (p === "perf/restroom") {   // Performance Dashboard → Restroom Inspections (Nov 2026): the day's grid (restroom system) + the inspections (RR_DB) + 30-day history
     const lead = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO"].includes(me.role);

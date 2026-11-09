@@ -6,12 +6,23 @@
 <title>Executive Report · ABC</title>
 <link rel="icon" type="image/png" href="/icons/abc-48.png">
 <!-- Executive Report feature — see docs/FEATURE-exec-report.md -->
+<script>/* the hub's light / dark setting (screen only — print and PDF stay white) */try{const t=JSON.parse(localStorage.getItem("hub.theme")||'"light"');if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
 :root{
   --ink:#26262a; --muted:#6b6b70; --line:#dcdce0; --bg:#eeeef1; --card:#fff;
   --brand:#58585a; --accent:#0f5c7a; --accent-soft:#e6f1f5; --py:#b9b9bf;
   --pos:#1a7f4b; --neg:#c0392b; --warn:#b7791f;
   --pos-soft:#e5f4ec; --neg-soft:#fbe9e6; --warn-soft:#fcf3df;
+}
+/* Nov 2026 — the dashboard look (dash.css): ABC purple, soft white cards, light / dark on screen */
+:root{ --brand:#6B3FA0; --accent:#6B3FA0; --accent-soft:#F1EAFA; --bg:#F6F4FA; --line:#ECE8F2; --ink:#2A1F3D; --muted:#7C7391; --pos:#13B38A; --neg:#E04848; --pos-soft:#E6F8F2; --neg-soft:#FDEDED; }
+@media screen{
+  :root[data-theme="dark"]{ --bg:#15111C; --card:#1F1A29; --line:#2E2740; --ink:#EEE9F6; --muted:#A79DBA; --accent:#9B6FD6; --accent-soft:#2A2238; --pos-soft:#16302A; --neg-soft:#3A1F24; --warn-soft:#352A17; color-scheme:dark; }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --bg:#15111C; --card:#1F1A29; --line:#2E2740; --ink:#EEE9F6; --muted:#A79DBA; --accent:#9B6FD6; --accent-soft:#2A2238; --pos-soft:#16302A; --neg-soft:#3A1F24; --warn-soft:#352A17; } }
+  body{font-family:"Plus Jakarta Sans","Segoe UI",Calibri,-apple-system,Roboto,Arial,sans-serif}
+  .bar{background:linear-gradient(135deg,#6B3FA0,#4A1F73)!important}
+  .mall{border-radius:14px!important;box-shadow:0 2px 14px rgba(42,15,69,.06)!important}
+  .btn{border-radius:10px!important;background:var(--card);color:var(--ink)}
 }
 *{box-sizing:border-box}
 html{font-size:14px}
