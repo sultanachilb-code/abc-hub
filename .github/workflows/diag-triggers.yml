@@ -10,6 +10,6 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          Q="SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ('inspection_logs','softservices_logs','rooms','restrooms','schedules','time_windows','windows')"
-          npx -y wrangler@4 d1 execute abc-restroom-db --remote --json --command "$Q" > o.json 2> e.txt || true
+          Q="SELECT k, substr(v,1,300) AS v FROM meta WHERE k IN ('sso:policy','sso:hubonly-nov26','pos:cfg','inc:cfg','landing:site')"
+          npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
           echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
