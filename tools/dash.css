@@ -1,0 +1,36 @@
+/* ABC Property Hub — dashboard look (Nov 2026): clean white cards, soft shadows, ABC purple — light and dark.
+   Used by the Performance Dashboard and every page opened from it (Flagship status, Soft services, Monthly Pack, Leadership Pack,
+   Snaglist Report, Report builder, Data updated) and by the Executive Report, so they look like one product.
+   Load it after tools.css. Only restyles; no page logic depends on it. */
+:root{
+  --d-bg:#F6F4FA; --d-card:#FFFFFF; --d-line:#ECE8F2; --d-txt:#2A1F3D; --d-mut:#7C7391;
+  --d-acc:#6B3FA0; --d-acc2:#C9B2E6; --d-pl:#F1EAFA; --d-blue:#5D87FF;
+  --d-ok:#13B38A; --d-okl:#E6F8F2; --d-bad:#FA5A5A; --d-badl:#FDEDED; --d-warn:#E3961B; --d-warnl:#FEF5E5;
+  --d-shadow:0 2px 14px rgba(42,15,69,.06);
+  --t1b:#F1EAFA;--t1c:#6B3FA0;--t2b:#FEF5E5;--t2c:#C98510;--t3b:#ECF2FF;--t3c:#4570EA;--t4b:#FDEDED;--t4c:#E04848;--t5b:#E6F8F2;--t5c:#0F9B78;--t6b:#E8F7FF;--t6c:#1D93C7;
+  --paper:var(--d-bg); --surface:var(--d-card); --line:var(--d-line); --text:var(--d-txt); --muted:var(--d-mut); --brand:#6B3FA0; --brand-2:#8E63C7;
+  --font:"Plus Jakarta Sans","Figtree",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --d-bg:#15111C; --d-card:#1F1A29; --d-line:#2E2740; --d-txt:#EEE9F6; --d-mut:#A79DBA; --d-acc:#9B6FD6; --d-acc2:#4B3A66; --d-pl:#2A2238; --d-blue:#7C9CFF;
+  --d-ok:#3DD9A6; --d-okl:#16302A; --d-bad:#FF7A7A; --d-badl:#3A1F24; --d-warn:#F5B44C; --d-warnl:#352A17; --d-shadow:0 2px 14px rgba(0,0,0,.35);
+  --t1b:#2A2238;--t1c:#C7A6F2;--t2b:#352A17;--t2c:#F5C46B;--t3b:#1E2840;--t3c:#8EA9FF;--t4b:#3A1F24;--t4c:#FF8F8F;--t5b:#16302A;--t5c:#5BE0B5;--t6b:#172C38;--t6c:#6CC8F0;
+  --paper:var(--d-bg); --surface:var(--d-card); --line:var(--d-line); --text:var(--d-txt); --muted:var(--d-mut); --brand:#8E5FCB; --brand-2:#A57DDB; } }
+:root[data-theme="dark"]{
+  --d-bg:#15111C; --d-card:#1F1A29; --d-line:#2E2740; --d-txt:#EEE9F6; --d-mut:#A79DBA; --d-acc:#9B6FD6; --d-acc2:#4B3A66; --d-pl:#2A2238; --d-blue:#7C9CFF;
+  --d-ok:#3DD9A6; --d-okl:#16302A; --d-bad:#FF7A7A; --d-badl:#3A1F24; --d-warn:#F5B44C; --d-warnl:#352A17; --d-shadow:0 2px 14px rgba(0,0,0,.35);
+  --t1b:#2A2238;--t1c:#C7A6F2;--t2b:#352A17;--t2c:#F5C46B;--t3b:#1E2840;--t3c:#8EA9FF;--t4b:#3A1F24;--t4c:#FF8F8F;--t5b:#16302A;--t5c:#5BE0B5;--t6b:#172C38;--t6c:#6CC8F0;
+  --paper:var(--d-bg); --surface:var(--d-card); --line:var(--d-line); --text:var(--d-txt); --muted:var(--d-mut); --brand:#8E5FCB; --brand-2:#A57DDB; }
+body{background:var(--d-bg);color:var(--d-txt)}
+.dc{background:var(--d-card);border-radius:14px;box-shadow:var(--d-shadow);padding:22px;min-width:0}
+/* the shared tool parts, in the dashboard look */
+.card{border:0!important;border-radius:14px!important;box-shadow:var(--d-shadow)}
+.top{background:var(--d-bg)!important;border-bottom:0!important;padding:16px 24px!important}
+.top h1{font-size:1.15rem}
+.wrap{padding:6px 24px 40px!important}
+.btn{border-radius:10px;background:var(--d-acc)}.btn:hover{background:#7E52B8}
+.btn.ghost{background:var(--d-card);color:var(--d-acc);border:1px solid var(--d-acc)}.btn.ghost:hover{background:var(--d-pl)}
+.sel,.inp{border-radius:10px;border-color:var(--d-line);background:var(--d-card)}
+.tabs{border:0;box-shadow:var(--d-shadow);border-radius:12px}.tabs button.on{background:var(--d-acc);box-shadow:0 6px 16px rgba(107,63,160,.3)}
+.pill{border-radius:8px}.pill.ok{background:var(--d-okl);color:var(--d-ok)}.pill.warn{background:var(--d-warnl);color:var(--d-warn)}.pill.alert{background:var(--d-badl);color:var(--d-bad)}.pill.brand{background:var(--d-pl);color:var(--d-acc)}
+table th{color:var(--d-mut)}
