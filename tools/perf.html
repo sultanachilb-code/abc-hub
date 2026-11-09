@@ -51,6 +51,9 @@
 .frm{padding:0!important;overflow:hidden}.frm .fh{display:flex;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--d-line);flex-wrap:wrap}
 .frm .fh b{font-size:1rem}.frm .fh a{color:var(--d-acc);font-weight:700;font-size:.82rem;cursor:pointer;text-decoration:none}
 .frm iframe{display:block;width:100%;height:calc(100dvh - 150px);border:0;background:var(--d-bg)}
+.kt td,.kt th{text-align:center}.kt td:first-child,.kt th:first-child{text-align:left;font-weight:600}
+.kt th.kh{cursor:pointer;color:var(--d-acc);font-size:.8rem}.kt th.kh:hover{text-decoration:underline}.kt tr.kst td{background:var(--d-bg)}
+.kv2{display:inline-block;min-width:54px;border-radius:8px;padding:4px 8px;font-weight:800}.kt small.kup,.kt small.kdn{display:block;font-size:.68rem;font-weight:700;margin-top:2px}.kup{color:var(--d-ok)}.kdn{color:var(--d-bad)}
 .empty2{padding:30px;text-align:center;color:var(--d-mut)}
 /* restroom */
 .ring{--v:0;--c:var(--d-acc);width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--v)*1%),var(--d-pl) 0);display:grid;place-items:center;flex:none}
@@ -81,10 +84,10 @@
 <script src="common.js"></script>
 <script>
 const UP = new URLSearchParams(location.search);
-let S = null, PAGE = UP.get("page") || "overview", SITE = UP.get("site") || "", SNAG = null, RR = null, RRDAY = "";
+let S = null, PAGE = UP.get("page") || "overview", SITE = UP.get("site") || "", SNAG = null, RR = null, RRDAY = "", KP = null, KPER = "month";
 const PAGES = [
   { k: "overview", n: "Overview", i: "📊", g: "Performance" },
-  { k: "status", n: "Flagship status", i: "🏬", g: "Performance", url: () => "/tools/leadership?tab=ov&embed=1" },
+  { k: "status", n: "Flagship status", i: "🏬", g: "Performance" },   /* one KPI table, as the Property Advisor's (Nov 2026) */
   { k: "restroom", n: "Restroom Inspections", i: "🚻", g: "Performance" },
   { k: "soft", n: "Soft services", i: "🧽", g: "Performance", url: () => "/tools/leadership?tab=sc&embed=1" },
   { k: "pack", n: "Monthly Pack", i: "📦", g: "Reports", url: () => `/tools/pack${SITE ? "?site=" + SITE : ""}` },
@@ -143,6 +146,7 @@ function show(k){
   PAGE = k; history.replaceState(null, "", k === "overview" ? location.pathname : `?page=${k}${SITE ? "&site=" + SITE : ""}`); side(); scrollTo(0, 0);
   const p = PAGES.find(x => x.k === k) || PAGES[0]; $("#ttl").textContent = k === "overview" ? "Performance Dashboard" : p.n;
   if (k === "overview") return overview();
+  if (k === "status") return status();
   if (k === "restroom") { if (!RR || (RR.site && SITE && RR.site !== SITE)) { $("#view").innerHTML = `<div class="dc"><div class="empty2">Loading the inspections…</div></div>`; return loadRR(); } return restroom(); }
   $("#view").innerHTML = `<div class="dc frm"><div class="fh"><a data-back>‹ Overview</a><b>${p.i} ${esc(p.n)}</b><span class="sp"></span><a href="${p.url()}" target="_blank" rel="noopener">Open full screen ↗</a></div><iframe src="${p.url()}" title="${esc(p.n)}"></iframe></div>`;
   $("#view [data-back]").onclick = () => show("overview");
@@ -240,6 +244,44 @@ function overview(){
   $("#view").querySelectorAll("[data-go]").forEach(b => { if (b.dataset.go) b.onclick = e => { e.preventDefault(); show(b.dataset.go); }; });
   $("#view").querySelectorAll("[data-hub]").forEach(b => { if (b.dataset.hub && !b.dataset.go) b.onclick = e => { e.preventDefault(); e.stopPropagation(); hubOpen(b.dataset.hub, SITE ? "?site=" + SITE : ""); }; });
   $("#view").querySelectorAll("[data-open]").forEach(r => r.onclick = () => { SITE = r.dataset.open; $("#siteF").value = SITE; RR = null; overview(); scrollTo(0, 0); });
+}
+
+/* ---------- flagship status: every KPI × every flagship in one table (the Property Advisor's KPI table) ---------- */
+async function status(){
+  if (!KP || KP.period !== KPER) {
+    $("#view").innerHTML = `<div class="dc"><div class="empty2">Working out the KPIs…</div></div>`;
+    try { KP = await api("brief/kpi?period=" + KPER); } catch (e){ $("#view").innerHTML = `<div class="dc"><div class="empty2">${esc(e.message)}</div></div>`; return; }
+    if (PAGE !== "status") return;
+  }
+  const K = KP, sites = K.sites, short = n => String(n).replace(/^ABC\s+/i, "").replace(/Department Store/, "DS");
+  const val = c => c.v == null ? "—" : c.pct ? Math.round(c.v) + "%" : Number(c.v).toLocaleString("en-US");
+  const bg = t => t === "g" ? "var(--d-okl)" : t === "a" ? "var(--d-warnl)" : t === "r" ? "var(--d-badl)" : "transparent", fg = t => t === "g" ? "var(--d-ok)" : t === "a" ? "var(--d-warn)" : t === "r" ? "var(--d-bad)" : "var(--d-txt)";
+  const toneOf = v => v == null ? "" : v >= 90 ? "g" : v >= 75 ? "a" : "r";
+  const avgRow = r => { const v = r.cells.filter(c => c.v != null).map(c => c.v); if (!v.length) return null; return r.cells[0].pct ? v.reduce((a, b) => a + b, 0) / v.length : v.reduce((a, b) => a + b, 0); };
+  const flag = code => S.flagships.find(f => f.site === code) || {};
+  const score = code => { const v = K.rows.flatMap(r => r.cells.filter(c => c.site === code && c.pct && c.tone && c.v != null).map(c => c.v)); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
+  const cnt = t => K.rows.reduce((a, r) => a + r.cells.filter(c => c.tone === t).length, 0);
+  const per = { today: "Today", "7d": "7 days", month: "Month" };
+  $("#view").innerHTML = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:4px 0 16px">
+      <span class="mut">${esc(D.fmt(K.range.from, { year: "numeric" }))} → ${esc(D.fmt(K.range.to, { year: "numeric" }))} · compared with the period before</span><span style="flex:1"></span>
+      ${Object.entries(per).map(([k, n]) => `<button class="chip2" data-per="${k}" style="${KPER === k ? "background:var(--d-acc);color:#fff;border-color:var(--d-acc)" : ""}">${n}</button>`).join("")}
+      <button class="chip2" data-cards>Detailed cards ↗</button></div>
+    <div class="tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+      <div class="tile t5" style="cursor:default"><div class="ic">🟢</div><small>On target</small><b>${cnt("g")}</b><em>KPIs at 90 % or more</em></div>
+      <div class="tile t2" style="cursor:default"><div class="ic">🟠</div><small>Watch</small><b>${cnt("a")}</b><em>75 – 89 %</em></div>
+      <div class="tile t4" style="cursor:default"><div class="ic">🔴</div><small>Below target</small><b>${cnt("r")}</b><em>under 75 %</em></div>
+      <div class="tile t1" style="cursor:default"><div class="ic">🏬</div><small>Flagships</small><b>${sites.length}</b><em>${sites.filter(s => flag(s.code).light === "red").length} need action</em></div></div>
+    <div class="dc"><div class="hd"><div><h3>Flagship status · KPIs</h3><div class="sub">${per[KPER]} · green ≥ 90 %, amber 75–89 %, red &lt; 75 % · ▲▼ = change vs the period before · tap a flagship to open it</div></div></div>
+      <div class="tw"><table class="kt"><thead><tr><th style="min-width:230px">KPI</th>${sites.map(s => `<th class="kh" data-open="${s.code}" title="Open ${esc(s.name)}">${esc(short(s.name))}</th>`).join("")}${sites.length > 1 ? `<th>All</th>` : ""}</tr>
+        <tr class="kst"><td><b>Status today</b></td>${sites.map(s => { const L = LIGHT[flag(s.code).light] || LIGHT.green; return `<td><span class="pill2 ${L[0]}">${L[1]}</span></td>`; }).join("")}${sites.length > 1 ? `<td></td>` : ""}</tr>
+        <tr class="kst"><td><b>Overall score</b><br><small class="mut">average of the % KPIs</small></td>${sites.map(s => { const v = score(s.code), t = toneOf(v); return `<td><b style="font-size:1.1rem;color:${fg(t)}">${v == null ? "—" : v + "%"}</b></td>`; }).join("")}${sites.length > 1 ? `<td></td>` : ""}</tr></thead>
+        <tbody>${K.rows.map(r => { const a = avgRow(r), at = r.cells[0].pct && r.key !== "gla" ? toneOf(a) : "";
+          return `<tr><td>${esc(r.label)}</td>${r.cells.map(c => `<td title="${esc(c.hint || "")}"><span class="kv2" style="background:${bg(c.tone)};color:${fg(c.tone)}">${val(c)}</span>${c.delta ? `<small class="${c.delta > 0 ? "kup" : "kdn"}">${c.delta > 0 ? "▲" : "▼"}${Math.abs(c.delta)}</small>` : ""}${c.sub ? `<br><small class="mut">${esc(c.sub)}</small>` : ""}</td>`).join("")}
+            ${sites.length > 1 ? `<td><b style="color:${fg(at)}">${a == null ? "—" : r.cells[0].pct ? Math.round(a) + "%" : Math.round(a).toLocaleString("en-US")}</b></td>` : ""}</tr>`; }).join("")}</tbody></table></div></div>
+    ${K.worst && K.worst.length ? `<div class="dc" style="margin-top:22px"><h3>Weakest this period</h3><div class="sub">Where to look first</div><div class="list">${K.worst.map(w => `<div class="li"><div class="ic" style="background:${bg(w.tone)}">${w.tone === "r" ? "⛔" : "⚠️"}</div><div><b>${esc(short(w.siteName))} · ${esc(w.label)}</b><small>${Math.round(w.v)}%${w.delta ? ` · ${w.delta > 0 ? "▲" : "▼"} ${Math.abs(w.delta)} vs before` : ""}</small></div></div>`).join("")}</div></div>` : ""}`;
+  $("#view").querySelectorAll("[data-per]").forEach(b => b.onclick = () => { KPER = b.dataset.per; status(); });
+  $("#view").querySelector("[data-cards]").onclick = () => window.open("/tools/leadership?tab=ov", "_blank");
+  $("#view").querySelectorAll("[data-open]").forEach(h => h.onclick = () => { SITE = h.dataset.open; $("#siteF").value = SITE; RR = null; show("overview"); });
 }
 
 /* ---------- restroom inspections ---------- */
