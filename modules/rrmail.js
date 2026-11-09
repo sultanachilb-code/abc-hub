@@ -21,7 +21,7 @@ export async function rrMailRun(env, d) {
   } catch { return; }   // the table appears with the Restroom system's first email
   let notConnected = 0;
   for (const m of rows) {
-    const r = await d.outlookSend(env, { from: PREFERRED_FROM, to: list(m.to_list), cc: list(m.cc_list), bcc: list(m.bcc_list), subject: m.subject, html: m.html })
+    const r = await d.outlookSend(env, { kind: "rroutbox", from: PREFERRED_FROM, to: list(m.to_list), cc: list(m.cc_list), bcc: list(m.bcc_list), subject: m.subject, html: m.html })
       .catch(e => ({ ok: false, error: e.message }));
     const now = new Date().toISOString();
     if (r && r.ok) {

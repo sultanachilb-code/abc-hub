@@ -1,3 +1,4 @@
+import { mailGate } from "./mailctl.js";
 /* =====================================================================
    MEMO (Nov 2026, Upcoming - Testing) — docs/FEATURE-memo.md
    Official memos from the operations team to tenants.
@@ -129,7 +130,7 @@ function mail(d, m, t, kind) {
     <p><a href="${link}" style="display:inline-block;background:#4A1F73;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">${ask}</a></p>
     <p style="font-size:12px;color:#777">This link is personal to ${escH(t.brand)} (${escH(t.units)}) — no password needed.</p>
     <p>Kind regards,<br>ABC ${escH(sn)} — Operations Team</p></div></div>`;
-  return { to: t.emails.split(/,\s*/), subject: `ABC ${sn} · ${head} · ${m.title}`, html };
+  return { kind: "memo", to: t.emails.split(/,\s*/), subject: `ABC ${sn} · ${head} · ${m.title}`, html };
 }
 async function sendTo(env, d, m, list, kind) {
   const today = d.today(), go = list.filter(t => t.emails && !t.state);
@@ -245,6 +246,7 @@ export async function memoRoute(env, p, method, b, url, d) {
   if (method !== "POST") throw err("Unknown request", 404);
   if (!ops) throw err("Only the operations team sends memos", 403);
   if (p === "memo/create") {
+  { const g = await mailGate(env, "memo"); if (!g.ok) throw err(g.error, 409); }   // Email Control: switched OFF
     const title = clip(b.title, 160); if (!title) throw err("Give the memo a subject");
     const body = txt(b.body, 6000); if (!body) throw err("Write the memo");
     const sites = pickSites(b.sites); if (!sites.length) throw err("Choose at least one flagship");
@@ -277,6 +279,7 @@ export async function memoRoute(env, p, method, b, url, d) {
   }
   const m = await memo(b.id);
   if (p === "memo/remind") {
+  { const g = await mailGate(env, "memo"); if (!g.ok) throw err(g.error, 409); }   // Email Control: switched OFF
     if (m.closed_at) throw err("This memo is closed");
     let rows = ((await env.DB.prepare("SELECT * FROM memo_targets WHERE memo_id = ? AND state = ''").bind(m.id).all()).results || []).filter(r => mySites.includes(r.site));
     if (b.site) rows = rows.filter(r => r.site === b.site);

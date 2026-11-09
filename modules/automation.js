@@ -121,7 +121,7 @@ export async function automationRun(env, deps, now = new Date()) {
       await env.DB.prepare("INSERT OR REPLACE INTO daily_stats (site, day, data, at) VALUES (?,?,?,?)").bind(site, t.day, JSON.stringify(snapshotOf(R)), now.toISOString()).run();
       const to = people.filter(u => deps.canSite(u, site)).map(u => u.email);
       if (to.length && env.MAIL_RELAY_URL) {
-        const r = await deps.relay(env, { to, subject: `End of Day Report — ABC ${deps.SITES[site]} — ${t.day}`, html: eodEmailHtml(R, deps.hubUrl) });
+        const r = await deps.relay(env, { kind: "eod", to, subject: `End of Day Report — ABC ${deps.SITES[site]} — ${t.day}`, html: eodEmailHtml(R, deps.hubUrl) });
         if (r.ok) out.eod++;
       }
     }
@@ -133,7 +133,7 @@ export async function automationRun(env, deps, now = new Date()) {
     const to = (results || []).map(u => u.email);
     const sum = Object.entries(data.tables).map(([k, v]) => `${k}: ${v.length}`).join(" · ");
     if (to.length) {
-      const r = await deps.relay(env, { to, subject: `ABC Property Hub — weekly backup ${t.day}`,
+      const r = await deps.relay(env, { kind: "backup", to, subject: `ABC Property Hub — weekly backup ${t.day}`,
         html: `<p style="font-family:Calibri,Arial">The weekly backup of the ABC Property Hub is attached (${Math.round(z.bytes / 1024)} KB, compressed JSON).</p><p style="font-family:Calibri,Arial;font-size:12px;color:#666">${esc(sum)}</p>`,
         attachment: { fileName: `abc-hub-backup-${t.day}.json.gz`, mimeType: "application/gzip", base64: z.base64 } });
       await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('backup:last', ?)").bind(JSON.stringify({ day: t.day, at: now.toISOString(), bytes: z.bytes, ok: !!r.ok, error: r.error || "" })).run();

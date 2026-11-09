@@ -205,7 +205,7 @@ export async function roRun(env, d) {
         ${s.link ? `<tr><td style="padding:4px 12px 4px 0;color:#6B6478">${s.fmt === "Online" ? "Join" : "Where"}</td><td>${/^https?:\/\//.test(s.link) ? `<a href="${esc(s.link)}">${esc(s.link)}</a>` : esc(s.link)}</td></tr>` : ""}</table>
         <p style="margin:14px 0 0">Please have your hub account ready: <a href="${esc(d.hubUrl)}">${esc(d.hubUrl.replace(/^https:\/\//, "").replace(/\/$/, ""))}</a></p>
         <p style="margin:12px 0 0;color:#6B6478;font-size:12px">The full plan: Hub → Hub Applications → Hub Training &amp; Rollout.</p></div>`;
-      await d.outlookSend(env, { from: FROM, to: [], bcc: to, subject: `Hub training ${label}: ${s.name} — ${fmtWhen(s.day, s.time)}`, html })
+      await d.outlookSend(env, { kind: "training", from: FROM, to: [], bcc: to, subject: `Hub training ${label}: ${s.name} — ${fmtWhen(s.day, s.time)}`, html })
         .catch(e => console.error("rollout reminder", e && e.message));
     }
   }

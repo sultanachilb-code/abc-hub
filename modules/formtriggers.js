@@ -149,7 +149,7 @@ export async function fireTrigger(env, d, { site, form, day, item, cfg, remark, 
       <tr><td style="padding:4px 10px 4px 0;color:#6D6479">Date</td><td>${esc(fmtDay(day))}</td></tr>
       ${res.mfId ? `<tr><td style="padding:4px 10px 4px 0;color:#6D6479">Reference</td><td>Malfunction #${res.mfId}</td></tr>` : ""}</table>
       <p>Kindly attend to it at your earliest convenience${photo ? " (photo attached)" : ""}.</p><p>Regards,<br>${esc(me.full_name)}<br>ABC Operations · ${esc(d.siteName(site))}</p></div>`;
-    const r = await d.relay(env, { to: a.email.to, subject: `${d.siteName(site)} · ${item.t} — not OK (${formName}, ${fmtDay(day)})`.slice(0, 200), html, from: me.email,
+    const r = await d.relay(env, { kind: "formalert", to: a.email.to, subject: `${d.siteName(site)} · ${item.t} — not OK (${formName}, ${fmtDay(day)})`.slice(0, 200), html, from: me.email,
       attachment: photo ? { base64: photo.b64, fileName: "photo.jpg", mimeType: photo.type } : null }).catch(e => ({ ok: false, error: e.message }));
     res.email = !!(r && r.ok); if (r && !r.ok) res.emailError = String(r.error || "").slice(0, 200);
   }

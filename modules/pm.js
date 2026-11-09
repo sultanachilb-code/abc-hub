@@ -246,7 +246,7 @@ function tenantMail(d, { site, brand, ym, deadline, tk, certs, kind, to, extra =
     <p><a href="${link}" style="display:inline-block;background:#4A1F73;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold">Upload the certificates</a></p>
     <p style="font-size:12px;color:#777">This link is personal to ${escH(brand)} — no password needed. Certificates not submitted and approved within 5 days after the deadline are treated as a breach of the tenant manual (non-performance of preventive maintenance).</p>
     <p>Kind regards,<br>ABC ${escH(sn)} — Operations Team</p></div></div>`;
-  return { to: to.split(/,\s*/), subject: `ABC ${sn} · ${title} · ${brand}`, html };
+  return { kind: "pm", to: to.split(/,\s*/), subject: `ABC ${sn} · ${title} · ${brand}`, html };
 }
 
 /* ---------- the tenant's link ---------- */

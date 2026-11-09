@@ -52,6 +52,6 @@ export async function snagReportRun(env, d) {
   const to = (results || []).map(u => u.email);
   if (!to.length) return { sent: false };
   const t = snagTotals(R);
-  await d.relay(env, { to, subject: `Snaglist weekly · ${t.open} open · ${t.solved} solved · all flagships`, html: snagEmailHtml(R, d.hubUrl) });
+  await d.relay(env, { kind: "snagweekly", to, subject: `Snaglist weekly · ${t.open} open · ${t.solved} solved · all flagships`, html: snagEmailHtml(R, d.hubUrl) });
   return { sent: true, to: to.length };
 }

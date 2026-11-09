@@ -312,7 +312,7 @@ export async function dailyReport(env, d, site, day, o = {}) {
      <table style="width:100%;border-collapse:collapse"><tr>${th("Time")}${th("Name")}${th("Company")}${th("Tenant")}${th("Agent")}</tr>${rows}</table>
      <p style="color:#6D6479;font-size:11px;margin-top:16px">Automated report — Cleaner Access, ABC Property Hub.</p>`);
   const subject = `${o.testTo ? "[TEST] " : ""}ABC ${short} — Cleaner entries — ${fmtDay(day)} (${r.count} cleaner${r.count === 1 ? "" : "s"})`;
-  const s = await d.outlookSend(env, { from: FROM, to, cc, subject, html }).catch(e => ({ ok: false, error: e.message }));
+  const s = await d.outlookSend(env, { kind: "cleaners", from: FROM, to, cc, subject, html }).catch(e => ({ ok: false, error: e.message }));
   return s && s.ok ? { sent: true, to, cc } : { sent: false, why: (s && s.error) || "Outlook is not connected in the hub" };
 }
 async function monthlyVerification(env, d, site) {
@@ -330,7 +330,7 @@ async function monthlyVerification(env, d, site) {
        <p>Please <b>reply to this email within 5 business days</b>, confirming the list or telling us of any change (removals, replacements or new staff).</p>
        <p style="background:#FBF7EC;border-left:3px solid #C8A24A;padding:10px 14px"><b>Please note:</b> without a reply in that period, the listed passes will be <b>suspended</b> until the verification is completed.</p>
        <p>Thank you for your cooperation.</p><p>Best regards,<br><b>Mall Operations — ABC ${esc(short)}</b></p>`);
-    const s = await d.outlookSend(env, { from: FROM, to: [g.email], cc: og, subject: `ABC ${short} — ${g.tenant} Monthly Cleaner Verification`, html }).catch(() => null);
+    const s = await d.outlookSend(env, { kind: "cleanverify", from: FROM, to: [g.email], cc: og, subject: `ABC ${short} — ${g.tenant} Monthly Cleaner Verification`, html }).catch(() => null);
     await env.DB.prepare("INSERT INTO cl_verify_log (at, site, tenant, email, count, names, via) VALUES (?,?,?,?,?,?,?)")
       .bind(new Date().toISOString(), site, g.tenant, g.email, g.list.length, g.list.map(w => w.name).join(", ").slice(0, 2000), s && s.ok ? "outlook" : "not sent").run();
     if (s && s.ok) sent++;

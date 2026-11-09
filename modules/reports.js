@@ -350,7 +350,7 @@ async function doRun(env, rep, d, o = {}) {
     const ins = await env.DB.prepare("INSERT INTO rp_runs (report_id, name, period, sites, at, by_name, how, sent_to, status, data) VALUES (?,?,?,?,?,?,?,?,?,?)")
       .bind(rep.id, rep.name, JSON.stringify(P), sites.join(","), new Date().toISOString(), o.by || "Schedule", o.how || "sent", [...to, ...cc].join(", ").slice(0, 2000), "sending", keep(R)).run();
     const runId = ins.meta.last_row_id, link = `${d.hubUrl}/tools/reports?run=${runId}`;
-    const m = { from: o.from || rep.created_email || FROM, to, cc, subject: `${o.testTo ? "[TEST] " : ""}ABC Operations — ${rep.name} — ${P.label}`, html: reportHtml(rep.name, R, link) };
+    const m = { kind: "reports", from: o.from || rep.created_email || FROM, to, cc, subject: `${o.testTo ? "[TEST] " : ""}ABC Operations — ${rep.name} — ${P.label}`, html: reportHtml(rep.name, R, link) };
     if (def.excel !== false) m.attachment = { fileName: `${rep.name.replace(/[^\w\- ]+/g, "")} ${P.label.replace(/[^\w\- ]+/g, " ")}.xls`.replace(/\s+/g, " "), mimeType: "application/vnd.ms-excel", base64: b64(reportXls(rep.name, R)) };
     const s = await d.outlookSend(env, m).catch(e => ({ ok: false, error: e.message }));
     status = s && s.ok ? "sent" : "not sent: " + ((s && s.error) || "Outlook is not connected in the hub");

@@ -84,7 +84,7 @@ export async function digestRun(env, d) {
     await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)").bind(k, new Date().toISOString()).run();
     const D = await digestFor(env, u, d).catch(() => null);
     if (!D || !D.count) continue;
-    await d.relay(env, { to: [u.email], subject: `Your week · ${D.count} item${D.count === 1 ? "" : "s"} · ABC Property Hub`, html: digestHtml(u, D, d.hubUrl) });
+    await d.relay(env, { kind: "digest", to: [u.email], subject: `Your week · ${D.count} item${D.count === 1 ? "" : "s"} · ABC Property Hub`, html: digestHtml(u, D, d.hubUrl) });
     sent++;
   }
   return { sent };
