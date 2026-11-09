@@ -90,6 +90,23 @@ td{padding:8px 10px;border-bottom:1px solid var(--cline);vertical-align:middle}
 .sw.part{background:#E0B451}.sw.part::after{left:12px}
 .lp-pos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.lp-pos button{border:1px solid var(--cline);background:var(--ccard);color:inherit;border-radius:99px;padding:7px 12px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}
 .lp-pos button.on{background:#4A1F73;color:#fff;border-color:#4A1F73}.lp-pos button i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#C8A24A;margin-left:6px;vertical-align:1px}
+.hy-leg{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.78rem;color:#8A7F98;margin-bottom:12px}.hy-leg i{display:inline-block;width:13px;height:13px;border-radius:4px;border:2px solid transparent;margin-right:5px;vertical-align:-2px}
+.hy-wrap{overflow-x:auto;padding:6px 0 14px;background:var(--ccard);border:1px solid var(--cline);border-radius:16px}.hy-tree{width:max-content;margin:0 auto;padding:10px 16px}
+.hy-tree ul{padding-top:20px;position:relative;display:flex;justify-content:center;margin:0;padding-left:0}
+.hy-tree li{list-style:none;position:relative;padding:20px 5px 0;display:flex;flex-direction:column;align-items:center}
+.hy-tree li::before,.hy-tree li::after{content:"";position:absolute;top:0;right:50%;border-top:2px solid #B9A6D3;width:50%;height:20px}.hy-tree li::after{right:auto;left:50%;border-left:2px solid #B9A6D3}
+.hy-tree li:only-child::before,.hy-tree li:only-child::after{display:none}.hy-tree li:only-child{padding-top:0}.hy-tree li:first-child::before,.hy-tree li:last-child::after{border:0 none}
+.hy-tree li:last-child::before{border-right:2px solid #B9A6D3;border-radius:0 6px 0 0}.hy-tree li:first-child::after{border-radius:6px 0 0 0}
+.hy-tree ul ul::before{content:"";position:absolute;top:0;left:50%;border-left:2px solid #B9A6D3;height:20px}
+.hy-n{background:var(--ccard);border:2px solid #6B3FA0;border-radius:13px;padding:8px 11px;text-align:center;min-width:140px;max-width:200px;box-shadow:0 4px 12px rgba(42,15,69,.08);cursor:pointer}
+.hy-n:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(42,15,69,.16)}.hy-n b{display:block;font-size:.84rem}.hy-n small{display:block;color:#8A7F98;font-size:.68rem;margin-top:1px}
+.hy-n.top{background:#2A0F45;color:#fff;border-color:#2A0F45}.hy-n.lead{background:#4A1F73;color:#fff;border-color:#4A1F73}.hy-n.top small,.hy-n.lead small,.hy-n.hsl small{color:#E9CF8A}
+.hy-n.hsl{background:#1F5A96;color:#fff;border-color:#1F5A96}.hy-n.hs{border-color:#1F5A96;background:#EEF4FC;color:#1E1530}.hy-n.fl{border-color:#C8A24A;background:#FFFBEF;color:#1E1530;cursor:default}
+.hy-n.team{border-color:#9E86C2;text-align:left;min-width:200px;max-width:240px;cursor:default}.hy-n.hs .hy-tr{text-align:left}
+.hy-n.vac{border-color:#C0392B !important;border-style:dashed;background:#FDECEA !important;color:#1E1530 !important}.hy-n.vac small{color:#8A7F98 !important}.hy-n em{display:block;font-style:normal;font-weight:800;color:#C0392B;font-size:.72rem;margin-top:4px}
+.hy-ps{margin-top:5px;display:flex;flex-direction:column;gap:2px}.hy-p{font-size:.74rem;font-weight:700}.hy-p i{font-style:normal;font-weight:500;opacity:.75;font-size:.66rem}
+.hy-tr{display:flex;justify-content:space-between;gap:8px;font-size:.72rem;padding:3px 4px;border-top:1px solid rgba(74,31,115,.1);cursor:pointer;border-radius:6px}.hy-tr:hover{background:rgba(74,31,115,.06)}.hy-tr span:first-child{color:#8A7F98;white-space:nowrap}.hy-tn{font-weight:700;text-align:right}
+@media print{.atb,.hd div:last-child{display:none!important}.hy-wrap{border:0;overflow:visible}}
 .po-pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px}.po-pos h5{margin:0 0 5px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#8A7F98}
 .po-pos button{display:block;width:100%;text-align:left;border:1px solid var(--cline);background:var(--ccard);color:inherit;border-radius:12px;padding:7px 10px;font:inherit;cursor:pointer;margin-bottom:5px}
 .po-pos button b{display:block;font-size:.8rem}.po-pos button small{display:block;font-size:.68rem;color:#8A7F98}.po-pos button.psec{border-left:3px solid #1F5A96}
@@ -194,7 +211,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
   document.querySelectorAll("iframe.emb").forEach(f => { try { f.contentDocument.documentElement.setAttribute("data-theme", t); } catch {} }); }
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#hm").slice(1), UF = "all", UQ = "", USERS = null;
-const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
+const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["hy", "🌳", "Hierarchy"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
   ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["lp", "🧭", "Positions & landing pages"], ["is", "🚨", "Incident Report settings"], ["ws", "🎚", "Tool switches & folders"], ["rp", "📑", "Reports"], ["bk", "💾", "Data & backup"],
   ["sep", "Content"], ["em", "📮", "Email Control"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
@@ -236,7 +253,7 @@ function go(p){
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE)); if (LAY) drawNav();
   const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ hm, ss, ov, pr, us, ur, sec, hi, al, db, sy, mb, ws, lp, is, rp, pc, tl, bk, ex, an, fc, se, mm, em })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ hm, ss, ov, pr, hy, us, ur, sec, hi, al, db, sy, mb, ws, lp, is, rp, pc, tl, bk, ex, an, fc, se, mm, em })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -260,7 +277,7 @@ const PG = () => Object.fromEntries(NAV.filter(n => n[0] !== "sep").map(n => [n[
 const SEC_ICON = { People: "👥", Platform: "⚙️", Content: "📣" };
 const PDESC = { em: "Every email the hub sends — ON / OFF", ov: "Today at a glance", pr: "Positions, roles and flagships", us: "Accounts, sign-in and access", ur: "Who uses which tool", sec: "Sign-ins and two-step", hi: "Every change, by whom",
   al: "Free-plan allowances", db: "Tables and file storage", sy: "Connected systems and automatic jobs", mb: "Emails imported from IT reports", pc: "Projects and repositories", ss: "One hub account for Snaglist, Incidents, Restroom", tl: "Switch tools on / off, folders",
-  ws: "Each tool on / off and its folder", is: "Who receives the Incident Report emails", lp: "Each position: tools, home page, emails, system rights — per flagship", rp: "Build, schedule and send reports", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
+  ws: "Each tool on / off and its folder", hy: "The live hierarchy — who holds each position, vacancies", is: "Who receives the Incident Report emails", lp: "Each position: tools, home page, emails, system rights — per flagship", rp: "Build, schedule and send reports", bk: "Backups and clean-up", ex: "Tenant pages and email templates", an: "Pop-ups for the hub users", fc: "Cover photos of the flagships", se: "Seasonal decorations", mm: "Lines above the daily brief" };
 function defaultLayout(){
   const sections = []; let cur = { id: "s-glance", name: "At a glance", icon: "🏠", size: "card", closed: false, items: [] };
   for (const n of NAV){ if (n[0] === "sep"){ if (cur.items.length) sections.push(cur); cur = { id: "s-" + n[1].toLowerCase().replace(/[^a-z]+/g, ""), name: n[1], icon: SEC_ICON[n[1]] || "", size: "card", closed: false, items: [] }; } else cur.items.push(n[0]); }
@@ -1024,6 +1041,49 @@ function lpDraw(){
   $("#lpPrev").onclick = () => { try { localStorage.setItem("hub.briefAs", JSON.stringify(LPP)); localStorage.setItem("hub.briefFold", "false"); } catch {}
     if (LPW[lpWK()] && JSON.stringify(LPW[lpWK()]) !== JSON.stringify(lpSaved())) toast("Preview shows the SAVED page — save first to see your changes");
     window.open("/", "_blank"); };
+}
+
+/* ---------- Hierarchy (Nov 2026): the ABC hierarchy drawn live from the hub accounts ----------
+   Property Advisor → Mall Director (malls) · Head of Security · CDSO (department stores) → each flagship:
+   Mall Manager → Operations Manager → operations team, and the Security Manager → security staff. Red = vacant.
+   Click a box → that position (and flagship) in Positions & landing pages. */
+async function hy(){
+  const U = await api("admin/users"), L = (U.users || []).filter(u => u.active && u.role !== "EXTERNAL"), S = U.sites;
+  const keyOf = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? u.role : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
+    : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : "MO") : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : u.position === "SV" ? "SV" : "SEC") : null;
+  const of = (k, site) => L.filter(u => keyOf(u) === k && (!site || u.site === site));
+  let vac = 0;
+  const who = (list, max = 4) => list.length ? list.slice(0, max).map(u => `<span class="hy-p" title="${esc(u.email)}">${esc(u.name)}${u.positionLabel && ["Senior Mall Manager", "Deputy Operations Manager"].includes(u.positionLabel) ? ` <i>${esc(u.positionLabel)}</i>` : ""}</span>`).join("") + (list.length > max ? `<span class="hy-p mut">+${list.length - max} more</span>` : "") : "";
+  const box = (cls, title, sub, list, k, site, opt) => { const empty = !list.length && !opt; if (empty) vac++;
+    return `<div class="hy-n ${cls} ${empty ? "vac" : ""}" ${k ? `data-k="${k}" data-s="${site || "ALL"}" title="Open ${esc(title)} in Positions & landing pages"` : ""}><b>${esc(title)}</b>${sub ? `<small>${sub}</small>` : ""}${list.length ? `<div class="hy-ps">${who(list)}</div>` : empty ? `<em>Vacant</em>` : ""}</div>`; };
+  const team = site => { const T = [["SMS", "Senior Mall Supervisor"], ["MS", "Mall Supervisor"], ["MO", "Mall Officer"], ["WH", "Warehouse"]].map(([k, n]) => [k, n, of(k, site)]), all = T.flatMap(x => x[2]);
+    if (!all.length) vac++;
+    return `<div class="hy-n team ${all.length ? "" : "vac"}"><b>Operations team</b><small>${all.length} ${all.length === 1 ? "person" : "people"}</small>${T.map(([k, n, l]) => `<div class="hy-tr" data-k="${k}" data-s="${site}" title="Open ${n}"><span>${n}</span>${l.length ? `<span class="hy-tn">${l.map(u => esc(u.name)).join(", ")}</span>` : `<span class="hy-tn mut">—</span>`}</div>`).join("")}</div>`; };
+  const flag = site => `<li><div class="hy-n fl"><b>${esc(S[site].replace(/^ABC\s+/i, "").replace(/Department Store/, "DS"))}</b></div><ul>
+      <li>${box("", "Mall Manager", "or Senior / Deputy", of("MM", site), "MM", site)}<ul>
+        <li>${box("", "Operations Manager", "or Deputy", of("OM", site), "OM", site)}<ul><li>${team(site)}</li></ul></li>
+        <li>${box("hs", "Security Manager", "or Deputy · 📨 this flagship's emails", of("SECM", site), "SECM", site)}<ul><li>${box("hs", "Security staff", "", of("SEC", site), "SEC", site, true)}</li></ul></li>
+      </ul></li></ul></li>`;
+  const smAll = Object.keys(S).map(c => [c, of("SECM", c)]);
+  const tree = `<ul><li>${box("top", "Property Advisor", "all 5 flagships", of("ADVISOR"), "ADVISOR")}<ul>
+      <li>${box("lead", "Mall Director", "Verdun Mall · Achrafieh Mall", of("DIRECTOR"), "DIRECTOR")}<ul>${["VRM", "ACM"].filter(c => S[c]).map(flag).join("")}</ul></li>
+      <li>${box("hsl", "Head of Security", "all 5 flagships", of("HOS"), "HOS")}<ul><li><div class="hy-n hs"><b>Security Managers</b><small>one per flagship</small>${smAll.map(([c, l]) => `<div class="hy-tr" data-k="SECM" data-s="${c}"><span>${esc(S[c].replace(/^ABC\s+/i, "").replace(/Department Store/, "DS"))}</span><span class="hy-tn ${l.length ? "" : "t-bad"}">${l.length ? l.map(u => esc(u.name)).join(", ") : "Vacant"}</span></div>`).join("")}</div>
+        <ul><li>${box("hs", "Site Visit Officer", "1 person · all 5 flagships", of("SV"), "SV")}</li></ul></li></ul></li>
+      <li>${box("lead", "CDSO", "Department stores", of("CDSO"), "CDSO")}<ul>${["ACS", "VRS", "DBS"].filter(c => S[c]).map(flag).join("")}</ul></li>
+    </ul></li></ul>`;
+  const admins = L.filter(u => u.role === "ADMIN"), noPos = L.filter(u => u.role !== "ADMIN" && !keyOf(u));
+  V(head("Hierarchy", "Live from the hub accounts — who holds each position at each flagship. Red = vacant. Click a box to set what that position sees and does.",
+      `<button class="b g" onclick="go('lp')">🧭 Positions &amp; landing pages</button><button class="b g" onclick="go('us')">👥 Users &amp; access</button><button class="b g" id="hyZo" title="Smaller">－</button><button class="b g" id="hyFit">Fit</button><button class="b g" id="hyZi" title="Bigger">＋</button><button class="b g" onclick="window.print()">🖨 Print</button>`) +
+    `<div class="hy-leg"><span><i style="background:#2A0F45"></i>Leadership</span><span><i style="background:#FFFBEF;border-color:#C8A24A"></i>Flagship</span><span><i style="border-color:#6B3FA0"></i>Operations line</span><span><i style="background:#EEF4FC;border-color:#1F5A96"></i>Security line</span><span><i style="background:#FDECEA;border-color:#C0392B;border-style:dashed"></i>Vacant</span>
+      <b style="margin-left:auto">${L.length} active people · <span class="${vac ? "t-bad" : "t-ok"}">${vac} vacant</span></b></div>
+    <div class="hy-wrap"><div class="hy-tree">${tree}</div></div>
+    <p class="mut" style="font-size:.78rem;margin-top:10px">Administrators: ${admins.map(u => esc(u.name)).join(", ") || "—"}${noPos.length ? ` · Not in the hierarchy: ${noPos.map(u => esc(u.name)).join(", ")}` : ""}</p>`);
+  /* zoom: fits the screen on open, － / ＋ to change */
+  const T = $("#main .hy-tree"), W = $("#main .hy-wrap"); let z = 1;
+  const setZ = v => { z = Math.max(.4, Math.min(1.4, v)); T.style.zoom = z; };
+  const fit = () => { T.style.zoom = 1; setZ(Math.min(1, (W.clientWidth - 8) / T.scrollWidth)); };
+  fit(); $("#hyFit").onclick = fit; $("#hyZo").onclick = () => setZ(z - .1); $("#hyZi").onclick = () => setZ(z + .1);
+  $("#main").querySelectorAll("[data-k]").forEach(e => e.onclick = ev => { ev.stopPropagation(); LPP = e.dataset.k; HMP = e.dataset.k; LPS = e.dataset.s || "ALL"; go("lp"); });
 }
 
 /* ---------- Incident Report settings (Nov 2026, docs/FEATURE-positions.md) ----------
