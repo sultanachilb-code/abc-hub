@@ -7,12 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" > o.json 2> e.txt || true
-            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,1800))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
-          echo "::notice title=meta::$(q "SELECT k, substr(v,1,400) AS v FROM meta WHERE k IN ('sso:policy','sso:hubonly-nov26','pos:cfg','tools:cfg')")"
-          echo "::notice title=sultan::$(q "SELECT email, role, position, site_code, sites, active, substr(sys,1,300) AS sys FROM users WHERE email LIKE 'sultan%' OR email LIKE 'salaachi%'")"
-          echo "::notice title=snaghealth::$(curl -s -m 20 -o /dev/null -w '%{http_code}' https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1) root $(curl -s -m 20 -o /dev/null -w '%{http_code}' https://abc-snaglist.sultanalachi-work.workers.dev/) body $(curl -s -m 20 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 200)"
-          echo "::notice title=snagsso::$(curl -s -m 20 -o /dev/null -w '%{http_code} %{redirect_url}' 'https://abc-snaglist.sultanalachi-work.workers.dev/?sso=abc.def')"
+          q(){ npx -y wrangler@4 d1 execute "$1" --remote --json --command "$2" > o.json 2> e.txt || true
+            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,1800))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,400).replace(/\n/g," "))}'; }
+          echo "::notice title=accounts::$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts | head -c 600)"
+          export CLOUDFLARE_ACCOUNT_ID=61f649b35159d4a26df7dde3c09a91dd
+          echo "::notice title=snagschema-hubacct::$(q abc-snaglist "SELECT sql FROM sqlite_master WHERE name='users'")"
+          echo "::notice title=snaguser-hubacct::$(q abc-snaglist "SELECT email, role, site_code, sites, active, substr(hub_rights,1,200) AS r, last_login_at FROM users WHERE email LIKE 'salaachi%' OR role='ADMIN'")"
