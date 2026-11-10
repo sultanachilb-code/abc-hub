@@ -10,6 +10,9 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          Q="SELECT k, substr(v,1,300) AS v FROM meta WHERE k IN ('sso:policy','sso:hubonly-nov26','pos:cfg','inc:cfg','landing:site')"
-          npx -y wrangler@4 d1 execute hub-db --remote --json --command "$Q" > o.json 2> e.txt || true
-          echo "::notice title=acm::$(node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results[0]))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}')"
+          q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" > o.json 2> e.txt || true
+            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,1800))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
+          echo "::notice title=meta::$(q "SELECT k, substr(v,1,400) AS v FROM meta WHERE k IN ('sso:policy','sso:hubonly-nov26','pos:cfg','tools:cfg')")"
+          echo "::notice title=sultan::$(q "SELECT email, role, position, site_code, sites, active, substr(sys,1,300) AS sys FROM users WHERE email LIKE 'sultan%' OR email LIKE 'salaachi%'")"
+          echo "::notice title=snaghealth::$(curl -s -m 20 -o /dev/null -w '%{http_code}' https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1) root $(curl -s -m 20 -o /dev/null -w '%{http_code}' https://abc-snaglist.sultanalachi-work.workers.dev/) body $(curl -s -m 20 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 200)"
+          echo "::notice title=snagsso::$(curl -s -m 20 -o /dev/null -w '%{http_code} %{redirect_url}' 'https://abc-snaglist.sultanalachi-work.workers.dev/?sso=abc.def')"
