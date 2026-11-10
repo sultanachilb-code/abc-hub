@@ -7,4 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::notice title=snag::$(curl -s -m 20 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 200) boot $(curl -s -m 20 https://abc-snaglist.sultanalachi-work.workers.dev/ | grep -c "hadCache")"
+          echo "::notice title=snag::$(curl -s -m 30 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 800)"
