@@ -626,6 +626,7 @@ export default {
     }
     /* "Sign in with ABC Hub" from a system's own website: signed in → straight back with a pass; otherwise the hub's sign-in first */
     if (url.pathname === "/sso") return ssoPage(request, env, url);
+    if (url.pathname === "/viewas-stop") return new Response(null, { status: 302, headers: { location: "/admin", "cache-control": "no-store", "set-cookie": "hub_viewas=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" } });   // View as: way out from any screen
     /* Admin Control Center */
     if (url.pathname === "/admin" || url.pathname === "/admin/") return env.ASSETS.fetch(new Request(new URL("/tools/admin", url), request));
     /* Marketing Participation: the tenant's answer page (no hub account) */

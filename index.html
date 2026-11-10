@@ -1331,8 +1331,8 @@ async function boot(){
     return authScreen("error", e.message);
   }
   SITES = ME.sites; ROLES = ME.roles;
-  if (ME.user.mustChange) return authScreen("change");
-  if (ME.user.twofa && ME.user.twofa.setupNeeded) return twofaSetupScreen();   // Two-step login feature: required for this role
+  if (ME.user.mustChange && !ME.viewAs) return authScreen("change");   // View as: the person's own first-time steps never block the administrator
+  if (ME.user.twofa && ME.user.twofa.setupNeeded && !ME.viewAs) return twofaSetupScreen();   // Two-step login feature: required for this role
   /* "Sign in with ABC Hub" from Snaglist / Incidents / Restroom: signed in → straight back to that system */
   const ssoTo = new URLSearchParams(location.search).get("sso");
   if (ssoTo && /^[a-z-]{2,30}$/.test(ssoTo)) return location.replace("/sso?app=" + encodeURIComponent(ssoTo));
