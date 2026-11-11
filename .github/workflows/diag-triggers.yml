@@ -7,4 +7,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::notice title=snag::$(curl -s -m 30 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 12000 > h.json; node -e "const j=require(\"./h.json\");console.log(j.data.version, JSON.stringify(j.data.fix.lists))")"
+          curl -s -m 30 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 > h.json
+          node -e 'const j=require("./h.json");const L=j.data.fix.lists.map(r=>[r[0],r[1].replace(/[\n\r|]/g," "),r[5],r[6]].join("~"));for(let i=0;i<L.length;i+=12)console.log("::notice title=p"+String(i/12).padStart(2,"0")+"::"+L.slice(i,i+12).join(" ^ "))'
