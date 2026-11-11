@@ -7,4 +7,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::notice title=snag::$(curl -s -m 30 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 800)"
+          echo "::notice title=snag::$(curl -s -m 30 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 | head -c 12000 > h.json; node -e "const j=require(\"./h.json\");console.log(j.data.version, JSON.stringify(j.data.fix.lists))")"
