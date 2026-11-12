@@ -1475,6 +1475,7 @@ function startHub(){
     .filter(a => { const c = TC[a.id];
       if (role === "ADMIN" || ME.admin) return true;   // administrators see every tool (to test), also with their real role
       if (c && c.off) return false;                     // Tools control: switched off
+      const ov = (ME.toolsOv || {})[a.id]; if (ov) return !!ov[0];   // Positions & landing pages → Who sees what (position · flagship · this person)
       if (c && Array.isArray(c.access)) return c.access.includes(key);   // Who sees what / Tools control: chosen positions
       return (a.group === "Upcoming - Testing" && !TEST_ADMIN.includes(a.id)) || !ACC[a.id] || ACC[a.id].includes(key); });
   if (ME.viewAs && !document.getElementById("vaBar")) {   // Admin Control: View as (read-only)
@@ -1483,6 +1484,7 @@ function startHub(){
     v.innerHTML = `<span>👁 Viewing as <b>${esc(ME.user.name)}</b> · ${esc(ME.user.positionLabel || ME.user.roleLabel)} — read-only</span><button style="border:0;border-radius:10px;padding:7px 11px;font:inherit;font-weight:800;background:#E9CF8A;color:#2A0F45;cursor:pointer">Back to my admin</button>`;
     v.querySelector("button").onclick = async () => { await fetch("/api/viewas-stop", { method: "POST" }).catch(() => {}); location.href = "/admin"; };
     document.body.append(v);
+    vaTools(v, role);
   }
   $("#hubTitle").textContent = H.title;
   if (ME.admin && !ME.viewAs) {   // the ABC logo: administrators open the hub as administrator (password), then the Control Center
@@ -3373,6 +3375,51 @@ $("#list").addEventListener("click", e => {
 }, true);
 
 /* ---------- tiles ---------- */
+/* View as → hide / show tools right from the person's home screen (Nov 2026). Saved as the administrator; read-only for everything else. */
+function vaTools(bar, role){
+  const VA = ME.viewAs, SEL = ".tile[data-id],.fapp[data-id],.orbit-it[data-id],.tfab-it[data-id],.d2d-c[data-id],.brow[data-id],[data-hl]";
+  if (!document.getElementById("vaCss")) { const st = document.createElement("style"); st.id = "vaCss";
+    st.textContent = `body.vaEdit ${SEL.split(",").join(",body.vaEdit ")}{outline:2px dashed #C0392B;outline-offset:3px;border-radius:14px;position:relative}
+body.vaEdit .fapp[data-id]::after,body.vaEdit .tile[data-id]::after,body.vaEdit .d2d-c[data-id]::after,body.vaEdit [data-hl]::after{content:"✕ Hide";position:absolute;top:-8px;right:-6px;background:#C0392B;color:#fff;font:800 10px/1 system-ui;padding:4px 6px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.vaPop{position:fixed;inset:0;z-index:10000;background:rgba(20,8,35,.45);display:grid;place-items:center;padding:16px}
+.vaPop>div{background:#fff;color:#2A0F45;border-radius:16px;padding:16px;width:min(420px,100%);max-height:80vh;overflow:auto;display:grid;gap:8px;box-shadow:0 20px 50px rgba(0,0,0,.35);font-size:.86rem}
+.vaPop button{border:1px solid #E6E1EC;background:#F7F4FA;color:#2A0F45;border-radius:11px;padding:9px 11px;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.vaPop button.pri{background:#6B3FA0;color:#fff;border-color:#6B3FA0}.vaPop .mut{color:#6D6479;font-size:.76rem;font-weight:500}
+.vaRow{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #F0ECF4;padding:6px 0}`;
+    document.head.append(st); }
+  const B = (t, bg, fg) => `<button style="border:0;border-radius:10px;padding:7px 11px;font:inherit;font-weight:800;background:${bg};color:${fg};cursor:pointer;white-space:nowrap">${t}</button>`;
+  const wrap = document.createElement("span"); wrap.style.cssText = "display:flex;gap:6px";
+  const hiddenIds = () => ALL_APPS.filter(a => !(H.ADMIN_GROUPS || []).includes(a.group) && !APPS.some(x => x.id === a.id)).map(a => a.id);
+  wrap.innerHTML = B("✎ Hide tools", "#C0392B", "#fff") + B(`Hidden · ${hiddenIds().length}`, "#4A1F73", "#fff") + (VA.pos ? B("⚙ Position", "#4A1F73", "#fff") : "");
+  bar.insertBefore(wrap, bar.lastElementChild);
+  const [eB, hB, pB] = wrap.querySelectorAll("button");
+  eB.onclick = () => { const on = document.body.classList.toggle("vaEdit"); eB.textContent = on ? "✓ Done" : "✎ Hide tools"; if (on) toast("Click any tool to hide it from this person"); };
+  if (pB) pB.onclick = async () => { try { sessionStorage.setItem("lpPick", JSON.stringify({ key: VA.pos, site: VA.site })); } catch (e) {}
+    await fetch("/api/viewas-stop", { method: "POST" }).catch(() => {}); location.href = "/admin#lp"; };
+  const pop = html => { const p = document.createElement("div"); p.className = "vaPop"; p.innerHTML = `<div>${html}</div>`; p.onclick = e => { if (e.target === p || e.target.closest("[data-x]")) p.remove(); }; document.body.append(p); return p; };
+  const nm = id => { const a = ALL_APPS.find(x => x.id === id); return a ? a.name : id; };
+  const save = async (app, scope, show) => {
+    try { const r = await fetch("/api/viewas/tool", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ app, scope, show }) }).then(r => r.json());
+      if (!r.ok) throw new Error(r.error || "Could not save");
+      toast(`${nm(app)} ${show === false ? "hidden" : "shown again"}`); setTimeout(() => location.reload(), 500);
+    } catch (e) { toast(e.message, true); } };
+  const scopes = show => [["person", `Just ${esc(ME.user.name)}`, "an exception for this person only"],
+    ...(VA.pos && VA.site ? [["site", `${esc(ME.user.positionLabel || "This position")} · ${esc(VA.siteName)}`, "everyone in this position at this flagship"]] : []),
+    ...(VA.pos ? [["pos", `${esc(ME.user.positionLabel || "This position")} · ${VA.site ? "all flagships" : "everywhere"}`, "everyone in this position"]] : [])]
+    .map(([k, t, d]) => `<button data-s="${k}" ${k === "person" ? "" : ""}>${show ? "Show to" : "Hide from"} ${t}<br><span class="mut">${d}</span></button>`).join("");
+  const ask = (app, show) => { const p = pop(`<b style="font-size:.95rem">${show ? "Show" : "Hide"} “${esc(nm(app))}”</b>${scopes(show)}<button data-x class="mut" style="text-align:center">Cancel</button>`);
+    p.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { p.remove(); save(app, b.dataset.s, show); }); };
+  document.addEventListener("click", e => { if (!document.body.classList.contains("vaEdit")) return;
+    const t = e.target.closest(SEL); if (!t || e.target.closest("#vaBar,.vaPop")) return;
+    e.preventDefault(); e.stopImmediatePropagation(); ask(t.dataset.hl || t.dataset.id, false); }, true);
+  hB.onclick = () => { const ov = ME.toolsOv || {}, TC = ME.tools || {};
+    const rows = hiddenIds().map(id => { const o = ov[id], off = TC[id] && TC[id].off;
+      const why = off ? "Switched off for everyone (Tools control)" : o ? ({ person: "Hidden for this person", site: "Hidden for the position at this flagship", pos: "Hidden for the position" })[o[1]] : "Not part of this position";
+      return `<div class="vaRow"><span><b>${esc(nm(id))}</b><br><span class="mut">${why}</span></span>${off ? "" : `<button data-show="${esc(id)}" class="pri" style="padding:6px 10px">Show</button>`}</div>`; }).join("");
+    const p = pop(`<b style="font-size:.95rem">Hidden from ${esc(ME.user.name)}</b>${rows || `<span class="mut">Nothing hidden.</span>`}<button data-x class="mut" style="text-align:center">Close</button>`);
+    p.querySelectorAll("[data-show]").forEach(b => b.onclick = () => { const id = b.dataset.show, o = ov[id]; p.remove();
+      if (o && o[1] === "person") save(id, "person", null); else ask(id, true); }); };
+}
 function tile(a){
   const ready = appReady(a);
   const b = badgeOf(a);

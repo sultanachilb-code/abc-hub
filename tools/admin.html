@@ -849,6 +849,8 @@ let LPD = null, LPP = "SECM", LPW = {}, LDR = null, HMD = null, HMP = "SECM", HD
 async function lp(){
   const ids = ((window.HUB || {}).APPS || []).map(a => a.id).join(",");
   [LPD, HMD, POSD] = await Promise.all([api("admin/cc/lp"), api("admin/cc/home").catch(() => null), api("admin/cc/pos?apps=" + encodeURIComponent(ids))]); LPW = {};
+  try { const pk = JSON.parse(sessionStorage.getItem("lpPick") || "null"); sessionStorage.removeItem("lpPick");   // View as → "Edit this position"
+    if (pk && POSD.pos[pk.key]) { LPP = HMP = pk.key; LPS = pk.site && POSD.sites && POSD.sites[pk.site] ? pk.site : "ALL"; } } catch (e) {}
   if (POSD.pos[LPP] && POSD.pos[LPP].multi) LPS = "ALL";
   lpDraw();
 }

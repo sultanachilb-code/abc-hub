@@ -10,7 +10,7 @@ export { PhoneHub } from "./modules/phone.js";
 import { chatSchema, chatRoute, chatDeps, chatSync, chatRun, chatPostTeam } from "./modules/chat.js";
 import { cleanSchema, cleanRoute, cleanPublic, cleanGate, cleanDay, cleanRun, clMode } from "./modules/cleaners.js";   // Cleaner Access (the Cleaner QR system in the hub) — docs/FEATURE-cleaner-access.md
 import { ffSchema, ffRoute, ffPublic, ffRun } from "./modules/footfall.js";   // Footfall: Liban Park daily car counts per flagship — docs/FEATURE-footfall.md
-import { posCfg, posCfgNow, posAdmin, toolOverride, autoRecipients, incAdmin, incServer, AUTO_MAILS } from "./modules/positions.js";   // Positions & landing pages + Incident Report settings — docs/FEATURE-positions.md
+import { posCfg, posCfgNow, posAdmin, toolOverride, toolOverrides, posPersonTool, posKeyOf as posKeyOfU, posSiteOf as posSiteOfU, autoRecipients, incAdmin, incServer, AUTO_MAILS } from "./modules/positions.js";   // Positions & landing pages + Incident Report settings — docs/FEATURE-positions.md
 import { ssoSchema, SSO_APPS, sysAccess, sysSummary, cleanSys, ssoServer, ssoEnd, extAllowed, ssoPolicy, ssoPolicySet, SNAG_ROLES, INC_ROLES, INC_POSITIONS } from "./modules/hubsso.js";   // One hub account for every system — docs/FEATURE-hub-sign-in.md
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
@@ -781,12 +781,27 @@ async function route(request, env, ctx, url) {
   await toolsCfg(env).catch(() => {});   // Admin Control: tools switched off / moved / limited (kept 60 s in memory)
   await posCfg(env).catch(() => {});   // Admin Control: Positions & landing pages (kept 30 s in memory)
   if (me.role === "EXTERNAL" && !extAllowed(path)) throw fail("External accounts open only the systems given to them", 403);
+  /* View as → hide / show a tile right from the person's home screen (saved as the administrator, not as the person) */
+  if (me._viewAs && path === "viewas/tool" && method === "POST") {
+    const adm = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(me._viewAs.email).first();
+    if (!adm || !adm.active || !isAdminUser(adm)) throw fail("Administrator access only", 403);
+    const app = String(body.app || ""), scope = String(body.scope || ""), val = typeof body.show === "boolean" ? body.show : null;
+    if (!/^[a-z0-9-]{2,40}$/.test(app)) throw fail("Unknown tool");
+    if (scope === "person") await posPersonTool(env, me.email, app, val, adm, { audit });
+    else {
+      const key = posKeyOfU(me); if (!key) throw fail("This person has no position — use “Just this person”");
+      const site = scope === "site" ? posSiteOfU(me) : "ALL"; if (scope === "site" && !site) throw fail("This person has no flagship — use “This position, all flagships”");
+      await posAdmin(env, "POST", { key, site, part: "tools", id: app, value: val }, adm, { SITES, audit, legacyAllows: (u, a2) => legacyAllows(u, a2), appIds: () => [], offApps: () => [] });
+    }
+    await posCfg(env, true);
+    return ok({ ov: toolOverrides(me) });
+  }
   if (me._viewAs && (method !== "GET" || path === "sso")) throw fail(`View as ${me.full_name} is read-only — press “Back to my admin” to make changes`, 403);
   if (path === "me") {
     const [roles, on] = await Promise.all([requiredRoles(env), twofaOn(env, me.email).catch(() => false)]);
     const effRole = me._real ? me._real.role : me.role;   // administrator mode: two-step follows the person's real role
     return ok({ user: { ...userOut(me), ...(me._adminMode ? { positionLabel: "Administrator", roleLabel: "Administrator" } : {}), twofa: { on, required: roles.includes(effRole), setupNeeded: !me._viewAs && roles.includes(effRole) && !on }, sys: sysSummary(me, ssoDeps) }, sites: SITES, roles: ROLES,
-      tools: toolsCfgNow(), viewAs: me._viewAs || null, landing: await hasLanding(env, me).catch(() => false), home: await homeFor(env, me).catch(() => null),
+      tools: toolsCfgNow(), toolsOv: toolOverrides(me), viewAs: me._viewAs ? { ...me._viewAs, pos: posKeyOfU(me), site: posSiteOfU(me), siteName: SITES[posSiteOfU(me)] || "" } : null, landing: await hasLanding(env, me).catch(() => false), home: await homeFor(env, me).catch(() => null),
       lkAlert: isAdminUser(me) ? await env.DB.prepare("SELECT v FROM meta WHERE k = 'pt:lkalert'").first().then(r => r ? JSON.parse(r.v) : null).catch(() => null) : null,
       admin: isAdminUser(me) ? { mode: !!me._adminMode || (me.role === "ADMIN" && !!me._admUnlocked), unlocked: !!me._admUnlocked, real: me._real || null, split: !!me.is_admin && (me._real ? me._real.role : me.role) !== "ADMIN" } : null });
   }
