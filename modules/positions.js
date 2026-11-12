@@ -86,10 +86,10 @@ export async function posCfg(env, fresh) {
   if (!fresh && CFG && Date.now() - CFG_AT < 30000) return CFG;
   const r = await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'pos:cfg'"));
   let v = {}; try { v = JSON.parse((r && r.v) || "{}"); } catch {}
-  CFG = { def: v.def || {}, site: v.site || {} }; CFG_AT = Date.now();
+  CFG = { def: v.def || {}, site: v.site || {}, person: v.person || {} }; CFG_AT = Date.now();
   return CFG;
 }
-export const posCfgNow = () => CFG || { def: {}, site: {} };
+export const posCfgNow = () => CFG || { def: {}, site: {}, person: {} };
 const dig = (o, ...k) => k.reduce((a, x) => (a && typeof a === "object" ? a[x] : undefined), o);
 
 /* a stored value (flagship first, then the default) — undefined when nothing is stored */
@@ -100,6 +100,8 @@ function stored(cfg, key, site, part, id, sub) {
 }
 /* Who sees what: true / false when set here, undefined → the old rules (Tools control, apps.js) decide */
 export function toolOverride(u, app) {
+  const p = dig(posCfgNow().person, String(u.email || "").toLowerCase(), "tools", app);   // View as → hide for this person only
+  if (typeof p === "boolean") return p;
   const k = posKeyOf(u); if (!k) return undefined;
   const v = stored(posCfgNow(), k, posSiteOf(u), "tools", app);
   return typeof v === "boolean" ? v : undefined;
@@ -122,6 +124,31 @@ export async function autoRecipients(env, kind, site, d) {
   const cfg = await posCfg(env);
   const { results } = await env.DB.prepare("SELECT email, role, position, site_code, sites FROM users WHERE active = 1 AND role IN ('MANAGER','SUPERVISOR','SECURITY','ADVISOR','DIRECTOR','CDSO')").all().catch(() => ({ results: [] }));
   return (results || []).filter(u => { const k = posKeyOf(u); return k && d.sitesOf(u).includes(site) && mailOn(k, POS[k].multi ? "" : site, kind, cfg); }).map(u => u.email);
+}
+
+/* every tile this person's position / flagship / own exception decides: { id: [shown, "person" | "site" | "pos"] } — the home screen applies it */
+export function toolOverrides(u) {
+  const cfg = posCfgNow(), out = {}, k = posKeyOf(u), s = posSiteOf(u);
+  if (k) {
+    for (const [id, v] of Object.entries(dig(cfg.def, k, "tools") || {})) if (typeof v === "boolean") out[id] = [v, "pos"];
+    if (s && !POS[k].multi) for (const [id, v] of Object.entries(dig(cfg.site, s, k, "tools") || {})) if (typeof v === "boolean") out[id] = [v, "site"];
+  }
+  for (const [id, v] of Object.entries(dig(cfg.person, String(u.email || "").toLowerCase(), "tools") || {})) if (typeof v === "boolean") out[id] = [v, "person"];
+  return out;
+}
+/* View as → hide / show a tile for this person only (null = back to the position's setting) */
+export async function posPersonTool(env, email, app, value, me, d) {
+  if (!/^[a-z0-9-]{2,40}$/.test(app)) throw err("Unknown tool");
+  const raw = await one(env.DB.prepare("SELECT v FROM meta WHERE k = 'pos:cfg'"));
+  let all = {}; try { all = JSON.parse((raw && raw.v) || "{}"); } catch {}
+  all.person = all.person || {}; const e = String(email).toLowerCase();
+  const box = ((all.person[e] = all.person[e] || {}).tools = all.person[e].tools || {});
+  if (typeof value === "boolean") box[app] = value; else delete box[app];
+  if (!Object.keys(box).length) delete all.person[e];
+  await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pos:cfg', ?)").bind(JSON.stringify({ def: all.def || {}, site: all.site || {}, person: all.person, at: new Date().toISOString(), by: me.full_name || me.email })).run();
+  CFG = null;
+  if (d && d.audit) await d.audit(env, { me, site: "", tool: "admin", ref: "positions", label: `Who sees what · ${e} · ${app} ${value === true ? "shown" : value === false ? "hidden" : "back to the position"}`, action: "update", changes: [] }).catch(() => {});
+  return { saved: true };
 }
 
 /* ---------- Admin Control → Positions & landing pages ---------- */
@@ -161,7 +188,7 @@ export async function posAdmin(env, method, b, me, d) {
     const prune = o => { for (const k of Object.keys(o)) { if (o[k] && typeof o[k] === "object") { prune(o[k]); if (!Object.keys(o[k]).length) delete o[k]; } } return o; };
     prune(all);
     all.at = new Date().toISOString(); all.by = me.full_name || me.email;
-    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pos:cfg', ?)").bind(JSON.stringify({ def: all.def || {}, site: all.site || {}, at: all.at, by: all.by })).run();
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pos:cfg', ?)").bind(JSON.stringify({ def: all.def || {}, site: all.site || {}, person: all.person || {}, at: all.at, by: all.by })).run();
     CFG = null;
     if (d.audit) await d.audit(env, { me, site: site || "", tool: "admin", ref: "positions", label: `Positions · ${POS[key].n}${site ? " · " + d.SITES[site] : ""} · ${b.reset ? "back to default" : b.part}`, action: "update", changes: [] }).catch(() => {});
     return { saved: true, cfg: await posCfg(env, true) };
