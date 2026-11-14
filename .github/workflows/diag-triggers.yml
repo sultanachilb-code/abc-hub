@@ -5,7 +5,13 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          curl -s -m 30 https://abc-snaglist.sultanalachi-work.workers.dev/api?health=1 > h.json
-          node -e 'const j=require("./h.json");const L=j.data.fix.lists.map(r=>[r[0],r[1].replace(/[\n\r|]/g," "),r[5],r[6]].join("~"));for(let i=0;i<L.length;i+=12)console.log("::notice title=p"+String(i/12).padStart(2,"0")+"::"+L.slice(i,i+12).join(" ^ "))'
+          q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" > o.json 2> e.txt || true
+            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,1800))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
+          echo "::notice title=mbcfg::$(q "SELECT k, substr(v,1,400) v FROM meta WHERE k LIKE 'mb:%' OR k LIKE 'rmb%' OR k LIKE 'ms:rmb%'")"
+          echo "::notice title=mblog::$(q "SELECT received, substr(subject,1,60) s, substr(result,1,80) r, ok FROM mb_log ORDER BY received DESC LIMIT 8")"
+          echo "::notice title=keys::$(q "SELECT k FROM meta WHERE k LIKE '%rmb%' OR k LIKE '%mailbox%' OR k LIKE 'ms:%'")"
