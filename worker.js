@@ -1494,7 +1494,10 @@ const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 async function opsGroups(env) {
   const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'opsgroups'").first().catch(() => null);
   let g = {}; try { g = r ? JSON.parse(r.v) : {}; } catch {}
-  return Object.fromEntries(Object.keys(SITES).map(c => [c, { emails: (g[c] && g[c].emails) || [], auto: g[c] ? g[c].auto !== false : true, cctv: (g[c] && g[c].cctv) || [] }]));
+  /* Nov 2026: two recipient lists — OPS handover (AM · Mid · Night) = emails; OPS+CCTV handover (PM) = pm.
+     Before the split, PM went to emails + cctv: that is the starting PM list until it is saved. */
+  return Object.fromEntries(Object.keys(SITES).map(c => { const x = g[c] || {}, emails = x.emails || [], cctv = x.cctv || [];
+    return [c, { emails, auto: g[c] ? x.auto !== false : true, cctv, pm: Array.isArray(x.pm) ? x.pm : [...new Set([...emails, ...cctv])] }]; }));
 }
 async function saveOpsGroup(env, b) {
   const site = String(b.site || "").toUpperCase();
@@ -1502,23 +1505,26 @@ async function saveOpsGroup(env, b) {
   const emails = [...new Set(String(b.emails || "").split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean))];
   const bad = emails.find(e => !EMAIL_RE.test(e));
   if (bad) throw fail(`Not a valid email: ${bad}`);
-  if (emails.length > 5) throw fail("Up to 5 group emails per flagship");
+  if (emails.length > 15) throw fail("Up to 15 emails for the OPS handover");
   /* CCTV room emails: added to the PM handover email (Oct 2026) */
   const cctv = [...new Set(String(b.cctv || "").split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean))];
   const badC = cctv.find(e => !EMAIL_RE.test(e));
   if (badC) throw fail(`Not a valid CCTV email: ${badC}`);
   if (cctv.length > 5) throw fail("Up to 5 CCTV emails per flagship");
   const g = await opsGroups(env);
-  g[site] = { emails, auto: !!b.auto, cctv: b.cctv === undefined ? (g[site] && g[site].cctv) || [] : cctv };
+  let pm = b.pm === undefined ? g[site].pm : [...new Set(String(b.pm || "").split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean))];
+  const badP = pm.find(e => !EMAIL_RE.test(e)); if (badP) throw fail(`Not a valid email (OPS+CCTV handover): ${badP}`);
+  if (pm.length > 15) throw fail("Up to 15 emails for the OPS+CCTV handover");
+  g[site] = { emails, auto: !!b.auto, cctv: b.cctv === undefined ? (g[site] && g[site].cctv) || [] : cctv, pm };
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('opsgroups', ?)").bind(JSON.stringify(g)).run();
   return { opsGroups: g };
 }
 async function handoverRecipients(env, site, shift) {
   const g = (await opsGroups(env))[site];
-  const cctv = shift === "PM" ? g.cctv || [] : [];   // the PM handover also goes to the CCTV room
+  const cctv = shift === "PM" ? g.pm.filter(e => !g.emails.includes(e)) : [];   // PM = OPS+CCTV handover (its own list)
   const { results } = await env.DB.prepare("SELECT email, full_name, position FROM users WHERE active = 1 AND role = 'MANAGER' AND site_code = ?").bind(site).all();
   const mgrs = (results || []).filter(u => TITLES[u.position]).sort((a, b) => TITLES[a.position].rank - TITLES[b.position].rank);
-  const to = [...new Set([...g.emails, ...cctv])], cc = mgrs.map(u => u.email.toLowerCase()).filter(e => !to.includes(e));
+  const to = shift === "PM" ? [...g.pm] : [...g.emails], cc = mgrs.map(u => u.email.toLowerCase()).filter(e => !to.includes(e));
   return { auto: g.auto, relay: !!(env.MAIL_RELAY_URL && env.MAIL_RELAY_KEY), to: to.length ? to : cc.slice(0, 1), cc: to.length ? cc : cc.slice(1), cctv,
     names: mgrs.map(u => ({ email: u.email, name: u.full_name, title: TITLES[u.position].label })), group: g.emails };
 }
@@ -2505,7 +2511,7 @@ async function opsRoute(env, me, p, method, b, url) {
         }
       }
     }
-    const shiftInfo = { shifts: await handoverShifts(env, site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN", cctvMail: (await opsGroups(env))[site].cctv };
+    const shiftInfo = { shifts: await handoverShifts(env, site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN", cctvMail: (await opsGroups(env))[site].pm, opsMail: (await opsGroups(env))[site].emails };
     if (same) return { handover: handoverOut(same), can, existing: true, ...shiftInfo };
     const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first()
       || await env.DB.prepare("SELECT * FROM handovers WHERE site = ? ORDER BY day DESC, id DESC LIMIT 1").bind(site).first();
@@ -2537,7 +2543,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "handover/get") {
     const h = await env.DB.prepare("SELECT * FROM handovers WHERE id = ?").bind(Number(q("id")) || 0).first();
     if (!h || !canSite(me, h.site)) throw fail("Handover not found", 404);
-    return { handover: handoverOut(h), can: rights(me, h.site), shifts: await handoverShifts(env, h.site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN", cctvMail: (await opsGroups(env))[h.site].cctv };
+    return { handover: handoverOut(h), can: rights(me, h.site), shifts: await handoverShifts(env, h.site), shiftNames: HO_SHIFTS, admin: me.role === "ADMIN", cctvMail: (await opsGroups(env))[h.site].pm, opsMail: (await opsGroups(env))[h.site].emails };
   }
   if (p === "handover/shifts" && method === "POST") {   // administrators choose the flagship's handover shifts
     if (me.role !== "ADMIN") throw fail("Only an administrator can change the handover shifts", 403);
