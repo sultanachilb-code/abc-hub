@@ -167,7 +167,7 @@ async function openDay(day){
   try {
     const d = await api(`ops/handover/new?site=${CTX.site}&day=${day}`);
     if (d.existing) return open(d.handover.id);
-    H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin; H.cctvMail = d.cctvMail || [];
+    H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin; H.cctvMail = d.cctvMail || []; H.opsMail = d.opsMail || [];
     dirty = true; LIVE = null; setBase(H); render(); loadLive();
     if (H.can.handover) save(false, true);
   } catch (e){ app.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
@@ -207,7 +207,7 @@ async function history(){
   run();
 }
 async function open(id){
-  const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin; H.cctvMail = d.cctvMail || [];
+  const d = await api(`ops/handover/get?id=${id}`); H = d.handover; H.can = d.can; H.shifts = d.shifts; H.shiftNames = d.shiftNames; H.admin = d.admin; H.cctvMail = d.cctvMail || []; H.opsMail = d.opsMail || [];
   setTabs(BACK === "hist" || H.day !== CTX.today ? "hist" : "today");
   dirty = false; LIVE = null; setBase(H); PENDING = null; render(); loadLive();
 }
@@ -238,7 +238,7 @@ function redraw(){
   };
 }
 function adopt(h){
-  const keep = { can: H.can, shifts: H.shifts, shiftNames: H.shiftNames, admin: H.admin, cctvMail: H.cctvMail }, done = redraw();
+  const keep = { can: H.can, shifts: H.shifts, shiftNames: H.shiftNames, admin: H.admin, cctvMail: H.cctvMail, opsMail: H.opsMail }, done = redraw();
   H = Object.assign(h, keep); setBase(h); dirty = false; PENDING = null;
   done();
   const m = $("#savedMsg"); if (m && h.updatedName) m.textContent = `Updated live · ${h.updatedName} ${hm(h.updatedAt)}`;
@@ -787,10 +787,10 @@ function emlFile(){
   const { title, html } = mailHtml();
   const subj = "=?UTF-8?B?" + btoa(String.fromCharCode(...new TextEncoder().encode(title))) + "?=";
   const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
-  const to = MAIL_SHIFT === "PM" ? (H.cctvMail || []).join(", ") : "";   // the PM handover goes to the CCTV room (Hub administration → ABC Operations Groups)
+  const to = (MAIL_SHIFT === "PM" ? H.cctvMail || [] : H.opsMail || []).join(", ");   // OPS handover (AM · Mid) / OPS+CCTV handover (PM) — Admin → People & roles
   return { title, text: [`To: ${to}`, `Subject: ${subj}`, "X-Unsent: 1", "MIME-Version: 1.0", "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64utf8(doc)].join("\r\n") };
 }
-const mailSubjHtml = () => `<span class="muted">Subject:</span> <b>${esc(mailSubject())}</b>${MAIL_SHIFT === "PM" && (H.cctvMail || []).length ? `<br><span class="muted">To (CCTV):</span> <b>${esc(H.cctvMail.join(", "))}</b>` : ""}`;
+const mailSubjHtml = () => `<span class="muted">Subject:</span> <b>${esc(mailSubject())}</b>${(MAIL_SHIFT === "PM" ? H.cctvMail || [] : H.opsMail || []).length ? `<br><span class="muted">To (${MAIL_SHIFT === "PM" ? "OPS+CCTV" : "OPS"}):</span> <b>${esc((MAIL_SHIFT === "PM" ? H.cctvMail : H.opsMail).join(", "))}</b>` : ""}`;
 async function mailDialog(){
   if (!LIVE || LIVE.error) await loadLive();
   { const S = H.shifts || ["AM", "PM"], L = H.handoffs || [], nx = S.find(c => !L.some(x => x.shift === c)) || S[S.length - 1]; MAIL_SHIFT = shName(nx); }

@@ -1322,10 +1322,12 @@ async function pr(){
     main = `<div class="fg"><h4>Flagship management <small>one person per position</small></h4>${slot("MM", "MM")}${slot("OM", "OM")}${extra.map(row).join("")}</div>`
       + grp("Operations team", team, ACCESS_NOTE.SUPERVISOR, { role: "SUPERVISOR", site, position: "MO" }) + grp("Security", at.filter(u => u.role === "SECURITY"), "", { role: "SECURITY", site })
       + `<div class="fg"><h4>Leadership with access</h4><p class="mut">${leaders.map(u => `<b>${esc(u.name)}</b> · ${esc(u.roleLabel)}`).join("<br>") || "No Property Advisor, Mall Director or CDSO has this flagship yet."}</p></div>`
-      + `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))"><div class="card"><h3>ABC Operations Group · handover email</h3>
-          <div class="frm" style="grid-template-columns:1fr"><input id="ogE" placeholder="Group email, e.g. abcverdunoperations@abc.com.lb" value="${esc(og.emails.join(", "))}"><input id="ogC" placeholder="CCTV emails · PM handover (comma separated)" value="${esc((og.cctv || []).join(", "))}"></div>
+      + `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))"><div class="card"><h3>Handover recipients</h3>
+          <div class="frm" style="grid-template-columns:1fr">
+            <label class="mut" style="font-weight:800;color:var(--ink,#2A0F45)">OPS handover · AM &amp; Mid shifts<textarea id="ogE" rows="3" placeholder="One per line or ; e.g. abcverdunoperations@abc.com.lb">${esc(og.emails.join(";\n"))}</textarea></label>
+            <label class="mut" style="font-weight:800;color:var(--ink,#2A0F45)">OPS+CCTV handover · PM shift<textarea id="ogP" rows="3" placeholder="One per line or ; — operations group + CCTV room">${esc((og.pm || []).join(";\n"))}</textarea></label></div>
           <label class="mut" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ogA" ${og.auto ? "checked" : ""}> Email the handover automatically when it is handed over</label>
-          <div class="sub">Cc: ${[mm, om].filter(Boolean).map(u => esc(u.name)).join(" · ") || "no Mall Manager / Operations Manager"}</div><button class="b" style="margin-top:8px" id="ogS">Save group</button></div>
+          <div class="sub">Cc on both: ${[mm, om].filter(Boolean).map(u => esc(u.name)).join(" · ") || "no Mall Manager / Operations Manager"}</div><button class="b" style="margin-top:8px" id="ogS">Save recipients</button></div>
         <div class="card" id="scBox"><h3>Weekly schedule email · Sunday</h3><p class="mut">Loading…</p></div></div>`;
   }
   const role = e ? e.role || "SUPERVISOR" : "SUPERVISOR";
@@ -1447,7 +1449,7 @@ async function pr(){
   $("#tfS").onclick = async () => { try { await api("admin/2fa/policy", { roles: [...document.querySelectorAll(".tfR:checked")].map(i => i.value) }); toast("Two-step policy saved"); } catch (er){ toast(er.message, true); } };
   $("#mT").onclick = async () => { try { const r = await api("admin/morning-test", {}); toast("Test sent to " + r.to); } catch (er){ toast(er.message, true); } };
   $("#eT").onclick = async () => { try { const r = await api("admin/eod-test", { site: PTAB !== "LEAD" ? PTAB : "" }); toast("End of Day test sent to " + r.to); } catch (er){ toast(er.message, true); } };
-  const ogS = $("#ogS"); if (ogS) ogS.onclick = async () => { try { await api("admin/opsgroups", { site: PTAB, emails: $("#ogE").value, cctv: $("#ogC").value, auto: $("#ogA").checked }); toast("Group saved"); } catch (er){ toast(er.message, true); } };
+  const ogS = $("#ogS"); if (ogS) ogS.onclick = async () => { try { await api("admin/opsgroups", { site: PTAB, emails: $("#ogE").value, pm: $("#ogP").value, auto: $("#ogA").checked }); toast("Handover recipients saved"); } catch (er){ toast(er.message, true); } };
   const sc = $("#scBox"); if (sc) { const site = PTAB, mmN = (() => { const m = U.find(u => u.site === site && u.role === "MANAGER" && u.active && d.titles[u.position] && d.titles[u.position].slot === "MM"); return m ? m.name : ""; })();
     api("admin/schedcc").then(s => { sc.innerHTML = `<h3>Weekly schedule email · Sunday</h3><div class="sub">To: <b>${esc(mmN || "no Mall Manager")}</b> · Cc below — one per line or “;”</div>
       <textarea id="scT" rows="5" style="width:100%;margin-top:8px;border:1px solid var(--cline);border-radius:9px;padding:8px;font:inherit;font-size:.8rem;background:var(--ccard);color:var(--ctext)">${esc((s.cc[site] || "").split("; ").join(";\n"))}</textarea><button class="b g" id="scS" style="margin-top:6px">Save Cc list</button>`;
