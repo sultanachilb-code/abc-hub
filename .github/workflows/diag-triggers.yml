@@ -12,6 +12,5 @@ jobs:
       - run: |
           q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" > o.json 2> e.txt || true
             node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,1800))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
-          echo "::notice title=mbcfg::$(q "SELECT k, substr(v,1,400) v FROM meta WHERE k LIKE 'mb:%' OR k LIKE 'rmb%' OR k LIKE 'ms:rmb%'")"
-          echo "::notice title=mblog::$(q "SELECT received, substr(subject,1,60) s, substr(result,1,80) r, ok FROM mb_log ORDER BY received DESC LIMIT 8")"
-          echo "::notice title=keys::$(q "SELECT k FROM meta WHERE k LIKE '%rmb%' OR k LIKE '%mailbox%' OR k LIKE 'ms:%'")"
+          echo "::notice title=last::$(q "SELECT k, substr(v,1,160) v FROM meta WHERE k LIKE 'portal:last%' OR k='contracts:last' OR k='mb:lastrun'")"
+          echo "::notice title=mk::$(q "SELECT received, subject, files, result FROM mb_log WHERE subject LIKE '%Marketing%' OR subject LIKE '%Handover%' ORDER BY received DESC LIMIT 6")"
