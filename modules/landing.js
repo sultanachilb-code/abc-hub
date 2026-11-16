@@ -17,15 +17,16 @@ const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const one = async q => { try { return await q.first(); } catch { return null; } };
 
 export const LP_POSITIONS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse",
-  SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", SV: "Site Visit Officer", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
+  SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", SV: "Site Visit Officer", TECM: "Technical Manager", HOT: "Head of Technical", ADVISOR: "Property Advisor", DIRECTOR: "Mall Director", CDSO: "CDSO" };
 /* a pretend account of each position — used to check what it may open (Admin preview, builder) */
 export const LP_USER = { MM: { role: "MANAGER", position: "MM" }, OM: { role: "MANAGER", position: "OM" }, SMS: { role: "SUPERVISOR", position: "SMS" },
   MS: { role: "SUPERVISOR", position: "MS" }, MO: { role: "SUPERVISOR", position: "MO" }, WH: { role: "SUPERVISOR", position: "WH" }, SV: { role: "SECURITY", position: "SV" },
   SEC: { role: "SECURITY", position: "" }, SECM: { role: "SECURITY", position: "SM" },
-  HOS: { role: "SECURITY", position: "HOS" }, ADVISOR: { role: "ADVISOR" }, DIRECTOR: { role: "DIRECTOR" }, CDSO: { role: "CDSO" } };
+  HOS: { role: "SECURITY", position: "HOS" }, TECM: { role: "TECHNICAL", position: "TM" }, HOT: { role: "TECHNICAL", position: "HOT" }, ADVISOR: { role: "ADVISOR" }, DIRECTOR: { role: "DIRECTOR" }, CDSO: { role: "CDSO" } };
 export const lpKeyOf = u => !u ? null : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
   : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : null)
   : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : u.position === "SV" ? "SV" : "SEC")
+  : u.role === "TECHNICAL" ? (u.position === "HOT" ? "HOT" : "TECM")
   : ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? u.role : null;
 /* the old briefs, used when a position has no saved page */
 export const LEGACY = { MM: "manager", OM: "manager", ADVISOR: "advisor", DIRECTOR: "director", CDSO: "cdso" };

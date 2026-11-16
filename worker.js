@@ -54,6 +54,7 @@ import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
 import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
+import { qcIngest, qcRoute } from "./modules/qc.js";   // QC Snaglists from ABC Audit (Nov 2026)
 import { tlSchema, tlRoute } from "./modules/tlist.js";   // Tenant List (YES / NO per tenant, SKU from the CRM sheet) — docs/FEATURE-tenant-list.md
 import { mkSchema, mkRoute, mkPublic, mkRun, extCfg, mailPreview, EMAIL_STYLES } from "./modules/mkt.js";
 import { memoSchema, memoRoute, memoPublic, memoRun } from "./modules/memo.js";   // Memo — docs/FEATURE-memo.md
@@ -108,6 +109,7 @@ const ROLES = {
   MANAGER: "Flagship Management",
   SUPERVISOR: "Operations Team",
   SECURITY: "Security",
+  TECHNICAL: "Technical",   // Nov 2026: Technical Manager (mall + its DS, like security) · Head of Technical (every flagship)
   EXTERNAL: "External account"   // outside operations: sees and opens only the systems given to them (Oct 2026)
 };
 const FULL_ROLES = ["ADMIN", "ADVISOR", "DIRECTOR", "CDSO", "MANAGER"];   // full access at the flagships they can reach
@@ -133,7 +135,8 @@ const SLOTS = { MM: "Mall Manager / Senior Mall Manager", OM: "Operations Manage
    Verdun Mall → Verdun DS · Achrafieh Mall → Achrafieh DS. Dbayeh DS has its own Security Manager. */
 const SEC_COVER = { VRM: ["VRS"], ACM: ["ACS"] };
 const SEC_POSITIONS = { SM: { label: "Security Manager" }, HOS: { label: "Head of Security" }, SV: { label: "Site Visit Officer" } };   // Nov 2026: Site Visit Officer — one person, every flagship   // Nov 2026: Security Manager (one flagship) · Head of Security (every flagship)   // Security role: the Head of Security sees every flagship
-const posLabel = p => (POSITIONS[p] || TITLES[p] || SEC_POSITIONS[p] || {}).label || "";
+const TECH_POSITIONS = { TM: { label: "Technical Manager" }, HOT: { label: "Head of Technical" } };   // Nov 2026: same coverage as security (SEC_COVER)
+const posLabel = p => (POSITIONS[p] || TITLES[p] || SEC_POSITIONS[p] || TECH_POSITIONS[p] || {}).label || "";
 /* Which flagships an account can open */
 function sitesOf(u) {
   if (!u) return [];
@@ -143,6 +146,8 @@ function sitesOf(u) {
     return list.length ? list : (SITES[u.site_code] ? [u.site_code] : []);
   }
   if (u.role === "SECURITY" && (u.position === "HOS" || u.position === "SV")) return Object.keys(SITES);
+  if (u.role === "TECHNICAL" && u.position === "HOT") return Object.keys(SITES);
+  if (u.role === "TECHNICAL" && SEC_COVER[u.site_code]) return [u.site_code, ...SEC_COVER[u.site_code]].filter(c => SITES[c]);   // Technical Manager: the mall + its department store
   if (u.role === "SECURITY" && u.position === "SM" && SEC_COVER[u.site_code]) return [u.site_code, ...SEC_COVER[u.site_code]].filter(c => SITES[c]);   // the mall's Security Manager also covers its department store   // Head of Security, Site Visit Officer: every flagship   // Head of Security: every flagship (Oct 2026)
   return SITES[u.site_code] ? [u.site_code] : [];
 }
@@ -294,12 +299,14 @@ const APP_ACCESS = {
   "form-pm": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-dbank": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
   "form-open": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-  "form-close": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"]
+  "form-close": ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
+  "qc-snag": ["MM", "OM", "SMS", "MS", "MO", "LEAD", "TECM", "HOT"]   // QC Snaglists from ABC Audit (Nov 2026) — each department sees its own packs
 };
 const accessKey = u => ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? "LEAD"
   : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
   : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : "MO")
-  : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : "SEC") : u.role;
+  : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : "SEC")
+  : u.role === "TECHNICAL" ? (u.position === "HOT" ? "HOT" : "TECM") : u.role;
 
 /* Hub Training & Rollout */
 const RO_DEPS = { posKey: u => accessKey(u), posName: u => posLabel(u.position) || ROLES[u.role] || u.role, siteName: s => siteName(s), today: () => beirutToday() };
@@ -764,6 +771,7 @@ async function route(request, env, ctx, url) {
   if (path === "ext-cfg") { const c = await extCfg(env); return json({ ok: true, data: { theme: c.theme } }, 200, { "cache-control": "no-cache" }); }   // tenant & visitor pages: Light / Dark / Auto (Admin Control)
   if (path.startsWith("mk-ext/")) { const r = await mkPublic(env, path.slice(7), method, body, { siteName, now: nowIso, today: beirutToday }); return r instanceof Response ? r : ok(r); }   // Marketing Participation: the tenant's link
   if (path.startsWith("memo-ext/")) { const r = await memoPublic(env, path.slice(9), method, body, { siteName, now: nowIso, today: beirutToday }); return r instanceof Response ? r : ok(r); }   // Memo: the tenant's link
+  if (path === "qc/ingest" && method === "POST") return ok(await qcIngest(env, request, body, { SITES, sitesOf, now: nowIso, raiseEvent }));   // QC Snaglists: ABC Audit shares a Snaglist (modules/qc.js)
   if (path.startsWith("pm-ext/")) return ok(await pmPublic(env, path.slice(7), method, body, { siteName, now: nowIso, today: beirutToday }));   // Preventive Maintenance: the tenant's link
   if (path.startsWith("qp-pass/") && method === "GET") return ok(await qpPublic(env, path.slice(8), { siteName }));   // Quick Access Pass: the visitor's page (the token is the key)
   if (path.startsWith("rx/")) return ok(await directoryPublic(env, path, method, body, url, { siteName, now: nowIso }));   // Tenants Directory feature: reception link
@@ -1140,6 +1148,7 @@ async function saveUser(env, me, b) {
       if (!POSITIONS[pos]) throw fail("Choose the position: Mall Officer, Mall Supervisor, Senior Mall Supervisor or Warehouse");
       position = pos;
     } else if (role === "SECURITY") position = SEC_POSITIONS[pos] ? pos : "";
+    else if (role === "TECHNICAL") { if (!TECH_POSITIONS[pos]) throw fail("Choose the position: Technical Manager or Head of Technical"); position = pos; }
   }
   /* one person per management slot at each flagship */
   if (role === "MANAGER") {
@@ -1927,14 +1936,14 @@ function rights(me, site) {
     schedule: opsLead,
     scheduleOwn: team && me.role === "SUPERVISOR",   // the operations team fills its own shifts (the whole schedule stays with the Manager / Senior Mall Supervisor)
     mom: team,
-    handover: mine && me.role !== "SECURITY" && !wh,
+    handover: mine && me.role !== "SECURITY" && me.role !== "TECHNICAL" && !wh,
     feedback: mine && !wh,                 // anyone at the flagship can log tenant feedback
     feedbackAdmin: opsLead,         // edit anyone's entries, import history
     gla: team,                      // keep the GLA up to date
     layouts: opsLead,               // Mall Layouts feature: upload plans, adjust pins
     property: full,                 // Property Details feature: update the values
     reminders: full,                // Reminders feature: choose which reminders run
-    formsFill: mine && me.role !== "SECURITY" && !wh,   // Operations Forms feature: fill the checklists
+    formsFill: mine && me.role !== "SECURITY" && me.role !== "TECHNICAL" && !wh,   // Operations Forms feature: fill the checklists
     formsLead: opsLead,             // Operations Forms feature: reopen, delete, upload the Areeba list
     emergency: opsLead,             // Emergency Alert feature: send an alert, end it with All clear
     budget: team,                   // Budget feature: see the CAPEX / OPEX lines and prepare JDE requests
@@ -2137,7 +2146,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p === "eod") return eodReport(env, me, site, isDay(q("date")) ? q("date") : beirutToday());
 
   /* ----- Mall Layouts feature (modules/layouts.js) ----- */
-  if (p === "layouts/hot") { if (!canSite(me, site) || isWarehouse(me) || me.role === "SECURITY") throw fail("Not allowed", 403);
+  if (p === "layouts/hot") { if (!canSite(me, site) || isWarehouse(me) || me.role === "SECURITY" || me.role === "TECHNICAL") throw fail("Not allowed", 403);
     return hotspots(env, site, url, { today: beirutToday, pullDay, snagBase: CONNECTORS.snaglist.base }); }   // Hotspot map on the layouts
   if (p.startsWith("layouts/")) return layoutsRoute(env, p, method, b, url, { site, can, me, now: nowIso,
     canFurn: !!can.layouts || isFull(me) || (me.role === "SUPERVISOR" && me.position !== "WH") });   // bins & benches: the operations team
@@ -2238,6 +2247,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
   if (p.startsWith("memo/")) return memoRoute(env, p, method, b, url, { ...PM_DEPS, me, canSite, raiseEvent, isOps: u => u.role==="ADMIN"||isFull(u)||(u.role==="SUPERVISOR"&&u.position!=="WH") });   // Memo (modules/memo.js)
   if (p.startsWith("mk/")) return mkRoute(env, p, method, b, url, { ...PM_DEPS, me, canSite, raiseEvent, isOps: u => u.role==="ADMIN"||isFull(u)||(u.role==="SUPERVISOR"&&u.position!=="WH") });   // Marketing Participation (modules/mkt.js)
+  if (p.startsWith("qc/")) return qcRoute(env, p, method, b, url, { me, SITES, sitesOf, allows: (u, a) => roleAllows(u, a) });   // QC Snaglists (modules/qc.js)
   if (p.startsWith("pm/")) return pmRoute(env, p, method, b, url, { ...PM_DEPS, site, me, canSite, raiseEvent,   // Preventive Maintenance (modules/pm.js)
     isOps: u => u.role === "ADMIN" || isFull(u) || (u.role === "SUPERVISOR" && u.position !== "WH"), isBoss: u => u.role === "ADMIN" || isFull(u) });
   if (p.startsWith("tl/")) return tlRoute(env, p, method, b, url, { site, me, canSite, siteName, now: nowIso,   // Tenant List (modules/tlist.js)

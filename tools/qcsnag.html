@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>QC Snaglists · ABC</title>
+<link rel="icon" type="image/png" href="/icons/abc-48.png">
+<link rel="stylesheet" href="tools.css">
+<style>
+/* QC Snaglists (Nov 2026) — modules/qc.js · light only */
+:root,html[data-theme]{--q-p:#4A1F73;--q-p2:#6B3FA0;--q-bg:#F5F2F9;--q-card:#fff;--q-ink:#2A0F45;--q-mut:#6D6479;--q-line:#E8E2EF;color-scheme:light}
+body{background:var(--q-bg)!important;color:var(--q-ink)!important}
+.q-wrap{max-width:1100px;margin:0 auto;padding:16px}
+.q-h{font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--q-p2);margin:16px 0 10px;font-weight:800}
+.q-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.q-ic{background:var(--q-card);border:1px solid var(--q-line);border-radius:16px;padding:16px;text-align:center;font-weight:800;font-size:.9rem;cursor:pointer;color:var(--q-ink)}
+.q-ic:hover{border-color:var(--q-p2)}.q-ic i{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 8px;border-radius:14px;color:#fff;font-style:normal;font-size:1.45rem}
+.q-ic small{display:block;color:var(--q-mut);font-weight:600;margin-top:4px}
+.q-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.q-cd{background:var(--q-card);border:1px solid var(--q-line);border-radius:16px;padding:14px;cursor:pointer}.q-cd:hover{border-color:var(--q-p2)}
+.q-t{display:flex;justify-content:space-between;gap:8px;align-items:start}
+.q-sc{font-size:1.5rem;font-weight:800}.q-sc small{font-size:.7rem;color:var(--q-mut);display:block;text-align:right;font-weight:600}
+.q-chip{display:inline-block;border-radius:99px;padding:3px 9px;font-size:.72rem;font-weight:800;margin:6px 4px 0 0}
+.g-Minor{background:#EDE4F7;color:#4A1F73}.g-Moderate{background:#FFF3E0;color:#B06A00}.g-Major{background:#FDECEA;color:#C0392B}.g-Critical{background:#F8E1EA;color:#8E1B4A}
+.q-dep{background:#EEF0F5;color:#3B3550}.q-imm{background:#FFF3E0;color:#B06A00}.q-prj{background:#E3EEF9;color:#1F5A96}
+.q-mut{color:var(--q-mut);font-size:.8rem}
+.q-filters{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.q-filters button{border:1px solid var(--q-line);background:var(--q-card);border-radius:99px;padding:6px 11px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer;color:var(--q-ink)}
+.q-filters button.on{background:var(--q-p);color:#fff;border-color:var(--q-p)}
+.q-f{background:var(--q-card);border:1px solid var(--q-line);border-radius:16px;display:grid;grid-template-columns:160px 1fr;overflow:hidden;margin-bottom:10px;break-inside:avoid}
+.q-ph{background:#EEE9F4;min-height:140px;display:grid;place-items:center;color:var(--q-mut);font-size:.72rem}
+.q-ph img{width:100%;height:100%;min-height:140px;object-fit:cover;display:block;cursor:zoom-in}
+.q-fb{padding:10px 12px;font-size:.86rem}.q-fb b{font-size:.92rem}
+.q-ap{margin-top:8px;padding-top:8px;border-top:1px dashed var(--q-line);font-size:.76rem;color:var(--q-mut)}
+.q-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;background:var(--q-card);border:1px solid var(--q-line);border-radius:16px;padding:14px;margin-bottom:12px}
+.q-btn{border:0;border-radius:10px;padding:8px 12px;font:inherit;font-weight:800;background:var(--q-p);color:#fff;font-size:.8rem;cursor:pointer;text-decoration:none;display:inline-block}
+.q-btn.g{background:var(--q-bg);color:var(--q-ink);border:1px solid var(--q-line)}
+.q-back{border:0;background:none;color:var(--q-p2);font:inherit;font-weight:800;cursor:pointer;padding:0;margin-bottom:6px}
+.q-empty{background:var(--q-card);border:1px dashed var(--q-line);border-radius:16px;padding:22px;text-align:center;color:var(--q-mut)}
+.q-zoom{position:fixed;inset:0;background:rgba(20,8,35,.85);display:grid;place-items:center;z-index:50;padding:16px}.q-zoom img{max-width:100%;max-height:100%;border-radius:10px}
+@media (max-width:560px){.q-f{grid-template-columns:1fr}.q-ph,.q-ph img{min-height:200px}}
+@media print{.top,.q-filters,.q-back,.q-btn{display:none!important}body{background:#fff!important}.q-f{border-color:#ccc}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>QC Snaglists <small id="sub">ABC Audit · Quality Control</small></h1>
+</div>
+<div class="q-wrap"><div id="view"><p class="q-mut">Loading…</p></div></div>
+<script src="common.js"></script>
+<script>
+document.documentElement.setAttribute("data-theme", "light");   // light only (Nov 2026)
+let QD = null, DEP = null, PK = null, F = "all";
+const DEPI = { OPS: ["🧹", "#4A1F73"], TECH: ["🔧", "#1F5A96"], RET: ["🛍", "#8E3B6B"] };
+const GR = ["Critical", "Major", "Moderate", "Minor"];
+const fd = d => d ? new Date(String(d).slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "–";
+const V = h => { $("#view").innerHTML = h; scrollTo(0, 0); };
+const chips = c => GR.filter(g => c && c[g]).map(g => `<span class="q-chip g-${g}">${c[g]} ${g}</span>`).join("");
+
+async function boot(){
+  try { QD = await api("ops/qc/list"); } catch (e) { return V(`<div class="q-empty">${esc(e.message)}</div>`); }
+  const q = new URLSearchParams(location.search);
+  if (q.get("pack")) return openPack(q.get("pack"));
+  if (QD.depts.length === 1) return dept(QD.depts[0].k);
+  landing();
+}
+function landing(){
+  DEP = null; PK = null;
+  V(`<div class="q-h">Departments</div><div class="q-icons">${QD.depts.map(d => { const n = QD.packs.filter(p => p.dept === d.k).length, [ic, col] = DEPI[d.k];
+      return `<div class="q-ic" data-dep="${d.k}"><i style="background:${col}">${ic}</i>${esc(d.name)}<small>${n} snaglist${n === 1 ? "" : "s"}</small></div>`; }).join("")}</div>
+    ${QD.packs.length ? "" : `<p class="q-mut" style="margin-top:14px">Nothing yet. A Snaglist appears here as soon as the audit team shares it in ABC Audit.</p>`}`);
+  document.querySelectorAll("[data-dep]").forEach(x => x.onclick = () => dept(x.dataset.dep));
+}
+function dept(k){
+  DEP = k; PK = null;
+  const L = QD.packs.filter(p => p.dept === k), name = (QD.depts.find(d => d.k === k) || {}).name || k;
+  V(`${QD.depts.length > 1 ? `<button class="q-back" id="bk">‹ Departments</button>` : ""}<div class="q-h">${esc(name)} · posted audits</div>
+    ${L.length ? `<div class="q-cards">${L.map(p => `<div class="q-cd" data-pk="${esc(p.id)}"><div class="q-t"><div><b>${esc(p.siteName)}</b><div class="q-mut">${fd(p.start)}${p.end && p.end !== p.start ? " – " + fd(p.end) : ""} · ${esc(p.audit)}</div><span class="q-chip q-dep">${esc(p.deptName)}</span></div>
+        <div class="q-sc">${p.score != null ? p.score + "%" : "–"}<small>score</small></div></div>${chips(p.counts)}<div class="q-mut" style="margin-top:8px">${p.n} finding${p.n === 1 ? "" : "s"} · shared ${fd(p.shared || p.received)}</div></div>`).join("")}</div>`
+      : `<div class="q-empty">No ${esc(name)} Snaglist shared yet.</div>`}`);
+  const bk = $("#bk"); if (bk) bk.onclick = landing;
+  document.querySelectorAll("[data-pk]").forEach(x => x.onclick = () => openPack(x.dataset.pk));
+}
+async function openPack(id){
+  try { PK = await api("ops/qc/pack?id=" + encodeURIComponent(id)); } catch (e) { return toast(e.message, true); }
+  DEP = PK.dept; F = "all"; showPack();
+}
+function showPack(){
+  const P = PK, floors = [...new Set(P.findings.map(f => f.card).filter(Boolean))];
+  const FL = [["all", `All ${P.findings.length}`], ...floors.map(c => ["c:" + c, c]), ["s:FOH", "Front of House"], ["s:BOH", "Back of House"], ["g:big", "Critical / Major"], ["t:I", "Immediate"], ["t:P", "Project"]];
+  const isP = f => /^p/i.test(f.type || ""), side = f => /back|boh/i.test(f.side || "") ? "BOH" : /front|foh/i.test(f.side || "") ? "FOH" : "";
+  const pass = f => F === "all" || (F.startsWith("c:") && f.card === F.slice(2)) || (F === "s:FOH" && side(f) === "FOH") || (F === "s:BOH" && side(f) === "BOH")
+    || (F === "g:big" && ["Critical", "Major"].includes(f.grade)) || (F === "t:I" && !isP(f)) || (F === "t:P" && isP(f));
+  const L = P.findings.filter(pass);
+  V(`<button class="q-back" id="bk">‹ ${esc(P.deptName)}</button>
+    <div class="q-top"><div><b>${esc(P.siteName)} · ${esc(P.deptName)} · ${fd(P.start)}</b><div class="q-mut">${esc(P.audit)} · score ${P.score != null ? P.score + "%" : "–"} · frozen when posted — nothing here changes it</div>${chips(P.counts)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="q-btn g" onclick="print()">⤓ Print / PDF</button><a class="q-btn g" href="${esc(P.link)}" target="_blank" rel="noopener">↗ Open in ABC Audit</a></div></div>
+    <div class="q-filters">${FL.map(([k, n]) => `<button data-f="${esc(k)}" class="${F === k ? "on" : ""}">${esc(n)}</button>`).join("")}</div>
+    ${L.map(f => `<div class="q-f"><div class="q-ph">${f.photos[0] ? `<img loading="lazy" src="${esc(f.photos[0])}" alt="Photo" data-z="${esc(f.photos[0])}">` : "No photo"}</div><div class="q-fb">
+      <b>${esc([f.card, f.area, f.sub].filter(Boolean).join(" · "))}</b><br>
+      ${f.grade ? `<span class="q-chip g-${esc(f.grade)}">${esc(f.grade)}</span>` : ""}${side(f) ? `<span class="q-chip q-dep">${side(f) === "FOH" ? "Front of House" : "Back of House"}</span>` : ""}<span class="q-chip ${isP(f) ? "q-prj" : "q-imm"}">${isP(f) ? "Project" : "Immediate"}</span>
+      <div style="margin-top:6px">${esc(f.text)}</div>${f.comment ? `<div class="q-mut" style="margin-top:4px">“${esc(f.comment)}”</div>` : ""}
+      <div class="q-mut" style="margin-top:4px">${esc(f.id)} · found ${fd(f.created)} ${esc(String(f.created || "").slice(11, 16))}${f.due ? " · fix by " + fd(f.due) : ""}${f.asset ? " · " + esc(f.asset) : ""}${f.resp ? " · " + esc(f.resp) : ""}</div>
+      <div class="q-ap">Action plan — coming next (owner · due date · status · proof)</div></div></div>`).join("") || `<div class="q-empty">No finding matches this filter.</div>`}`);
+  $("#bk").onclick = () => dept(P.dept);
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { F = b.dataset.f; showPack(); });
+  document.querySelectorAll("[data-z]").forEach(im => im.onclick = () => { const z = document.createElement("div"); z.className = "q-zoom"; z.innerHTML = `<img src="${esc(im.dataset.z)}" alt="">`; z.onclick = () => z.remove(); document.body.append(z); });
+}
+boot();
+</script>
+</body>
+</html>

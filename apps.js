@@ -114,7 +114,8 @@ window.HUB = {
     "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-open":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-close":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "abc-audit":       ["MM",  "OM",  "LEAD"],   // ABC Audit (Quality Control + Departmental audits) — Nov 2026
+    "abc-audit":       ["MM",  "OM",  "LEAD"],
+    "qc-snag":         ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD", "TECM", "HOT"],   // QC Snaglists (ABC Audit → hub, Nov 2026)   // ABC Audit (Quality Control + Departmental audits) — Nov 2026
   },
 
   /* who sees the extra copy of a tile placed in a folder with also: [...] (the tile's own folder follows ACCESS above) */
@@ -477,6 +478,8 @@ window.HUB = {
     }
     */
 
+    /* QC Snaglists (Nov 2026) — the Snaglists ABC Audit shares, each department to its own team */
+    { id: "qc-snag", name: "QC Snaglists", desc: "Quality Control audit findings shared by ABC Audit — Operations, Technical and Retail packs", group: "Reports", icon: "clipboard", color: "#6B3FA0", url: "/tools/qcsnag" },
     /* ABC Audit (Nov 2026) — Quality Control + Departmental audits; the address is set in Admin → Systems & jobs (/go/audit) */
     {
       id: "abc-audit",

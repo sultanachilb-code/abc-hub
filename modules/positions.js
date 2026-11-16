@@ -33,18 +33,22 @@ export const POS = {
   SECM: { n: "Security Manager", g: "Security", sub: "or Deputy", sec: true },
   SV: { n: "Site Visit Officer", g: "Security", multi: true, sub: "all flagships", sec: true },
   SEC: { n: "Security staff", g: "Security", sec: true },
+  HOT: { n: "Head of Technical", g: "Technical", multi: true, sub: "all flagships" },   // Nov 2026
+  TECM: { n: "Technical Manager", g: "Technical", sub: "mall + its department store" },
   WH: { n: "Warehouse", g: "Other", sub: "view only" }
 };
 /* a pretend account of each position — to check what the old rules give it */
 export const POS_USER = { ADVISOR: { role: "ADVISOR" }, DIRECTOR: { role: "DIRECTOR" }, CDSO: { role: "CDSO" },
   MM: { role: "MANAGER", position: "MM" }, OM: { role: "MANAGER", position: "OM" },
   SMS: { role: "SUPERVISOR", position: "SMS" }, MS: { role: "SUPERVISOR", position: "MS" }, MO: { role: "SUPERVISOR", position: "MO" }, WH: { role: "SUPERVISOR", position: "WH" },
-  HOS: { role: "SECURITY", position: "HOS" }, SECM: { role: "SECURITY", position: "SM" }, SV: { role: "SECURITY", position: "SV" }, SEC: { role: "SECURITY", position: "" } };
+  HOS: { role: "SECURITY", position: "HOS" }, SECM: { role: "SECURITY", position: "SM" }, SV: { role: "SECURITY", position: "SV" }, SEC: { role: "SECURITY", position: "" },
+  HOT: { role: "TECHNICAL", position: "HOT" }, TECM: { role: "TECHNICAL", position: "TM" } };
 export const posKeyOf = u => !u ? null
   : ["ADVISOR", "DIRECTOR", "CDSO"].includes(u.role) ? u.role
   : u.role === "MANAGER" ? (["OM", "DOM"].includes(u.position) ? "OM" : "MM")
   : u.role === "SUPERVISOR" ? (["SMS", "MS", "MO", "WH"].includes(u.position) ? u.position : "MO")
   : u.role === "SECURITY" ? (u.position === "SM" ? "SECM" : u.position === "HOS" ? "HOS" : u.position === "SV" ? "SV" : "SEC")
+  : u.role === "TECHNICAL" ? (u.position === "HOT" ? "HOT" : "TECM")
   : null;
 /* the flagship whose settings apply to this person (none for positions covering several flagships) */
 export const posSiteOf = u => { const k = posKeyOf(u); return k && !POS[k].multi ? (u.site_code || "") : ""; };

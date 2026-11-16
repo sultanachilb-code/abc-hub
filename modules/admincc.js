@@ -76,7 +76,7 @@ export async function toolsCfg(env) {
   return TCFG;
 }
 export const toolsCfgNow = () => TCFG || {};   // for the synchronous access check (loaded at the start of each signed-in request)
-export const ACCESS_KEYS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse", SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", LEAD: "Leadership (Advisor, Director, CDSO)" };
+export const ACCESS_KEYS = { MM: "Mall Manager", OM: "Operations Manager", SMS: "Senior Mall Supervisor", MS: "Mall Supervisor", MO: "Mall Officer", WH: "Warehouse", SEC: "Security staff", SECM: "Security Manager", HOS: "Head of Security", TECM: "Technical Manager", HOT: "Head of Technical", LEAD: "Leadership (Advisor, Director, CDSO)" };
 
 /* ---------- helpers ---------- */
 const metaGet = async (env, k) => { const r = await env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(k).first().catch(() => null); return r ? r.v : null; };
@@ -135,7 +135,7 @@ async function systems(env, d, fresh) {
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('cc:sys', ?)").bind(JSON.stringify(out)).run().catch(() => {});
   return out;
 }
-const SECRETS = [["SESSION_SECRET", "Sign-in (required)", true], ["HUB_KEY", "Connected systems (Snaglist, Incidents…)", true], ["MAIL_RELAY_KEY", "Mail relay (Gmail)", true],
+const SECRETS = [["SESSION_SECRET", "Sign-in (required)", true], ["HUB_KEY", "Connected systems (Snaglist, Incidents…)", true], ["MAIL_RELAY_KEY", "Mail relay (Gmail)", true], ["AUDIT_KEY", "ABC Audit → QC Snaglists (same value as HUB_QC_KEY in ABC Audit)", false],
   ["INBOX_KEY", "Hub Gmail inbox + Drive backup", false], ["GATE_KEY", "Loading Gate", false], ["MS_TENANT_ID", "Microsoft (Outlook)", false], ["MS_CLIENT_ID", "Microsoft (Outlook)", false],
   ["MS_CLIENT_SECRET", "Microsoft (Outlook)", false], ["CF_API_TOKEN", "Usage meters (Cloudflare)", false], ["CF_ACCOUNT_ID", "Usage meters (Cloudflare)", false],
   ["SF_CLIENT_ID", "Salesforce", false], ["SF_CLIENT_SECRET", "Salesforce", false], ["TWILIO_SID", "Emergency calls / SMS", false], ["TWILIO_TOKEN", "Emergency calls / SMS", false]];
