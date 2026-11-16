@@ -8,6 +8,8 @@
    Stored in meta 'landing:pos' = { KEY: { sections: [{ name, items: [{ w, size, app? }] }], at, by } }
    ===================================================================== */
 import { managerBrief, kpiBrief, KPI_ITEMS, MGR_ITEMS, briefConfig } from "./rolebrief.js";
+/* the KPI rows that existed before layouts recorded "known" (Nov 2026) */
+const OLD_KPIS = ["restroom", "pir", "amcheck", "pmcheck", "handover", "cleaning", "mf48", "snags", "gla", "contractors", "contracts", "vrres", "mk7"];
 import { patrolDay } from "./patrol.js";
 import { posSiteOf } from "./positions.js";   // Nov 2026: a landing page / home layout can be changed for one flagship (Positions & landing pages)
 
@@ -106,7 +108,7 @@ function clean(layout, apps) {
     name: String(s.name || "").replace(/\s+/g, " ").trim().slice(0, 40) || "Section",
     items: (Array.isArray(s.items) ? s.items : []).slice(0, 24).filter(i => WIDGETS[i.w] && (i.w !== "shortcut" || /^[a-z0-9-]{2,40}$/.test(String(i.app || ""))))
       .map(i => ({ w: i.w, size: [1, 2, 4].includes(Number(i.size)) ? Number(i.size) : (WIDGETS[i.w].size || 1), ...(i.w === "shortcut" ? { app: i.app } : {}),
-        ...(i.w === "kpi" && i.opts ? { opts: { rows: (Array.isArray(i.opts.rows) ? i.opts.rows : Object.keys(KPI_ITEMS)).filter(k => KPI_ITEMS[k]), period: ["today", "7d", "month"].includes(i.opts.period) ? i.opts.period : "month" } } : {}) }))
+        ...(i.w === "kpi" && i.opts ? { opts: { rows: (Array.isArray(i.opts.rows) ? i.opts.rows : Object.keys(KPI_ITEMS)).filter(k => KPI_ITEMS[k]), known: Object.keys(KPI_ITEMS), period: ["today", "7d", "month"].includes(i.opts.period) ? i.opts.period : "month" } } : {}) }))
   }));
   const seen = new Set();
   for (const s of secs) s.items = s.items.filter(i => i.w === "shortcut" || (seen.has(i.w) ? false : (seen.add(i.w), true)));
@@ -253,7 +255,9 @@ export async function landingData(env, layout, { key, site, sites, period, d, al
   }
   let kpi = null;
   const ko = (items.find(i => i.w === "kpi") || {}).opts || {};
-  const per = period || ko.period || "month", rowsOn = Array.isArray(ko.rows) && ko.rows.length ? ko.rows : Object.keys(KPI_ITEMS);
+  const per = period || ko.period || "month", rowsOn = Array.isArray(ko.rows) && ko.rows.length
+    ? [...ko.rows, ...Object.keys(KPI_ITEMS).filter(k => !(Array.isArray(ko.known) ? ko.known : OLD_KPIS).includes(k))]   // KPIs added after the layout was saved show until switched off
+    : Object.keys(KPI_ITEMS);
   if ((want.has("kpi") || want.has("worst")) && sites.length) kpi = await kpiBrief(env, sites, per, d, Object.fromEntries(Object.keys(KPI_ITEMS).map(k => [k, rowsOn.includes(k)]))).catch(e => { console.error("landing kpi", e && e.message); return null; });
   period = per;
   const rank = { r: 0, a: 1, g: 2, "": 3 };
