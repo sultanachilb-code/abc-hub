@@ -11,6 +11,8 @@ jobs:
     steps:
       - run: |
           q(){ npx -y wrangler@4 d1 execute hub-db --remote --json --command "$1" > o.json 2> e.txt || true
-            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,1800))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
-          echo "::notice title=st::$(q "SELECT kind, status, site, COUNT(*) n FROM portal_items WHERE active = 1 AND kind = 'vr' GROUP BY status, site ORDER BY status")"
-          echo "::notice title=ty::$(q "SELECT kind, type, COUNT(*) n FROM portal_items WHERE active = 1 AND kind IN ('nr','bp','vr') GROUP BY kind, type ORDER BY kind, n DESC")"
+            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r[r.length-1].results).slice(0,2500))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
+          echo "::notice title=cyc::$(q "SELECT c.id, c.site, c.month, c.launched_at, c.launched_by, (SELECT COUNT(*) FROM pm_records r WHERE r.cycle_id = c.id) recs, (SELECT COUNT(*) FROM pm_records r WHERE r.cycle_id = c.id AND r.completed_at = '') open, (SELECT MAX(last_mail) FROM pm_records r WHERE r.cycle_id = c.id) lastmail FROM pm_cycles c")"
+          echo "::notice title=ext::$(q "SELECT COUNT(*) ext FROM pm_ext") certs $(q "SELECT status, COUNT(*) n, SUM(file_key != '') files FROM pm_certs GROUP BY status")"
+          echo "::notice title=meta::$(q "SELECT k, substr(v,1,300) v FROM meta WHERE k LIKE 'pm%' OR k LIKE '%gate%' OR k LIKE 'mail%' OR k LIKE 'email%'")"
+          echo "::notice title=rem::$(q "SELECT name FROM sqlite_master WHERE type='table' AND (name LIKE '%remind%' OR name LIKE '%event%')")"
