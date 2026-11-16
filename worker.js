@@ -2972,7 +2972,9 @@ function hoWhen(v) {
 function hoReadRows(rows, test) {
   const hi = rows.findIndex(r => r.some(c => /request name/i.test(String(c || ""))) && r.some(c => /valid from/i.test(String(c || ""))) && r.some(c => /tenant/i.test(String(c || ""))));
   if (hi < 0) return null;
-  if (test) return true;
+  /* Nov 2026: the Marketing Requests report has the same headings ("Marketing Request Name", "Valid From", "Tenant Comments") —
+     it is the Handover Report only when its rows carry REQ- numbers */
+  if (test) return rows.slice(hi + 1).some(r => r.some(c => /^REQ-?\d+/i.test(String(c || "").trim()))) || null;
   const H0 = rows[hi].map(c => String(c || "").toLowerCase()), col = re => H0.findIndex(h => re.test(h));
   const C = { status: col(/^status/), from: col(/valid from/), req: col(/request name/), tenant: col(/tenant/), to: col(/valid to/), sub: col(/sub maint|category|type/), contr: col(/contractor|supplier/), desc: col(/description/) };
   const out = []; let status = "", from = null;
