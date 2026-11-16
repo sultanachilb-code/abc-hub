@@ -30,7 +30,7 @@ import { projectsSchema, projectsRoute, projectsRun } from "./modules/projects.j
 import { addinSchema, addinPair, addinUser, addinAllowed, addinRoute, addinIssue } from "./modules/addin.js";   // Outlook add-in feature — see docs/FEATURE-outlook-addin.md
 import { mailInbox } from "./modules/inbox.js";   // Email inbox: MOM, calendar and contracts report by email — see docs/FEATURE-email-inbox.md
 import { contractsSchema, contractsRoute, contractsRun } from "./modules/contracts.js";
-import { portalSchema, portalRoute, lkAlertRun } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
+import { portalSchema, portalRoute, lkAlertRun, setMkHandover } from "./modules/portal.js";   // Tenant portal follow-up — see docs/FEATURE-portal-followup.md
 import { t360Route } from "./modules/tenant360.js";   // Tenant 360 — see docs/FEATURE-tenant-360.md
 import { findRoute } from "./modules/find.js";   // Hub search across content — see docs/FEATURE-hub-search.md
 import { malfunctionsSchema, malfunctionsRoute } from "./modules/malfunctions.js";   // Malfunction Records — see docs/FEATURE-malfunctions.md
@@ -3042,6 +3042,52 @@ async function hoReportImport(env, rows, from) {
   await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('portal:last:handover', ?)").bind(JSON.stringify({ at, from, rows: list.length })).run();
   return { rows: list.length, notApproved, unplaced, sites: res };
 }
+
+/* Nov 2026: Marketing Requests report → each flagship's Shift Handover. Approved only, Today (starts today or still running)
+   and Tomorrow (starts tomorrow) — later ones arrive with their own day's import. Each MKT- once. Called from portalImport. */
+async function mkHoImport(env, items) {
+  const day = beirutToday(), next = (() => { const t = new Date(day + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); })();
+  const w = v => { const m = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?/.exec(v || ""); return m ? { day: m[1], time: m[2] || "" } : null; };
+  const per = {};
+  for (const x of items || []) {
+    if (x.kind !== "mk" || !/^approved/i.test(x.status || "") || !x.site || !SITES[x.site]) continue;
+    const f = w(x.from), t = w(x.to); if (!f) continue;
+    const end = t ? t.day : f.day;
+    const sec = f.day === day || (f.day < day && end >= day) ? "today" : f.day === next ? "tomorrow" : "";
+    if (sec) (per[x.site] = per[x.site] || []).push({ ...x, f, t, sec });
+  }
+  const res = {}, at = nowIso(), by = "Marketing Requests report";
+  for (const [site, L] of Object.entries(per)) {
+    let h = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day = ? ORDER BY id DESC LIMIT 1").bind(site, day).first();
+    let doc;
+    if (h) doc = cleanHandover(JSON.parse(h.doc));
+    else { const last = await env.DB.prepare("SELECT * FROM handovers WHERE site = ? AND day < ? ORDER BY day DESC, id DESC LIMIT 1").bind(site, day).first(); doc = cleanHandover(carryHandover(last ? JSON.parse(last.doc) : null, day)); }
+    const have = new Set();
+    for (const k of ["ongoing", "today", "tomorrow", "upcoming"]) for (const x of doc[k]) { if (x.req) have.add(String(x.req).toUpperCase()); (String(x.text).match(/MKT-?\d+/gi) || []).forEach(r => have.add(r.toUpperCase())); }
+    const n = { today: 0, tomorrow: 0, dup: 0 };
+    for (const q of L) {
+      if (have.has(q.name)) { n.dup++; continue; }
+      const tenant = hoNice(q.tenant || hoTenant(q.account, SITES[site]));
+      const span = `${hoDmy(q.f.day).slice(0, 5)}${q.f.time ? " " + q.f.time : ""}${q.t ? "–" + (q.t.day !== q.f.day ? (q.t.day.slice(0, 4) !== q.f.day.slice(0, 4) ? hoDmy(q.t.day) : hoDmy(q.t.day).slice(0, 5)) + " " : "") + (q.t.time || "") : ""}`.replace(/–$/, "");
+      const text = `📣 ${tenant} · ${q.type || "Marketing"} · ${span}${q.desc ? ` · ${q.desc.slice(0, 160)}` : ""} (${q.name})`;
+      doc[q.sec].push({ id: "k" + Math.random().toString(36).slice(2, 10), text, cctv: false, done: false, date: "", src: "portal", req: q.name,
+        until: q.t && q.t.day > q.f.day ? q.t.day : q.f.day,
+        cols: { tenant, req: q.name, task: ["📣 " + (q.type || "Marketing"), q.desc ? q.desc.slice(0, 160) : ""].filter(Boolean).join(" · "), contractor: "", time: span, m: "" } });
+      have.add(q.name); n[q.sec]++;
+    }
+    const added = n.today + n.tomorrow;
+    if (added) {
+      const clean = JSON.stringify(cleanHandover(doc));
+      if (h) await env.DB.prepare("UPDATE handovers SET doc = ?, updated_at = ?, updated_name = ? WHERE id = ?").bind(clean, at, by, h.id).run();
+      else await env.DB.prepare(`INSERT INTO handovers (site, day, shift, doc, status, created_by, created_name, created_at, updated_at, updated_name, handoffs) VALUES (?,?,'DAY',?,'draft',?,?,?,?,?,'[]')`)
+        .bind(site, day, clean, "mailbox", by, at, at, by).run();
+    }
+    res[site] = n;
+  }
+  const parts = Object.entries(res).filter(([, n]) => n.today + n.tomorrow + n.dup).map(([s, n]) => `${SITES[s]} +${n.today} today, +${n.tomorrow} tomorrow${n.dup ? ` (${n.dup} already in)` : ""}`);
+  return parts.length ? "Marketing → Handover: " + parts.join(" · ") : "Marketing → Handover: nothing for today or tomorrow";
+}
+setMkHandover(mkHoImport);
 
 /* A new handover starts from the last one: unfinished follow-ups stay, yesterday's "tomorrow"
    becomes today, dated items arrive on their day (and the day before, under "Tomorrow"), finished events drop off, checklists reset. */

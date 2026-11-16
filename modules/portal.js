@@ -295,6 +295,9 @@ async function importUsers(env, d, users, now) {
 
 /* ---------- import: one or more report files (email attachments or uploaded on the page) ---------- */
 const FP = x => [x.status, x.account, x.type, x.created, x.days, x.subject, x.desc, x.link, x.sfId, x.from, x.to, x.phone, x.permit, x.abc, x.site].join("\u0001");
+/* Nov 2026: approved Marketing Requests for today / tomorrow → Shift Handover (the function lives in worker.js) */
+let MK_HO = null;
+export function setMkHandover(fn) { MK_HO = fn; }
 export async function portalImport(env, d, { files, from }) {
   const res = [], now = d.now();
   for (const f of files.slice(0, 10)) {
@@ -366,7 +369,9 @@ export async function portalImport(env, d, { files, from }) {
     for (const k of kinds) ops.push(env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind("portal:last:" + k,
       JSON.stringify({ at: now, from, file: f.name, rows: [...seen.values()].filter(x => x.kind === k).length, sites: [...sites], ...(partial && k === "vr" ? { partial: true } : {}) })));
     for (let i = 0; i < ops.length; i += 150) await env.DB.batch(ops.slice(i, i + 150));
-    res.push({ file: f.name, kinds: [...kinds].map(k => KINDS[k].label + (partial ? " (details only)" : "")), rows: seen.size, added, changed, gone: gone.length, unknown: [...unknown].slice(0, 5), partial });
+    let ho = "";
+    if (kinds.has("mk") && MK_HO) ho = await MK_HO(env, [...seen.values()]).catch(e => "Marketing → Handover: " + e.message);
+    res.push({ file: f.name, kinds: [...kinds].map(k => KINDS[k].label + (partial ? " (details only)" : "")), rows: seen.size, added, changed, gone: gone.length, unknown: [...unknown].slice(0, 5), partial, ho });
   }
   if (!res.some(r => r.rows)) throw err(res.map(r => `${r.file}: ${r.error}`).join(" · ") || "No report found in the attachment");
   return { files: res };

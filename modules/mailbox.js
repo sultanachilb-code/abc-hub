@@ -115,7 +115,7 @@ async function importFiles(env, d, files, from) {
   }
   try {
     const r = await portalImport(env, d, { files, from });
-    return { ok: true, text: r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.changed} status changes · ${f.gone} no longer in the report${f.unknown && f.unknown.length ? ` · not placed: ${f.unknown.join(", ")}` : ""}`).join(" | ") };
+    return { ok: true, text: r.files.map(f => f.error ? `${f.file}: ${f.error}` : `${f.kinds.join(", ")}: ${f.rows} items · ${f.added} new · ${f.changed} status changes · ${f.gone} no longer in the report${f.unknown && f.unknown.length ? ` · not placed: ${f.unknown.join(", ")}` : ""}${f.ho ? ` · ${f.ho}` : ""}`).join(" | ") };
   } catch (e) {
     try { const c = await contractsImport(env, d, { files, from }); return { ok: true, text: `Contracts near ending: ${c.rows} contracts · ${c.added} new · ${c.gone} no longer in the report` }; }
     catch { return { ok: false, text: e.message.slice(0, 400) }; }
