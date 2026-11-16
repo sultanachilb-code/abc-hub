@@ -303,7 +303,7 @@ async function contractsEnding(env, site, day) {
 
 export async function kpiBrief(env, sites, period, d, cfg) {
   const day = d.today(), R = rangeOf(period, day), P = prevRange(R);
-  const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}:r3`;
+  const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}:r4`;
   try { const c = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(ck))) || {}).v || "null"); if (c && Date.now() - c.t < 30 * 60e3) return c.data; } catch {}
   const snag = cfg.snags && d.snagReport ? await d.snagReport(R.from, R.to).catch(() => null) : null;
   const S = new Map(((snag && snag.sites) || []).map(s => [s.site, s]));
@@ -338,6 +338,11 @@ export async function kpiBrief(env, sites, period, d, cfg) {
     }));
     out.push({ key: k, label: KPI_ITEMS[k], cells });
   }
+  /* Nov 2026: total of the ABC Connect items waiting (requests + penalties + violations) per flagship */
+  const PR = out.filter(r => PORTAL_OPEN[r.key]);
+  if (PR.length > 1) out.push({ key: "portalTotal", label: "ABC Connect items pending (total)", total: true, cells: sites.map((s, i) => {
+    const vs = PR.map(r => r.cells[i].v).filter(v => v != null), old = PR.reduce((t, r) => t + (Number((/^(\d+)/.exec(r.cells[i].sub || "") || [])[1]) || 0), 0);
+    return { site: s, v: vs.length ? vs.reduce((a, b) => a + b, 0) : null, pct: false, tone: "", delta: null, sub: old ? `${old} over 7 days` : "", hint: "" }; }) });
   const worst = [];
   for (const row of out) for (const c of row.cells) if (c.tone === "r" || c.tone === "a") worst.push({ site: c.site, siteName: d.siteName(c.site), label: row.label, v: c.v, tone: c.tone, delta: c.delta });
   worst.sort((a, b) => a.v - b.v);
