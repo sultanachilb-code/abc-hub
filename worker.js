@@ -54,7 +54,7 @@ import { crmSchema, crmRoute } from "./modules/crm.js";
 import { inductionSchema, inductionRoute, inductionCover } from "./modules/induction.js";
 import { readSheet } from "./modules/sheetread.js";   // Excel / CSV reader (Preventive Maintenance setup)
 import { pmSchema, pmRoute, pmPublic, pmRun } from "./modules/pm.js";
-import { qcIngest, qcRoute } from "./modules/qc.js";   // QC Snaglists from ABC Audit (Nov 2026)
+import { qcIngest, qcRoute, qcRun } from "./modules/qc.js";   // QC Snaglists from ABC Audit (Nov 2026)
 import { tlSchema, tlRoute } from "./modules/tlist.js";   // Tenant List (YES / NO per tenant, SKU from the CRM sheet) — docs/FEATURE-tenant-list.md
 import { mkSchema, mkRoute, mkPublic, mkRun, extCfg, mailPreview, EMAIL_STYLES } from "./modules/mkt.js";
 import { memoSchema, memoRoute, memoPublic, memoRun } from "./modules/memo.js";   // Memo — docs/FEATURE-memo.md
@@ -690,6 +690,7 @@ export default {
       await polEmbedPending(env, t => embedTexts(env, t), { limit: 48, cron: true }).catch(e => console.error("pol embed", e && e.message));   // ABCON meaning search: finish passages not embedded yet
       await outlookRun(env, { today: beirutToday, notifyAdmins, fallback: relayScript }).catch(e => console.error("outlook", e && e.message));   // Outlook sending: queue + secret expiry
       await pmRun(env, { ...PM_DEPS, hour: beirutHour, raiseEvent }).catch(e => console.error("pm", e && e.message));   // Preventive Maintenance
+      await qcRun(env, { hour: beirutHour, today: beirutToday, now: nowIso, SITES, raiseEvent }).catch(e => console.error("qc", e && e.message));   // QC action reminders
       await mkRun(env, { ...PM_DEPS, hour: beirutHour, raiseEvent }).catch(e => console.error("mk", e && e.message));   // Marketing Participation: daily reminders
       await memoRun(env, { ...PM_DEPS, hour: beirutHour, raiseEvent }).catch(e => console.error("memo", e && e.message));   // Memo: automatic reminders
       await keyboxRun(env, { today: beirutToday, hour: beirutHour, raiseEvent }).catch(e => console.error("keybox", e && e.message));   // Key Box: late keys
@@ -2247,7 +2248,7 @@ async function opsRoute(env, me, p, method, b, url) {
   if (p.startsWith("cl/")) return cleaningRoute(env, p, method, b, url, { site, me, can, now: nowIso, siteName });   // Cleaning headcount control
   if (p.startsWith("memo/")) return memoRoute(env, p, method, b, url, { ...PM_DEPS, me, canSite, raiseEvent, isOps: u => u.role==="ADMIN"||isFull(u)||(u.role==="SUPERVISOR"&&u.position!=="WH") });   // Memo (modules/memo.js)
   if (p.startsWith("mk/")) return mkRoute(env, p, method, b, url, { ...PM_DEPS, me, canSite, raiseEvent, isOps: u => u.role==="ADMIN"||isFull(u)||(u.role==="SUPERVISOR"&&u.position!=="WH") });   // Marketing Participation (modules/mkt.js)
-  if (p.startsWith("qc/")) return qcRoute(env, p, method, b, url, { me, SITES, sitesOf, allows: (u, a) => roleAllows(u, a) });   // QC Snaglists (modules/qc.js)
+  if (p.startsWith("qc/")) return qcRoute(env, p, method, b, url, { me, SITES, sitesOf, allows: (u, a) => roleAllows(u, a), today: beirutToday, now: nowIso, posLabel, raiseEvent });   // QC Snaglists (modules/qc.js)
   if (p.startsWith("pm/")) return pmRoute(env, p, method, b, url, { ...PM_DEPS, site, me, canSite, raiseEvent,   // Preventive Maintenance (modules/pm.js)
     isOps: u => u.role === "ADMIN" || isFull(u) || (u.role === "SUPERVISOR" && u.position !== "WH"), isBoss: u => u.role === "ADMIN" || isFull(u) });
   if (p.startsWith("tl/")) return tlRoute(env, p, method, b, url, { site, me, canSite, siteName, now: nowIso,   // Tenant List (modules/tlist.js)

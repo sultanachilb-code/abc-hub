@@ -39,6 +39,24 @@ body{background:var(--q-bg)!important;color:var(--q-ink)!important}
 .q-back{border:0;background:none;color:var(--q-p2);font:inherit;font-weight:800;cursor:pointer;padding:0;margin-bottom:6px}
 .q-empty{background:var(--q-card);border:1px dashed var(--q-line);border-radius:16px;padding:22px;text-align:center;color:var(--q-mut)}
 .q-zoom{position:fixed;inset:0;background:rgba(20,8,35,.85);display:grid;place-items:center;z-index:50;padding:16px}.q-zoom img{max-width:100%;max-height:100%;border-radius:10px}
+.q-tw{background:var(--q-card);border:1px solid var(--q-line);border-radius:16px;overflow:auto}
+.q-tw table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:720px}.q-tw th{text-align:left;color:var(--q-mut);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid var(--q-line);background:#FBFAFD}
+.q-tw td{padding:10px 12px;border-bottom:1px solid var(--q-line);vertical-align:middle}.q-tw tr:last-child td{border-bottom:0}
+.q-st{display:inline-block;border-radius:99px;padding:3px 9px;font-size:.72rem;font-weight:800;white-space:nowrap}
+.s-pend{background:#FFF3E0;color:#B06A00}.s-cl{background:#E8F5E9;color:#2E7D32}.s-clo{background:#FDECEA;color:#C0392B}
+.a-unassigned{background:#EEF0F5;color:#3B3550}.a-assigned{background:#EDE4F7;color:#4A1F73}.a-progress{background:#FFF3E0;color:#B06A00}.a-escalated{background:#FDECEA;color:#C0392B}.a-fixed{background:#E3EEF9;color:#1F5A96}.a-verified{background:#E8F5E9;color:#2E7D32}.a-overdue{background:#C0392B;color:#fff}
+.q-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:12px 0}
+.q-c3{background:var(--q-card);border:1px solid var(--q-line);border-radius:16px;padding:16px;cursor:pointer}.q-c3:hover{border-color:var(--q-p2)}
+.q-c3 i{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;color:#fff;font-style:normal;font-size:1.2rem;margin-bottom:8px}.q-c3 b{font-size:1rem}
+.q-bar{height:8px;border-radius:9px;background:var(--q-line);margin:8px 0 4px;overflow:hidden}.q-bar span{display:block;height:100%;background:#2E7D32}
+.q-it{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--q-card);border:1px solid var(--q-line);border-radius:14px;padding:10px 12px;margin-bottom:8px;font-size:.86rem}
+.q-btn.r{background:#C0392B}.q-btn.s{padding:6px 10px;font-size:.76rem}
+.q-pop{position:fixed;inset:0;background:rgba(20,8,35,.45);display:grid;place-items:center;z-index:60;padding:16px}
+.q-pop>div{background:#fff;border-radius:16px;padding:16px;width:min(520px,100%);max-height:88vh;overflow:auto;display:grid;gap:8px;font-size:.86rem}
+.q-pop label{font-weight:700;font-size:.78rem;color:var(--q-mut)}.q-pop input,.q-pop select,.q-pop textarea{width:100%;border:1px solid var(--q-line);border-radius:10px;padding:9px 10px;font:inherit;background:#fff;color:var(--q-ink)}
+.q-pop input[type=checkbox]{width:auto}.q-cm{background:var(--q-card);border:1px solid var(--q-line);border-radius:14px;padding:10px 12px;margin-bottom:8px;font-size:.86rem}
+.q-cm select{border:1px solid var(--q-line);border-radius:10px;padding:9px 10px;font:inherit;background:#fff}
+.q-ck{display:flex;gap:6px;align-items:center}
 @media (max-width:560px){.q-f{grid-template-columns:1fr}.q-ph,.q-ph img{min-height:200px}}
 @media print{.top,.q-filters,.q-back,.q-btn{display:none!important}body{background:#fff!important}.q-f{border-color:#ccc}}
 </style>
@@ -51,24 +69,32 @@ body{background:var(--q-bg)!important;color:var(--q-ink)!important}
 <script src="common.js"></script>
 <script>
 document.documentElement.setAttribute("data-theme", "light");   // light only (Nov 2026)
-let QD = null, DEP = null, PK = null, F = "all";
+let QD = null, DEP = null, PK = null, F = "all", AF = "open", SEL = new Set();
 const DEPI = { OPS: ["🧹", "#4A1F73"], TECH: ["🔧", "#1F5A96"], RET: ["🛍", "#8E3B6B"] };
 const GR = ["Critical", "Major", "Moderate", "Minor"];
 const fd = d => d ? new Date(String(d).slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "–";
 const V = h => { $("#view").innerHTML = h; scrollTo(0, 0); };
 const chips = c => GR.filter(g => c && c[g]).map(g => `<span class="q-chip g-${g}">${c[g]} ${g}</span>`).join("");
+const stOf = p => !p.closed ? `<span class="q-st s-pend">Pending</span>` : p.closedOpen ? `<span class="q-st s-clo">Closed · ${p.closedOpen} left open</span>` : `<span class="q-st s-cl">Closed</span>`;
+const isP = f => /^p/i.test(f.type || ""), side = f => /back|boh/i.test(f.side || "") ? "BOH" : /front|foh/i.test(f.side || "") ? "FOH" : "";
+const act = f => (PK.actions || {})[f.id] || { status: "unassigned" };
+const late = a => a.due && a.due < PK.today && !["fixed", "verified"].includes(a.status);
+const aChip = a => late(a) ? `<span class="q-st a-overdue">Overdue</span>` : `<span class="q-st a-${a.status}">${esc(PK.statuses[a.status] || a.status)}</span>`;
+const pop = html => { const p = document.createElement("div"); p.className = "q-pop"; p.innerHTML = `<div>${html}</div>`; p.onclick = e => { if (e.target === p || e.target.closest("[data-x]")) p.remove(); }; document.body.append(p); return p; };
+const photo = file => new Promise((ok, no) => { if (!file) return ok(""); const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = im.width * k; c.height = im.height * k; c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL("image/jpeg", .82)); }; im.onerror = no; im.src = r.result; }; r.onerror = no; r.readAsDataURL(file); });
 
 async function boot(){
   try { QD = await api("ops/qc/list"); } catch (e) { return V(`<div class="q-empty">${esc(e.message)}</div>`); }
   const q = new URLSearchParams(location.search);
   if (q.get("pack")) return openPack(q.get("pack"));
+  if (DEP) return dept(DEP);
   if (QD.depts.length === 1) return dept(QD.depts[0].k);
   landing();
 }
 function landing(){
   DEP = null; PK = null;
-  V(`<div class="q-h">Departments</div><div class="q-icons">${QD.depts.map(d => { const n = QD.packs.filter(p => p.dept === d.k).length, [ic, col] = DEPI[d.k];
-      return `<div class="q-ic" data-dep="${d.k}"><i style="background:${col}">${ic}</i>${esc(d.name)}<small>${n} snaglist${n === 1 ? "" : "s"}</small></div>`; }).join("")}</div>
+  V(`<div class="q-h">Departments</div><div class="q-icons">${QD.depts.map(d => { const L = QD.packs.filter(p => p.dept === d.k), n = L.filter(p => !p.closed).length, [ic, col] = DEPI[d.k];
+      return `<div class="q-ic" data-dep="${d.k}"><i style="background:${col}">${ic}</i>${esc(d.name)}<small>${n} pending · ${L.length} in all</small></div>`; }).join("")}</div>
     ${QD.packs.length ? "" : `<p class="q-mut" style="margin-top:14px">Nothing yet. A Snaglist appears here as soon as the audit team shares it in ABC Audit.</p>`}`);
   document.querySelectorAll("[data-dep]").forEach(x => x.onclick = () => dept(x.dataset.dep));
 }
@@ -76,36 +102,128 @@ function dept(k){
   DEP = k; PK = null;
   const L = QD.packs.filter(p => p.dept === k), name = (QD.depts.find(d => d.k === k) || {}).name || k;
   V(`${QD.depts.length > 1 ? `<button class="q-back" id="bk">‹ Departments</button>` : ""}<div class="q-h">${esc(name)} · posted audits</div>
-    ${L.length ? `<div class="q-cards">${L.map(p => `<div class="q-cd" data-pk="${esc(p.id)}"><div class="q-t"><div><b>${esc(p.siteName)}</b><div class="q-mut">${fd(p.start)}${p.end && p.end !== p.start ? " – " + fd(p.end) : ""} · ${esc(p.audit)}</div><span class="q-chip q-dep">${esc(p.deptName)}</span></div>
-        <div class="q-sc">${p.score != null ? p.score + "%" : "–"}<small>score</small></div></div>${chips(p.counts)}<div class="q-mut" style="margin-top:8px">${p.n} finding${p.n === 1 ? "" : "s"} · shared ${fd(p.shared || p.received)}</div></div>`).join("")}</div>`
+    ${L.length ? `<div class="q-tw"><table><thead><tr><th>Audit #</th><th>Flagship</th><th>Posted</th><th>Audit score</th><th>Action plan</th><th>Status</th><th></th></tr></thead><tbody>
+      ${L.map(p => `<tr><td><b>${esc(p.audit)}</b><div class="q-mut">${chips(p.counts)}</div></td><td>${esc(p.siteName)}</td><td>${fd(p.shared || p.received)}</td><td><b>${p.score != null ? p.score + "%" : "–"}</b></td>
+        <td>${p.verified} / ${p.n} verified${p.overdue ? ` · <b style="color:#C0392B">${p.overdue} overdue</b>` : ""}</td><td>${stOf(p)}</td><td><button class="q-btn ${p.closed ? "g" : ""}" data-pk="${esc(p.id)}">Open</button></td></tr>`).join("")}</tbody></table></div>`
       : `<div class="q-empty">No ${esc(name)} Snaglist shared yet.</div>`}`);
   const bk = $("#bk"); if (bk) bk.onclick = landing;
   document.querySelectorAll("[data-pk]").forEach(x => x.onclick = () => openPack(x.dataset.pk));
 }
-async function openPack(id){
+async function openPack(id, view){
   try { PK = await api("ops/qc/pack?id=" + encodeURIComponent(id)); } catch (e) { return toast(e.message, true); }
-  DEP = PK.dept; F = "all"; showPack();
+  DEP = PK.dept; SEL = new Set();
+  (view === "snag" ? showSnag : view === "plan" ? showPlan : view === "com" ? showCom : home)();
 }
-function showPack(){
+const reload = v => openPack(PK.id, v);
+function head(back){
+  return `<button class="q-back" id="bk">‹ ${back}</button>
+    <div class="q-top"><div><b>${esc(PK.audit)} · ${esc(PK.siteName)} · ${esc(PK.deptName)}</b><div class="q-mut">Posted ${fd(PK.shared)} · score ${PK.score != null ? PK.score + "%" : "–"} (frozen — nothing here changes it) · ${PK.closed ? (PK.closedOpen ? `closed ${fd(PK.closed)} by ${esc(PK.closedBy)} with ${PK.closedOpen} left open` : `closed ${fd(PK.closed)} by ${esc(PK.closedBy)}`) : "Pending"}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${PK.canManage ? `<button class="q-btn r" id="cls">Close audit</button>` : ""}${PK.canReopen ? `<button class="q-btn g" id="reo">Reopen</button>` : ""}</div></div>`;
+}
+function wireHead(back){
+  $("#bk").onclick = back;
+  const c = $("#cls"); if (c) c.onclick = closeAudit;
+  const r = $("#reo"); if (r) r.onclick = async () => { try { await api("ops/qc/reopen", { id: PK.id }); toast("Audit reopened"); QD = await api("ops/qc/list"); reload(); } catch (e) { toast(e.message, true); } };
+}
+function home(){
+  const F2 = PK.findings, A = F2.map(act), ver = A.filter(a => a.status === "verified").length, fx = A.filter(a => a.status === "fixed").length, pr = A.filter(a => ["assigned", "progress", "escalated"].includes(a.status)).length,
+    od = A.filter(late).length, un = A.filter(a => a.status === "unassigned").length, disp = PK.comments.filter(c => c.kind === "dispute").length, last = PK.comments[PK.comments.length - 1];
+  const open = F2.filter(f => act(f).status !== "verified");
+  V(head(esc(PK.deptName)) + `<div class="q-3">
+      <div class="q-c3" data-go="snag"><i style="background:#4A1F73">📋</i><b>Snaglist</b><div class="q-mut">${F2.length} finding${F2.length === 1 ? "" : "s"}</div><div>${chips(PK.counts)}</div></div>
+      <div class="q-c3" data-go="plan"><i style="background:#2E7D32">🛠</i><b>Action plan</b><div class="q-bar"><span style="width:${F2.length ? Math.round(ver / F2.length * 100) : 0}%"></span></div><div class="q-mut">${ver} verified · ${fx} fixed · ${pr} in hand · ${un} not assigned${od ? ` · <b style="color:#C0392B">${od} overdue</b>` : ""}</div></div>
+      <div class="q-c3" data-go="com"><i style="background:#1F5A96">💬</i><b>Comments</b><div class="q-mut">${PK.comments.length} comment${PK.comments.length === 1 ? "" : "s"}${disp ? ` · ${disp} disputed` : ""}${last ? ` · last: ${esc(last.by)}, ${fd(last.at)}` : ""}</div></div></div>
+    <div class="q-h">Still open — not yet finalized (${open.length})</div>
+    ${open.map(f => { const a = act(f); return `<div class="q-it"><div><b>${esc([f.card, f.area, f.sub].filter(Boolean).join(" · "))}</b> ${f.grade ? `<span class="q-chip g-${esc(f.grade)}">${esc(f.grade)}</span>` : ""}<div class="q-mut">${esc(f.text)} · Owner: ${esc(a.ownerName || "—")}${a.due ? " · due " + fd(a.due) : ""}</div></div>${aChip(a)}</div>`; }).join("") || `<div class="q-empty">Everything is verified. ✓</div>`}`);
+  wireHead(() => { QD && dept(PK.dept); });
+  document.querySelectorAll("[data-go]").forEach(x => x.onclick = () => ({ snag: showSnag, plan: showPlan, com: showCom })[x.dataset.go]());
+}
+function closeAudit(){
+  const open = PK.findings.filter(f => act(f).status !== "verified"), big = open.filter(f => ["Critical", "Major"].includes(f.grade)).length;
+  const p = pop(open.length ? `<b style="color:#C0392B;font-size:1rem">⚠ ${open.length} item${open.length === 1 ? " is" : "s are"} still open</b>
+      <span class="q-mut">${big ? `${big} Critical / Major not verified. ` : ""}Closing records the audit as “Closed · ${open.length} left open”, visible to management. The audit score does not change.</span>
+      <label>Type <b>Agree</b> to close</label><input id="agr" placeholder="Agree" autocomplete="off"><div style="display:flex;gap:8px;justify-content:flex-end"><button class="q-btn g" data-x>Cancel</button><button class="q-btn r" id="go">Close audit</button></div>`
+    : `<b style="font-size:1rem">Close this audit?</b><span class="q-mut">Every finding is verified.</span><div style="display:flex;gap:8px;justify-content:flex-end"><button class="q-btn g" data-x>Cancel</button><button class="q-btn" id="go">Close audit</button></div>`);
+  p.querySelector("#go").onclick = async () => { const ag = p.querySelector("#agr"); if (ag && ag.value.trim().toLowerCase() !== "agree") return toast("Type Agree to close", true);
+    try { await api("ops/qc/close", { id: PK.id, agree: ag ? ag.value : "" }); p.remove(); toast("Audit closed"); QD = await api("ops/qc/list"); reload(); } catch (e) { toast(e.message, true); } };
+}
+function showSnag(){
   const P = PK, floors = [...new Set(P.findings.map(f => f.card).filter(Boolean))];
   const FL = [["all", `All ${P.findings.length}`], ...floors.map(c => ["c:" + c, c]), ["s:FOH", "Front of House"], ["s:BOH", "Back of House"], ["g:big", "Critical / Major"], ["t:I", "Immediate"], ["t:P", "Project"]];
-  const isP = f => /^p/i.test(f.type || ""), side = f => /back|boh/i.test(f.side || "") ? "BOH" : /front|foh/i.test(f.side || "") ? "FOH" : "";
   const pass = f => F === "all" || (F.startsWith("c:") && f.card === F.slice(2)) || (F === "s:FOH" && side(f) === "FOH") || (F === "s:BOH" && side(f) === "BOH")
     || (F === "g:big" && ["Critical", "Major"].includes(f.grade)) || (F === "t:I" && !isP(f)) || (F === "t:P" && isP(f));
   const L = P.findings.filter(pass);
-  V(`<button class="q-back" id="bk">‹ ${esc(P.deptName)}</button>
-    <div class="q-top"><div><b>${esc(P.siteName)} · ${esc(P.deptName)} · ${fd(P.start)}</b><div class="q-mut">${esc(P.audit)} · score ${P.score != null ? P.score + "%" : "–"} · frozen when posted — nothing here changes it</div>${chips(P.counts)}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="q-btn g" onclick="print()">⤓ Print / PDF</button><a class="q-btn g" href="${esc(P.link)}" target="_blank" rel="noopener">↗ Open in ABC Audit</a></div></div>
+  V(head(esc(P.audit)) + `<div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px"><button class="q-btn g" onclick="print()">⤓ Print / PDF</button><a class="q-btn g" href="${esc(P.link)}" target="_blank" rel="noopener">↗ Open in ABC Audit</a></div>
     <div class="q-filters">${FL.map(([k, n]) => `<button data-f="${esc(k)}" class="${F === k ? "on" : ""}">${esc(n)}</button>`).join("")}</div>
     ${L.map(f => `<div class="q-f"><div class="q-ph">${f.photos[0] ? `<img loading="lazy" src="${esc(f.photos[0])}" alt="Photo" data-z="${esc(f.photos[0])}">` : "No photo"}</div><div class="q-fb">
       <b>${esc([f.card, f.area, f.sub].filter(Boolean).join(" · "))}</b><br>
       ${f.grade ? `<span class="q-chip g-${esc(f.grade)}">${esc(f.grade)}</span>` : ""}${side(f) ? `<span class="q-chip q-dep">${side(f) === "FOH" ? "Front of House" : "Back of House"}</span>` : ""}<span class="q-chip ${isP(f) ? "q-prj" : "q-imm"}">${isP(f) ? "Project" : "Immediate"}</span>
       <div style="margin-top:6px">${esc(f.text)}</div>${f.comment ? `<div class="q-mut" style="margin-top:4px">“${esc(f.comment)}”</div>` : ""}
-      <div class="q-mut" style="margin-top:4px">${esc(f.id)} · found ${fd(f.created)} ${esc(String(f.created || "").slice(11, 16))}${f.due ? " · fix by " + fd(f.due) : ""}${f.asset ? " · " + esc(f.asset) : ""}${f.resp ? " · " + esc(f.resp) : ""}</div>
-      <div class="q-ap">Action plan — coming next (owner · due date · status · proof)</div></div></div>`).join("") || `<div class="q-empty">No finding matches this filter.</div>`}`);
-  $("#bk").onclick = () => dept(P.dept);
-  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { F = b.dataset.f; showPack(); });
+      <div class="q-mut" style="margin-top:4px">${esc(f.id)} · found ${fd(f.created)} ${esc(String(f.created || "").slice(11, 16))}${f.due ? " · fix by " + fd(f.due) : ""}${f.asset ? " · " + esc(f.asset) : ""}</div>
+      <div class="q-ap">Action plan: ${aChip(act(f))} ${esc(act(f).ownerName || "")}</div></div></div>`).join("") || `<div class="q-empty">No finding matches this filter.</div>`}`);
+  wireHead(home);
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { F = b.dataset.f; showSnag(); });
   document.querySelectorAll("[data-z]").forEach(im => im.onclick = () => { const z = document.createElement("div"); z.className = "q-zoom"; z.innerHTML = `<img src="${esc(im.dataset.z)}" alt="">`; z.onclick = () => z.remove(); document.body.append(z); });
+}
+function showPlan(){
+  const AFL = [["open", "Not verified"], ["unassigned", "Not assigned"], ["late", "Overdue"], ["mine", "Mine"], ["escalated", "Needs approval"], ["fixed", "To verify"], ["all", "All"]];
+  const pass = f => { const a = act(f); return AF === "all" || (AF === "open" && a.status !== "verified") || (AF === "late" && late(a)) || (AF === "mine" && a.owner === PK.me) || a.status === AF; };
+  const L = PK.findings.filter(pass);
+  V(head(esc(PK.audit)) + `<div class="q-filters">${AFL.map(([k, n]) => `<button data-af="${k}" class="${AF === k ? "on" : ""}">${n}</button>`).join("")}</div>
+    ${PK.canManage ? `<div class="q-it" style="background:#FBFAFD"><span class="q-mut"><b id="nsel">${SEL.size}</b> selected</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="q-btn s g" id="sall">Select all shown</button><button class="q-btn s" id="bulk">Assign owner &amp; due date</button></div></div>` : ""}
+    ${L.map(f => { const a = act(f); return `<div class="q-it"><div class="q-ck" style="flex:1 1 320px;align-items:flex-start">${PK.canManage ? `<input type="checkbox" data-sel="${esc(f.id)}" ${SEL.has(f.id) ? "checked" : ""} style="margin-top:4px">` : ""}<div>
+        <b>${esc([f.card, f.area, f.sub].filter(Boolean).join(" · "))}</b> ${f.grade ? `<span class="q-chip g-${esc(f.grade)}">${esc(f.grade)}</span>` : ""}<span class="q-chip ${isP(f) ? "q-prj" : "q-imm"}">${isP(f) ? "Project" : "Immediate"}</span>
+        <div class="q-mut">${esc(f.text)}</div>
+        <div class="q-mut" style="margin-top:4px">Owner: <b>${esc(a.ownerName || "—")}</b>${a.due ? ` · due ${fd(a.due)}` : ""}${a.action ? ` · ${esc(a.action)}` : ""}${a.contractor ? ` · contractor ${esc(a.contractor)}` : ""}${a.cost ? ` · ${esc(a.cost)}` : ""}${a.escalate ? ` · ⚠ ${esc(a.escalate)}` : ""}${a.fixedBy ? ` · fixed by ${esc(a.fixedBy)}` : ""}${a.verifiedBy ? ` · verified by ${esc(a.verifiedBy)}` : ""}</div>
+        ${a.proof ? `<img src="${esc(a.proof)}" alt="Proof" data-z="${esc(a.proof)}" style="margin-top:6px;width:110px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in">` : ""}</div></div>
+      <div style="display:flex;gap:6px;align-items:center">${aChip(a)}${!PK.closed && (PK.canManage || a.owner === PK.me) ? `<button class="q-btn s g" data-ed="${esc(f.id)}">Update</button>` : ""}</div></div>`; }).join("") || `<div class="q-empty">Nothing here.</div>`}`);
+  wireHead(home);
+  document.querySelectorAll("[data-af]").forEach(b => b.onclick = () => { AF = b.dataset.af; showPlan(); });
+  document.querySelectorAll("[data-sel]").forEach(c => c.onchange = () => { c.checked ? SEL.add(c.dataset.sel) : SEL.delete(c.dataset.sel); $("#nsel").textContent = SEL.size; });
+  const sa = $("#sall"); if (sa) sa.onclick = () => { L.forEach(f => SEL.add(f.id)); showPlan(); };
+  const bk = $("#bulk"); if (bk) bk.onclick = () => SEL.size ? assign([...SEL]) : toast("Select findings first", true);
+  document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => edit(b.dataset.ed));
+  document.querySelectorAll("[data-z]").forEach(im => im.onclick = () => { const z = document.createElement("div"); z.className = "q-zoom"; z.innerHTML = `<img src="${esc(im.dataset.z)}" alt="">`; z.onclick = () => z.remove(); document.body.append(z); });
+}
+const ownerSel = cur => `<select id="own"><option value="">— nobody —</option>${PK.owners.map(o => `<option value="${esc(o.email)}" ${o.email === cur ? "selected" : ""}>${esc(o.name)}${o.pos ? " · " + esc(o.pos) : ""}</option>`).join("")}</select>`;
+function assign(ids){
+  const p = pop(`<b style="font-size:1rem">Assign ${ids.length} finding${ids.length === 1 ? "" : "s"}</b><label>Owner</label>${ownerSel("")}<label>Due date (empty = the auditor's “fix by” date)</label><input type="date" id="due">
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="q-btn g" data-x>Cancel</button><button class="q-btn" id="go">Assign</button></div>`);
+  p.querySelector("#go").onclick = async () => { try { const b = { id: PK.id, f: ids, owner: p.querySelector("#own").value }; const du = p.querySelector("#due").value; if (du) b.due = du;
+    await api("ops/qc/act", b); p.remove(); SEL = new Set(); toast("Assigned"); reload("plan"); } catch (e) { toast(e.message, true); } };
+}
+function edit(fid){
+  const f = PK.findings.find(x => x.id === fid), a = act(f), M = PK.canManage, St = s => `<option value="${s}" ${a.status === s ? "selected" : ""}>${esc(PK.statuses[s])}</option>`;
+  const opts = ["assigned", "progress", "escalated", "fixed", ...(M ? ["verified"] : [])].map(St).join("");
+  const p = pop(`<b style="font-size:1rem">${esc([f.card, f.area, f.sub].filter(Boolean).join(" · "))}</b><span class="q-mut">${esc(f.text)}</span>
+    ${M ? `<label>Owner</label>${ownerSel(a.owner)}<label>Due date</label><input type="date" id="due" value="${esc(a.due || f.due || "")}">` : `<span class="q-mut">Owner: ${esc(a.ownerName || "—")}${a.due ? " · due " + fd(a.due) : ""}</span>`}
+    <label>What will be done</label><input id="actn" value="${esc(a.action || "")}" maxlength="500">
+    ${isP(f) ? `<label>Contractor</label><input id="ctr" value="${esc(a.contractor || "")}"><label>Cost estimate</label><input id="cost" value="${esc(a.cost || "")}" placeholder="e.g. USD 450">` : ""}
+    <label>Status</label><select id="st">${opts}</select>
+    <div id="fx" hidden><label>Proof photo (needed for Fixed)</label><input type="file" id="pf" accept="image/*" capture="environment"><input id="pn" placeholder="Note (optional)"></div>
+    <div id="es" hidden><label>Why does it need approval or budget?</label><input id="esr" value="${esc(a.escalate || "")}"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="q-btn g" data-x>Cancel</button><button class="q-btn" id="go">Save</button></div>`);
+  const sync = () => { const v = p.querySelector("#st").value; p.querySelector("#fx").hidden = v !== "fixed"; p.querySelector("#es").hidden = v !== "escalated"; };
+  p.querySelector("#st").onchange = sync; sync();
+  p.querySelector("#go").onclick = async () => {
+    try { const b = { id: PK.id, f: [fid], action: p.querySelector("#actn").value };
+      if (M) { b.owner = p.querySelector("#own").value; b.due = p.querySelector("#due").value; }
+      if (p.querySelector("#ctr")) { b.contractor = p.querySelector("#ctr").value; b.cost = p.querySelector("#cost").value; }
+      const st = p.querySelector("#st").value; if (st !== a.status || st === "fixed") b.status = st;
+      if (st === "fixed") { b.proof = await photo(p.querySelector("#pf").files[0]); b.proofNote = p.querySelector("#pn").value; }
+      if (st === "escalated") b.escalate = p.querySelector("#esr").value;
+      await api("ops/qc/act", b); p.remove(); toast("Saved"); reload("plan"); } catch (e) { toast(e.message, true); } };
+}
+function showCom(){
+  const fn = id => { const f = PK.findings.find(x => x.id === id); return f ? [f.card, f.area, f.sub].filter(Boolean).join(" · ") : ""; };
+  V(head(esc(PK.audit)) + `${PK.canComment ? `<div class="q-cm" style="display:grid;gap:8px"><b>New comment</b>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="ck" style="flex:1 1 180px">${Object.entries(PK.kinds).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select>
+      <select id="cf" style="flex:2 1 260px"><option value="">— the whole audit —</option>${PK.findings.map(f => `<option value="${esc(f.id)}">${esc(f.id)} · ${esc(fn(f.id))}</option>`).join("")}</select></div>
+      <textarea id="ct" rows="3" placeholder="Write the comment…" style="width:100%;border:1px solid var(--q-line);border-radius:10px;padding:9px;font:inherit"></textarea>
+      <div class="q-mut">A disputed finding is recorded for management only — it never changes the audit score.</div><div><button class="q-btn" id="cs">Post comment</button></div></div>` : ""}
+    ${PK.comments.slice().reverse().map(c => `<div class="q-cm"><b>${esc(c.by)}</b> <span class="q-mut">· ${fd(c.at)} ${esc(String(c.at || "").slice(11, 16))}</span> <span class="q-chip ${c.kind === "dispute" ? "g-Major" : "q-dep"}">${esc(c.kindName)}</span>${c.f ? `<div class="q-mut">On ${esc(c.f)} · ${esc(fn(c.f))}</div>` : ""}<div style="margin-top:6px;white-space:pre-wrap">${esc(c.text)}</div></div>`).join("") || `<div class="q-empty">No comments yet.</div>`}`);
+  wireHead(home);
+  const cs = $("#cs"); if (cs) cs.onclick = async () => { try { await api("ops/qc/comment", { id: PK.id, kind: $("#ck").value, f: $("#cf").value, text: $("#ct").value }); toast("Comment posted"); reload("com"); } catch (e) { toast(e.message, true); } };
 }
 boot();
 </script>
