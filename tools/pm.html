@@ -97,16 +97,20 @@ function home(){
       <div class="${H.ext.length ? "warn" : ""}"><b>${H.ext.length}</b>Extensions to approve</div></div>
     ${H.ext.length ? `<div class="sec">Deadline extensions to approve</div>${H.ext.map(e => `<div class="nx"><div class="m"><b>${esc(e.month)} · <span class="risk r-${e.risk}">${e.risk}</span> → ${esc(fd(e.deadline))}</b><small>Asked by ${esc(e.requested_by)}${e.note ? " · " + esc(e.note) : ""}</small></div>
       ${H.boss ? `<button class="btn small" data-ex="${e.id}" data-d="approve">Approve</button><button class="btn ghost small" data-ex="${e.id}" data-d="refuse">Refuse</button>` : `<small class="muted2">Management approves</small>`}</div>`).join("")}` : ""}
+    <div class="nx" style="border:1px solid ${H.auto ? "#2E7D32" : "#C0392B"}"><div class="m"><b>Automatic emails to tenants: ${H.auto ? "ON" : "OFF"}</b><small>${H.auto ? "Each PM month opens by itself 15 days before, weekly reminders and the breach list run (all flagships)" : "Nothing is opened or emailed by itself — testing mode. “Open now” still works by hand."}</small></div>
+      ${H.boss ? `<button class="btn small ${H.auto ? "ghost" : ""}" id="pmAuto">${H.auto ? "Switch OFF" : "Switch ON"}</button>` : ""}</div>
     <div class="sec">Next PM months</div>
     ${H.next.length ? H.next.map(n => { const open = H.cycles.find(c => c.month === n.month);
       return `<div class="nx"><div class="m"><b>${esc(n.label)}</b><small>Opens ${esc(fd(n.launch))} (15 days before) · deadline ${esc(fd(n.deadline))}</small></div>
-        ${open ? `<span class="ch c-approved">Open</span>` : H.ops ? `<button class="btn small" data-open="${n.month}">Open now</button>` : `<small class="muted2">Opens automatically</small>`}</div>`; }).join("") : `<p class="muted2">No month in the setup for ${esc(H.siteName)} yet.</p>`}
+        ${open ? `<span class="ch c-approved">Open</span>` : H.ops ? `<button class="btn small" data-open="${n.month}">Open now</button>` : `<small class="muted2">${H.auto ? "Opens automatically" : "Automatic emails OFF"}</small>`}</div>`; }).join("") : `<p class="muted2">No month in the setup for ${esc(H.siteName)} yet.</p>`}
     <div class="sec">PM months</div>
     ${H.cycles.length ? `<div class="cards">${H.cycles.map(c => `<div class="cy" data-cy="${c.id}"><b>${esc(c.label)}</b><small>Deadline ${esc(fd(c.deadline))}</small>
         <div class="prog"><i style="width:${c.tenants ? Math.round(c.done / c.tenants * 100) : 0}%"></i></div>
         <div class="chips"><span class="ch c-approved">${c.done}/${c.tenants} complete</span>${c.pending ? `<span class="ch c-pending">${c.pending} to review</span>` : ""}${c.open ? `<span class="ch c-missing">${c.open} missing</span>` : ""}${c.breach ? `<span class="ch c-rejected">${c.breach} breach</span>` : ""}</div></div>`).join("")}</div>`
       : `<p class="muted2">No PM month opened yet. Each month opens by itself 15 days before, or press “Open now”.</p>`}`);
   $("#view").querySelectorAll("[data-cy]").forEach(x => x.onclick = () => { CY = +x.dataset.cy; show(); });
+  const au = $("#pmAuto"); if (au) au.onclick = async () => { if (!confirm(H.auto ? "Stop all automatic PM emails (launch, reminders) on every flagship?" : "Switch ON: PM months open by themselves 15 days before and tenants get weekly reminders, on every flagship. Continue?")) return;
+    try { await api("ops/pm/auto", { site: CTX.site, on: !H.auto }); toast(H.auto ? "Automatic PM emails OFF" : "Automatic PM emails ON"); load(); } catch (e){ toast(e.message, true); } };
   $("#view").querySelectorAll("[data-open]").forEach(b => b.onclick = async () => {
     if (!confirm(`Open ${b.closest(".nx").querySelector("b").textContent} now and email every tenant their link?`)) return;
     b.disabled = true; try { const r = await api("ops/pm/launch", { site: CTX.site, month: b.dataset.open }); toast(`Opened · ${r.records} tenants · ${r.mailed} emailed`); load(); } catch (e){ b.disabled = false; toast(e.message, true); } });

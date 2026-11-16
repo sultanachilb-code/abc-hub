@@ -31,7 +31,16 @@ export const MGR_ITEMS = { incidents: "Incidents · PIR", checklists: "AM / PM c
   restroom: "Restroom inspection", feedback: "Tenant feedback", marketing: "Marketing events", cleaning: "Cleaning", contractors: "Contractors", contracts: "Contracts ending", portal: "Portal items waiting" };
 export const KPI_ITEMS = { restroom: "Restroom inspection compliance", pir: "Incident PIR on time", amcheck: "AM checklist on time", pmcheck: "PM checklist on time",
   handover: "Handover on time", cleaning: "Cleaning compliance", mf48: "Malfunctions fixed within 48 h", snags: "Snags solved", gla: "GLA occupancy (by area)",
-  contractors: "Contractor entries", contracts: "Contracts ending (next 60 days)", vrres: "Portal violations resolved (older than 7 days)", mk7: "Marketing requests answered (older than 7 days)" };
+  contractors: "Contractor entries", contracts: "Contracts ending (next 60 days)", vrres: "Portal violations resolved (older than 7 days)", mk7: "Marketing requests answered (older than 7 days)",
+  nrOpen: "ABC Requests open (Sent to Tenant)", bpRev: "Penalties pending submission (In Review)", vrOpen: "Violations not closed (Sent to Tenant)" };
+/* Nov 2026: counts from the latest ABC Connect import (not the period) · sub = how many are older than 7 days */
+const PORTAL_OPEN = { nrOpen: ["nr", "sent to tenant"], bpRev: ["bp", "in review"], vrOpen: ["vr", "sent to tenant"] };
+async function portalOpen(env, site, k, day) {
+  const [kind, st] = PORTAL_OPEN[k], d7 = new Date(new Date(day + "T12:00:00Z").getTime() - 7 * 864e5).toISOString().slice(0, 10);
+  const r = await one(env.DB.prepare(`SELECT COUNT(*) AS n, SUM(CASE WHEN created_day != '' AND created_day < ? THEN 1 ELSE 0 END) AS old
+    FROM portal_items WHERE site = ? AND kind = ? AND active = 1 AND lower(status) = ?`).bind(d7, site, kind, st)).catch(() => null);
+  return r ? { n: Number(r.n) || 0, old: Number(r.old) || 0 } : null;
+}
 export const AUDIENCES = { manager: "Mall / Operations Manager", advisor: "Property Advisor", director: "Mall Director", cdso: "CDSO" };
 const allOn = o => Object.fromEntries(Object.keys(o).map(k => [k, true]));
 export async function briefConfig(env) {
@@ -294,7 +303,7 @@ async function contractsEnding(env, site, day) {
 
 export async function kpiBrief(env, sites, period, d, cfg) {
   const day = d.today(), R = rangeOf(period, day), P = prevRange(R);
-  const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}:r2`;
+  const ck = `brief:kpi:${sites.join(",")}:${period}:${day}:${Object.keys(cfg).filter(k => cfg[k]).join(",")}:r3`;
   try { const c = JSON.parse(((await one(env.DB.prepare("SELECT v FROM meta WHERE k = ?").bind(ck))) || {}).v || "null"); if (c && Date.now() - c.t < 30 * 60e3) return c.data; } catch {}
   const snag = cfg.snags && d.snagReport ? await d.snagReport(R.from, R.to).catch(() => null) : null;
   const S = new Map(((snag && snag.sites) || []).map(s => [s.site, s]));
@@ -314,6 +323,7 @@ export async function kpiBrief(env, sites, period, d, cfg) {
       case "contracts": return prev ? null : contractsEnding(env, site, day);
       case "vrres": return portalVrPct(env, site, r.from, r.to, day);
       case "mk7": return portalMkPct(env, site, r.from, r.to, day);
+      case "nrOpen": case "bpRev": case "vrOpen": { if (prev) return null; const x = await portalOpen(env, site, k, day); if (x) HINT.set(site + "|" + k, x.old ? `${x.old} over 7 days` : ""); return x ? x.n : null; }
     }
     return null;
   };
@@ -321,10 +331,10 @@ export async function kpiBrief(env, sites, period, d, cfg) {
   const keys = Object.keys(KPI_ITEMS).filter(k => cfg[k]);
   const out = [];
   for (const k of keys) {
-    const cells = await Promise.all(sites.map(async s => {
+    const cells = await Promise.all(sites.map(async s => {   // (portal counts: the hint holds the "over 7 days" sub)
       const v = await calc(s, k, R, false), pv = PCT.has(k) && !["cleaning", "gla"].includes(k) ? await calc(s, k, P, true) : null;
       return { site: s, v, pct: PCT.has(k), tone: PCT.has(k) && k !== "gla" ? tone(v) : "", delta: v != null && pv != null ? Math.round(v - pv) : null,
-        sub: k === "snags" && S.has(s) ? `${S.get(s).openTotal} open` : "", hint: HINT.get(s + "|" + k) || "" };
+        sub: k === "snags" && S.has(s) ? `${S.get(s).openTotal} open` : PORTAL_OPEN[k] ? HINT.get(s + "|" + k) || "" : "", hint: HINT.get(s + "|" + k) || "" };
     }));
     out.push({ key: k, label: KPI_ITEMS[k], cells });
   }

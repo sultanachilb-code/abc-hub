@@ -325,7 +325,8 @@ export async function pmRoute(env, p, method, b, url, d) {
     const ext = (await env.DB.prepare("SELECT e.*, c.month FROM pm_ext e JOIN pm_cycles c ON c.id = e.cycle_id WHERE c.site = ? AND e.status = 'pending'").bind(site).all()).results || [];
     const pendingReview = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pm_certs WHERE site = ? AND status = 'pending'").bind(site).first()).n;
     const next = await nextMonths(env, site, today);
-    return { site, siteName: d.siteName(site), today, ops, boss, setup: setupN, tenants: ten, pendingReview, ext, next, cats: CATS, reasons: PM_REASONS, penalty: PENALTY,
+    const auto = ((await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:auto'").first().catch(() => null)) || {}).v === "on";
+    return { auto, site, siteName: d.siteName(site), today, ops, boss, setup: setupN, tenants: ten, pendingReview, ext, next, cats: CATS, reasons: PM_REASONS, penalty: PENALTY,
       cycles: cyc.map(c => ({ id: c.id, month: c.month, label: monthName(c.month), deadline: c.deadline, launchedAt: c.launched_at, by: c.launched_by, ...(S.get(c.id) || { tenants: 0, done: 0, pending: 0, open: 0, breach: 0 }) })) };
   }
   if (p === "pm/cycle") {
@@ -443,6 +444,11 @@ export async function pmRoute(env, p, method, b, url, d) {
       .bind(site, brand, cat, cleanEmails(b.emails), clip(b.units, 80), since, b.excluded ? 1 : 0, d.now()).run();
     return { saved: true };
   }
+  if (p === "pm/auto" && method === "POST") {   // all flagships: automatic launch 15 days before + weekly tenant reminders + breach list
+    if (!boss && me.role !== "ADMIN" && !me.is_admin) throw err("Management only", 403);
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('pm:auto', ?)").bind(b.on ? "on" : "off").run();
+    return { auto: !!b.on };
+  }
   if (p === "pm/launch") {
     const ym = String(b.month || ""); if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(ym)) throw err("Choose the month");
     if (ym < today.slice(0, 7)) throw err("This month has passed");
@@ -515,6 +521,9 @@ async function nextMonths(env, site, today) {
 /* ---------- cron: launch, weekly reminders, extension reminder, breaches (once a day from 09:00) ---------- */
 export async function pmRun(env, d) {
   if (d.hour() < 9) return;
+  /* Nov 2026: automatic launch, tenant reminders and breaches only when switched ON (PM page → Automatic emails) — OFF while testing */
+  const sw = await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:auto'").first().catch(() => null);
+  if (!sw || sw.v !== "on") return;
   const today = d.today();
   const g = await env.DB.prepare("SELECT v FROM meta WHERE k = 'pm:run'").first().catch(() => null);
   if (g && g.v === today) return;
