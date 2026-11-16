@@ -12,5 +12,5 @@ jobs:
       - run: |
           q(){ npx -y wrangler@4 d1 execute "${DBN:-hub-db}" --remote --json --command "$1" > o.json 2> e.txt || true
             node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r.map(x=>x.results&&x.results.length?x.results:x.meta&&x.meta.changes)).slice(0,1500))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
-          echo "::notice title=set::$(q "INSERT OR REPLACE INTO meta (k, v) VALUES ('audit:url', 'https://abc-audit.abcoperationshub.workers.dev'); DELETE FROM meta WHERE k = 'cc:sys'")"
-          echo "::notice title=ping::$(curl -s -m 20 -w ' HTTP %{http_code}' https://abc-audit.abcoperationshub.workers.dev/api/status | head -c 200) go $(curl -s -m 20 -o /dev/null -w '%{http_code} %{redirect_url}' https://operations-hub.sultanachi-lb-61f.workers.dev/go/audit)"
+          echo "::notice title=qc::$(q "SELECT id, site, dept, received_at, updated_at FROM qc_packs")"
+          echo "::notice title=ingest::$(curl -s -m 20 -X POST -H 'content-type: application/json' -d '{}' https://operations-hub.sultanachi-lb-61f.workers.dev/api/qc/ingest | head -c 200)"
