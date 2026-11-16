@@ -692,6 +692,10 @@ async function sy(fresh){
   const S = await api("admin/cc/systems" + (fresh ? "?fresh=1" : ""));
   V(head("Systems &amp; jobs", `Connected systems, settings and the automatic jobs · checked ${ago(S.at)}`, `<button class="b g" id="ta">↻ Test all now</button>`) +
     `<div class="sec">Connected systems</div><div class="sys">${S.list.map(s => `<div class="sy"><span class="d bg-${s.ok ? (s.warn ? "warn" : "ok") : "bad"}"></span><div><b>${esc(s.name)}</b><small>${s.ok ? (s.ms != null ? `Answers · ${s.ms} ms` : "OK") : "Not answering"}${s.note ? " · " + esc(s.note) : ""}</small></div></div>`).join("")}</div>
+    ${(() => { const au = S.list.find(s => s.id === "audit") || {}; return `<div class="sec">ABC Audit</div>
+      <div class="sy" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="mut" style="flex:1 1 220px">Address of the ABC Audit system — the hub tile opens it, and it is checked above with the other systems</span>
+        <input id="auU" value="${esc(au.url || "")}" placeholder="https://abc-audit.….workers.dev" style="flex:2 1 260px;border:1px solid var(--cline);border-radius:10px;padding:9px 10px;font:inherit;background:var(--ccard);color:var(--ctext)">
+        <button class="b" id="auS">Save</button></div>`; })()}
     <div class="sec">Automatic jobs</div><div class="tw"><table><thead><tr><th>Job</th><th>When</th><th>Last run</th><th>Status</th><th></th></tr></thead><tbody>
       ${S.jobs.map(j => `<tr><td><b>${esc(j.name)}</b>${j.note ? `<br><span class="mut">${esc(j.note)}</span>` : ""}</td><td class="mut">${esc(j.when)}</td><td>${esc(j.last ? (j.last.length <= 10 ? ago(j.last) : dt(j.last)) : "—")}</td>
         <td>${pill(j.ok ? "ok" : j.id === "cron" ? "bad" : "warn", j.ok ? "OK" : "Check")}</td><td>${j.run ? `<button class="b g" data-run="${j.run}">${esc(j.runLabel || "Run now")}</button>` : ""}</td></tr>`).join("")}</tbody></table></div>
@@ -699,6 +703,7 @@ async function sy(fresh){
     <div class="tw"><table><thead><tr><th>Setting</th><th>Used for</th><th>Status</th></tr></thead><tbody>
       ${S.secrets.map(s => `<tr><td><code>${esc(s.name)}</code></td><td>${esc(s.use)}</td><td>${s.set ? pill("ok", "Set") : pill(s.required ? "bad" : "mut", s.required ? "Missing" : "Not set")}</td></tr>`).join("")}</tbody></table></div>`);
   $("#ta").onclick = () => { V(`<p class="mut">Testing every system…</p>`); sy(true).catch(e => toast(e.message, true)); };
+  $("#auS").onclick = async () => { try { await api("admin/cc/audit-url", { url: $("#auU").value }); toast("ABC Audit address saved"); sy(true); } catch (e){ toast(e.message, true); } };
   $("#main").querySelectorAll("[data-run]").forEach(b => b.onclick = async () => {
     const j = b.dataset.run;
     if (j === "backup") return location.href = "/api/admin/backup";

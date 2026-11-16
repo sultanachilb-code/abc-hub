@@ -119,7 +119,9 @@ async function systems(env, d, fresh) {
   const C = d.CONNECTORS, names = { snaglist: "Snaglist", incidents: "Incidents", restroom: "Restroom", "cleaner-qr": "Cleaning app", footfall: "Footfall" };
   const list = await Promise.all([
     ...Object.entries(names).filter(([k]) => C[k]).map(([k, n]) => ping(k, n, C[k])),
-    ping("gate", "Loading Gate", { base: env.GATE_URL || "https://abc-loading-gate.sultanachi-lb-61f.workers.dev" })
+    ping("gate", "Loading Gate", { base: env.GATE_URL || "https://abc-loading-gate.sultanachi-lb-61f.workers.dev" }),
+    (async () => { const u = await metaGet(env, "audit:url");   // ABC Audit (Nov 2026): /api/status answers without signing in
+      return u ? { ...(await ping("audit", "ABC Audit", { base: u.replace(/\/+$/, ""), ping: "/api/status" })), url: u } : { id: "audit", name: "ABC Audit", ok: false, warn: true, note: "Address not set" }; })()
   ]);
   const q = await metaJson(env, "mail:quota");
   list.push({ id: "relay", name: "Mail relay (Gmail)", ok: !!env.MAIL_RELAY_URL && !!env.MAIL_RELAY_KEY, note: !env.MAIL_RELAY_URL ? "Not set" : q ? `${q.remaining} left today` : "" });
@@ -259,6 +261,13 @@ export async function admRoute(env, a, method, b, url, d) {
     for (let i = 6; i >= 0; i--) { const k = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10); aiDays.push({ day: k, used: Math.round(Number(await metaGet(env, `ai:neu:${k}`)) || 0) }); }
     return { d1, storage: st, workers: wr, mail: { relay: mq, relaySet: !!env.MAIL_RELAY_URL, outlookSent: Number(sent.n) || 0, waiting: Number(wait.n) || 0, auto: (await metaGet(env, "ms:auto")) || "", secretExp: (await metaGet(env, "ms:secret_exp")) || "", people },
       ai: { used: Math.round(ai), free: aiFree, closeAt: Math.round(aiFree * .8), days: aiDays }, sms: { set: !!(env.TWILIO_SID && env.TWILIO_TOKEN) } };
+  }
+  if (a === "cc/audit-url" && method === "POST") {   // ABC Audit address (the hub tile opens it through /go/audit)
+    const u = String(b.url || "").trim().replace(/\/+$/, "");
+    if (u && !/^https:\/\/[\w.-]+(\/[\w./-]*)?$/.test(u)) throw Object.assign(new Error("Enter the address starting with https://"), { status: 400 });
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('audit:url', ?)").bind(u).run();
+    await env.DB.prepare("DELETE FROM meta WHERE k = 'cc:sys'").run().catch(() => {});
+    return { url: u };
   }
   if (a === "cc/systems") {
     const sys = await systems(env, d, url.searchParams.get("fresh") === "1");

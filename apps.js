@@ -26,7 +26,7 @@ window.HUB = {
   title: "ABC Property Hub",
   org: "ABC Operations",
 
-  GROUPS: ["Day to Day Operations", "Property Overview & Info", "ABC Platforms", "Grok Space", "Tenant Management", "Micro Tools", "Access and Security", "Soft Services Management",
+  GROUPS: ["Day to Day Operations", "Property Overview & Info", "ABC Platforms", "Tenant Management", "Micro Tools", "Access and Security", "Soft Services Management",
     "Hub Applications", "Reports", "Dashboards",
     /* Hub Phone and Hub Chat (Oct 2026) */
     "Phone",
@@ -114,7 +114,7 @@ window.HUB = {
     "form-dbank":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-open":       ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
     "form-close":      ["MM",  "OM",  "SMS",  "MS",  "MO",  "LEAD"],
-    "reporting-hub":   ["MM",  "OM",  "SMS",  "LEAD"],   // Reporting Hub (Grok Space)
+    "abc-audit":       ["MM",  "OM",  "LEAD"],   // ABC Audit (Quality Control + Departmental audits) — Nov 2026
   },
 
   /* who sees the extra copy of a tile placed in a folder with also: [...] (the tile's own folder follows ACCESS above) */
@@ -477,15 +477,16 @@ window.HUB = {
     }
     */
 
-    /* Reporting Hub — Grok Space (vertical unified dashboard) */
+    /* ABC Audit (Nov 2026) — Quality Control + Departmental audits; the address is set in Admin → Systems & jobs (/go/audit) */
     {
-      id: "reporting-hub",
-      name: "Reporting Hub",
-      desc: "Unified vertical dashboard — Overview, Soft Services, Accuracy, Snaglist, EOD",
-      group: "Grok Space",
-      icon: "gauge",
+      id: "abc-audit",
+      name: "ABC Audit",
+      desc: "Quality Control and departmental audits",
+      group: "ABC Platforms",
+      icon: "clipboard",
       color: "#4A1F73",
-      url: "/Grok Module/reporting-hub.html"
+      url: "/go/audit",
+      embed: false
     },
   ]
 };/* full apps_final.js content — 79 tiles including Performance Hub */

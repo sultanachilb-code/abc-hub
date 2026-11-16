@@ -15,7 +15,7 @@ import { ssoSchema, SSO_APPS, sysAccess, sysSummary, cleanSys, ssoServer, ssoEnd
 import { rrMailRun } from "./modules/rrmail.js";   // Restroom Inspection emails through Outlook   // Hub Chat — see docs/FEATURE-hub-chat.md
 import { budgetSchema, budgetRoute } from "./modules/budget.js";
 import { accuracyRoute } from "./modules/accuracy.js";   // Data Accuracy Score feature — see docs/FEATURE-accuracy.md
-import { performanceRoute } from "./modules/performance.js";   // Reporting Hub (Grok Space) — see Grok Module
+import { performanceRoute } from "./modules/performance.js";   // Performance routes
 import { tenantsSchema, tenantsRoute, repeatCheck, announcementsOn } from "./modules/tenants.js";
 import { directorySchema, directoryRoute, directoryPublic } from "./modules/directory.js";
 import { worksSchema, worksInbox, worksFile, worksRoute } from "./modules/works.js";   // Tenant Works Forms feature — see docs/FEATURE-tenant-works.md   // Tenants Directory feature — see docs/FEATURE-directory.md
@@ -626,6 +626,10 @@ export default {
     }
     /* "Sign in with ABC Hub" from a system's own website: signed in → straight back with a pass; otherwise the hub's sign-in first */
     if (url.pathname === "/sso") return ssoPage(request, env, url);
+    if (url.pathname === "/go/audit") {   // ABC Audit (Nov 2026): its address is set in Admin → Systems & jobs
+      const a = await env.DB.prepare("SELECT v FROM meta WHERE k = 'audit:url'").first().catch(() => null);
+      return new Response(null, { status: 302, headers: { location: a && /^https:\/\//.test(a.v) ? a.v : "/admin#sy", "cache-control": "no-store" } });
+    }
     if (url.pathname === "/viewas-stop") return new Response(null, { status: 302, headers: { location: "/admin", "cache-control": "no-store", "set-cookie": "hub_viewas=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax" } });   // View as: way out from any screen
     /* Admin Control Center */
     if (url.pathname === "/admin" || url.pathname === "/admin/") return env.ASSETS.fetch(new Request(new URL("/tools/admin", url), request));
