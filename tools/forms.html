@@ -169,6 +169,12 @@ html.pm .ck td.rem input,html.pm .ck td.rem select{font-size:.78rem;padding:0}
 .phbox{border:2px dashed var(--line);border-radius:12px;padding:12px;text-align:center;cursor:pointer;font-size:.85rem;color:var(--muted);margin-top:8px}
 .phbox img{max-width:100%;max-height:180px;border-radius:8px;display:block;margin:0 auto}
 @media print{ .tset,.tg{display:none!important} }
+.secall{float:right;padding:3px 9px;font-size:.72rem}
+.pri{display:inline-block;margin-left:6px;font-size:.66rem;font-weight:800;border-radius:99px;padding:1px 7px;background:#EEF0F5;color:#3B3550;vertical-align:middle}.pri-High{background:#FDECEA;color:#C0392B}.pri-Medium{background:#FFF3E0;color:#B06A00}
+.fixon{margin-left:6px;padding:1px 7px!important;font-size:.68rem!important;background:none!important;border:1px solid #F3C1BA!important;color:#C0392B!important;box-shadow:none!important}.fixb{margin-top:4px;color:#C0392B;font-weight:800;font-size:.78rem}.fixb span{color:var(--muted,#6D6479);font-weight:600}.fixoff{margin-left:6px;padding:2px 8px;font-size:.7rem;background:#C0392B;color:#fff}
+tr.fixed td{background:#FFF6F5!important}
+.fu{margin:12px 0;border:1px solid var(--line,#E8E2EF);border-radius:12px;padding:10px 12px}.fui{display:grid;grid-template-columns:1fr 240px;gap:10px;border-top:1px dashed var(--line,#E8E2EF);padding-top:8px;margin-top:8px;font-size:.84rem}
+.fui input{width:100%;margin-top:6px}@media (max-width:640px){.fui{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -314,7 +320,7 @@ function rowsHTML(){
   const items = run.items;
   while (i < items.length){
     const it = items[i];
-    if (it.s !== sec){ sec = it.s; if (sec) out.push(`<tr class="sec"><td colspan="6">${esc(sec)}</td></tr>`); }
+    if (it.s !== sec){ sec = it.s; if (sec) out.push(`<tr class="sec"><td colspan="6">${esc(sec)}${run.fixOn && !L ? `<button class="btn small secall noprint" data-secall="${esc(sec)}">✓ Select all</button>` : ""}</td></tr>`); }
     let j = i; while (j + 1 < items.length && items[j + 1].s === it.s && items[j + 1].a === it.a) j++;
     for (let k = i; k <= j; k++){
       const x = items[k], a = run.answers[x.id] || {}, off = offItem(x);
@@ -322,9 +328,13 @@ function rowsHTML(){
       let task = `${k === i ? `<span class="ar">${esc(x.a)}</span>` : ""}${cond}${esc(x.t)}`;
       if (x.ids) task += `<span class="ids">${esc(x.ids)}</span>`;
       if (x.f && !off) task += `<div>${x.f.map(n => `<label class="fld">${esc(n)}<input data-f="${esc(x.id)}" data-n="${esc(n)}" value="${esc((a.f || {})[n] || "")}" ${L ? "readonly" : ""}></label>`).join("")}</div>`;
+      if (x.pr) task += `<span class="pri pri-${esc(x.pr)}">${esc(x.pr)}</span>`;
+      if (run.fixOn){ const fx = (run.fixes || {})[x.id];
+        task += fx ? `<div class="fixb">⚑ Fixing · ${esc(fx.note)} <span>— ${esc(fx.by)}, ${esc(new Date(fx.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}</span>${M.can.fill ? `<button class="btn small fixoff noprint" data-unfix="${esc(x.id)}">Remove fixing</button>` : ""}</div>`
+          : (M.can.fill && !L ? `<button class="btn small ghost fixon noprint" data-fix="${esc(x.id)}">⚑ Fix issue</button>` : ""); }
       task += trigBadge(x, a);
       if (x.k === "gla" && run.header && run.header.unitId) task += `<a class="glalink noprint" href="/tools/gla?unit=${run.header.unitId}&back=${encodeURIComponent(`/tools/forms?f=${FORM}&site=${site}${run.id ? `&id=${run.id}` : ""}`)}">Open in GLA ↗</a>`;
-      const cls = ["it", off ? "off" : "", a.v === "n" ? "bad" : "", a.r ? "hasrem" : ""].join(" ");
+      const cls = ["it", off ? "off" : "", a.v === "n" ? "bad" : "", a.r ? "hasrem" : "", run.fixOn && (run.fixes || {})[x.id] ? "fixed" : ""].join(" ");
       let marks;
       if (x.k === "training" && !off){
         marks = `<td colspan="3" class="trc"><div class="tr"><span class="yn"><button data-tr="${x.id}" data-v="yes" class="${a.tr === "yes" ? "on" : ""}" ${L ? "disabled" : ""}>Yes</button><button data-tr="${x.id}" data-v="no" class="${a.tr === "no" ? "on" : ""}" ${L ? "disabled" : ""}>No</button></span>
@@ -357,6 +367,7 @@ function renderSheet(){
     <table class="ck"><colgroup><col class="area"><col><col class="mk"><col class="mk"><col class="mk"><col class="rem"></colgroup>
       <thead><tr><th class="area">${FORM === "dbank" ? "Floor" : "Area"}</th><th>${FORM === "dbank" ? "Tenant · Terminal ID" : "Task"}</th><th style="text-align:center">✓</th><th style="text-align:center">✗</th><th style="text-align:center">N/A</th><th class="rem">${FORM === "dbank" ? "Reason / remark" : "Remark"}</th></tr></thead>
       <tbody id="rows">${rowsHTML()}</tbody></table>
+    ${fuHTML()}
     <div class="foot"><label><span>${esc(M.meta.commentsLabel)}</span><textarea id="cmt" ${L ? "readonly" : ""}>${esc(run.comments || "")}</textarea></label>
       <label><span>Filled by</span><div class="sig">${esc(run.createdName || ctx.me.name)}</div></label>
       <label><span>${M.meta.kind === "tenant" ? "Branch manager signature" : "Submitted by"}</span><div class="sig">${M.meta.kind === "tenant" ? esc((run.header || {}).manager || "") : esc(run.submittedName || "")}</div></label></div>
@@ -377,8 +388,16 @@ function wire(){
   sh.onclick = e => {
     const ts = e.target.closest("[data-tset]"); if (ts){ e.stopPropagation(); return trigEdit(ts.dataset.tset); }   // ⚡ set a trigger (admins, managers)
     const tb = e.target.closest("[data-tfire]"); if (tb && !locked()){ e.stopPropagation(); return trigAsk(tb.dataset.tfire); }
+    const uf = e.target.closest("[data-unfix]"); if (uf){ e.stopPropagation(); return unfix(uf.dataset.unfix); }   // ⚑ Remove fixing (also on a submitted sheet)
     if (locked()) return;
+    const fx = e.target.closest("[data-fix]"); if (fx){ e.stopPropagation(); return fixIt(fx.dataset.fix); }
+    const sa = e.target.closest("[data-secall]");
+    if (sa){ let n = 0; run.items.filter(i => i.s === sa.dataset.secall && !offItem(i) && !(run.fixes || {})[i.id]).forEach(i => { const a = ans(i.id); if (!a.v){ a.v = "y"; n++; } });
+      redrawRows(); if (n) changed(); toast(n ? `${n} item${n === 1 ? "" : "s"} ticked ✓ in ${sa.dataset.secall}` : "Nothing left to tick in this section"); return; }
+    const fst = e.target.closest("[data-fust]");
+    if (fst){ const o = fuOf(fst.dataset.fust); o.st = fst.dataset.v; fst.parentElement.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === fst)); changed(); return; }
     const m = e.target.closest("[data-mk]");
+    if (m && run.fixOn && (run.fixes || {})[m.dataset.mk]){ toast("⚑ This item is flagged for fixing — press Remove fixing when it is fixed", true); return; }
     if (m){ const a = ans(m.dataset.mk); a.v = a.v === m.dataset.v ? undefined : m.dataset.v; if (!a.v) delete a.v;
       redrawRows(); changed();
       if (a.v === "n" && TRG()[m.dataset.mk] && !FIRED()[m.dataset.mk]) return trigAsk(m.dataset.mk);   // ⚡ this item has a trigger
@@ -399,6 +418,7 @@ function wire(){
       else run.header[x.dataset.h] = x.value;
       if (x.dataset.h === "tenant") pickTenant(x.value); changed(); }
     else if (x.id === "cmt"){ run.comments = x.value; changed(); }
+    else if (x.dataset.fuc){ fuOf(x.dataset.fuc).c = x.value; changed(); }
   };
   sh.onchange = e => {
     const x = e.target;
@@ -423,6 +443,34 @@ function wire(){
   };
   if (M.meta.kind === "tenant" && !units && !locked()) api(`ops/forms/tenants?site=${site}`).then(r => { units = r.units; const dl = $("#glaList");
     if (dl) dl.innerHTML = units.map(u => `<option value="${esc(u.brand)}">${esc(u.code)} · ${esc(u.status)}</option>`).join(""); }).catch(() => {});
+}
+/* ---------- ⚑ Fix issue (Achrafieh DS AM) and follow-up of previous findings (Nov 2026) ---------- */
+function fuOf(key){ run.header = run.header || {}; run.header.fu = run.header.fu || {}; const x = (run.fu || []).find(f => f.key === key) || {};
+  return (run.header.fu[key] = run.header.fu[key] || { st: "", c: "", l: x.label || "", f: x.from || "", r: x.remark || "" }); }
+function fuHTML(){
+  const L = locked(), F = run.fu || []; if (!F.length) return "";
+  const H = ((run.header || {}).fu) || {};
+  return `<div class="fu"><b>Follow-up · ${FORM === "pm" ? "today's AM checklist findings" : "yesterday's AM and PM findings"} (${F.length})</b>
+    ${F.map(x => { const o = H[x.key] || {}; return `<div class="fui"><div><span class="muted">${esc(x.from)}</span> · <b>${esc(x.label)}</b>${x.remark ? `<div class="muted">Remark: ${esc(x.remark)}</div>` : ""}${x.last ? `<div class="muted">${esc(x.last)}</div>` : ""}</div>
+      <div><span class="yn"><button data-fust="${esc(x.key)}" data-v="fixed" class="${o.st === "fixed" ? "on" : ""}" ${L ? "disabled" : ""}>Fixed</button><button data-fust="${esc(x.key)}" data-v="open" class="${o.st === "open" ? "on" : ""}" ${L ? "disabled" : ""}>Still open</button></span>
+      <input data-fuc="${esc(x.key)}" value="${esc(o.c || "")}" placeholder="Comment" ${L ? "readonly" : ""}></div></div>`; }).join("")}</div>`;
+}
+async function fixIt(id){
+  const it = run.items.find(i => i.id === id); if (!it) return;
+  const d = dlg("dFix");
+  d.innerHTML = `<form method="dialog" style="display:grid;gap:10px;min-width:min(420px,86vw)"><b>⚑ Fix issue</b><span class="muted">${esc(it.a)} — ${esc(it.t)}</span>
+    <input id="fxN" placeholder="What needs fixing?" maxlength="200" required><span class="muted">It stays flagged on every checklist, for everyone, until someone presses Remove fixing.</span>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" value="x" type="button" id="fxC">Cancel</button><button class="btn" id="fxS" type="button">Flag</button></div></form>`;
+  d.showModal(); d.querySelector("#fxC").onclick = () => d.close();
+  d.querySelector("#fxS").onclick = async () => { const note = d.querySelector("#fxN").value.trim(); if (!note) return toast("Write what needs fixing", true);
+    try { const r = await api("ops/forms/fix", { site, form: FORM, item: id, note }); run.fixes = r.fixes; const a = run.answers[id] = run.answers[id] || {}; a.v = "n"; if (!a.r) a.r = `⚑ Fix issue: ${note}`;
+      d.close(); redrawRows(); changed(); toast("Flagged for fixing"); } catch (e){ toast(e.message, true); } };
+}
+async function unfix(id){
+  if (!await confirmBox("Remove fixing?", "The issue is fixed — the flag is removed for everyone.", "Remove fixing")) return;
+  try { const r = await api("ops/forms/unfix", { site, form: FORM, item: id }); run.fixes = r.fixes; const a = run.answers[id];
+    if (a && !locked()){ delete a.v; if (String(a.r || "").startsWith("⚑ Fix issue")) delete a.r; }
+    redrawRows(); if (!locked()) changed(); toast("Fixing removed"); } catch (e){ toast(e.message, true); }
 }
 function pickTenant(name){
   const u = (units || []).find(x => x.brand.toLowerCase() === String(name).trim().toLowerCase());
@@ -590,6 +638,9 @@ async function submit(){
   const noReason = run.items.filter(i => (run.answers[i.id] || {}).v === "n" && !String((run.answers[i.id] || {}).r || "").trim());
   if (noReason.length){ const tr = document.querySelector(`tr[data-id="${noReason[0].id}"]`); tr && tr.scrollIntoView({ behavior: "smooth", block: "center" });
     return toast(`Add a remark to every ✗ (${noReason.length} missing)`, true); }
+  const fuMiss = (run.fu || []).filter(x => !(((run.header || {}).fu || {})[x.key] || {}).st);
+  if (fuMiss.length){ const b = document.querySelector(".fu"); b && b.scrollIntoView({ behavior: "smooth", block: "center" });
+    return toast(`Follow-up: mark ${fuMiss.length} previous finding${fuMiss.length === 1 ? "" : "s"} Fixed or Still open`, true); }
   if (FORM === "dbank" && !run.header.to) run.header.to = hm();
   if (!await confirmBox("Submit the checklist?", `${t.done} / ${t.total} done${t.issues ? ` · <b>${t.issues} ✗</b>` : ""}. After submitting it can no longer be changed (a manager can reopen it).`, "Submit")) return;
   clearTimeout(saveT); await save(true);

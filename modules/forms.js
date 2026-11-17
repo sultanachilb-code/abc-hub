@@ -14,6 +14,7 @@
    Routes : /api/ops/forms/*   (all require a hub sign-in)
    ===================================================================== */
 
+import { ACS_AM } from "./forms-acs.js";   // Achrafieh DS AM checklist (Nov 2026)
 const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
 import { reminderDone } from "./reminders.js";   // checklist submitted → its reminders are done
 import { trigSchema, trigRoute, trigForSheet, triggersOf, fireTrigger, TRIG_FORMS } from "./formtriggers.js";   // ⚡ checklist triggers (Oct 2026)
@@ -173,6 +174,11 @@ const REASONS = [
   "Restricting CCM payments vs cash", "Adding a surcharge on CCM payments", "Machine off / unplugged", "Late settlement"
 ];
 const DEFAULTS = { am: { items: AM }, pm: { items: PM }, open: { items: OPEN }, close: { items: CLOSE }, dbank: { items: [], reasons: REASONS } };
+const SITE_DEFAULTS = { "ACS:am": { items: ACS_AM } };   // a flagship's own starting list (Nov 2026)
+/* Nov 2026 — ⚑ Fix issue + Select all per section: Achrafieh DS AM checklist only */
+const FIX_ON = { ACS: ["am"] };
+export const fixOn = (site, form) => (FIX_ON[site] || []).includes(form);
+const COVER = { VRM: ["VRM", "VRS"], ACM: ["ACM", "ACS"], DBS: ["DBS"] };   // Technical Manager: mall + its department store
 
 export async function formsSchema(env) {
   await env.DB.batch([
@@ -187,12 +193,14 @@ export async function formsSchema(env) {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS dbank_machines (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0,
       tenant TEXT NOT NULL, old_id TEXT NOT NULL DEFAULT '', new_id TEXT NOT NULL DEFAULT '', floor TEXT NOT NULL DEFAULT '')`)
   ]);
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS form_fixes (site TEXT NOT NULL, form TEXT NOT NULL, item_id TEXT NOT NULL, note TEXT NOT NULL DEFAULT '',
+    by_email TEXT NOT NULL DEFAULT '', by_name TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, PRIMARY KEY (site, form, item_id))`).run();   // ⚑ Fix issue (Nov 2026)
   await trigSchema(env);   // ⚡ checklist triggers
 }
 
 async function template(env, site, form) {
   const r = await env.DB.prepare("SELECT data, updated_by, updated_at FROM form_templates WHERE site = ? AND form = ?").bind(site, form).first();
-  const d = r ? JSON.parse(r.data) : JSON.parse(JSON.stringify(DEFAULTS[form]));
+  const d = r ? JSON.parse(r.data) : JSON.parse(JSON.stringify(SITE_DEFAULTS[`${site}:${form}`] || DEFAULTS[form]));
   return { items: d.items || [], reasons: d.reasons || (form === "dbank" ? REASONS : []), updatedBy: r ? r.updated_by : "", updatedAt: r ? r.updated_at : "" };
 }
 async function machines(env, site) {
@@ -229,6 +237,7 @@ function cleanItems(list) {
     const out = { id, s: clip(String(x.s || "").trim(), 80), a: clip(String(x.a || "").trim(), 60), t };
     if (FLAGS[x.c]) out.c = x.c;
     if (["training", "gla"].includes(x.k)) out.k = x.k;
+    if (["High", "Medium", "Low"].includes(x.pr)) out.pr = x.pr;
     const f = Array.isArray(x.f) ? x.f.map(v => clip(String(v).trim(), 40)).filter(Boolean).slice(0, 4) : [];
     if (f.length) out.f = f;
     return out;
@@ -259,6 +268,14 @@ function cleanHeader(form, h = {}) {
     for (const k of Object.keys(FLAGS)) if (h.flags && typeof h.flags[k] === "boolean") o.flags[k] = h.flags[k];
     if (!o.tenant) throw err("Enter the tenant");
   }
+  if (form === "am" || form === "pm") {   // follow-up of the previous checklists' findings (Nov 2026)
+    const fu = {};
+    for (const [k, v] of Object.entries((h && h.fu) || {}).slice(0, 300)) {
+      if (!/^\d{4}-\d{2}-\d{2}:(am|pm):[\w-]{1,24}$/.test(k) || !v || typeof v !== "object") continue;
+      fu[k] = { st: v.st === "fixed" || v.st === "open" ? v.st : "", c: clip(String(v.c || "").trim(), 300), l: clip(v.l, 220), f: clip(v.f, 30), r: clip(v.r, 300) };
+    }
+    if (Object.keys(fu).length) o.fu = fu;
+  }
   if (FORMS[form].kind === "dbank") { o.from = /^\d{2}:\d{2}$/.test(h.from || "") ? h.from : ""; o.to = /^\d{2}:\d{2}$/.test(h.to || "") ? h.to : ""; }
   return o;
 }
@@ -266,6 +283,36 @@ const runOut = (r, full) => ({ id: r.id, form: r.form, day: r.day, title: r.titl
   createdBy: r.created_by, createdName: r.created_name, createdAt: r.created_at, updatedAt: r.updated_at,
   submittedAt: r.submitted_at, submittedName: r.submitted_name,
   ...(full ? { items: JSON.parse(r.items), header: JSON.parse(r.header), answers: JSON.parse(r.answers), comments: r.comments } : {}) });
+
+/* ⚑ the items flagged "Fix issue" (they stay until someone presses Remove fixing) */
+async function fixesOf(env, site, form) {
+  if (!fixOn(site, form)) return null;
+  const { results } = await env.DB.prepare("SELECT item_id, note, by_name, at FROM form_fixes WHERE site = ? AND form = ?").bind(site, form).all();
+  return Object.fromEntries((results || []).map(r => [r.item_id, { note: r.note, by: r.by_name, at: r.at }]));
+}
+const prevDay = d => new Date(new Date(d + "T12:00:00Z").getTime() - 864e5).toISOString().slice(0, 10);
+/* the findings to follow up: PM ← today's AM · AM ← yesterday's AM and PM — a finding left "Still open" keeps coming back until it is marked Fixed */
+async function followups(env, site, form, day, fixes) {
+  if (form !== "am" && form !== "pm") return [];
+  const src = form === "pm" ? [[day, "am"]] : [[prevDay(day), "am"], [prevDay(day), "pm"]];
+  const map = new Map();
+  for (const [d, f] of src) {
+    const r = await env.DB.prepare("SELECT items, answers, header FROM form_runs WHERE site = ? AND form = ? AND day = ? ORDER BY id LIMIT 1").bind(site, f, d).first();
+    if (!r) continue;
+    const items = JSON.parse(r.items || "[]"), ans = JSON.parse(r.answers || "{}"), h = JSON.parse(r.header || "{}");
+    for (const [k, v] of Object.entries(h.fu || {})) {   // what that checklist followed: fixed → done, still open → carried on
+      if (v.st === "fixed") map.delete(k); else if (v.st === "open") map.set(k, { key: k, from: v.f, label: v.l, remark: v.r, last: v.c ? `Still open — ${v.c}` : "Still open" });
+    }
+    for (const it of items) {
+      const a = ans[it.id] || {}; if (a.v !== "n") continue;
+      if (fixes && fixes[it.id] && f === form) continue;   // flagged ⚑ Fix issue: followed by the flag
+      const k = `${d}:${f}:${it.id}`; if (map.has(k)) continue;
+      if (Object.values(h.fu || {}).length && (h.fu[k] || {}).st === "fixed") continue;
+      map.set(k, { key: k, from: `${f.toUpperCase()} ${d.slice(8)}/${d.slice(5, 7)}`, label: [it.a, it.t].filter(Boolean).join(" — "), remark: a.r || "", last: "" });
+    }
+  }
+  return [...map.values()];
+}
 
 /* ctx = { site, can, me, now, today, raiseEvent } */
 export async function formsRoute(env, p, method, b, url, ctx) {
@@ -275,7 +322,11 @@ export async function formsRoute(env, p, method, b, url, ctx) {
   const lead = !!can.formsLead;
   const formOf = v => { if (!FORMS[v]) throw err("Choose a checklist"); return v; };
   if (p.startsWith("forms/trig/")) { const r = await trigRoute(env, p, method, b, url, ctx, FORMS, template); if (r) return r; throw err("Unknown endpoint", 404); }
-  const withTrig = async (form, run) => TRIG_FORMS.includes(form) ? { ...run, trig: await trigForSheet(env, site, form, run.day).catch(() => null) } : run;
+  const withTrig = async (form, run) => {
+    const fixes = await fixesOf(env, site, form);
+    const out = { ...run, ...(fixes ? { fixes, fixOn: true } : {}), fu: await followups(env, site, form, run.day, fixes).catch(() => []) };
+    return TRIG_FORMS.includes(form) ? { ...out, trig: await trigForSheet(env, site, form, run.day).catch(() => null) } : out;
+  };
 
   if (p === "forms/meta") {
     const form = formOf(q("form"));
@@ -336,11 +387,17 @@ export async function formsRoute(env, p, method, b, url, ctx) {
       if (form === "dbank" && Array.isArray(b.itemIds)) { const keep = new Set(b.itemIds); items = items.filter(i => keep.has(i.id)); }
     }
     const answers = cleanAnswers(items, b.answers);
+    const FX = await fixesOf(env, site, form);   // ⚑ flagged items stay ✗ until Remove fixing
+    if (FX) for (const it of items) if (FX[it.id]) answers[it.id] = { ...(answers[it.id] || {}), v: "n", r: (answers[it.id] || {}).r || `⚑ Fix issue: ${FX[it.id].note || "flagged"}` };
     const t = tally(items, answers, header);
     const title = FORMS[form].kind === "tenant" ? header.tenant : "";
     const comments = clip(b.comments || "", 3000);
     const submit = !!b.submit;
     if (submit && t.done < t.total) throw err(`${t.total - t.done} item${t.total - t.done === 1 ? "" : "s"} still to tick before submitting`);
+    if (submit && (form === "am" || form === "pm")) {   // every finding to follow needs Fixed / Still open
+      const need = (await followups(env, site, form, day, FX)).filter(x => !((header.fu || {})[x.key] || {}).st);
+      if (need.length) throw err(`Follow-up: mark ${need.length} previous finding${need.length === 1 ? "" : "s"} Fixed or Still open before submitting`);
+    }
     /* ⚡ triggers: a ✗ on an item with a trigger may need a photo / remark before submitting */
     const TRIG = submit && TRIG_FORMS.includes(form) ? await triggersOf(env, site, form) : {};
     for (const it of items) { const c = TRIG[it.id], a = answers[it.id] || {};
@@ -372,6 +429,25 @@ export async function formsRoute(env, p, method, b, url, ctx) {
       await reminderDone(env, site, "form", p => p.form === form, `${FORMS[form].name} submitted by ${me.full_name}`, at);
     }
     return { id, status: submit ? "submitted" : "draft", ...t };
+  }
+  if ((p === "forms/fix" || p === "forms/unfix") && method === "POST") {   // ⚑ Fix issue / Remove fixing — shared by everyone at the flagship
+    if (!can.formsFill) throw err("You can view this checklist but not change it", 403);
+    const form = formOf(b.form); if (!fixOn(site, form)) throw err("Fix issue is not used on this checklist");
+    const it = (await template(env, site, form)).items.find(i => i.id === String(b.item || "")); if (!it) throw err("Unknown item");
+    if (p === "forms/unfix") {
+      await env.DB.prepare("DELETE FROM form_fixes WHERE site = ? AND form = ? AND item_id = ?").bind(site, form, it.id).run();
+      await ctx.raiseEvent(env, { site, app: "forms", tone: "ok", title: `⚑ Fixed · ${FORMS[form].name}`, body: `${it.a} — ${it.t.slice(0, 90)} · by ${me.full_name}` }).catch(() => {});
+      return { fixes: await fixesOf(env, site, form) };
+    }
+    const note = clip(String(b.note || "").trim(), 200); if (!note) throw err("Write what needs fixing");
+    await env.DB.prepare(`INSERT INTO form_fixes (site, form, item_id, note, by_email, by_name, at) VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(site, form, item_id) DO UPDATE SET note = excluded.note, by_email = excluded.by_email, by_name = excluded.by_name, at = excluded.at`).bind(site, form, it.id, note, me.email, me.full_name, now()).run();
+    const title = `⚑ Fix issue · ${FORMS[form].name}`, body2 = `${it.a} — ${it.t.slice(0, 90)} · “${note}” · by ${me.full_name}`;
+    await ctx.raiseEvent(env, { site, app: "forms", tone: "warn", title, body: body2 }).catch(() => {});
+    const { results } = await env.DB.prepare("SELECT email, position, site_code FROM users WHERE role = 'TECHNICAL' AND active = 1").all();
+    for (const u of results || []) if (u.position === "HOT" || (COVER[u.site_code] || [u.site_code]).includes(site))
+      await ctx.raiseEvent(env, { site, app: "forms", tone: "warn", title, body: body2, email: u.email }).catch(() => {});
+    return { fixes: await fixesOf(env, site, form) };
   }
   if (p === "forms/reopen" && method === "POST") {
     if (!lead) throw err("Only managers and the senior mall supervisor can reopen a submitted checklist", 403);
