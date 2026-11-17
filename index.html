@@ -410,7 +410,7 @@ body.hl-docked main{padding-bottom:110px}
 .rb-need{display:inline-flex;align-items:center;line-height:1;font-size:.72rem;font-weight:800;padding:5px 10px;border-radius:99px;background:#FDECEA;color:#C0392B;white-space:nowrap}.rb-need.ok{background:#E6F4EC;color:#2E8B57}
 .rb-site{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface);color:var(--text);font:inherit;font-size:.8rem}
 .rb-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
-.rb-tile{display:grid;gap:3px;text-align:left;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer}
+.rb-tile{display:grid;gap:3px;text-align:left;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer}.rb-tile:hover{border-color:var(--brand);box-shadow:0 4px 14px rgba(74,31,115,.12)}.rb-tile:hover small::after{content:" · Open ›";font-weight:700;color:var(--brand)}.rb-kt td button{cursor:pointer}.rb-kt td button:hover .rb-c{outline:2px solid var(--brand);outline-offset:1px}
 .rb-tile b{font-size:.8rem;color:var(--muted)}.rb-tile strong{font-size:1.3rem;font-weight:800}.rb-tile small{font-size:.74rem;color:var(--muted);line-height:1.35}
 .rb-tile.t-r{border-color:#F3C7C2;background:#FFF7F6}.rb-tile.t-r strong{color:#C0392B}.rb-tile.t-a{border-color:#F1DDB5;background:#FFFBF2}.rb-tile.t-a strong{color:#B26A00}.rb-tile.t-g strong{color:#2E8B57}
 :root[data-theme="dark"] .rb-tile.t-r,:root[data-theme="dark"] .rb-tile.t-a{background:var(--surface)}
@@ -1235,7 +1235,7 @@ const inG = (a, g) => a.group === g || (Array.isArray(a.also) && a.also.includes
 const appReady = a => a.sites ? Object.values(a.sites).some(isSet) : isSet(a.url);
 const keyOf = (id, site) => site ? `${id}::${site}` : id;
 const parseKey = k => { const [id, site] = k.split("::"); return { app: byId(id), site: site || null }; };
-const urlOf = (a, site) => site ? a.sites[site] : a.url;
+const urlOf = (a, site) => !site ? a.url : a.sites ? a.sites[site] : (isSet(a.url) && /^[A-Z]{3}$/.test(site) ? a.url + (a.url.includes("?") ? "&" : "?") + "site=" + site : a.url);   // a flagship code opens an in-hub tool on that flagship (brief tiles, Nov 2026)
 const initials = s => String(s).split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 const mySiteName = () => ME && ME.user.siteName;
 const show = id => ["boot","auth","home","appview","admin"].forEach(v => $("#" + v).classList.toggle("hidden", v !== id));
@@ -2618,7 +2618,8 @@ const showD2D = () => !!(ME && ME.user) && (ME.user.role === "ADMIN" || !seniorV
    Admin → "Preview as…" and "Brief settings" (who sees what). Green ≥ 90 %, amber 75–89 %, red < 75 %. */
 const RB = { data: null, busy: false, as: store.get("hub.briefAs", "advisor"), period: store.get("hub.briefPeriod", ""), site: store.get("hub.briefSite", ""), err: "" };
 const RB_APP = { incidents: "incidents", checklists: "forms", handover: "handover", malfunctions: "malfunctions", snaglist: "snaglist", restroom: "restroom", feedback: "feedback", marketing: "calendar", cleaning: "cleanctl", contractors: "contractor-access", contracts: "contracts",
-  portal: "portal", vrres: "portal", mk7: "portal", pir: "incidents", amcheck: "forms", pmcheck: "forms", cleaningk: "cleanctl", mf48: "malfunctions", snags: "snaglist", gla: "gla" };
+  portal: "portal", vrres: "portal", mk7: "portal", pir: "incidents", amcheck: "forms", pmcheck: "forms", cleaningk: "cleanctl", mf48: "malfunctions", snags: "snaglist", gla: "gla",
+  nrOpen: "portal", bpRev: "portal", vrOpen: "portal", portalTotal: "portal", latekeys: "keybox", patrol: "patrol", gate: "gate", cleaners: "cleaner-qr", quickpass: "quickpass", emergency: "emergency", fitout: "fitout", footfall: "footfall" };
 async function loadRoleBrief(){
   if (RB.busy) return; if (ME && ME.user.role === "ADMIN" && store.get("hub.briefFold", false)) return renderRoleBrief();   // folded: nothing to load RB.busy = true; RB.err = ""; renderRoleBrief();
   try { RB.data = await api(`brief/role?as=${encodeURIComponent(RB.as)}&period=${RB.period}&site=${encodeURIComponent(RB.site)}`); }
@@ -2667,7 +2668,9 @@ $("#brief").addEventListener("click", async e => {
   if (t.closest("[data-rbref]")) return loadRoleBrief();
   if (t.closest("[data-rbfold]")){ store.set("hub.briefFold", !store.get("hub.briefFold", false)); return renderRoleBrief(); }
   if (t.closest("[data-rbset]")) return briefSettings();
-  const ap = t.closest("[data-rbapp]"); if (ap){ const a = byId(ap.dataset.rbapp); if (a) launch(a, ap.dataset.rbsite2 || undefined); }
+  const ap = t.closest("[data-rbapp]"); if (ap){ const id = ap.dataset.rbapp; if (!id) return;   // every tile and KPI opens its tool on that flagship (Nov 2026)
+    const a = byId(id); if (!a) return toast("This tool is not open to your position", true);
+    const code = ap.dataset.rbsite2 || ""; launch(a, a.sites ? undefined : (/^[A-Z]{3}$/.test(code) ? code : undefined)); }
 });
 $("#brief").addEventListener("change", e => { if (e.target.matches("[data-rbas2]")){ RB.as = e.target.value; store.set("hub.briefAs", RB.as); RB.data = null; RB.site = ""; return loadRoleBrief(); }
   if (e.target.matches("[data-rbsite]")){ RB.site = e.target.value; store.set("hub.briefSite", RB.site); loadRoleBrief(); } });
@@ -2689,7 +2692,7 @@ function landingHtml(D, part, first, refresh){
     if (i.kind === "todo") return `<div class="lp-w ${span}"><b class="lp-t">${i.icon} Your follow-ups</b>${D.todo.length ? `<div class="rb-todo">${D.todo.map(x => `<button class="rb-do" data-rbapp="${esc(x.app || "")}" data-rbsite2="${esc(D.site)}"><i class="d-${x.tone}"></i><span><b>${esc(x.text)}</b><small>${esc(x.sub || "")}</small></span><em>Open ›</em></button>`).join("")}</div>` : `<p class="brief-empty" style="margin:6px 0 0">Nothing waiting — all under control.</p>`}</div>`;
     if (i.kind === "shortcut"){ const a = byId(i.app); if (!a) return ""; return `<button class="rb-tile lp-w ${span}" data-rbapp="${esc(a.id)}" data-rbsite2="${esc(D.site)}"><b>⭐ Shortcut</b><strong style="font-size:1.05rem">${esc(a.name)}</strong><small>${esc(a.desc || "")}</small></button>`; }
     if (i.value == null) return "";
-    return `<button class="rb-tile lp-w ${span} t-${i.tone || "n"}" data-rbapp="${esc(i.app || "")}" data-rbsite2="${esc(D.site)}"><b>${i.icon} ${esc(i.title || i.name)}</b><strong>${esc(i.value)}</strong><small>${esc(i.note || "")}</small></button>`;
+    return `<button class="rb-tile lp-w ${span} t-${i.tone || "n"}" data-rbapp="${esc(i.app || RB_APP[i.w] || "")}" data-rbsite2="${esc(D.site)}"><b>${i.icon} ${esc(i.title || i.name)}</b><strong>${esc(i.value)}</strong><small>${esc(i.note || "")}</small></button>`;
   };
   return `<div class="brief-h"><div><h2>${part} brief · ${esc(D.siteName)}</h2><p>Good ${part.toLowerCase()}, ${first} — ${esc(D.position)}</p></div><div class="brief-actions">
       ${D.sites && D.sites.length > 1 ? `<select class="rb-site" data-rbsite>${D.sites.map(c => `<option value="${c}" ${c === D.site ? "selected" : ""}>${esc((SITES || {})[c] || c)}</option>`).join("")}</select>` : ""}

@@ -27,7 +27,8 @@ function offRead(){ try { return JSON.parse(localStorage.getItem(OFF.key) || "[]
 function offWrite(q){ try { localStorage.setItem(OFF.key, JSON.stringify(q)); } catch {} offBadge(); }
 function offKey(path, b){ return path + "|" + (b.site || "") + "|" + (b.clientId || b.id || `${b.form || ""}|${b.day || ""}|${(b.header && b.header.tenant) || ""}`); }
 async function apiRaw(path, body){
-  if (EMBED && EMBED.site && path === "ops/context") path += "?site=" + EMBED.site;
+  if (path === "ops/context") { const qs = (() => { try { return (new URLSearchParams(location.search).get("site") || "").toUpperCase(); } catch { return ""; } })();
+    const sc = (EMBED && EMBED.site) || (/^[A-Z]{3}$/.test(qs) ? qs : ""); if (sc) path += "?site=" + sc; }   // ?site= from the hub brief opens the tool on that flagship
   const r = await fetch("/api/" + path, body === undefined ? { credentials: "same-origin" }
     : { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   let j = null; try { j = await r.json(); } catch {}
