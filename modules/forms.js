@@ -174,9 +174,11 @@ const REASONS = [
   "Restricting CCM payments vs cash", "Adding a surcharge on CCM payments", "Machine off / unplugged", "Late settlement"
 ];
 const DEFAULTS = { am: { items: AM }, pm: { items: PM }, open: { items: OPEN }, close: { items: CLOSE }, dbank: { items: [], reasons: REASONS } };
-const SITE_DEFAULTS = { "ACS:am": { items: ACS_AM } };   // a flagship's own starting list (Nov 2026)
+const SITE_DEFAULTS = { "ACS:am": { items: ACS_AM }, "ACS:pm": { items: ACS_AM } };   // Achrafieh DS: PM = same list as AM (17 Nov 2026)   // a flagship's own starting list (Nov 2026)
 /* Nov 2026 — ⚑ Fix issue + Select all per section: Achrafieh DS AM checklist only */
-const FIX_ON = { ACS: ["am"] };
+const FIX_ON = { ACS: ["am", "pm"] };
+const FIX_SHARE = { ACS: "am" };   // Achrafieh DS: one set of ⚑ flags shared by the AM and PM checklists (same list)
+const fixKey = (site, form) => FIX_SHARE[site] || form;
 export const fixOn = (site, form) => (FIX_ON[site] || []).includes(form);
 const COVER = { VRM: ["VRM", "VRS"], ACM: ["ACM", "ACS"], DBS: ["DBS"] };   // Technical Manager: mall + its department store
 
@@ -287,7 +289,7 @@ const runOut = (r, full) => ({ id: r.id, form: r.form, day: r.day, title: r.titl
 /* ⚑ the items flagged "Fix issue" (they stay until someone presses Remove fixing) */
 async function fixesOf(env, site, form) {
   if (!fixOn(site, form)) return null;
-  const { results } = await env.DB.prepare("SELECT item_id, note, by_name, at FROM form_fixes WHERE site = ? AND form = ?").bind(site, form).all();
+  const { results } = await env.DB.prepare("SELECT item_id, note, by_name, at FROM form_fixes WHERE site = ? AND form = ?").bind(site, fixKey(site, form)).all();
   return Object.fromEntries((results || []).map(r => [r.item_id, { note: r.note, by: r.by_name, at: r.at }]));
 }
 const prevDay = d => new Date(new Date(d + "T12:00:00Z").getTime() - 864e5).toISOString().slice(0, 10);
@@ -305,7 +307,7 @@ async function followups(env, site, form, day, fixes) {
     }
     for (const it of items) {
       const a = ans[it.id] || {}; if (a.v !== "n") continue;
-      if (fixes && fixes[it.id] && f === form) continue;   // flagged ⚑ Fix issue: followed by the flag
+      if (fixes && fixes[it.id]) continue;   // flagged ⚑ Fix issue: followed by the flag
       const k = `${d}:${f}:${it.id}`; if (map.has(k)) continue;
       if (Object.values(h.fu || {}).length && (h.fu[k] || {}).st === "fixed") continue;
       map.set(k, { key: k, from: `${f.toUpperCase()} ${d.slice(8)}/${d.slice(5, 7)}`, label: [it.a, it.t].filter(Boolean).join(" — "), remark: a.r || "", last: "" });
@@ -435,13 +437,13 @@ export async function formsRoute(env, p, method, b, url, ctx) {
     const form = formOf(b.form); if (!fixOn(site, form)) throw err("Fix issue is not used on this checklist");
     const it = (await template(env, site, form)).items.find(i => i.id === String(b.item || "")); if (!it) throw err("Unknown item");
     if (p === "forms/unfix") {
-      await env.DB.prepare("DELETE FROM form_fixes WHERE site = ? AND form = ? AND item_id = ?").bind(site, form, it.id).run();
+      await env.DB.prepare("DELETE FROM form_fixes WHERE site = ? AND form = ? AND item_id = ?").bind(site, fixKey(site, form), it.id).run();
       await ctx.raiseEvent(env, { site, app: "forms", tone: "ok", title: `⚑ Fixed · ${FORMS[form].name}`, body: `${it.a} — ${it.t.slice(0, 90)} · by ${me.full_name}` }).catch(() => {});
       return { fixes: await fixesOf(env, site, form) };
     }
     const note = clip(String(b.note || "").trim(), 200); if (!note) throw err("Write what needs fixing");
     await env.DB.prepare(`INSERT INTO form_fixes (site, form, item_id, note, by_email, by_name, at) VALUES (?,?,?,?,?,?,?)
-      ON CONFLICT(site, form, item_id) DO UPDATE SET note = excluded.note, by_email = excluded.by_email, by_name = excluded.by_name, at = excluded.at`).bind(site, form, it.id, note, me.email, me.full_name, now()).run();
+      ON CONFLICT(site, form, item_id) DO UPDATE SET note = excluded.note, by_email = excluded.by_email, by_name = excluded.by_name, at = excluded.at`).bind(site, fixKey(site, form), it.id, note, me.email, me.full_name, now()).run();
     const title = `⚑ Fix issue · ${FORMS[form].name}`, body2 = `${it.a} — ${it.t.slice(0, 90)} · “${note}” · by ${me.full_name}`;
     await ctx.raiseEvent(env, { site, app: "forms", tone: "warn", title, body: body2 }).catch(() => {});
     const { results } = await env.DB.prepare("SELECT email, position, site_code FROM users WHERE role = 'TECHNICAL' AND active = 1").all();
