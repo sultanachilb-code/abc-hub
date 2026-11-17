@@ -74,7 +74,7 @@ const SYS_DEF = {
   },
   snaglist: {
     ADVISOR: "EVNNVVVNN", DIRECTOR: "EVNNVVVNN", CDSO: "EVNNVVVNN",
-    MM: "EEEEEVEEE", OM: "EEEEEVEEN", SMS: "ONENENNNN", MS: "ONENENNNN", MO: "ONNNVNNNN",   // operations team: own snaglists (Supervisor) as today; "Flagship snaglists" ✎/👁 = Manager account
+    MM: "EEEEEVEEE", OM: "EEEEEVEEN", SMS: "ONENENNNN", MS: "ONENENNNN", MO: "ONNNENNNN",   // operations team: own snaglists (Supervisor) as today; "Flagship snaglists" ✎/👁 = Manager account
     HOS: "NNNNNVNNN", SECM: "NNNNNNNNN", SV: "NNNENONNN", SEC: "NNNNNNNNN", WH: "NNNNNNNNN"
   }
 };
