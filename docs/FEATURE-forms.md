@@ -21,6 +21,11 @@ Added: September 2026 · Status: live · Owner: Sultan Al Achi
 - Submitting raises a bell entry at the flagship (warning when there are ✗).
 - The Reminders feature can check "AM / PM checklist submitted today" and "Direct Banking submitted this week".
 
+## November 2026 additions
+- **Achrafieh Department Store AM checklist** has its own list (Quality Control daily checklist, 129 items with High / Medium / Low priority) — `modules/forms-acs.js`, used until an administrator edits that flagship's list.
+- **Achrafieh DS AM only**: **✓ Select all** on every section (ticks the empty items of that section; flagged items and items already ✗ / N/A are not changed) and **⚑ Fix issue** per item (note required). A flagged item stays ✗ on every day's checklist for everyone until someone presses **Remove fixing** (`form_fixes` table). Flagging notifies the flagship (bell) and the Technical Manager / Head of Technical covering it.
+- **Follow-up (every flagship)**: the PM checklist lists today's AM ✗ findings; the next day's AM lists the previous AM and PM findings. Each needs **Fixed / Still open** + comment before submitting (stored in the record's header `fu`); Still open findings keep coming back until marked Fixed.
+
 ## Everything it adds (to remove the feature, undo exactly these)
 | Where | What |
 |---|---|
