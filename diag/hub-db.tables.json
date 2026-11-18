@@ -1,0 +1,616 @@
+[
+  {
+    "results": [
+      {
+        "name": "_cf_KV",
+        "z": 0
+      },
+      {
+        "name": "users",
+        "z": 0
+      },
+      {
+        "name": "announcements",
+        "z": 0
+      },
+      {
+        "name": "sqlite_sequence",
+        "z": 0
+      },
+      {
+        "name": "meta",
+        "z": 0
+      },
+      {
+        "name": "control_sheet",
+        "z": 0
+      },
+      {
+        "name": "push_subs",
+        "z": 0
+      },
+      {
+        "name": "hub_events",
+        "z": 0
+      },
+      {
+        "name": "usage_log",
+        "z": 0
+      },
+      {
+        "name": "sched_cells",
+        "z": 0
+      },
+      {
+        "name": "sched_notes",
+        "z": 0
+      },
+      {
+        "name": "mom_meetings",
+        "z": 0
+      },
+      {
+        "name": "mom_actions",
+        "z": 0
+      },
+      {
+        "name": "ops_settings",
+        "z": 0
+      },
+      {
+        "name": "handovers",
+        "z": 0
+      },
+      {
+        "name": "gla_reports",
+        "z": 0
+      },
+      {
+        "name": "tenant_feedback",
+        "z": 0
+      },
+      {
+        "name": "gla_units",
+        "z": 0
+      },
+      {
+        "name": "gla_events",
+        "z": 0
+      },
+      {
+        "name": "layout_levels",
+        "z": 0
+      },
+      {
+        "name": "layout_images",
+        "z": 0
+      },
+      {
+        "name": "layout_pins",
+        "z": 0
+      },
+      {
+        "name": "property_rows",
+        "z": 0
+      },
+      {
+        "name": "property_log",
+        "z": 0
+      },
+      {
+        "name": "reminders",
+        "z": 0
+      },
+      {
+        "name": "reminder_runs",
+        "z": 0
+      },
+      {
+        "name": "reminder_done",
+        "z": 0
+      },
+      {
+        "name": "form_templates",
+        "z": 0
+      },
+      {
+        "name": "form_runs",
+        "z": 0
+      },
+      {
+        "name": "dbank_machines",
+        "z": 0
+      },
+      {
+        "name": "emergencies",
+        "z": 0
+      },
+      {
+        "name": "emergency_recips",
+        "z": 0
+      },
+      {
+        "name": "budget_lines",
+        "z": 0
+      },
+      {
+        "name": "budget_uses",
+        "z": 0
+      },
+      {
+        "name": "exec_reports",
+        "z": 0
+      },
+      {
+        "name": "tm_recipients",
+        "z": 0
+      },
+      {
+        "name": "tm_announcements",
+        "z": 0
+      },
+      {
+        "name": "fitout_tracks",
+        "z": 0
+      },
+      {
+        "name": "daily_stats",
+        "z": 0
+      },
+      {
+        "name": "dir_contacts",
+        "z": 0
+      },
+      {
+        "name": "dir_links",
+        "z": 0
+      },
+      {
+        "name": "user_photos",
+        "z": 0
+      },
+      {
+        "name": "site_covers",
+        "z": 0
+      },
+      {
+        "name": "user_2fa",
+        "z": 0
+      },
+      {
+        "name": "login_challenges",
+        "z": 0
+      },
+      {
+        "name": "trusted_devices",
+        "z": 0
+      },
+      {
+        "name": "works_forms",
+        "z": 0
+      },
+      {
+        "name": "works_blobs",
+        "z": 0
+      },
+      {
+        "name": "cal_items",
+        "z": 0
+      },
+      {
+        "name": "change_log",
+        "z": 0
+      },
+      {
+        "name": "evac_routes",
+        "z": 0
+      },
+      {
+        "name": "evac_assign",
+        "z": 0
+      },
+      {
+        "name": "contractors",
+        "z": 0
+      },
+      {
+        "name": "contractor_visits",
+        "z": 0
+      },
+      {
+        "name": "contractor_checks",
+        "z": 0
+      },
+      {
+        "name": "projects",
+        "z": 0
+      },
+      {
+        "name": "addin_tokens",
+        "z": 0
+      },
+      {
+        "name": "addin_codes",
+        "z": 0
+      },
+      {
+        "name": "contracts_ending",
+        "z": 0
+      },
+      {
+        "name": "user_passkeys",
+        "z": 0
+      },
+      {
+        "name": "gate_scans",
+        "z": 0
+      },
+      {
+        "name": "gate_devices",
+        "z": 0
+      },
+      {
+        "name": "portal_items",
+        "z": 0
+      },
+      {
+        "name": "mf_providers",
+        "z": 0
+      },
+      {
+        "name": "mf_records",
+        "z": 0
+      },
+      {
+        "name": "mf_photos",
+        "z": 0
+      },
+      {
+        "name": "cl_settings",
+        "z": 0
+      },
+      {
+        "name": "cl_reports",
+        "z": 0
+      },
+      {
+        "name": "tr_courses",
+        "z": 0
+      },
+      {
+        "name": "tr_people",
+        "z": 0
+      },
+      {
+        "name": "tr_records",
+        "z": 0
+      },
+      {
+        "name": "quick_passes",
+        "z": 0
+      },
+      {
+        "name": "patrol_points",
+        "z": 0
+      },
+      {
+        "name": "patrol_scans",
+        "z": 0
+      },
+      {
+        "name": "patrol_photos",
+        "z": 0
+      },
+      {
+        "name": "cc_tasks",
+        "z": 0
+      },
+      {
+        "name": "cc_devices",
+        "z": 0
+      },
+      {
+        "name": "cc_jobs",
+        "z": 0
+      },
+      {
+        "name": "cc_special",
+        "z": 0
+      },
+      {
+        "name": "pol_docs",
+        "z": 0
+      },
+      {
+        "name": "pol_chunks",
+        "z": 0
+      },
+      {
+        "name": "pol_fts",
+        "z": 0
+      },
+      {
+        "name": "pol_fts_data",
+        "z": 0
+      },
+      {
+        "name": "pol_fts_idx",
+        "z": 0
+      },
+      {
+        "name": "pol_fts_content",
+        "z": 0
+      },
+      {
+        "name": "pol_fts_docsize",
+        "z": 0
+      },
+      {
+        "name": "pol_fts_config",
+        "z": 0
+      },
+      {
+        "name": "pol_vec",
+        "z": 0
+      },
+      {
+        "name": "ai_facts",
+        "z": 0
+      },
+      {
+        "name": "ai_feedback",
+        "z": 0
+      },
+      {
+        "name": "ai_chats",
+        "z": 0
+      },
+      {
+        "name": "crm_rows",
+        "z": 0
+      },
+      {
+        "name": "crm_retrieved",
+        "z": 0
+      },
+      {
+        "name": "portal_users",
+        "z": 0
+      },
+      {
+        "name": "ind_settings",
+        "z": 0
+      },
+      {
+        "name": "gate_accounts",
+        "z": 0
+      },
+      {
+        "name": "ms_tokens",
+        "z": 0
+      },
+      {
+        "name": "ms_queue",
+        "z": 0
+      },
+      {
+        "name": "followups",
+        "z": 0
+      },
+      {
+        "name": "kb_units",
+        "z": 0
+      },
+      {
+        "name": "kb_moves",
+        "z": 0
+      },
+      {
+        "name": "pm_setup",
+        "z": 0
+      },
+      {
+        "name": "pm_tenants",
+        "z": 0
+      },
+      {
+        "name": "pm_cycles",
+        "z": 0
+      },
+      {
+        "name": "pm_records",
+        "z": 0
+      },
+      {
+        "name": "pm_certs",
+        "z": 0
+      },
+      {
+        "name": "pm_ext",
+        "z": 0
+      },
+      {
+        "name": "mk_campaigns",
+        "z": 0
+      },
+      {
+        "name": "mk_targets",
+        "z": 0
+      },
+      {
+        "name": "admin_signins",
+        "z": 0
+      },
+      {
+        "name": "tl_cfg",
+        "z": 0
+      },
+      {
+        "name": "tl_answers",
+        "z": 0
+      },
+      {
+        "name": "tl_groups",
+        "z": 0
+      },
+      {
+        "name": "mb_log",
+        "z": 0
+      },
+      {
+        "name": "phone_calls",
+        "z": 0
+      },
+      {
+        "name": "chat_convs",
+        "z": 0
+      },
+      {
+        "name": "chat_members",
+        "z": 0
+      },
+      {
+        "name": "chat_msgs",
+        "z": 0
+      },
+      {
+        "name": "form_triggers",
+        "z": 0
+      },
+      {
+        "name": "form_trig_log",
+        "z": 0
+      },
+      {
+        "name": "sso_ended",
+        "z": 0
+      },
+      {
+        "name": "cl_workers",
+        "z": 0
+      },
+      {
+        "name": "cl_attendance",
+        "z": 0
+      },
+      {
+        "name": "cl_verify_log",
+        "z": 0
+      },
+      {
+        "name": "cl_log",
+        "z": 0
+      },
+      {
+        "name": "ff_days",
+        "z": 0
+      },
+      {
+        "name": "ff_dur",
+        "z": 0
+      },
+      {
+        "name": "ff_req",
+        "z": 0
+      },
+      {
+        "name": "ff_log",
+        "z": 0
+      },
+      {
+        "name": "rp_reports",
+        "z": 0
+      },
+      {
+        "name": "rp_runs",
+        "z": 0
+      },
+      {
+        "name": "rp_subs",
+        "z": 0
+      },
+      {
+        "name": "guide_progress",
+        "z": 0
+      },
+      {
+        "name": "guide_media",
+        "z": 0
+      },
+      {
+        "name": "ro_phases",
+        "z": 0
+      },
+      {
+        "name": "ro_sessions",
+        "z": 0
+      },
+      {
+        "name": "ro_att",
+        "z": 0
+      },
+      {
+        "name": "ro_mods",
+        "z": 0
+      },
+      {
+        "name": "ff_hist",
+        "z": 0
+      },
+      {
+        "name": "portal_lookup",
+        "z": 0
+      },
+      {
+        "name": "memo_memos",
+        "z": 0
+      },
+      {
+        "name": "memo_targets",
+        "z": 0
+      },
+      {
+        "name": "mail_log",
+        "z": 0
+      },
+      {
+        "name": "qc_packs",
+        "z": 0
+      },
+      {
+        "name": "qc_actions",
+        "z": 0
+      },
+      {
+        "name": "qc_comments",
+        "z": 0
+      },
+      {
+        "name": "form_fixes",
+        "z": 0
+      },
+      {
+        "name": "dbx_saved",
+        "z": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "CDG",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.572
+      },
+      "duration": 0.572,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 27701248,
+      "rows_read": 277,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

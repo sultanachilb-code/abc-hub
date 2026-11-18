@@ -1,0 +1,7709 @@
+[
+  {
+    "results": [
+      {
+        "t": "addin_codes",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_codes",
+        "c": "code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_codes",
+        "c": "expires_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_codes",
+        "c": "tries",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "addin_tokens",
+        "c": "hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_tokens",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_tokens",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_tokens",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_tokens",
+        "c": "last_used",
+        "ty": "TEXT"
+      },
+      {
+        "t": "addin_tokens",
+        "c": "expires_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "admin_signins",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "admin_signins",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "admin_signins",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "admin_signins",
+        "c": "ok",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "admin_signins",
+        "c": "what",
+        "ty": "TEXT"
+      },
+      {
+        "t": "admin_signins",
+        "c": "ua",
+        "ty": "TEXT"
+      },
+      {
+        "t": "admin_signins",
+        "c": "ip",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_chats",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_chats",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_chats",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_chats",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_chats",
+        "c": "msgs",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_chats",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ai_facts",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "text",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "fb_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ai_facts",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_facts",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "vote",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "q",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "a",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "fact_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "pos",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "done_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ai_feedback",
+        "c": "done_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "announcements",
+        "c": "message",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "starts_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "ends_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "announcements",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "budget_lines",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "year",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "budget_lines",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "budget_lines",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "bu",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "obj",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "sub",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "co1",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "co3",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "co3_desc",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_lines",
+        "c": "budget",
+        "ty": "REAL"
+      },
+      {
+        "t": "budget_lines",
+        "c": "fct",
+        "ty": "REAL"
+      },
+      {
+        "t": "budget_lines",
+        "c": "landing",
+        "ty": "REAL"
+      },
+      {
+        "t": "budget_lines",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "budget_uses",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "year",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "budget_uses",
+        "c": "line_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "topic",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "description",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "amount",
+        "ty": "REAL"
+      },
+      {
+        "t": "budget_uses",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "budget_uses",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cal_items",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "start_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "end_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "time_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "time_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "location",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "repeat",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "month",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "owner",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "plan",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "extra",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "done",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cal_items",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cal_items",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_devices",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_devices",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "token_hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "pair_code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "pair_exp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "users",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "last_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_devices",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_devices",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "client_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "task_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "special_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "floor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "area",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "user_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "device_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "before_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "after_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "b_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "bt_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "a_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "at_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "purged",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_jobs",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_special",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "details",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "area",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "due",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "due_time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "priority",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "photo",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "done_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "done_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "job_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_special",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_special",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "floor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "icon",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "tool",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "freq",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "times",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "rule",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "sort",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_tasks",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "change_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "tool",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "action",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "changes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "change_log",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "pair",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "auto_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "color",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "announce",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_convs",
+        "c": "members_add",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_convs",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "last_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "last_text",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_convs",
+        "c": "last_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_members",
+        "c": "conv_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_members",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_members",
+        "c": "role",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_members",
+        "c": "src",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_members",
+        "c": "muted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_members",
+        "c": "last_read",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_members",
+        "c": "joined_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "conv_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "body",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "file_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "file_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "file_size",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "dur",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "reply_to",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "mentions",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "reactions",
+        "ty": "TEXT"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "chat_msgs",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "worker_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "agent",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "gate",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_attendance",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cl_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_log",
+        "c": "worker_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_log",
+        "c": "what",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_log",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cl_reports",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "provider",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "day_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "day_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "rows",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "staff",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cl_reports",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_reports",
+        "c": "printed",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_settings",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_settings",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_settings",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_settings",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "count",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "names",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_verify_log",
+        "c": "via",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "nationality",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "company_phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "tenant_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "position",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "comment",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "registered",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "photo_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "idcopy_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "images_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cl_workers",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "visit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "workers",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "in_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "in_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "out_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "out_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_checks",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "contractor_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "work",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "descr",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "req",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "src",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "day_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "day_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "time_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "time_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contractor_visits",
+        "c": "sf_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contractors",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "trade",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "contact",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "mobile",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "ins_expiry",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "ins_ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contractors",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "contract_no",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "account",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "bu",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "start_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "end_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "departure_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "rtype",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "first_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "last_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "left_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "note_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "contracts_ending",
+        "c": "note_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "control_sheet",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "live_url",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "github_url",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "cloudflare_url",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "app_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "control_sheet",
+        "c": "sort",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "seq",
+        "ty": "REAL"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "link",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "sku",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "crm",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "hh_status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "retrieved_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "serial",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "model",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "connection",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "given_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_retrieved",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "crm_rows",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "seq",
+        "ty": "REAL"
+      },
+      {
+        "t": "crm_rows",
+        "c": "cont",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "crm_rows",
+        "c": "floor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "sheet_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "crm_rows",
+        "c": "link",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "sku",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "crm",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "delivery_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "serial",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "model",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "connection",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "crm_user",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "crm_password",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "stamp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "crm_rows",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "daily_stats",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "daily_stats",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "daily_stats",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "daily_stats",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "old_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "new_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbank_machines",
+        "c": "floor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbx_saved",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "dbx_saved",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbx_saved",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbx_saved",
+        "c": "sql",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbx_saved",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dbx_saved",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "employee",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "position",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "mobile",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "landline",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "location",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_contacts",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_links",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_links",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_links",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "dir_links",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "dir_links",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergencies",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "location",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "managers",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergencies",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "closed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "closed_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergencies",
+        "c": "close_note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "emergency_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "why",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "devices",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "sends",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "delivered",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "first_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "last_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "ack_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "mobile",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "calls",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "called_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "emergency_recips",
+        "c": "call_error",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_assign",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_assign",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "evac_assign",
+        "c": "corridor_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "evac_assign",
+        "c": "assembly_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "evac_assign",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_assign",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_assign",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_routes",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "evac_routes",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_routes",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_routes",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_routes",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_routes",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evac_routes",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "evac_routes",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "exec_reports",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "exec_reports",
+        "c": "period",
+        "ty": "TEXT"
+      },
+      {
+        "t": "exec_reports",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "exec_reports",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "exec_reports",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "entries",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "entries_noemp",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "employees",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "exits",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "free",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "membership",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "balance",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "detail",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_days",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_days",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_dur",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_dur",
+        "c": "month",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_dur",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_dur",
+        "c": "total",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_dur",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_dur",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_dur",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_hist",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_hist",
+        "c": "month",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_hist",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_hist",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_hist",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_hist",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_log",
+        "c": "period",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_log",
+        "c": "what",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_log",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "period",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "expires",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "sent_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ff_req",
+        "c": "reminders",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ff_req",
+        "c": "done_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "target",
+        "ty": "TEXT"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "ms",
+        "ty": "TEXT"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "fitout_tracks",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "followups",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "msg_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "subject",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "sender",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "link",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "due",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "priority",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "done_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "followups",
+        "c": "rem_before",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "followups",
+        "c": "rem_day",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "followups",
+        "c": "imid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "form",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "item_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_fixes",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_runs",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "form",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "items",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "header",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "answers",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "comments",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "done",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_runs",
+        "c": "total",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_runs",
+        "c": "issues",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_runs",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "submitted_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_runs",
+        "c": "submitted_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_templates",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_templates",
+        "c": "form",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_templates",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_templates",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_templates",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "form",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "item_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "item_text",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "run_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "remark",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "photo_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "result",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "mf_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "form_trig_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_triggers",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_triggers",
+        "c": "form",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_triggers",
+        "c": "item_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_triggers",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_triggers",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "form_triggers",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "username",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "salt",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "disabled",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "pw_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "pw_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_accounts",
+        "c": "last_login",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_devices",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "token_hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "pair_hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "pair_exp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "paired_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "last_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "last_agent",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_devices",
+        "c": "revoked",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_devices",
+        "c": "account_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_devices",
+        "c": "expires",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_scans",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "client_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "decision",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "reason",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "override",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_scans",
+        "c": "verdict",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "sf_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "req",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "contractor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "work",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "valid_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "valid_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "workers",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_scans",
+        "c": "visit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gate_scans",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gate_scans",
+        "c": "scanned_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gla_events",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gla_events",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "eff_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "before",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "after",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "date_edited_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_events",
+        "c": "date_edited_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_reports",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_reports",
+        "c": "month",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_reports",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_reports",
+        "c": "units",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gla_reports",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_reports",
+        "c": "uploaded_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_reports",
+        "c": "uploaded_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gla_units",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "section",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "dept",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "area",
+        "ty": "REAL"
+      },
+      {
+        "t": "gla_units",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gla_units",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "gla_units",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "gla_units",
+        "c": "contract_start",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_media",
+        "c": "slot",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_media",
+        "c": "file_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_media",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_media",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_media",
+        "c": "updated",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_media",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "role",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "pos",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "books",
+        "ty": "TEXT"
+      },
+      {
+        "t": "guide_progress",
+        "c": "updated",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "handovers",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "shift",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "doc",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "submitted_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "received_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "received_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "handoffs",
+        "ty": "TEXT"
+      },
+      {
+        "t": "handovers",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "hub_events",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "app",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "body",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "tone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "hub_events",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ind_settings",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ind_settings",
+        "c": "cfg",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ind_settings",
+        "c": "cover",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ind_settings",
+        "c": "cover_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ind_settings",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ind_settings",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "kb_moves",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "unit",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "out_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "due_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "back_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "keys",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "kb_moves",
+        "c": "taker",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "taker_kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "taker_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "purpose",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "signature",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "id_photo",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "given_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "given_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "received_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_moves",
+        "c": "late_alert",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_units",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_units",
+        "c": "unit",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_units",
+        "c": "keys",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "kb_units",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_units",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_units",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "kb_units",
+        "c": "held",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "layout_images",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_images",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_images",
+        "c": "part",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "layout_images",
+        "c": "mime",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_images",
+        "c": "data",
+        "ty": "BLOB"
+      },
+      {
+        "t": "layout_levels",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_levels",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_levels",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_levels",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "layout_levels",
+        "c": "width",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "layout_levels",
+        "c": "height",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "layout_levels",
+        "c": "figures",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_levels",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_levels",
+        "c": "uploaded_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_levels",
+        "c": "uploaded_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "layout_pins",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "x",
+        "ty": "REAL"
+      },
+      {
+        "t": "layout_pins",
+        "c": "y",
+        "ty": "REAL"
+      },
+      {
+        "t": "layout_pins",
+        "c": "source",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "checked_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "layout_pins",
+        "c": "checked_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "number",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "login_challenges",
+        "c": "options",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "wchal",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "ua",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "ip",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "expires_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "login_challenges",
+        "c": "decided_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_log",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_log",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_log",
+        "c": "n",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mail_log",
+        "c": "last_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_log",
+        "c": "last_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "msg_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "received",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "subject",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "sender",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "files",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "result",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mb_log",
+        "c": "ok",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mb_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_memos",
+        "c": "ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "sites",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "body",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "cat",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "mode",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "reply_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "file_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "file_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "filt",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "auto",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_memos",
+        "c": "every",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_memos",
+        "c": "max_rem",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_memos",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "created_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "sent_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_memos",
+        "c": "closed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_targets",
+        "c": "memo_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_targets",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "units",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "dept",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "floors",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "emails",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "state",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "answered_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "answered_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "reply",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "reply_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "reply_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "reply_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "mails",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_targets",
+        "c": "reminders",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "memo_targets",
+        "c": "last_mail",
+        "ty": "TEXT"
+      },
+      {
+        "t": "memo_targets",
+        "c": "opened_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "meta",
+        "c": "k",
+        "ty": "TEXT"
+      },
+      {
+        "t": "meta",
+        "c": "v",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_photos",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mf_photos",
+        "c": "record_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mf_photos",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_photos",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_photos",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mf_providers",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "service",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "contact",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "sites",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mf_providers",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_providers",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mf_records",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "provider_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mf_records",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "location",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "asset",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "description",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "priority",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "provider_ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "found_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "reported_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "attended_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "fixed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "closed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mf_records",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "message",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "act_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "act_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "start_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "end_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "sites",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "depts",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "positions",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "memo_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "memo_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "created_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "launched_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "closed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "summary_done",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mk_campaigns",
+        "c": "levels",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mk_targets",
+        "c": "campaign_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mk_targets",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "units",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "dept",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "emails",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "answer",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "answered_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "answered_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "offer",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "details",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "contact",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "reason",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "comment",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "mails",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mk_targets",
+        "c": "last_mail",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mk_targets",
+        "c": "opened_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mom_actions",
+        "c": "meeting_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mom_actions",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mom_actions",
+        "c": "text",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "owner_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "owner_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "due",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "done_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "notified_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_actions",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "meet_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "week_no",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "location",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "next_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "last_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "participants",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "points",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "prepared_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "published_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mom_meetings",
+        "c": "meeting_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ms_queue",
+        "c": "sender",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "msg",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "tries",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ms_queue",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "sent_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "error",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_queue",
+        "c": "batch",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "ms_user",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "ms_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "refresh",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "access",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "access_exp",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "connected_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "last_used",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "sent",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ms_tokens",
+        "c": "last_error",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ops_settings",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ops_settings",
+        "c": "k",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ops_settings",
+        "c": "v",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_photos",
+        "c": "scan_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_photos",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_points",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "area",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_points",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_points",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_points",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "round",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "point_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "guard",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "issues",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "manual",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "has_photo",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "client_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "patrol_scans",
+        "c": "synced_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "from_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "from_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "to_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "to_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "video",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "phone_calls",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "started_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "answered_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "ended_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "phone_calls",
+        "c": "seen",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_certs",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_certs",
+        "c": "record_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_certs",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "cert",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "risk",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "file_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "file_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "uploaded_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "reviewed_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "reviewed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "reason",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "comment",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "na",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_certs",
+        "c": "checklist",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_certs",
+        "c": "applicable",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "month",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "deadline",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "launched_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "launched_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_cycles",
+        "c": "breach_done",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_ext",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_ext",
+        "c": "cycle_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_ext",
+        "c": "risk",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "deadline",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "requested_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "requested_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "decided_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_ext",
+        "c": "decided_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_records",
+        "c": "cycle_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_records",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "emails",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "deadline",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "completed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "last_mail",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "ext_mail",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_records",
+        "c": "breach_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_records",
+        "c": "opened_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_setup",
+        "c": "cert",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "risk",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "cats",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "sites",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "months",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_setup",
+        "c": "cat",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "sub",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "applicable",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_setup",
+        "c": "checklist",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_setup",
+        "c": "freq",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "emails",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "units",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "since",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "excluded",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pm_tenants",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_chunks",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_chunks",
+        "c": "doc_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_chunks",
+        "c": "n",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_chunks",
+        "c": "page",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_chunks",
+        "c": "section",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_chunks",
+        "c": "text",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "coll",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "version",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "file_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "mime",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "size",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "pages",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "chars",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "notext",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "replaces",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_docs",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_docs",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pol_fts",
+        "c": "text",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts",
+        "c": "section",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts",
+        "c": "title",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts",
+        "c": "doc_id",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts",
+        "c": "chunk_id",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_config",
+        "c": "k",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_config",
+        "c": "v",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_content",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_fts_content",
+        "c": "c0",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_content",
+        "c": "c1",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_content",
+        "c": "c2",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_content",
+        "c": "c3",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_content",
+        "c": "c4",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_data",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_fts_data",
+        "c": "block",
+        "ty": "BLOB"
+      },
+      {
+        "t": "pol_fts_docsize",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_fts_docsize",
+        "c": "sz",
+        "ty": "BLOB"
+      },
+      {
+        "t": "pol_fts_idx",
+        "c": "segid",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_idx",
+        "c": "term",
+        "ty": ""
+      },
+      {
+        "t": "pol_fts_idx",
+        "c": "pgno",
+        "ty": ""
+      },
+      {
+        "t": "pol_vec",
+        "c": "chunk_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_vec",
+        "c": "doc_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pol_vec",
+        "c": "v",
+        "ty": "BLOB"
+      },
+      {
+        "t": "portal_items",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "account",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "created_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "days",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "portal_items",
+        "c": "subject",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "description",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "link",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "sf_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "portal_items",
+        "c": "first_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "last_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "left_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "status_since",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "valid_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "valid_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "permit",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "abc_note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_items",
+        "c": "fp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "contract",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "shop",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "grp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "start_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_lookup",
+        "c": "end_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "username",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "first",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "last",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "account",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "profile",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "last_login",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "created",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "portal_users",
+        "c": "first_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "last_seen",
+        "ty": "TEXT"
+      },
+      {
+        "t": "portal_users",
+        "c": "raw_account",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "projects",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "stage",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "priority",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "owner",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "contractor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "location",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "start_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "due_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "done_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "budget",
+        "ty": "REAL"
+      },
+      {
+        "t": "projects",
+        "c": "spent",
+        "ty": "REAL"
+      },
+      {
+        "t": "projects",
+        "c": "currency",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "budget_year",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "projects",
+        "c": "budget_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "progress",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "projects",
+        "c": "descr",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "milestones",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "updates",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "projects",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "updated_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "projects",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "property_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "property_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_log",
+        "c": "row_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "property_log",
+        "c": "item",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_log",
+        "c": "field",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_log",
+        "c": "before",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_log",
+        "c": "after",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_log",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "property_rows",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "property_rows",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "sub",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "item",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "value",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "is_total",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "property_rows",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "property_rows",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "endpoint",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "p256dh",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "auth",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "device",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "push_subs",
+        "c": "last_ok_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "pack_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "finding_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "owner_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "owner_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "action",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "due",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "proof_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "proof_note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "fixed_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "fixed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "verified_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "verified_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "escalate",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "contractor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "cost",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "reminded",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_actions",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "qc_comments",
+        "c": "pack_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "finding_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "text",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_comments",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "audit_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "dept",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "start_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "end_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "score",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "qc_packs",
+        "c": "origin",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "shared_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "counts",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "findings",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "received_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "closed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "closed_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "qc_packs",
+        "c": "closed_open",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "quick_passes",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "quick_passes",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "mobile",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "reason",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "req_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "req_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "req_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "dec_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "dec_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "dec_note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "expires_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "used_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "used_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "quick_passes",
+        "c": "visit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "quick_passes",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_done",
+        "c": "reminder_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "reminder_done",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_done",
+        "c": "by_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_done",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_done",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "reminder_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "slot",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "state",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "detail",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "pushed",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "reminder_runs",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "reminders",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "at_time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "every_min",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "reminders",
+        "c": "until_time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "days",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "params",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "preset",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "reminders",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "reminders",
+        "c": "scope",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_att",
+        "c": "session_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_att",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_att",
+        "c": "state",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_att",
+        "c": "attended",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_att",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_att",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_mods",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_mods",
+        "c": "phase_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_mods",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_mods",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_mods",
+        "c": "done",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_mods",
+        "c": "done_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_mods",
+        "c": "done_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_phases",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_phases",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "title",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "icon",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "color",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "date_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "date_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "notes",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_phases",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "phase_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "fmt",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "audience",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "link",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "ro_sessions",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "rp_reports",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "icon",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "def",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "created_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_reports",
+        "c": "deleted",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "rp_runs",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "rp_runs",
+        "c": "report_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "rp_runs",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "period",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "sites",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "how",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "sent_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_runs",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_subs",
+        "c": "report_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "rp_subs",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "rp_subs",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_cells",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_cells",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_cells",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_cells",
+        "c": "val",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_cells",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_cells",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_notes",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_notes",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sched_notes",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "site_covers",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "site_covers",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "site_covers",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "site_covers",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sso_ended",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sso_ended",
+        "c": "sid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "sso_ended",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "description",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "action",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "action_desc",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tenant_feedback",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_answers",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_answers",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_answers",
+        "c": "answer",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_answers",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_answers",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_cfg",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_cfg",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_cfg",
+        "c": "open_only",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tl_cfg",
+        "c": "depts",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_cfg",
+        "c": "started_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_cfg",
+        "c": "started_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_groups",
+        "c": "bkey",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_groups",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_groups",
+        "c": "grp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_groups",
+        "c": "src",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_groups",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tl_groups",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "brand",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "unit",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "eff_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "thumbs",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "subject",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "gla",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_announcements",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "k",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "field",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "scope",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "emails",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tm_recipients",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_courses",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_courses",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_courses",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_courses",
+        "c": "validity",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_courses",
+        "c": "required",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_courses",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_courses",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_people",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_people",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_people",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_people",
+        "c": "role",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_people",
+        "c": "company",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_people",
+        "c": "pos",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_people",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_records",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_records",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "person",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "course_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "tr_records",
+        "c": "done_on",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "expires_on",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "trainer",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "note",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "tr_records",
+        "c": "created_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "trusted_devices",
+        "c": "hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "trusted_devices",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "trusted_devices",
+        "c": "ua",
+        "ty": "TEXT"
+      },
+      {
+        "t": "trusted_devices",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "trusted_devices",
+        "c": "expires_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "usage_log",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "usage_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "usage_log",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "usage_log",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "usage_log",
+        "c": "role",
+        "ty": "TEXT"
+      },
+      {
+        "t": "usage_log",
+        "c": "app",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "totp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "totp_pending",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "totp_on",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_2fa",
+        "c": "last_step",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_2fa",
+        "c": "backup",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "cred_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "cred_key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "cred_alg",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_2fa",
+        "c": "reg_chal",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "approve_ep",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "approve_device",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "approve_on",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_2fa",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "email_on",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_2fa",
+        "c": "email_code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "email_exp",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "email_sent",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_2fa",
+        "c": "email_tries",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "cred_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "pubkey",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "alg",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "label",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_passkeys",
+        "c": "last_used",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_photos",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_photos",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "user_photos",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "full_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "role",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "site_code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "salt",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "iterations",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "must_change",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "last_login_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "morning_email",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "notif_read_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "position",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "sites",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "photo_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "twofa_fail",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "twofa_lock",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "mobile",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "weekly_digest",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "last_seen_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "signout_at",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "fail_count",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "locked_until",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "is_admin",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "ext",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "sys",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_blobs",
+        "c": "form_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_blobs",
+        "c": "ver",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_blobs",
+        "c": "seq",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_blobs",
+        "c": "data",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_forms",
+        "c": "site",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "unit_id",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_forms",
+        "c": "tenant",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "unit",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "level",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "tenant_status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "file_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "bytes",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_forms",
+        "c": "ver",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "works_forms",
+        "c": "done",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "from_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "from_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "subject",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "msg_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "via",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "received_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "completed_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "works_forms",
+        "c": "deleted",
+        "ty": "INTEGER"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "CDG",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 7.6721
+      },
+      "duration": 7.6721,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 27701248,
+      "rows_read": 3351,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

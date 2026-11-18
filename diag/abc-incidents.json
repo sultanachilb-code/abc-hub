@@ -1,0 +1,884 @@
+[
+  {
+    "results": [
+      {
+        "t": "audit_log",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "audit_log",
+        "c": "actor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "audit_log",
+        "c": "actor_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "audit_log",
+        "c": "action",
+        "ty": "TEXT"
+      },
+      {
+        "t": "audit_log",
+        "c": "target_ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "audit_log",
+        "c": "details",
+        "ty": "TEXT"
+      },
+      {
+        "t": "audit_log",
+        "c": "at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "date_added",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "person_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "contact_info",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "reason",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "photo_evidence_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "access_status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "date_from",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "date_to",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "source_ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "last_updated",
+        "ty": "TEXT"
+      },
+      {
+        "t": "blacklist",
+        "c": "cctv_notified_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_mapping",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cc_mapping",
+        "c": "addresses",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "blacklist_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "notified_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "notified_by_uid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "notified_by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_notifications",
+        "c": "trigger",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_team",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "cctv_team",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "config",
+        "c": "key",
+        "ty": "TEXT"
+      },
+      {
+        "t": "config",
+        "c": "value",
+        "ty": "TEXT"
+      },
+      {
+        "t": "counters",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "counters",
+        "c": "n",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "counters",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "customer_service",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "customer_service",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "customer_service",
+        "c": "cc",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "code",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "by_uid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "summary",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "payload",
+        "ty": "TEXT"
+      },
+      {
+        "t": "drafts",
+        "c": "saved_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "owner_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "owner_ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "kind",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "mime",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "data_base64",
+        "ty": "TEXT"
+      },
+      {
+        "t": "evidence",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "logged_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "incident_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "incident_time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "category",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "severity",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "person_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "person_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "contact_info",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "other_persons",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "case_details",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "action_taken",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "follow_up_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "status",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "reported_by_uid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "reported_by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "cs_notified",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "escalation_required",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "incidents",
+        "c": "escalation_triggers",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "alert_sent_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "escalated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "escalation_breach",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "breach_alert_sent_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "incident_owner",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "steps_done",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "resolved_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "pir_due_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "pir_submitted_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "pir_overdue_alert_sent_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "incidents",
+        "c": "cctv_footage_notice",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "tenant_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "client_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "refresh_token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "access_token",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "access_token_expires_at",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "mail_account",
+        "c": "scope",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "connected_email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "connected_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "connected_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "mail_account",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_nonce",
+        "c": "nonce",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_nonce",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_nonce",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_nonce",
+        "c": "used",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "oauth_state",
+        "c": "state",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_state",
+        "c": "code_verifier",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_state",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "oauth_state",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "incident_ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "flagship",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "is_minor",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "pledges",
+        "c": "name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "mother",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "dob",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "nationality",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "register",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "residence",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "street",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "building",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "floor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "act",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "act_time",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "act_day",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "act_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "ban_duration",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "guardian_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "guardian_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "guardian_phone",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "sig_evidence_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "guardian_sig_evidence_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "manager",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "manager_sig_evidence_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "signed_date",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "created_by_uid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "created_by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "pledge_doc_evidence_id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "pledges",
+        "c": "person_type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "ref",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "submitted_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "submitted_by_uid",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "submitted_by_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "timeline",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "root_cause",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "op_impact",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "fin_impact",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "corrective",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "preventive",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "lessons",
+        "ty": "TEXT"
+      },
+      {
+        "t": "post_incident_reports",
+        "c": "comm_record",
+        "ty": "TEXT"
+      },
+      {
+        "t": "severity_matrix",
+        "c": "type",
+        "ty": "TEXT"
+      },
+      {
+        "t": "severity_matrix",
+        "c": "major",
+        "ty": "TEXT"
+      },
+      {
+        "t": "severity_matrix",
+        "c": "minor",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "id",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "email",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "password_hash",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "password_salt",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "full_name",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "role",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "flagship_scope",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "active",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "created_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "created_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "updated_at",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "updated_by",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "position",
+        "ty": "TEXT"
+      },
+      {
+        "t": "users",
+        "c": "must_change_password",
+        "ty": "INTEGER"
+      },
+      {
+        "t": "users",
+        "c": "hub_rights",
+        "ty": "TEXT"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "MRS",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 1.6071
+      },
+      "duration": 1.6071,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 1789952,
+      "rows_read": 394,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]
