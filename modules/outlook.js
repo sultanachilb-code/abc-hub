@@ -94,7 +94,12 @@ async function accessFor(env, email) {
     .bind(await seal(env, j.access_token), Date.now() + (Number(j.expires_in) || 3600) * 1000, j.refresh_token ? 1 : "", j.refresh_token ? await seal(env, j.refresh_token) : "", email).run();
   return j.access_token;
 }
-const addr = list => [...new Set((Array.isArray(list) ? list : [list]).map(x => String(x || "").trim()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))]
+/* cleans each address (stray quotes, brackets, "Name <a@b>" forms, trailing punctuation), drops invalid ones and duplicates —
+   one mistyped address (e.g. a trailing ') made Microsoft refuse the whole email */
+const cleanAddr = x => { let a = String(x || "").trim(); const m = a.match(/<([^<>]+)>/); if (m) a = m[1];
+  return a.replace(/^[\s'"`<(\[]+|[\s'"`>)\].,;:]+$/g, "").toLowerCase(); };
+const addr = list => [...new Set((Array.isArray(list) ? list : [list]).flatMap(x => String(x || "").split(/[,;]/)).map(cleanAddr)
+  .filter(x => /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(x)))]
   .slice(0, 400).map(address => ({ emailAddress: { address } }));
 /* one email through Graph as `email`. → { ok } | { ok:false, error, retry, notConnected } */
 async function graphSend(env, email, m) {
@@ -175,7 +180,8 @@ export async function outlookRun(env, deps) {
       let m = {}; try { m = JSON.parse(q.msg); } catch {}
       const r = await graphSend(env, sender, m);
       if (r.ok) { await env.DB.prepare("UPDATE ms_queue SET status = 'sent', sent_at = ?, msg = '' WHERE id = ?").bind(new Date().toISOString(), q.id).run(); continue; }
-      if (r.retry && q.tries < 6) { await env.DB.prepare("UPDATE ms_queue SET tries = tries + 1, error = ? WHERE id = ?").bind(r.error, q.id).run(); if (/429|throttl/i.test(r.error)) break; continue; }
+      if (r.retry && q.tries < 30) {   // ~1 hour of retries: covers a Microsoft outage, not only a short throttle
+        await env.DB.prepare("UPDATE ms_queue SET tries = tries + 1, error = ? WHERE id = ?").bind(r.error, q.id).run(); if (/429|throttl/i.test(r.error)) break; continue; }
       if (r.notConnected && deps.fallback) {   // the sender disconnected: try the old relay once
         const f = await deps.fallback(env, m).catch(e => ({ ok: false, error: e.message }));
         if (f && f.ok) { await env.DB.prepare("UPDATE ms_queue SET status = 'sent', sent_at = ?, msg = '', error = 'via mail relay' WHERE id = ?").bind(new Date().toISOString(), q.id).run(); continue; }
