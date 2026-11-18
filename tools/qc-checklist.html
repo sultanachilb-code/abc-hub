@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#5f1b67">
+  <link rel="icon" type="image/png" href="/icons/abc-48.png">
+  <title>ABC QC Checklist</title>
+  <!-- Achrafieh DS AM / PM QC checklist (Nov 2026) — modules/formsqc.js · docs/FEATURE-forms.md -->
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root{
+      --abc-purple:#5f1b67;
+      --abc-purple-dark:#47144d;
+      --abc-soft:#f6f0f8;
+      --abc-border:#e6d7eb;
+      --abc-text:#1f2937;
+      --abc-muted:#6b7280;
+      --ok:#0f766e;
+      --issue:#b91c1c;
+      --na:#6b7280;
+      --white:#ffffff;
+    }
+
+    html, body{
+      margin:0;
+      padding:0;
+      background:linear-gradient(180deg,#f8f4f9 0%, #ffffff 100%);
+      color:var(--abc-text);
+      font-family:Arial, Helvetica, sans-serif;
+    }
+
+    .container{
+      width:100%;
+      max-width:980px;
+      margin:0 auto;
+      padding:16px 14px 40px;
+    }
+
+    .hero{
+      background:linear-gradient(135deg,var(--abc-purple) 0%, #7a2a84 100%);
+      color:#fff;
+      border-radius:22px;
+      padding:22px 18px;
+      box-shadow:0 12px 30px rgba(95,27,103,.18);
+      margin-bottom:16px;
+    }
+
+    .hero h1{
+      margin:0 0 8px;
+      font-size:24px;
+      line-height:1.25;
+    }
+
+    .hero p{
+      margin:0;
+      font-size:14px;
+      opacity:.95;
+      line-height:1.5;
+    }
+
+    .card{
+      background:#fff;
+      border:1px solid var(--abc-border);
+      border-radius:20px;
+      padding:16px;
+      box-shadow:0 6px 18px rgba(17,24,39,.05);
+      margin-bottom:14px;
+    }
+
+    .card h2{
+      margin:0 0 12px;
+      font-size:18px;
+      color:var(--abc-purple);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .field label{
+      display:block;
+      margin-bottom:6px;
+      font-size:13px;
+      font-weight:700;
+      color:#374151;
+    }
+
+    input, select, textarea{
+      width:100%;
+      border:1px solid #d7dbe2;
+      border-radius:14px;
+      padding:12px 14px;
+      font-size:15px;
+      outline:none;
+      background:#fff;
+    }
+
+    textarea{
+      min-height:90px;
+      resize:vertical;
+    }
+
+    input:focus, select:focus, textarea:focus{
+      border-color:var(--abc-purple);
+      box-shadow:0 0 0 4px rgba(95,27,103,.08);
+    }
+
+    .legend{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      font-size:13px;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      border-radius:999px;
+      padding:8px 12px;
+      background:var(--abc-soft);
+      border:1px solid var(--abc-border);
+      font-weight:700;
+    }
+
+    details.section{
+      background:#fff;
+      border:1px solid var(--abc-border);
+      border-radius:18px;
+      overflow:hidden;
+      margin-bottom:12px;
+      box-shadow:0 6px 18px rgba(17,24,39,.04);
+    }
+
+    details.section[open]{
+      border-color:#d8c0df;
+    }
+
+    .section summary{
+      list-style:none;
+      cursor:pointer;
+      padding:16px;
+      background:linear-gradient(180deg,#fff 0%, #fbf8fc 100%);
+      font-weight:800;
+      color:var(--abc-purple);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+
+    .section summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .sectionCount{
+      font-size:12px;
+      color:var(--abc-muted);
+      font-weight:700;
+      background:#f4ecf7;
+      border:1px solid var(--abc-border);
+      padding:6px 10px;
+      border-radius:999px;
+      white-space:nowrap;
+      text-align:right;
+      line-height:1.4;
+    }
+
+    .summaryActions{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .okAllBtn{
+      border:none;
+      background:#ecfdf5;
+      color:var(--ok);
+      border:1px solid #a7f3d0;
+      font-weight:800;
+      border-radius:999px;
+      padding:8px 12px;
+      cursor:pointer;
+      white-space:nowrap;
+      font-size:12px;
+    }
+
+    .okAllBtn:active{
+      transform:scale(.98);
+    }
+
+    .items{
+      padding:6px 10px 14px;
+    }
+
+    .item{
+      border:1px solid #ebeef4;
+      border-radius:16px;
+      padding:14px;
+      margin:10px 0;
+      background:#fff;
+    }
+
+    .item.itemMissing{
+      border-color:#b91c1c;
+      box-shadow:0 0 0 4px rgba(185,28,28,.08);
+      background:#fff8f8;
+    }
+
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom:8px;
+      font-size:12px;
+      color:var(--abc-muted);
+    }
+
+    .badge{
+      background:#f7f7fb;
+      border:1px solid #e7e7f3;
+      border-radius:999px;
+      padding:5px 8px;
+      font-weight:700;
+    }
+
+    .risk-high{
+      color:#991b1b;
+      background:#fef2f2;
+      border-color:#fecaca;
+    }
+
+    .risk-medium{
+      color:#92400e;
+      background:#fffbeb;
+      border-color:#fde68a;
+    }
+
+    .risk-low{
+      color:#065f46;
+      background:#ecfdf5;
+      border-color:#a7f3d0;
+    }
+
+    .itemTitle{
+      font-size:15px;
+      font-weight:800;
+      line-height:1.5;
+      margin:6px 0 12px;
+    }
+
+    .statusRow{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+    }
+
+    .statusOption input{
+      display:none;
+    }
+
+    .statusLabel{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      border:1px solid #d7dbe2;
+      border-radius:14px;
+      padding:12px 10px;
+      font-weight:800;
+      background:#fff;
+      cursor:pointer;
+      min-height:50px;
+      text-align:center;
+    }
+
+    .statusOption input:checked + .statusLabel{
+      border-color:var(--abc-purple);
+      box-shadow:0 0 0 4px rgba(95,27,103,.08);
+      background:#faf5fc;
+      color:var(--abc-purple);
+    }
+
+    .issueWrap{
+      margin-top:12px;
+      display:none;
+      border-top:1px dashed #ddd6e5;
+      padding-top:12px;
+    }
+
+    .issueWrap.show{
+      display:block;
+    }
+
+    .issueBox{
+      border:1px solid #eadfec;
+      background:#fcf8fd;
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+    }
+
+    .issueBox.issueMissing{
+      border-color:#b91c1c;
+      box-shadow:0 0 0 4px rgba(185,28,28,.08);
+      background:#fff8f8;
+    }
+
+    .issueHead{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+      font-size:13px;
+      font-weight:800;
+      color:var(--abc-purple);
+    }
+
+    .miniBtn{
+      border:none;
+      background:#ede3f2;
+      color:var(--abc-purple);
+      font-weight:800;
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+    }
+
+    .miniBtn.danger{
+      background:#fef2f2;
+      color:#991b1b;
+    }
+
+    .miniBtn.fixed{
+      background:#fff7ed;
+      color:#9a3412;
+      border:1px solid #fed7aa;
+    }
+
+    .miniBtn.resolve{
+      background:#ecfdf5;
+      color:#065f46;
+      border:1px solid #a7f3d0;
+    }
+
+    .issueBox.fixedIssue{
+      border-color:#f59e0b;
+      background:#fffbeb;
+      box-shadow:0 0 0 3px rgba(245,158,11,.08);
+    }
+
+    .fixedIssueTag{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      background:#fff7ed;
+      color:#9a3412;
+      border:1px solid #fed7aa;
+      border-radius:999px;
+      padding:5px 8px;
+      font-size:11px;
+      font-weight:800;
+      margin-left:8px;
+    }
+
+    .issueHeadActions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .fixedIssueNote{
+      margin-top:10px;
+      padding:9px 10px;
+      border-radius:10px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      font-size:12px;
+      font-weight:700;
+      line-height:1.4;
+    }
+
+    .stickyBar{
+      position:sticky;
+      bottom:12px;
+      z-index:20;
+      margin-top:16px;
+    }
+
+    .stickyInner{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(255,255,255,.95);
+      border:1px solid var(--abc-border);
+      box-shadow:0 10px 30px rgba(17,24,39,.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .summaryText{
+      font-size:13px;
+      color:var(--abc-muted);
+      line-height:1.4;
+    }
+
+    .actionBtns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:13px 18px;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    .btnPrimary{
+      background:linear-gradient(135deg,var(--abc-purple) 0%, #7a2a84 100%);
+      color:#fff;
+      min-width:170px;
+    }
+
+    .btnSecondary{
+      background:#ede3f2;
+      color:var(--abc-purple);
+      min-width:170px;
+    }
+
+    .btnDanger{
+      background:#fef2f2;
+      color:#991b1b;
+      min-width:170px;
+      border:1px solid #fecaca;
+    }
+
+    .btnPrimary:disabled,
+    .btnSecondary:disabled,
+    .btnDanger:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+    }
+
+    .loading, .message{
+      display:none;
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:700;
+      white-space:pre-line;
+    }
+
+    .loading{
+      background:#eef4ff;
+      color:#1d4ed8;
+    }
+
+    .message.success{
+      display:block;
+      background:#ecfdf5;
+      color:#065f46;
+    }
+
+    .message.error{
+      display:block;
+      background:#fef2f2;
+      color:#991b1b;
+    }
+
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(17,24,39,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      padding:18px;
+    }
+
+    .modal.show{
+      display:flex;
+    }
+
+    .modalCard{
+      width:100%;
+      max-width:560px;
+      background:#fff;
+      border-radius:22px;
+      padding:22px;
+      box-shadow:0 24px 60px rgba(17,24,39,.25);
+    }
+
+    .modalCard h3{
+      margin:0 0 10px;
+      color:var(--abc-purple);
+      font-size:22px;
+    }
+
+    .modalCard p{
+      margin:0 0 12px;
+      line-height:1.6;
+      color:#374151;
+    }
+
+    .sheetLink{
+      display:block;
+      word-break:break-word;
+      margin:8px 0 16px;
+      color:var(--abc-purple);
+      font-weight:700;
+    }
+
+    .modalActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .draftStat{
+      background:#f8f4fa;
+      border:1px solid var(--abc-border);
+      border-radius:14px;
+      padding:12px;
+      margin:12px 0 0;
+      font-size:14px;
+      line-height:1.6;
+    }
+
+    @media (max-width:700px){
+      .grid{
+        grid-template-columns:1fr;
+      }
+
+      .hero h1{
+        font-size:21px;
+      }
+
+      .statusRow{
+        grid-template-columns:1fr;
+      }
+
+      .section summary{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+
+      .summaryActions{
+        width:100%;
+        justify-content:space-between;
+      }
+
+      .stickyInner{
+        align-items:stretch;
+        flex-direction:column;
+      }
+
+      .actionBtns{
+        width:100%;
+        flex-direction:column;
+      }
+
+      .btnPrimary,
+      .btnSecondary,
+      .btnDanger{
+        width:100%;
+      }
+
+      .modalActions{
+        flex-direction:column;
+      }
+    }
+  </style>
+  <style>
+    /* hub additions (Nov 2026) */
+    .topRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .topRow .site{font-weight:800;color:var(--abc-purple)}
+    .topBtns{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{border:1px solid var(--abc-border);background:#fff;color:var(--abc-purple);font-weight:800;border-radius:999px;padding:9px 14px;cursor:pointer;font-size:13px}
+    .chip.on{background:var(--abc-purple);color:#fff;border-color:var(--abc-purple)}
+    input[readonly], select:disabled{background:#f8f6fa;color:#4b5563}
+    .banner{border-radius:18px;padding:14px 16px;margin-bottom:14px;font-size:14px;line-height:1.5;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .banner.done{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+    .banner.draft{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+    .locked .statusRow, .locked .okAllBtn, .locked .miniBtn, .locked #qcStick{pointer-events:none;opacity:.55}
+    .savedTag{font-size:12px;color:var(--abc-muted)}
+    .rec{display:grid;grid-template-columns:1.1fr .8fr 1.2fr .7fr auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid #f0eaf3;font-size:14px}
+    .rec:last-child{border-bottom:0}
+    .rec .st{font-weight:800;font-size:12px;border-radius:999px;padding:5px 10px;text-align:center}
+    .rec .st.s{background:#ecfdf5;color:#065f46}.rec .st.d{background:#fffbeb;color:#92400e}
+    .rec.h{font-size:12px;font-weight:800;color:var(--abc-muted);text-transform:uppercase;letter-spacing:.04em}
+    .rp h2{margin:18px 0 8px}
+    .rpHead{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .rpHead div{background:var(--abc-soft);border:1px solid var(--abc-border);border-radius:14px;padding:10px 12px;font-size:13px}
+    .rpHead b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--abc-muted);margin-bottom:3px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+    .kpi{border-radius:14px;padding:12px;text-align:center;border:1px solid var(--abc-border);background:#fff}
+    .kpi b{display:block;font-size:24px}.kpi small{color:var(--abc-muted);font-weight:700}
+    .kpi.ok b{color:var(--ok)}.kpi.bad b{color:var(--issue)}.kpi.na b{color:var(--na)}
+    table.rt{width:100%;border-collapse:collapse;font-size:13px}
+    .rt th{background:var(--abc-purple);color:#fff;text-align:left;padding:8px;font-size:12px}
+    .rt td{border-bottom:1px solid #eee5f1;padding:7px 8px;vertical-align:top}
+    .rt tr.sec td{background:#f4ecf7;font-weight:800;color:var(--abc-purple)}
+    .rt .c{text-align:center;white-space:nowrap}
+    @media (max-width:700px){ .rec{grid-template-columns:1fr 1fr} .rec.h{display:none} .rpHead,.kpis{grid-template-columns:1fr 1fr} }
+    @media print{ .noprint{display:none!important} body{background:#fff} .container{max-width:none;padding:0} .card,.hero{box-shadow:none} .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact} .rt th,.rt tr.sec td{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topRow noprint">
+      <span class="site" id="siteName">ABC</span>
+      <div class="topBtns">
+        <button type="button" class="chip on" id="vSheet">✓ Checklist</button>
+        <button type="button" class="chip" id="vRecords">📋 Records &amp; reports</button>
+      </div>
+    </div>
+
+    <div id="viewSheet">
+    <div class="hero">
+      <h1>ABC QC Daily Checklist</h1>
+      <p>Fill the checklist by shift. Temporary Save keeps your draft in the hub, so you can continue on any device. The checklist is recorded only after the final submit.</p>
+    </div>
+
+    <div id="bannerBox"></div>
+
+    <form id="qcForm">
+      <div class="card">
+        <h2>Shift Information</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" required>
+          </div>
+
+          <div class="field">
+            <label for="shift">Shift</label>
+            <select id="shift" name="shift" required>
+              <option value="AM">AM Shift</option>
+              <option value="PM">PM Shift</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="managerName">Shift Manager Name</label>
+            <input type="text" id="managerName" name="managerName" readonly>
+          </div>
+
+          <div class="field">
+            <label for="inspectionFloor">Floor</label>
+            <input type="text" id="inspectionFloor" name="inspectionFloor" placeholder="Example: L0 / L1 / L2 / All floors" required>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span class="pill">✅ OK</span>
+          <span class="pill">❌ Issue</span>
+          <span class="pill">➖ N/A</span>
+          <span class="pill">📌 Fixed issue — stays until Resolved</span>
+        </div>
+      </div>
+
+      <div id="checklistContainer"></div>
+
+      <div class="card">
+        <h2>General Comment</h2>
+        <textarea id="generalComment" name="generalComment" placeholder="Optional general notes for this shift"></textarea>
+      </div>
+
+      <div class="stickyBar" id="qcStick">
+        <div class="stickyInner">
+          <div class="summaryText"><span id="progressText">Loading checklist…</span><br><span class="savedTag" id="savedTag"></span></div>
+          <div class="actionBtns">
+            <button type="button" class="btn btnSecondary" id="saveDraftBtn">Temporary Save</button>
+            <button type="button" class="btn btnDanger" id="clearDraftBtn">Clear Temporary Saved</button>
+            <button type="submit" class="btn btnPrimary" id="submitBtn">Submit Checklist</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="loading" id="loadingBox">Submitting checklist…</div>
+      <div class="message" id="messageBox"></div>
+    </form>
+    </div>
+
+    <div id="viewOther" style="display:none"></div>
+  </div>
+
+  <div class="modal" id="successModal">
+    <div class="modalCard">
+      <h3>Checklist submitted successfully</h3>
+      <p id="successText">The checklist is recorded in the hub.</p>
+      <div class="modalActions">
+        <button type="button" class="btn btnPrimary" id="openReportBtn">Open the report</button>
+        <button type="button" class="btn btnSecondary" id="closeModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="draftModal">
+    <div class="modalCard">
+      <h3>Temporary draft saved</h3>
+      <div class="draftStat" id="draftModalText"></div>
+      <div class="modalActions" style="margin-top:16px;">
+        <button type="button" class="btn btnPrimary" id="closeDraftModalBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    /* =====================================================================
+       ABC QC Daily Checklist — Achrafieh Department Store (hub, Nov 2026)
+       Same page as the team's Google Sheets version; everything is stored in
+       the hub: /api/ops/forms/qc/* (modules/formsqc.js). No password — the
+       hub sign-in decides who can open and fill it.
+       ===================================================================== */
+    const UP = new URLSearchParams(location.search);
+    const FORM = UP.get('f') === 'pm' ? 'pm' : 'am';
+    let SITE = (UP.get('site') || '').toUpperCase();
+    let FLOOR_OPTIONS = ["B3", "B2", "B1", "L0", "L1", "L2", "L3", "ALL"];
+    const S = { day: '', run: null, can: {}, me: {}, items: [], dirty: false, saving: false, timer: 0, lastId: 0 };
+
+    const state = {
+      checklist: [],
+      totalItems: 0,
+      fixedIssues: []
+    };
+
+    const q = path => `ops/forms/qc/${path}${path.includes('?') ? '&' : '?'}form=${FORM}&site=${SITE}`;
+    const post = (path, body) => apiRaw(`ops/forms/qc/${path}?site=${SITE}`, { form: FORM, site: SITE, ...body });
+
+    document.getElementById('shift').value = FORM.toUpperCase();
+    document.getElementById('shift').addEventListener('change', e => {
+      const f = e.target.value === 'PM' ? 'pm' : 'am';
+      if (f !== FORM) location.href = `/tools/qc-checklist?f=${f}&site=${SITE}`;
+    });
+    document.getElementById('date').addEventListener('change', async e => {
+      await flushSave();
+      await load(e.target.value);
+    });
+
+    document.getElementById('openReportBtn').addEventListener('click', () => {
+      document.getElementById('successModal').classList.remove('show');
+      if (S.lastId) showReport(S.lastId);
+    });
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('successModal').classList.remove('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.getElementById('closeDraftModalBtn').addEventListener('click', () => {
+      document.getElementById('draftModal').classList.remove('show');
+    });
+    document.getElementById('saveDraftBtn').addEventListener('click', () => { saveDraft(true); });
+    document.getElementById('clearDraftBtn').addEventListener('click', () => { clearDraftAndReset(); });
+    document.getElementById('vSheet').addEventListener('click', () => showSheet());
+    document.getElementById('vRecords').addEventListener('click', () => showRecords());
+
+    function makeSafeId(value){
+      return String(value || '')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    /* ---------- loading from the hub ---------- */
+    async function boot(){
+      try {
+        const ctx = await api('ops/context' + (SITE ? `?site=${SITE}` : ''));
+        SITE = ctx.site;
+        document.getElementById('siteName').textContent = `${ctx.siteName || SITE} · ${FORM.toUpperCase()} checklist`;
+        document.title = `${FORM.toUpperCase()} QC Checklist · ${ctx.siteName || SITE}`;
+        const rep = Number(UP.get('report'));
+        await load('');
+        if (rep) showReport(rep);
+      } catch (e) {
+        document.getElementById('checklistContainer').innerHTML = `<div class="card">${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    async function load(day){
+      const d = await apiRaw(q('state' + (day ? `?day=${day}` : '')));
+      S.day = d.day; S.run = d.run; S.can = d.can; S.me = d.me; S.items = d.items; S.dirty = false;
+      FLOOR_OPTIONS = d.floors || FLOOR_OPTIONS;
+      state.fixedIssues = d.pins || [];
+      document.getElementById('date').value = d.day;
+      document.getElementById('date').max = d.today;
+      const h = (d.run && d.run.header) || {};
+      document.getElementById('managerName').value = (d.run && d.run.status === 'submitted' && h.manager) || d.me.name || '';
+      document.getElementById('inspectionFloor').value = h.floor || '';
+      document.getElementById('generalComment').value = (d.run && d.run.comments) || '';
+      renderChecklist(getStaticChecklist());
+      drawBanner();
+      setSaved(d.run && d.run.status === 'draft' ? `Draft saved in the hub · ${fmtTime(d.run.updatedAt)}` : '');
+    }
+
+    function getStaticChecklist() {
+      const grouped = {};
+      S.items.forEach(x => {
+        const item = { id: x.id, n: x.n, section: x.s, subArea: x.a, item: x.t, risk: x.pr };
+        if (!grouped[item.section]) grouped[item.section] = { name: item.section, items: [] };
+        grouped[item.section].items.push(item);
+      });
+      return { success: true, checklist: Object.values(grouped) };
+    }
+
+    function drawBanner(){
+      const r = S.run, box = document.getElementById('bannerBox');
+      const locked = !!(r && r.status === 'submitted') || !S.can.fill;
+      document.getElementById('qcForm').classList.toggle('locked', locked);
+      document.querySelectorAll('#qcForm input:not([type=radio]):not(#date), #qcForm textarea, #qcForm select:not(#shift)').forEach(el => { if (el.id !== 'managerName') el.disabled = locked; });
+      if (r && r.status === 'submitted') {
+        box.innerHTML = `<div class="banner done"><span>✅ The ${FORM.toUpperCase()} checklist of <b>${escapeHtml(fmtDay(S.day))}</b> was submitted by <b>${escapeHtml(r.submittedName)}</b> at ${escapeHtml(fmtTime(r.submittedAt))} · ${r.issues} issue${r.issues === 1 ? '' : 's'}.</span>
+          <span class="topBtns"><button type="button" class="chip on" onclick="showReport(${r.id})">Open the report</button>${S.can.lead ? `<button type="button" class="chip" onclick="reopenRun(${r.id})">Reopen</button>` : ''}</span></div>`;
+      } else if (!S.can.fill) {
+        box.innerHTML = `<div class="banner draft">You can view this checklist but not fill it.</div>`;
+      } else if (r) {
+        box.innerHTML = `<div class="banner draft"><span>📝 Draft started by <b>${escapeHtml(r.createdName)}</b> — continue and submit when all items are answered.</span></div>`;
+      } else box.innerHTML = '';
+    }
+
+    function renderChecklist(res){
+      if(!res || !res.success){
+        showMessage('Unable to load checklist.', 'error');
+        return;
+      }
+
+      state.checklist = Array.isArray(res.checklist) ? res.checklist : [];
+      const container = document.getElementById('checklistContainer');
+      container.innerHTML = '';
+
+      let total = 0;
+
+      state.checklist.forEach((section, index) => {
+        const items = Array.isArray(section.items) ? section.items : [];
+        total += items.length;
+
+        const details = document.createElement('details');
+        details.className = 'section';
+        details.dataset.sectionName = section.name || '';
+        if(index === 0) details.open = true;
+
+        const summary = document.createElement('summary');
+        summary.innerHTML = `
+          <span>${escapeHtml(section.name || 'Section')}</span>
+          <span class="summaryActions">
+            <button type="button" class="okAllBtn" onclick="markSectionOk(${index}, event)">✅ OK All</button>
+            <span class="sectionCount" id="sectionCount_${makeSafeId(section.name)}">0 / ${items.length} filled • ${items.length} left</span>
+          </span>
+        `;
+        details.appendChild(summary);
+
+        const itemsWrap = document.createElement('div');
+        itemsWrap.className = 'items';
+
+        items.forEach(item => {
+          const risk = String(item.risk || '').trim();
+          const riskClass = 'risk-' + risk.toLowerCase();
+
+          const card = document.createElement('div');
+          card.className = 'item';
+          card.dataset.itemId = String(item.id);
+
+          card.innerHTML = `
+            <div class="meta">
+              <span class="badge">#${escapeHtml(item.n || item.id)}</span>
+              <span class="badge">${escapeHtml(item.subArea || '')}</span>
+              <span class="badge ${riskClass}">${escapeHtml(risk || 'N/A')}</span>
+            </div>
+
+            <div class="itemTitle">${escapeHtml(item.item || '')}</div>
+
+            <div class="statusRow">
+              ${statusOptionHtml(item.id, '✅', 'OK')}
+              ${statusOptionHtml(item.id, '❌', 'Issue')}
+              ${statusOptionHtml(item.id, '➖', 'N/A')}
+            </div>
+
+            <div class="issueWrap" id="issueWrap_${item.id}">
+              <div id="issueList_${item.id}"></div>
+              <button type="button" class="miniBtn" onclick="addIssueEntry('${item.id}')">+ Add another floor issue</button>
+            </div>
+          `;
+          itemsWrap.appendChild(card);
+        });
+
+        details.appendChild(itemsWrap);
+        container.appendChild(details);
+      });
+
+      state.totalItems = total;
+      bindStatusEvents();
+      bindAutoSaveEvents();
+      restoreFromHub();
+      loadFixedIssues();
+      updateProgress();
+      updateSectionCounts();
+    }
+
+    function markSectionOk(sectionIndex, event){
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const section = state.checklist[sectionIndex];
+      if (!section || !Array.isArray(section.items)) return;
+
+      section.items.forEach(item => {
+        const itemId = String(item.id);
+        const okRadio = document.querySelector(
+          `input[name="status_${cssEscape(itemId)}"][value="✅"]`
+        );
+        const issueRadio = document.querySelector(
+          `input[name="status_${cssEscape(itemId)}"][value="❌"]`
+        );
+        const wrap = document.getElementById('issueWrap_' + itemId);
+        const issueList = document.getElementById(`issueList_${itemId}`);
+
+        // IMPORTANT:
+        // If this checklist item contains one or more fixed/persistent issues,
+        // OK All must NOT clear them or mark the item as OK.
+        const fixedIssueBoxes = issueList
+          ? Array.from(issueList.querySelectorAll('.issueBox[data-fixed-id]'))
+          : [];
+
+        if (fixedIssueBoxes.length) {
+          if (issueList) {
+            Array.from(issueList.querySelectorAll('.issueBox:not([data-fixed-id])'))
+              .forEach(box => box.remove());
+          }
+          if (issueRadio) issueRadio.checked = true;
+          if (wrap) wrap.classList.add('show');
+          clearItemMissingState(item.id);
+          renumberIssueEntries(item.id);
+          return;
+        }
+
+        if (okRadio) okRadio.checked = true;
+        if (wrap) wrap.classList.remove('show');
+        if (issueList) issueList.innerHTML = '';
+
+        clearItemMissingState(item.id);
+      });
+
+      updateProgress();
+      updateSectionCounts();
+      saveDraft(false);
+    }
+
+    function statusOptionHtml(id, value, label){
+      const safeId = escapeAttribute(String(id));
+      const inputId = `status_${safeId}_${encodeURIComponent(value)}`;
+      return `
+        <label class="statusOption">
+          <input type="radio" id="${inputId}" name="status_${safeId}" value="${value}">
+          <span class="statusLabel">${value} ${label}</span>
+        </label>
+      `;
+    }
+
+    function bindStatusEvents(){
+      document.querySelectorAll('#checklistContainer input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          const id = radio.name.replace('status_','');
+          const wrap = document.getElementById('issueWrap_' + id);
+          const list = document.getElementById(`issueList_${id}`);
+
+          clearItemMissingState(id);
+
+          if(!wrap) return;
+
+          if (radio.value !== '❌' && list && list.querySelector('.issueBox[data-fixed-id]')) {
+            // a pinned issue keeps the item ❌ until it is Resolved
+            const issueRadio = document.querySelector(`input[name="status_${cssEscape(id)}"][value="❌"]`);
+            if (issueRadio) issueRadio.checked = true;
+            showMessage('This item has a fixed issue. Press ✓ Resolved on the issue when it is fixed.', 'error');
+            return;
+          }
+
+          if(radio.value === '❌'){
+            wrap.classList.add('show');
+            if (!list.children.length) {
+              addIssueEntry(id);
+            }
+          } else {
+            wrap.classList.remove('show');
+            list.innerHTML = '';
+          }
+
+          updateProgress();
+          updateSectionCounts();
+          saveDraft(false);
+        });
+      });
+    }
+
+    let autoBound = false;
+    function bindAutoSaveEvents(){
+      if (autoBound) return; autoBound = true;
+      ['inspectionFloor', 'generalComment'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => saveDraft(false));
+        el.addEventListener('change', () => saveDraft(false));
+      });
+    }
+
+    function addIssueEntry(itemId, presetData = null){
+      const list = document.getElementById(`issueList_${itemId}`);
+      if (!list) return;
+
+      const fixedId = presetData && presetData.fixedId ? String(presetData.fixedId) : '';
+
+      if (fixedId) {
+        const existingFixed = list.querySelector(`.issueBox[data-fixed-id="${cssEscapeForAttribute(fixedId)}"]`);
+        if (existingFixed) return;
+      }
+
+      const index = list.children.length;
+      const box = document.createElement('div');
+      box.className = fixedId ? 'issueBox fixedIssue' : 'issueBox';
+
+      if (fixedId) {
+        box.dataset.fixedId = fixedId;
+      }
+
+      const actionButtons = fixedId
+        ? `
+          <div class="issueHeadActions">
+            <span class="fixedIssueTag">📌 Fixed Issue</span>
+            <button type="button" class="miniBtn resolve" onclick="resolveFixedIssue(this)">✓ Resolved</button>
+          </div>
+        `
+        : `
+          <div class="issueHeadActions">
+            <button type="button" class="miniBtn fixed" onclick="fixIssueEntry(this)">📌 Fix Issue</button>
+            <button type="button" class="miniBtn danger" onclick="removeIssueEntry(this)">Remove</button>
+          </div>
+        `;
+
+      const by = presetData && presetData.by ? `<br>Pinned by ${escapeHtml(presetData.by)} · ${escapeHtml(fmtTime(presetData.at))}` : '';
+      box.innerHTML = `
+        <div class="issueHead">
+          <span>Issue ${index + 1}</span>
+          ${actionButtons}
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>Floor</label>
+            <select class="issue-floor" required ${fixedId ? 'disabled' : ''}>
+              <option value="">Select floor</option>
+              ${FLOOR_OPTIONS.map(f => `<option value="${f}">${f}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Comment / Action</label>
+            <textarea class="issue-comment" placeholder="Required for this floor issue" required ${fixedId ? 'disabled' : ''}></textarea>
+          </div>
+        </div>
+        ${fixedId ? `<div class="fixedIssueNote">This issue is fixed/pinned and will remain visible on the checklist for all users until it is marked Resolved.${by}</div>` : ''}
+      `;
+
+      if (fixedId) list.insertBefore(box, list.firstChild); else list.appendChild(box);
+
+      const floorSelect = box.querySelector('.issue-floor');
+      const commentArea = box.querySelector('.issue-comment');
+
+      if (presetData) {
+        floorSelect.value = presetData.floor || '';
+        commentArea.value = presetData.comment || '';
+      }
+
+      if (!fixedId) {
+        floorSelect.addEventListener('change', () => {
+          box.classList.remove('issueMissing');
+          saveDraft(false);
+        });
+        commentArea.addEventListener('input', () => {
+          box.classList.remove('issueMissing');
+          saveDraft(false);
+        });
+      }
+
+      renumberIssueEntries(itemId);
+    }
+
+    async function fixIssueEntry(button){
+      const issueBox = button.closest('.issueBox');
+      if (!issueBox) return;
+
+      const issueList = issueBox.parentElement;
+      const itemId = issueList && issueList.id ? issueList.id.replace('issueList_', '') : '';
+
+      const floor = issueBox.querySelector('.issue-floor')?.value || '';
+      const comment = (issueBox.querySelector('.issue-comment')?.value || '').trim();
+
+      if (!itemId || !floor || !comment) {
+        issueBox.classList.add('issueMissing');
+        showMessage('Please select the floor and enter the issue description before pressing Fix Issue.', 'error');
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = 'Fixing...';
+
+      try {
+        const { pin } = await post('pin', { item: itemId, floor, comment });
+        state.fixedIssues.push(pin);
+        const fixedId = String(pin.id || '');
+        issueBox.dataset.fixedId = fixedId;
+        issueBox.classList.add('fixedIssue');
+
+        const floorSelect = issueBox.querySelector('.issue-floor');
+        const commentArea = issueBox.querySelector('.issue-comment');
+        if (floorSelect) floorSelect.disabled = true;
+        if (commentArea) commentArea.disabled = true;
+
+        const head = issueBox.querySelector('.issueHead');
+        if (head) {
+          const title = head.querySelector('span');
+          head.innerHTML = '';
+          if (title) head.appendChild(title);
+          const actions = document.createElement('div');
+          actions.className = 'issueHeadActions';
+          actions.innerHTML = `
+            <span class="fixedIssueTag">📌 Fixed Issue</span>
+            <button type="button" class="miniBtn resolve" onclick="resolveFixedIssue(this)">✓ Resolved</button>
+          `;
+          head.appendChild(actions);
+        }
+
+        if (!issueBox.querySelector('.fixedIssueNote')) {
+          const note = document.createElement('div');
+          note.className = 'fixedIssueNote';
+          note.textContent = 'This issue is fixed/pinned and will remain visible on the checklist for all users until it is marked Resolved.';
+          issueBox.appendChild(note);
+        }
+
+        showMessage('Issue fixed successfully. It will now remain visible for all users until it is resolved.', 'success');
+        saveDraft(false);
+
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = '📌 Fix Issue';
+        showMessage('Unable to fix issue: ' + (error.message || 'Unknown error'), 'error');
+      }
+    }
+
+    async function resolveFixedIssue(button){
+      const issueBox = button.closest('.issueBox');
+      if (!issueBox) return;
+
+      const fixedIssueId = issueBox.dataset.fixedId || '';
+      if (!fixedIssueId) return;
+
+      button.disabled = true;
+      button.textContent = 'Resolving...';
+
+      try {
+        await post('resolve', { id: Number(fixedIssueId) });
+        state.fixedIssues = state.fixedIssues.filter(p => String(p.id) !== fixedIssueId);
+
+        const list = issueBox.parentElement;
+        const itemId = list && list.id ? list.id.replace('issueList_', '') : '';
+
+        issueBox.remove();
+
+        if (itemId) {
+          renumberIssueEntries(itemId);
+          if (list && list.children.length === 0) {
+            const okRadio = document.querySelector(`input[name="status_${cssEscape(String(itemId))}"][value="✅"]`);
+            const wrap = document.getElementById('issueWrap_' + itemId);
+            if (okRadio) okRadio.checked = true;
+            if (wrap) wrap.classList.remove('show');
+          }
+        }
+
+        updateProgress();
+        updateSectionCounts();
+        saveDraft(false);
+
+        showMessage('Issue marked as resolved. It will no longer appear as a fixed issue.', 'success');
+
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = '✓ Resolved';
+        showMessage('Unable to resolve issue: ' + (error.message || 'Unknown error'), 'error');
+      }
+    }
+
+    function removeIssueEntry(button){
+      const issueBox = button.closest('.issueBox');
+      if (!issueBox) return;
+
+      if (issueBox.dataset.fixedId) {
+        showMessage('A fixed issue cannot be removed directly. Please use Resolved.', 'error');
+        return;
+      }
+
+      const list = issueBox.parentElement;
+      issueBox.remove();
+
+      if (list && list.id) {
+        const itemId = list.id.replace('issueList_', '');
+        renumberIssueEntries(itemId);
+      }
+
+      updateProgress();
+      updateSectionCounts();
+      saveDraft(false);
+    }
+
+    /* the pinned issues (shared by the AM and PM checklists) — on every item until ✓ Resolved */
+    function loadFixedIssues(){
+      state.fixedIssues.forEach(fixed => {
+        const itemId = String(fixed.item || '');
+        if (!itemId) return;
+        const radio = document.querySelector(`input[name="status_${cssEscape(itemId)}"][value="❌"]`);
+        const wrap = document.getElementById('issueWrap_' + itemId);
+        const list = document.getElementById('issueList_' + itemId);
+        if (!list) return;
+        if (radio) radio.checked = true;
+        if (wrap) wrap.classList.add('show');
+        addIssueEntry(itemId, { fixedId: fixed.id, floor: fixed.floor || '', comment: fixed.comment || '', by: fixed.by, at: fixed.at });
+      });
+      updateProgress();
+      updateSectionCounts();
+    }
+
+    function renumberIssueEntries(itemId){
+      const list = document.getElementById(`issueList_${itemId}`);
+      if (!list) return;
+      const heads = list.querySelectorAll('.issueHead > span:first-child');
+      heads.forEach((el, i) => el.textContent = `Issue ${i + 1}`);
+    }
+
+    function updateProgress(){
+      const answered = getAnsweredCount();
+      const left = state.totalItems - answered;
+      document.getElementById('progressText').textContent = `Answered ${answered} of ${state.totalItems} checklist items • ${left} remaining`;
+    }
+
+    function updateSectionCounts(){
+      state.checklist.forEach(section => {
+        const total = (section.items || []).length;
+        let filled = 0;
+        (section.items || []).forEach(item => {
+          const selected = document.querySelector(`input[name="status_${cssEscape(String(item.id))}"]:checked`);
+          if (selected) filled++;
+        });
+        const left = total - filled;
+        const badge = document.getElementById(`sectionCount_${makeSafeId(section.name)}`);
+        if (badge) badge.textContent = `${filled} / ${total} filled • ${left} left`;
+      });
+    }
+
+    function getAnsweredCount(){
+      return document.querySelectorAll('#checklistContainer input[type="radio"]:checked').length;
+    }
+
+    function getRemainingCount(){
+      return Math.max(0, state.totalItems - getAnsweredCount());
+    }
+
+    /* ---------- saving in the hub ---------- */
+    const V = { '✅': 'y', '❌': 'n', '➖': 'na' }, R = { y: '✅', n: '❌', na: '➖' };
+    function collectAnswers(){
+      const answers = {};
+      state.checklist.forEach(section => {
+        (section.items || []).forEach(item => {
+          const selected = document.querySelector(`input[name="status_${cssEscape(String(item.id))}"]:checked`);
+          if (!selected) return;
+          const o = { v: V[selected.value] };
+          if (o.v === 'n') o.iss = Array.from(document.querySelectorAll(`#issueList_${item.id} .issueBox:not([data-fixed-id])`)).map(box => ({
+            fl: box.querySelector('.issue-floor')?.value || '',
+            c: (box.querySelector('.issue-comment')?.value || '').trim()
+          }));
+          answers[item.id] = o;
+        });
+      });
+      return answers;
+    }
+
+    function setSaved(t){ document.getElementById('savedTag').textContent = t || ''; }
+
+    /* every change is kept in the hub a few seconds later; Temporary Save keeps it at once */
+    function saveDraft(showPopup){
+      if (!S.can.fill || (S.run && S.run.status === 'submitted')) return;
+      S.dirty = true;
+      clearTimeout(S.timer);
+      if (showPopup) return flushSave(true);
+      setSaved('Saving…');
+      S.timer = setTimeout(() => flushSave(false), 2500);
+    }
+
+    async function flushSave(showPopup){
+      clearTimeout(S.timer);
+      if (!S.dirty && !showPopup) return;
+      if (S.saving) { S.timer = setTimeout(() => flushSave(showPopup), 800); return; }
+      S.saving = true; S.dirty = false;
+      try {
+        const r = await post('save', { day: S.day, header: { floor: document.getElementById('inspectionFloor').value }, comments: document.getElementById('generalComment').value, answers: collectAnswers() });
+        if (!S.run) { S.run = { id: r.id, status: 'draft', createdName: S.me.name }; drawBanner(); }
+        setSaved(`Draft saved in the hub · ${fmtTime(r.savedAt)}`);
+        if (showPopup) {
+          document.getElementById('draftModalText').innerHTML = `
+            <strong>Temporary draft saved successfully.</strong><br>
+            Answered items: <strong>${getAnsweredCount()}</strong><br>
+            Remaining items: <strong>${getRemainingCount()}</strong><br><br>
+            Please do not forget to complete this checklist later. It opens on any device from the hub.<br>
+            Saved on: <strong>${escapeHtml(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Beirut' }))}</strong>
+          `;
+          document.getElementById('draftModal').classList.add('show');
+        }
+      } catch (e) {
+        S.dirty = true;
+        setSaved('Not saved — ' + e.message);
+        if (showPopup) showMessage('Unable to save: ' + e.message, 'error');
+      } finally { S.saving = false; }
+    }
+
+    async function clearDraftAndReset(){
+      if (S.run && S.run.status === 'submitted') return;
+      if (!confirm('Clear the temporary saved checklist of this day? Fixed (📌) issues stay.')) return;
+      clearTimeout(S.timer); S.dirty = false;
+      try {
+        await post('clear', { day: S.day });
+        await load(S.day);
+        showMessage('Temporary saved draft was cleared successfully.', 'success');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) { showMessage(e.message, 'error'); }
+    }
+
+    function restoreFromHub(){
+      const r = S.run;
+      if (!r || !r.answers) return;
+      Object.entries(r.answers).forEach(([itemId, a]) => {
+        const radio = document.querySelector(`input[name="status_${cssEscape(itemId)}"][value="${R[a.v] || ''}"]`);
+        if (!radio) return;
+        radio.checked = true;
+        if (a.v === 'n') {
+          document.getElementById('issueWrap_' + itemId)?.classList.add('show');
+          (a.iss || []).forEach(x => addIssueEntry(itemId, { floor: x.fl, comment: x.c }));
+          if (r.status === 'submitted') (a.pins || []).forEach(x => {
+            if (!state.fixedIssues.some(p => String(p.id) === String(x.id))) addIssueEntry(itemId, { fixedId: 'old' + x.id, floor: x.fl, comment: x.c });
+          });
+        }
+      });
+    }
+
+    async function reopenRun(id){
+      if (!confirm('Reopen this submitted checklist so it can be changed and submitted again?')) return;
+      try { await apiRaw('ops/forms/reopen?site=' + SITE, { id, site: SITE }); await load(S.day); showMessage('The checklist is open again.', 'success'); }
+      catch (e) { showMessage(e.message, 'error'); }
+    }
+
+    function cssEscapeForAttribute(value){
+      return String(value || '').replace(/"/g, '\\"');
+    }
+
+    function clearAllMissingHighlights(){
+      document.querySelectorAll('.item.itemMissing').forEach(el => el.classList.remove('itemMissing'));
+      document.querySelectorAll('.issueBox.issueMissing').forEach(el => el.classList.remove('issueMissing'));
+    }
+
+    function clearItemMissingState(itemId){
+      const card = document.querySelector(`.item[data-item-id="${cssEscapeForAttribute(String(itemId))}"]`);
+      if (card) card.classList.remove('itemMissing');
+      document.querySelectorAll(`#issueList_${itemId} .issueBox`).forEach(box => box.classList.remove('issueMissing'));
+    }
+
+    function openSectionsByNames(sectionNames){
+      const needed = new Set(sectionNames);
+      document.querySelectorAll('details.section').forEach(sectionEl => {
+        const name = sectionEl.dataset.sectionName || '';
+        if (needed.has(name)) sectionEl.open = true;
+      });
+    }
+
+    document.getElementById('qcForm').addEventListener('submit', async function(e){
+      e.preventDefault();
+      if (!S.can.fill || (S.run && S.run.status === 'submitted')) return;
+
+      clearAllMissingHighlights();
+
+      const inspectionFloor = document.getElementById('inspectionFloor').value.trim();
+      if(!inspectionFloor){
+        showMessage('Please complete all shift information first.', 'error');
+        document.getElementById('inspectionFloor').focus();
+        return;
+      }
+
+      const missingSections = new Set();
+      const issueMissingSections = new Set();
+      let missing = 0, issueMissing = 0;
+
+      state.checklist.forEach(section => {
+        (section.items || []).forEach(item => {
+          const selected = document.querySelector(`input[name="status_${cssEscape(String(item.id))}"]:checked`);
+          const itemCard = document.querySelector(`.item[data-item-id="${cssEscapeForAttribute(String(item.id))}"]`);
+
+          if(!selected){
+            missing++;
+            missingSections.add(section.name || '');
+            if (itemCard) itemCard.classList.add('itemMissing');
+            return;
+          }
+
+          if(selected.value === '❌'){
+            const issueBoxes = document.querySelectorAll(`#issueList_${item.id} .issueBox`);
+            if (!issueBoxes.length) {
+              issueMissing++;
+              issueMissingSections.add(section.name || '');
+              if (itemCard) itemCard.classList.add('itemMissing');
+              return;
+            }
+            let invalid = false;
+            issueBoxes.forEach(box => {
+              if (box.dataset.fixedId) return;
+              const floor = box.querySelector('.issue-floor')?.value || '';
+              const comment = (box.querySelector('.issue-comment')?.value || '').trim();
+              if (!floor || !comment) {
+                invalid = true;
+                box.classList.add('issueMissing');
+                if (itemCard) itemCard.classList.add('itemMissing');
+              }
+            });
+            if (invalid) { issueMissing++; issueMissingSections.add(section.name || ''); }
+          }
+        });
+      });
+
+      if(missing){
+        const sectionList = Array.from(missingSections).filter(Boolean);
+        openSectionsByNames(sectionList);
+        showMessage('Please answer all checklist items before submitting.\n\nMissing sections:\n- ' + sectionList.join('\n- '), 'error');
+        const firstMissing = document.querySelector('.item.itemMissing');
+        if (firstMissing) firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if(issueMissing){
+        const sectionList = Array.from(issueMissingSections).filter(Boolean);
+        openSectionsByNames(sectionList);
+        showMessage('Please complete floor and comment for all items marked as issue.\n\nSections to review:\n- ' + sectionList.join('\n- '), 'error');
+        const firstIssueMissing = document.querySelector('.issueBox.issueMissing, .item.itemMissing');
+        if (firstIssueMissing) firstIssueMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      setLoading(true);
+      clearMessage();
+      clearTimeout(S.timer);
+      while (S.saving) await new Promise(r => setTimeout(r, 200));
+
+      try {
+        const r = await post('save', { day: S.day, submit: true, header: { floor: inspectionFloor }, comments: document.getElementById('generalComment').value, answers: collectAnswers() });
+        setLoading(false);
+        S.lastId = r.id; S.dirty = false;
+        document.getElementById('successText').innerHTML =
+          `The ${FORM.toUpperCase()} checklist of <strong>${escapeHtml(fmtDay(S.day))}</strong> is recorded in the hub · <strong>${r.issues}</strong> issue${r.issues === 1 ? '' : 's'}.<br>The team is notified, and the report is in 📋 Records &amp; reports.`;
+        await load(S.day);
+        document.getElementById('successModal').classList.add('show');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (error) {
+        setLoading(false);
+        showMessage('Submission failed: ' + (error.message || 'Unknown error'), 'error');
+      }
+    });
+
+    function setLoading(isLoading){
+      document.getElementById('submitBtn').disabled = isLoading;
+      document.getElementById('saveDraftBtn').disabled = isLoading;
+      document.getElementById('clearDraftBtn').disabled = isLoading;
+      document.getElementById('loadingBox').style.display = isLoading ? 'block' : 'none';
+    }
+
+    function showMessage(text, type){
+      const box = document.getElementById('messageBox');
+      box.className = 'message ' + type;
+      box.textContent = text;
+      box.style.display = 'block';
+    }
+
+    function clearMessage(){
+      const box = document.getElementById('messageBox');
+      box.className = 'message';
+      box.textContent = '';
+      box.style.display = 'none';
+    }
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttribute(str){
+      return String(str || '').replace(/"/g, '&quot;');
+    }
+
+    function cssEscape(value){
+      if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
+      return String(value).replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g, '\\$1');
+    }
+
+    const fmtDay = d => d ? new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const fmtTime = t => t ? new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Beirut', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+    /* ---------- records and reports ---------- */
+    function setView(v){
+      document.getElementById('viewSheet').style.display = v === 'sheet' ? '' : 'none';
+      document.getElementById('viewOther').style.display = v === 'sheet' ? 'none' : '';
+      document.getElementById('vSheet').classList.toggle('on', v === 'sheet');
+      document.getElementById('vRecords').classList.toggle('on', v !== 'sheet');
+      const u = new URL(location.href); if (v !== 'report') u.searchParams.delete('report'); history.replaceState(null, '', u);
+      window.scrollTo({ top: 0 });
+    }
+    function showSheet(){ setView('sheet'); }
+
+    async function showRecords(){
+      await flushSave();
+      setView('records');
+      const box = document.getElementById('viewOther');
+      box.innerHTML = '<div class="card">Loading…</div>';
+      try {
+        const { runs } = await apiRaw(q('list'));
+        box.innerHTML = `<div class="hero"><h1>${FORM.toUpperCase()} checklist · records</h1><p>One checklist per day. Open a record to see its report and print it.</p></div>
+          <div class="card" style="padding:0">${runs.length ? `<div class="rec h"><span>Day</span><span>Status</span><span>Shift manager</span><span>Issues</span><span></span></div>` +
+          runs.map(r => `<div class="rec"><span><b>${escapeHtml(fmtDay(r.day))}</b></span><span class="st ${r.status === 'submitted' ? 's' : 'd'}">${r.status === 'submitted' ? 'Submitted' : `Draft · ${r.done}/${r.total}`}</span>
+            <span>${escapeHtml(r.manager || r.submittedName || r.createdName)}${r.floor ? ` · ${escapeHtml(r.floor)}` : ''}</span><span>${r.issues ? `❌ ${r.issues}` : '✅ 0'}</span>
+            <span>${r.status === 'submitted' ? `<button class="chip on" onclick="showReport(${r.id})">Report</button>` : `<button class="chip" onclick="openDay('${r.day}')">Continue</button>`}</span></div>`).join('')
+          : '<p style="padding:16px">No checklist yet.</p>'}</div>`;
+      } catch (e) { box.innerHTML = `<div class="card">${escapeHtml(e.message)}</div>`; }
+    }
+    async function openDay(day){ setView('sheet'); await load(day); }
+
+    async function showReport(id){
+      await flushSave();
+      setView('report');
+      const u = new URL(location.href); u.searchParams.set('report', id); history.replaceState(null, '', u);
+      const box = document.getElementById('viewOther');
+      box.innerHTML = '<div class="card">Loading…</div>';
+      try {
+        const { run, pins, siteName } = await apiRaw(q(`report?id=${id}`));
+        const h = run.header || {}, A = run.answers || {}, its = run.items || [];
+        const cnt = { y: 0, n: 0, na: 0 }; its.forEach(i => { const v = (A[i.id] || {}).v; if (cnt[v] != null) cnt[v]++; });
+        const ist = (a) => [...(a.pins || []).map(x => `📌 [${escapeHtml(x.fl)}] ${escapeHtml(x.c)}`), ...(a.iss || []).map(x => `[${escapeHtml(x.fl)}] ${escapeHtml(x.c)}`)].join('<br>') || escapeHtml(a.r || '');
+        const bad = its.filter(i => (A[i.id] || {}).v === 'n');
+        const open = pins.filter(p => !p.resolvedAt), done = pins.filter(p => p.resolvedAt);
+        const itemName = id2 => { const i = its.find(x => x.id === id2); return i ? `#${i.n} ${escapeHtml(i.s)} — ${escapeHtml(i.t)}` : escapeHtml(id2); };
+        let sec = '';
+        const all = its.map(i => { const a = A[i.id] || {}; let row = '';
+          if (i.s !== sec) { sec = i.s; row += `<tr class="sec"><td colspan="5">${escapeHtml(sec)}</td></tr>`; }
+          return row + `<tr><td>#${i.n}</td><td>${escapeHtml(i.a)}</td><td>${escapeHtml(i.t)}</td><td class="c">${R[a.v] || '—'}</td><td>${a.v === 'n' ? ist(a) : ''}</td></tr>`; }).join('');
+        box.innerHTML = `<div class="topRow noprint"><button class="chip" onclick="showRecords()">‹ Records</button><button class="chip on" onclick="window.print()">🖨 Print / PDF</button></div>
+          <div class="hero"><h1>ABC QC Daily Checklist — ${escapeHtml(h.shift || FORM.toUpperCase())} Shift</h1><p>${escapeHtml(siteName)} · ${escapeHtml(fmtDay(run.day))}</p></div>
+          <div class="card rp">
+            <div class="rpHead"><div><b>Date</b>${escapeHtml(fmtDay(run.day))}</div><div><b>Shift</b>${escapeHtml(h.shift || FORM.toUpperCase())}</div><div><b>Shift manager</b>${escapeHtml(h.manager || run.submittedName || run.createdName)}</div><div><b>Floor</b>${escapeHtml(h.floor || '—')}</div></div>
+            <div class="kpis"><div class="kpi ok"><b>${cnt.y}</b><small>✅ OK</small></div><div class="kpi bad"><b>${cnt.n}</b><small>❌ Issue</small></div><div class="kpi na"><b>${cnt.na}</b><small>➖ N/A</small></div><div class="kpi"><b>${open.length}</b><small>📌 Pinned now</small></div></div>
+            <div style="font-size:13px;color:var(--abc-muted)">${run.status === 'submitted' ? `Submitted by <b>${escapeHtml(run.submittedName)}</b> · ${escapeHtml(fmtTime(run.submittedAt))}` : `Draft · ${run.done} of ${run.total} answered`}</div>
+            <h2>Issues found (${bad.length})</h2>
+            ${bad.length ? `<table class="rt"><thead><tr><th>#</th><th>Section · area</th><th>Item</th><th>Risk</th><th>Floor · comment</th></tr></thead><tbody>${bad.map(i => `<tr><td>#${i.n}</td><td>${escapeHtml(i.s)}<br><small>${escapeHtml(i.a)}</small></td><td>${escapeHtml(i.t)}</td><td>${escapeHtml(i.pr)}</td><td>${ist(A[i.id] || {})}</td></tr>`).join('')}</tbody></table>` : '<p>No issue — every item OK or N/A.</p>'}
+            <h2>📌 Fixed issues still open (${open.length})</h2>
+            ${open.length ? `<table class="rt"><thead><tr><th>Item</th><th>Floor</th><th>Issue</th><th>Pinned</th></tr></thead><tbody>${open.map(p => `<tr><td>${itemName(p.item)}</td><td>${escapeHtml(p.floor)}</td><td>${escapeHtml(p.comment)}</td><td>${escapeHtml(p.by)}<br><small>${escapeHtml(fmtTime(p.at))}</small></td></tr>`).join('')}</tbody></table>` : '<p>None.</p>'}
+            ${done.length ? `<h2>✓ Resolved since this day (${done.length})</h2><table class="rt"><thead><tr><th>Item</th><th>Floor</th><th>Issue</th><th>Resolved</th></tr></thead><tbody>${done.map(p => `<tr><td>${itemName(p.item)}</td><td>${escapeHtml(p.floor)}</td><td>${escapeHtml(p.comment)}</td><td>${escapeHtml(p.resolvedBy)}<br><small>${escapeHtml(fmtTime(p.resolvedAt))}</small></td></tr>`).join('')}</tbody></table>` : ''}
+            ${run.comments ? `<h2>General comment</h2><p style="white-space:pre-line">${escapeHtml(run.comments)}</p>` : ''}
+            <h2>All items</h2>
+            <table class="rt"><thead><tr><th>#</th><th>Area</th><th>Item</th><th class="c">Status</th><th>Floor · comment</th></tr></thead><tbody>${all}</tbody></table>
+          </div>`;
+      } catch (e) { box.innerHTML = `<div class="card">${escapeHtml(e.message)}</div>`; }
+    }
+
+    addEventListener('pagehide', () => { if (S.dirty) flushSave(false); });
+    boot();
+  </script>
+</body>
+</html>

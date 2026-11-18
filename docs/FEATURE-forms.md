@@ -46,3 +46,11 @@ DROP TABLE form_runs; DROP TABLE form_templates; DROP TABLE dbank_machines;
 DELETE FROM ops_settings WHERE k = 'dbank_upload';
 DELETE FROM hub_events WHERE app = 'forms';
 ```
+
+## Achrafieh DS — QC Daily Checklist page (Nov 2026)
+For Achrafieh Department Store (`QC_SITES` in `modules/formsqc.js`) the AM and PM tiles open `tools/qc-checklist.html` — the team's former Google Sheets page, now hub-backed, no password.
+- Records stay in `form_runs` (header `{qc, shift, manager, floor}`, answers `{v, r, iss:[{fl,c}], pins:[…]}`), so KPIs, missing-checklist alerts, reminders and the brief are unchanged.
+- 📌 Fix Issue → `form_pins` (one row per floor issue, shared by AM and PM, open until ✓ Resolved); this replaces the previous-findings follow-up for these sites. Technical Managers / Head of Technical are notified.
+- Temporary Save = hub draft (auto-saved a few seconds after each change); Clear Temporary Saved deletes the day's draft.
+- 📋 Records & reports: list per day and a printable report (issues, pinned issues, all items).
+- Routes: `/api/ops/forms/qc/{state,list,report,pin,resolve,save,clear}`.
