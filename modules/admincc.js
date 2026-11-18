@@ -147,7 +147,7 @@ async function jobs(env, d) {
   const day = async k => await metaGet(env, k);
   const eod = await env.DB.prepare("SELECT k, v FROM meta WHERE k >= ? AND k < ? ORDER BY k DESC LIMIT 10").bind("eod:", "eod;").all().catch(() => ({ results: [] }));
   const lastEod = (eod.results || [])[0];
-  const q = await env.DB.prepare("SELECT SUM(CASE WHEN status = 'wait' THEN 1 ELSE 0 END) AS wait, SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed FROM ms_queue").first().catch(() => null);
+  const q = await env.DB.prepare("SELECT SUM(CASE WHEN status = 'wait' THEN 1 ELSE 0 END) AS wait, SUM(CASE WHEN status = 'failed' AND created_at > ? THEN 1 ELSE 0 END) AS failed FROM ms_queue").bind(new Date(Date.now() - 864e5).toISOString()).first().catch(() => null);
   const beatAge = beat ? Math.round((Date.now() - Date.parse(beat)) / 60000) : null;
   const L = [
     { id: "cron", name: "Scheduler (every 2 minutes)", when: "every 2 min", last: beat || "", ok: beatAge != null && beatAge <= 15, note: beatAge == null ? "No run seen yet" : `${beatAge} min ago` },
@@ -156,7 +156,7 @@ async function jobs(env, d) {
     { id: "pm", name: "Preventive Maintenance (launch · reminders · breaches)", when: "09:00 daily", last: (await day("pm:run")) || "", ok: (await day("pm:run")) === today || hub < 10, run: "pm" },
     { id: "mk", name: "Marketing Participation reminders", when: "09:00 daily", last: (await day("mk:run")) || "", ok: (await day("mk:run")) === today || hub < 10, run: "mk" },
     { id: "fu", name: "Follow-up reminders", when: "daily", last: (await day("fu:run")) || "", ok: true },
-    { id: "outlook", name: "Outlook send queue", when: "every 2 min", last: beat || "", ok: !(q && Number(q.failed)), note: q ? `${Number(q.wait) || 0} waiting · ${Number(q.failed) || 0} failed` : "", run: "outlook" },
+    { id: "outlook", name: "Outlook send queue", when: "every 2 min", last: beat || "", ok: !(q && Number(q.failed)), note: q ? `${Number(q.wait) || 0} waiting · ${Number(q.failed) || 0} failed in the last 24 h` : "", run: "outlook" },
     { id: "storage", name: "Allowance check (alerts at 80 % / 95 %)", when: "daily + hourly D1", last: st && st.at || "", ok: true, run: "storage" },
     { id: "backup", name: "Backup", when: "Sunday email + monthly Google Drive", last: bk && bk.at || "", ok: !!(bk && bk.ok !== false && Date.now() - Date.parse(bk.at) < 40 * 864e5), note: bk ? (bk.ok === false ? "Last one failed: " + (bk.error || "") : `${bk.bytes ? Math.round(bk.bytes / 1024) + " KB" : ""}`) : "No backup recorded yet", run: "backup", runLabel: "Download now" }
   ];
