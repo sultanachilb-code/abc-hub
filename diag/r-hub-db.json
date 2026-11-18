@@ -8,48 +8,32 @@
       "served_by_colo": "CDG",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.6671
+        "sql_duration_ms": 0.1846
       },
-      "duration": 0.6671,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
+      "duration": 0.1846,
+      "changes": 1,
+      "last_row_id": 4245,
+      "changed_db": true,
       "size_after": 27742208,
-      "rows_read": 2199,
-      "rows_written": 0,
-      "total_attempts": 1
-    }
-  },
-  {
-    "results": [],
-    "success": true,
-    "meta": {
-      "served_by": "v3-prod",
-      "served_by_region": "WEUR",
-      "served_by_colo": "CDG",
-      "served_by_primary": true,
-      "timings": {
-        "sql_duration_ms": 0.6394
-      },
-      "duration": 0.6394,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
-      "size_after": 27742208,
-      "rows_read": 156,
-      "rows_written": 0,
+      "rows_read": 1,
+      "rows_written": 1,
       "total_attempts": 1
     }
   },
   {
     "results": [
       {
-        "t": "memo",
         "id": 116,
-        "memo_id": 2,
-        "site": "ACM",
-        "brand": "TOYS R US",
-        "emails": "storemanager.verdun@berytrade.com, patricia.chalhoub@berytrade.com, accounting@berytrade.com, marketing@berytrade.com, retail@berytrade.com, retail@berytrade.com'"
+        "emails": "storemanager.verdun@berytrade.com, patricia.chalhoub@berytrade.com, accounting@berytrade.com, marketing@berytrade.com, retail@berytrade.com",
+        "state": "",
+        "mails": 2,
+        "reminders": 1,
+        "last_mail": "2026-11-11",
+        "ref": "ACM-2026-001",
+        "every": 2,
+        "max_rem": 0,
+        "closed_at": "",
+        "reply_by": ""
       }
     ],
     "success": true,
@@ -59,136 +43,14 @@
       "served_by_colo": "CDG",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.1639
+        "sql_duration_ms": 0.1583
       },
-      "duration": 0.1639,
+      "duration": 0.1583,
       "changes": 0,
-      "last_row_id": 4243,
+      "last_row_id": 4245,
       "changed_db": false,
       "size_after": 27742208,
-      "rows_read": 128,
-      "rows_written": 0,
-      "total_attempts": 1
-    }
-  },
-  {
-    "results": [],
-    "success": true,
-    "meta": {
-      "served_by": "v3-prod",
-      "served_by_region": "WEUR",
-      "served_by_colo": "CDG",
-      "served_by_primary": true,
-      "timings": {
-        "sql_duration_ms": 0.0744
-      },
-      "duration": 0.0744,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
-      "size_after": 27742208,
-      "rows_read": 14,
-      "rows_written": 0,
-      "total_attempts": 1
-    }
-  },
-  {
-    "results": [],
-    "success": true,
-    "meta": {
-      "served_by": "v3-prod",
-      "served_by_region": "WEUR",
-      "served_by_colo": "CDG",
-      "served_by_primary": true,
-      "timings": {
-        "sql_duration_ms": 0.0734
-      },
-      "duration": 0.0734,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
-      "size_after": 27742208,
-      "rows_read": 29,
-      "rows_written": 0,
-      "total_attempts": 1
-    }
-  },
-  {
-    "results": [
-      {
-        "t": "dirq",
-        "n": 0
-      }
-    ],
-    "success": true,
-    "meta": {
-      "served_by": "v3-prod",
-      "served_by_region": "WEUR",
-      "served_by_colo": "CDG",
-      "served_by_primary": true,
-      "timings": {
-        "sql_duration_ms": 0.5549
-      },
-      "duration": 0.5549,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
-      "size_after": 27742208,
-      "rows_read": 2199,
-      "rows_written": 0,
-      "total_attempts": 1
-    }
-  },
-  {
-    "results": [
-      {
-        "t": "cl",
-        "n": 0
-      }
-    ],
-    "success": true,
-    "meta": {
-      "served_by": "v3-prod",
-      "served_by_region": "WEUR",
-      "served_by_colo": "CDG",
-      "served_by_primary": true,
-      "timings": {
-        "sql_duration_ms": 1.0641
-      },
-      "duration": 1.0641,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
-      "size_after": 27742208,
-      "rows_read": 274,
-      "rows_written": 0,
-      "total_attempts": 1
-    }
-  },
-  {
-    "results": [
-      {
-        "t": "sent",
-        "n": 4,
-        "a": "2026-11-13T07:00:58.038Z",
-        "b": "2026-11-13T08:32:02.963Z"
-      }
-    ],
-    "success": true,
-    "meta": {
-      "served_by": "v3-prod",
-      "served_by_region": "WEUR",
-      "served_by_colo": "CDG",
-      "served_by_primary": true,
-      "timings": {
-        "sql_duration_ms": 0.2177
-      },
-      "duration": 0.2177,
-      "changes": 0,
-      "last_row_id": 4243,
-      "changed_db": false,
-      "size_after": 27742208,
-      "rows_read": 231,
+      "rows_read": 2,
       "rows_written": 0,
       "total_attempts": 1
     }
