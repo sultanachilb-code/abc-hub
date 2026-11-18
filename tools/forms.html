@@ -206,6 +206,7 @@ async function boot(){
     site = ctx.site;
     $("#sitePick").innerHTML = siteSelect(ctx, v => { site = v; setUrl({ id: null }); run = null; boot(); });
     M = await api(`ops/forms/meta?form=${FORM}&site=${site}`);
+    if (M.qcPage) return location.replace(`/tools/qc-checklist.html?f=${FORM}&site=${site}${UP.get("id") ? `&report=${UP.get("id")}` : ""}${UP.get("embed") ? `&embed=${UP.get("embed")}` : ""}`);   // Achrafieh DS: its own QC checklist page (Nov 2026)
     document.title = `${M.meta.name} · ABC`;
     $("#ttl").innerHTML = `${esc(M.meta.name)} <small id="sub">${esc(ctx.siteName)}</small>`;
     $("#bEdit").classList.toggle("hidden", !M.can.admin);

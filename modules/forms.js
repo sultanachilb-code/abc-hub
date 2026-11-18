@@ -14,7 +14,8 @@
    Routes : /api/ops/forms/*   (all require a hub sign-in)
    ===================================================================== */
 
-import { ACS_AM } from "./forms-acs.js";   // Achrafieh DS AM checklist (Nov 2026)
+import { ACS_AM } from "./forms-acs.js";
+import { qcRoute, qcOn } from "./formsqc.js";   // Achrafieh DS QC checklist page (Nov 2026)   // Achrafieh DS AM checklist (Nov 2026)
 const clip = (v, n) => String(v == null ? "" : v).slice(0, n);
 import { reminderDone } from "./reminders.js";   // checklist submitted → its reminders are done
 import { trigSchema, trigRoute, trigForSheet, triggersOf, fireTrigger, TRIG_FORMS } from "./formtriggers.js";   // ⚡ checklist triggers (Oct 2026)
@@ -323,6 +324,7 @@ export async function formsRoute(env, p, method, b, url, ctx) {
   const isAdmin = me.role === "ADMIN";
   const lead = !!can.formsLead;
   const formOf = v => { if (!FORMS[v]) throw err("Choose a checklist"); return v; };
+  if (p.startsWith("forms/qc/")) return qcRoute(env, p, method, b, url, ctx, { template, FORMS, COVER, reminderDone, triggersOf, fireTrigger });
   if (p.startsWith("forms/trig/")) { const r = await trigRoute(env, p, method, b, url, ctx, FORMS, template); if (r) return r; throw err("Unknown endpoint", 404); }
   const withTrig = async (form, run) => {
     const fixes = await fixesOf(env, site, form);
@@ -334,7 +336,7 @@ export async function formsRoute(env, p, method, b, url, ctx) {
     const form = formOf(q("form"));
     const t = await template(env, site, form);
     const out = { form, meta: FORMS[form], forms: FORMS, flags: FLAGS, today: today(), reasons: t.reasons,
-      can: { fill: !!can.formsFill, lead, admin: isAdmin }, template: { count: t.items.length, updatedBy: t.updatedBy, updatedAt: t.updatedAt } };
+      can: { fill: !!can.formsFill, lead, admin: isAdmin }, template: { count: t.items.length, updatedBy: t.updatedBy, updatedAt: t.updatedAt }, qcPage: qcOn(site, form) };
     if (form === "dbank") {
       const [n, info] = await Promise.all([
         env.DB.prepare("SELECT COUNT(*) AS n FROM dbank_machines WHERE site = ?").bind(site).first(),
