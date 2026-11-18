@@ -2,44 +2,136 @@
   {
     "results": [
       {
-        "override": 0,
-        "verdict": "valid",
-        "n": 287
+        "id": 283,
+        "created_at": "2026-11-13T10:31:41.403Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"rroutbox\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"abcachoperations@abc.com.lb\"],\"cc\":[\"gfaisal@abc.com.lb\"],\"bcc\":[\"salaachi@abc.com.lb\"],\"subject\":\"⏰ Reminder — Window 2 closing soon | ABC Achrafieh Mall\",\"html\":\"<!DOCTYPE html><html><head><meta charset=\\\"UTF-8\\\">\\n  <style>\\n    body{margin:0"
       },
       {
-        "override": 0,
-        "verdict": "rejected",
-        "n": 14
+        "id": 282,
+        "created_at": "2026-11-13T10:31:19.078Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"rroutbox\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"VDSoperationmanagers@abc.com.lb\"],\"cc\":[\"kbouhussein@abc.com.lb\"],\"bcc\":[\"salaachi@abc.com.lb\"],\"subject\":\"⏰ Reminder — Window 2 closing soon | ABC Verdun Department Store\",\"html\":\"<!DOCTYPE html><html><head><meta charset=\\\"UTF-8\\\">\\n  <style>\\n"
       },
       {
-        "override": 0,
-        "verdict": "valid:pass",
-        "n": 11
+        "id": 281,
+        "created_at": "2026-11-13T10:30:56.869Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 503",
+        "batch": "retry",
+        "msg": "{\"kind\":\"rroutbox\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"abcverdunoperations@abc.com.lb\"],\"cc\":[\"jean.khoury@abc.com.lb\"],\"bcc\":[\"salaachi@abc.com.lb\"],\"subject\":\"⏰ Reminder — Window 2 closing soon | ABC Verdun Mall\",\"html\":\"<!DOCTYPE html><html><head><meta charset=\\\"UTF-8\\\">\\n  <style>\\n    body{marg"
       },
       {
-        "override": 1,
-        "verdict": "rejected",
-        "n": 11
+        "id": 280,
+        "created_at": "2026-11-13T10:00:56.359Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"footfall\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"libanparkverdun@abc.com.lb\"],\"cc\":[\"salaachi@abc.com.lb\"],\"subject\":\"Reminder 3 — ABC Verdun Mall — Parking figures — Thursday, 12 November 2026\",\"html\":\"<div style=\\\"font-family:Segoe UI,Arial,sans-serif;max-width:640px;margin:0 auto;border:1px"
       },
       {
-        "override": 0,
-        "verdict": "expired",
-        "n": 3
+        "id": 279,
+        "created_at": "2026-11-13T09:03:12.833Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"rroutbox\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"abcdbayehoperations@abc.com.lb\"],\"cc\":[\"cbazzi@abc.com.lb\",\"jdaou@abc.com.lb\"],\"bcc\":[\"salaachi@abc.com.lb\"],\"subject\":\"⏰ Reminder — Window 1 closing soon | ABC Dbayeh\",\"html\":\"<!DOCTYPE html><html><head><meta charset=\\\"UTF-8\\\">\\n  <style>\\n    "
       },
       {
-        "override": 1,
-        "verdict": "expired",
-        "n": 1
+        "id": 278,
+        "created_at": "2026-11-13T09:00:35.269Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"footfall\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"libanparkverdun@abc.com.lb\"],\"cc\":[\"salaachi@abc.com.lb\"],\"subject\":\"Reminder 2 — ABC Verdun Mall — Parking figures — Thursday, 12 November 2026\",\"html\":\"<div style=\\\"font-family:Segoe UI,Arial,sans-serif;max-width:640px;margin:0 auto;border:1px"
       },
       {
-        "override": 1,
-        "verdict": "expired:pass",
-        "n": 1
+        "id": 274,
+        "created_at": "2026-11-13T08:00:50.930Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"footfall\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"libanparkverdun@abc.com.lb\"],\"cc\":[\"salaachi@abc.com.lb\"],\"subject\":\"Reminder 1 — ABC Verdun Mall — Parking figures — Thursday, 12 November 2026\",\"html\":\"<div style=\\\"font-family:Segoe UI,Arial,sans-serif;max-width:640px;margin:0 auto;border:1px"
       },
       {
-        "override": 1,
-        "verdict": "unknown",
-        "n": 1
+        "id": 273,
+        "created_at": "2026-11-13T07:30:09.992Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"welcome\",\"to\":[\"hjaber@abc.com.lb\"],\"from\":\"salaachi@abc.com.lb\",\"replyTo\":\"salaachi@abc.com.lb\",\"subject\":\"Welcome to the ABC Property Hub\",\"html\":\"<table role=\\\"presentation\\\" width=\\\"100%\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" style=\\\"background:#F1EEF4;padding:24px 0\\\"><tr><td align=\\\"ce"
+      },
+      {
+        "id": 272,
+        "created_at": "2026-11-13T07:01:20.681Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 504",
+        "batch": "retry",
+        "msg": "{\"kind\":\"footfall\",\"from\":\"salaachi@abc.com.lb\",\"to\":[\"libanparkverdun@abc.com.lb\"],\"cc\":[\"salaachi@abc.com.lb\"],\"subject\":\"ABC Verdun Mall — Parking figures — Thursday, 12 November 2026\",\"html\":\"<div style=\\\"font-family:Segoe UI,Arial,sans-serif;max-width:640px;margin:0 auto;border:1px solid #E6E0E"
+      },
+      {
+        "id": 270,
+        "created_at": "2026-11-13T05:00:55.852Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 6,
+        "sent_at": "",
+        "error": "Outlook: Error 502",
+        "batch": "retry",
+        "msg": "{\"kind\":\"admin\",\"to\":[\"salaachi@abc.com.lb\"],\"subject\":\"Report mailbox cannot be read\",\"html\":\"<p style=\\\"font-family:Calibri,Arial\\\">Outlook: Error 502 — Admin Control Center → Report mailbox.</p>\"}"
+      },
+      {
+        "id": 253,
+        "created_at": "2026-11-11T07:00:43.383Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 0,
+        "sent_at": "",
+        "error": "Outlook: At least one recipient is not valid., Recipient 'retail@berytrade.com'' is not resolved. All recipients must be resolved before a message can be submitted.",
+        "batch": "bmwbrsb93",
+        "msg": "{\"kind\":\"memo\",\"to\":[\"storemanager.verdun@berytrade.com\",\"patricia.chalhoub@berytrade.com\",\"accounting@berytrade.com\",\"marketing@berytrade.com\",\"retail@berytrade.com\",\"retail@berytrade.com'\"],\"subject\":\"ABC Achrafieh Mall · Reminder · ACM-2026-001 · ABC Achrafieh - Fire Drill Training and Evacuation"
+      },
+      {
+        "id": 149,
+        "created_at": "2026-11-09T09:50:10.539Z",
+        "sender": "salaachi@abc.com.lb",
+        "status": "failed",
+        "tries": 0,
+        "sent_at": "",
+        "error": "Outlook: At least one recipient is not valid., Recipient 'retail@berytrade.com'' is not resolved. All recipients must be resolved before a message can be submitted.",
+        "batch": "bmw92yiy3",
+        "msg": "{\"to\":[\"storemanager.verdun@berytrade.com\",\"patricia.chalhoub@berytrade.com\",\"accounting@berytrade.com\",\"marketing@berytrade.com\",\"retail@berytrade.com\",\"retail@berytrade.com'\"],\"subject\":\"ABC Achrafieh Mall · ACM-2026-001 · ABC Achrafieh - Fire Drill Training and Evacuation Sessions\",\"html\":\"<div s"
       }
     ],
     "success": true,
@@ -49,14 +141,14 @@
       "served_by_colo": "CDG",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 1.37
+        "sql_duration_ms": 1.4177
       },
-      "duration": 1.37,
+      "duration": 1.4177,
       "changes": 0,
-      "last_row_id": 0,
+      "last_row_id": 4241,
       "changed_db": false,
-      "size_after": 27701248,
-      "rows_read": 666,
+      "size_after": 27742208,
+      "rows_read": 243,
       "rows_written": 0,
       "total_attempts": 1
     }

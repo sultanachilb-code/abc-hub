@@ -2,10 +2,7 @@
   {
     "results": [
       {
-        "at": "2026-08-24T15:06:05.761Z"
-      },
-      {
-        "at": "2026-08-24T10:26:52.917Z"
+        "1": 1
       }
     ],
     "success": true,
@@ -15,14 +12,14 @@
       "served_by_colo": "MRS",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.9512
+        "sql_duration_ms": 0.1961
       },
-      "duration": 0.9512,
+      "duration": 0.1961,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
       "size_after": 1789952,
-      "rows_read": 2,
+      "rows_read": 0,
       "rows_written": 0,
       "total_attempts": 1
     }
