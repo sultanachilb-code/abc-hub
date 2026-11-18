@@ -1,0 +1,89 @@
+[
+  {
+    "results": [
+      {
+        "role": "ADVISOR",
+        "position": "",
+        "n": 2
+      },
+      {
+        "role": "CDSO",
+        "position": "",
+        "n": 1
+      },
+      {
+        "role": "DIRECTOR",
+        "position": "",
+        "n": 1
+      },
+      {
+        "role": "MANAGER",
+        "position": "MM",
+        "n": 4
+      },
+      {
+        "role": "MANAGER",
+        "position": "OM",
+        "n": 2
+      },
+      {
+        "role": "MANAGER",
+        "position": "SMM",
+        "n": 1
+      },
+      {
+        "role": "SECURITY",
+        "position": "HOS",
+        "n": 1
+      },
+      {
+        "role": "SECURITY",
+        "position": "SM",
+        "n": 1
+      },
+      {
+        "role": "SECURITY",
+        "position": "SV",
+        "n": 1
+      },
+      {
+        "role": "SUPERVISOR",
+        "position": "MO",
+        "n": 8
+      },
+      {
+        "role": "SUPERVISOR",
+        "position": "MS",
+        "n": 11
+      },
+      {
+        "role": "SUPERVISOR",
+        "position": "SMS",
+        "n": 7
+      },
+      {
+        "role": "SUPERVISOR",
+        "position": "WH",
+        "n": 1
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "CDG",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.445
+      },
+      "duration": 0.445,
+      "changes": 0,
+      "last_row_id": 4237,
+      "changed_db": false,
+      "size_after": 27701248,
+      "rows_read": 82,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "results": [
+      {
+        "state": "",
+        "n": 91
+      },
+      {
+        "state": "ack",
+        "n": 35
+      },
+      {
+        "state": "reply",
+        "n": 2
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "CDG",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.9224
+      },
+      "duration": 0.9224,
+      "changes": 0,
+      "last_row_id": 4237,
+      "changed_db": false,
+      "size_after": 27701248,
+      "rows_read": 256,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

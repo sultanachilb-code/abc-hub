@@ -1,0 +1,124 @@
+[
+  {
+    "results": [
+      {
+        "kind": "bp",
+        "status": "Acknowledged",
+        "n": 38
+      },
+      {
+        "kind": "bp",
+        "status": "Created",
+        "n": 4
+      },
+      {
+        "kind": "bp",
+        "status": "In Review",
+        "n": 7
+      },
+      {
+        "kind": "bp",
+        "status": "Rejected",
+        "n": 4
+      },
+      {
+        "kind": "bp",
+        "status": "Sent to Tenant",
+        "n": 50
+      },
+      {
+        "kind": "cp",
+        "status": "Approved",
+        "n": 344
+      },
+      {
+        "kind": "cp",
+        "status": "Rejected",
+        "n": 1
+      },
+      {
+        "kind": "cp",
+        "status": "Submitted",
+        "n": 5
+      },
+      {
+        "kind": "mk",
+        "status": "Approved",
+        "n": 595
+      },
+      {
+        "kind": "mk",
+        "status": "Created",
+        "n": 49
+      },
+      {
+        "kind": "mk",
+        "status": "Rejected",
+        "n": 203
+      },
+      {
+        "kind": "mk",
+        "status": "Submitted To Review",
+        "n": 53
+      },
+      {
+        "kind": "nr",
+        "status": "Closed",
+        "n": 283
+      },
+      {
+        "kind": "nr",
+        "status": "Confirmed",
+        "n": 115
+      },
+      {
+        "kind": "nr",
+        "status": "Created",
+        "n": 19
+      },
+      {
+        "kind": "nr",
+        "status": "Sent to Tenant",
+        "n": 419
+      },
+      {
+        "kind": "vr",
+        "status": "Closed",
+        "n": 182
+      },
+      {
+        "kind": "vr",
+        "status": "Confirmed & Resolved",
+        "n": 107
+      },
+      {
+        "kind": "vr",
+        "status": "Created",
+        "n": 11
+      },
+      {
+        "kind": "vr",
+        "status": "Sent to Tenant",
+        "n": 359
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WEUR",
+      "served_by_colo": "CDG",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 6.6368
+      },
+      "duration": 6.6368,
+      "changes": 0,
+      "last_row_id": 4237,
+      "changed_db": false,
+      "size_after": 27701248,
+      "rows_read": 5718,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

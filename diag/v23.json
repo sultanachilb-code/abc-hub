@@ -1,0 +1,54 @@
+[
+  {
+    "results": [
+      {
+        "flagship": "achrafieh_ds",
+        "n": 377,
+        "d": "2026-11-18",
+        "d0": "2026-07-14"
+      },
+      {
+        "flagship": "achrafieh_mall",
+        "n": 559,
+        "d": "2026-11-18",
+        "d0": "2026-07-18"
+      },
+      {
+        "flagship": "dbayeh",
+        "n": 4187,
+        "d": "2026-11-18",
+        "d0": "2026-07-15"
+      },
+      {
+        "flagship": "verdun_ds",
+        "n": 1091,
+        "d": "2026-11-18",
+        "d0": "2026-07-18"
+      },
+      {
+        "flagship": "verdun_mall",
+        "n": 3778,
+        "d": "2026-11-18",
+        "d0": "2026-06-02"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "EEUR",
+      "served_by_colo": "MXP",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 16.7772
+      },
+      "duration": 16.7772,
+      "changes": 0,
+      "last_row_id": 11340,
+      "changed_db": false,
+      "size_after": 15159296,
+      "rows_read": 9992,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

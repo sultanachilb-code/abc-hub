@@ -1,0 +1,54 @@
+[
+  {
+    "results": [
+      {
+        "gps_status": "checked",
+        "has_issues": 1,
+        "COUNT(*)": 1
+      },
+      {
+        "gps_status": "migrated",
+        "has_issues": 0,
+        "COUNT(*)": 7
+      },
+      {
+        "gps_status": "obtained",
+        "has_issues": 0,
+        "COUNT(*)": 9655
+      },
+      {
+        "gps_status": "obtained",
+        "has_issues": 1,
+        "COUNT(*)": 319
+      },
+      {
+        "gps_status": "test",
+        "has_issues": 0,
+        "COUNT(*)": 1
+      },
+      {
+        "gps_status": "uncalibrated",
+        "has_issues": 0,
+        "COUNT(*)": 9
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "EEUR",
+      "served_by_colo": "MXP",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 65.3554
+      },
+      "duration": 65.3554,
+      "changes": 0,
+      "last_row_id": 11340,
+      "changed_db": false,
+      "size_after": 15159296,
+      "rows_read": 19984,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]
