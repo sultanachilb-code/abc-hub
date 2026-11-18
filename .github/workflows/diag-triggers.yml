@@ -10,6 +10,11 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 61f649b35159d4a26df7dde3c09a91dd
     steps:
       - run: |
-          q(){ npx -y wrangler@4 d1 execute "${DBN:-hub-db}" --remote --json --command "$1" > o.json 2> e.txt || true
-            node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r.map(x=>x.results&&x.results.length?x.results:x.meta&&x.meta.changes)).slice(0,1500))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
-          echo "::notice title=hq::snag $(curl -s -m 20 -X POST -d '{}' https://abc-snaglist.sultanalachi-work.workers.dev/hubquery | head -c 120) audit $(curl -s -m 20 -X POST -d '{}' https://abc-audit.abcoperationshub.workers.dev/hubquery | head -c 120)"
+          mkdir out
+          for D in hub-db abc-restroom-db abc-incidents; do
+            npx -y wrangler@4 d1 execute "$D" --remote --json --command "SELECT m.name AS t, p.name AS c, p.type AS ty FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE '_cf_%' ORDER BY m.name, p.cid" > out/$D.json 2> out/$D.err || true
+            npx -y wrangler@4 d1 execute "$D" --remote --json --command "SELECT name, (SELECT 0) z FROM sqlite_master WHERE type='table'" > out/$D.tables.json 2>/dev/null || true
+          done
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with: { name: schemas, path: out }
