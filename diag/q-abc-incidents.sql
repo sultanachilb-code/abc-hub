@@ -1,1 +1,1 @@
-SELECT at FROM audit_log ORDER BY id DESC LIMIT 2;
+SELECT 1;

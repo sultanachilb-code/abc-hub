@@ -1,1 +1,1 @@
-SELECT override, verdict, COUNT(*) n FROM gate_scans GROUP BY 1,2 ORDER BY 3 DESC LIMIT 8;
+SELECT id, created_at, sender, status, tries, sent_at, error, batch, substr(msg,1,300) AS msg FROM ms_queue WHERE status <> 'sent' ORDER BY id DESC LIMIT 20;
