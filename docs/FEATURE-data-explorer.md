@@ -9,3 +9,9 @@ Admin Control → 🔎 **Data explorer** — administrators only (Admin Control 
 - **Saved queries**: `dbx_saved`, shared by all administrators.
 - Every run is written to the change history (tool `admin`, ref `data-explorer`).
 - No query across two systems (separate databases).
+
+## Query library (Nov 2026)
+`modules/dbx-lib.js` holds 114 ready-made read-only queries (Hub 70, Restroom 13, Incidents 10, Snaglist 10, ABC Audit 11), named "Topic · What it shows".
+They are added to the shared Saved queries list as "Query library" the first time the Data explorer opens after a release (meta `dbx:lib` = `LIB_VER`).
+Raise `LIB_VER` to add or correct queries: missing ones are added and the library's own ones refreshed by name; queries saved by people are never touched, and one deleted by an administrator comes back only at the next version.
+The Saved queries page has a search box, a filter per system and groups by system and topic.
