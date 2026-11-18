@@ -12,5 +12,4 @@ jobs:
       - run: |
           q(){ npx -y wrangler@4 d1 execute "${DBN:-hub-db}" --remote --json --command "$1" > o.json 2> e.txt || true
             node -e 'try{const r=JSON.parse(require("fs").readFileSync("o.json","utf8"));console.log(JSON.stringify(r.map(x=>x.results&&x.results.length?x.results:x.meta&&x.meta.changes)).slice(0,1500))}catch(e){console.log("ERR "+require("fs").readFileSync("e.txt","utf8").slice(0,300).replace(/\n/g," "))}'; }
-          echo "::notice title=pos::$(q "SELECT substr(v,1,1500) v FROM meta WHERE k='pos:cfg'")"
-          echo "::notice title=ppl::$(q "SELECT role, position, site_code, COUNT(*) n FROM users WHERE active = 1 AND role IN ('MANAGER','SUPERVISOR') GROUP BY role, position, site_code")"
+          echo "::notice title=hq::snag $(curl -s -m 20 -X POST -d '{}' https://abc-snaglist.sultanalachi-work.workers.dev/hubquery | head -c 120) audit $(curl -s -m 20 -X POST -d '{}' https://abc-audit.abcoperationshub.workers.dev/hubquery | head -c 120)"
