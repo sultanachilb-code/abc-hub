@@ -10,6 +10,7 @@
    • Data & backup: table sizes, clean-up of old notifications / logs
    Routes: /api/admin/cc/*   ·   /api/viewas-stop (public: just clears the View-as cookie)
    ===================================================================== */
+import { dbxRoute } from "./dbx.js";   // 🔎 Data explorer (Nov 2026)
 const err = (m, status = 400) => Object.assign(new Error(m), { status });
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
 const LOCK_AFTER = 5, LOCK_MIN = 15, ONLINE_MIN = 10;
@@ -262,6 +263,7 @@ export async function admRoute(env, a, method, b, url, d) {
     return { d1, storage: st, workers: wr, mail: { relay: mq, relaySet: !!env.MAIL_RELAY_URL, outlookSent: Number(sent.n) || 0, waiting: Number(wait.n) || 0, auto: (await metaGet(env, "ms:auto")) || "", secretExp: (await metaGet(env, "ms:secret_exp")) || "", people },
       ai: { used: Math.round(ai), free: aiFree, closeAt: Math.round(aiFree * .8), days: aiDays }, sms: { set: !!(env.TWILIO_SID && env.TWILIO_TOKEN) } };
   }
+  if (a.startsWith("cc/dbx/")) return dbxRoute(env, a.slice(7), method, b, url, d);   // 🔎 Data explorer (read-only, Nov 2026)
   if (a === "cc/audit-url" && method === "POST") {   // ABC Audit address (the hub tile opens it through /go/audit)
     const u = String(b.url || "").trim().replace(/\/+$/, "");
     if (u && !/^https:\/\/[\w.-]+(\/[\w./-]*)?$/.test(u)) throw Object.assign(new Error("Enter the address starting with https://"), { status: 400 });
