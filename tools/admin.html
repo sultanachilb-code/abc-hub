@@ -204,6 +204,7 @@ dialog.cc select,dialog.cc textarea{border:1px solid var(--cline);border-radius:
 .dx-c{font:500 .74rem/1.5 ui-monospace,Menlo,Consolas,monospace;margin:2px 0 8px 10px;opacity:.9}.dx-c i{color:#C0392B}
 .dx-r{padding:12px;min-width:0}.dx-r textarea{width:100%;min-height:140px;border:1px solid var(--cline);border-radius:12px;padding:10px;font:500 .84rem/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--ccard);color:var(--ctext);resize:vertical}
 .dx-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}.dx-tw{max-height:60vh;overflow:auto}.dx-tw td{white-space:nowrap;max-width:420px;overflow:hidden;text-overflow:ellipsis;font-size:.8rem}.dx-tw th{position:sticky;top:0}
+.dx-sf{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}.dx-sf input{width:100%;padding:10px 12px;border:1px solid var(--cline);border-radius:12px;background:var(--ccard);color:var(--ctext);font:inherit}.dx-ch{display:flex;gap:6px;flex-wrap:wrap}.dx-ch button{border:1px solid var(--cline);background:var(--ccard);color:var(--ctext);border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;cursor:pointer}.dx-ch button.on{background:#1565C0;color:#fff;border-color:#1565C0}.dx-gr td{background:var(--cline);font-size:.8rem;padding:6px 10px}.dx-sq{font-size:.72rem;opacity:.75;word-break:break-all}
 .b.sm{padding:5px 9px;font-size:.74rem}
 </style>
 </head>
@@ -755,13 +756,29 @@ async function dxExport(kind){
   if (!window.XLSX) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "/tools/xlsx.full.min.js"; sc.onload = ok; sc.onerror = no; document.head.append(sc); });
   const ws = XLSX.utils.aoa_to_sheet([r.cols, ...r.rows]), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Query"); XLSX.writeFile(wb, name + ".xlsx");
 }
+const DXS = { f: "", src: "" };
 async function dxSaved(){
-  const S = (await api("admin/cc/dbx/saved")).saved;
-  V(head("⭐ Saved queries", "Shared by all administrators", `<button class="b gh" id="dxB">‹ Data explorer</button>`) +
-    (S.length ? `<div class="tw"><table><thead><tr><th>Name</th><th>System</th><th>Query</th><th>Saved by</th><th></th></tr></thead><tbody>${S.map(x => `<tr><td><b>${esc(x.name)}</b></td><td>${esc(x.srcName)}</td><td><code style="font-size:.74rem">${esc(x.sql.slice(0, 140))}${x.sql.length > 140 ? "…" : ""}</code></td><td>${esc(x.by)}<br><small class="mut">${ago(x.at)}</small></td>
-      <td style="white-space:nowrap"><button class="b sm" data-dxo="${x.id}">Open</button> <button class="b gh sm" data-dxd="${x.id}">Delete</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="mut">No saved query yet — write one in a system and press ⭐ Save query.</p>`));
+  const S = (await api("admin/cc/dbx/saved")).saved, ORD = Object.keys(DXN);
+  const topic = n => n.includes(" · ") ? n.split(" · ")[0] : "Other", title = n => n.includes(" · ") ? n.split(" · ").slice(1).join(" · ") : n;
+  const draw = () => {
+    const f = DXS.f.toLowerCase(), L = S.filter(x => (!DXS.src || x.src === DXS.src) && (!f || (x.name + " " + x.sql).toLowerCase().includes(f)))
+      .sort((a, b) => ORD.indexOf(a.src) - ORD.indexOf(b.src) || topic(a.name).localeCompare(topic(b.name)) || title(a.name).localeCompare(title(b.name)));
+    let last = "", rows = "";
+    for (const x of L){ const g = x.srcName + " — " + topic(x.name);
+      if (g !== last){ rows += `<tr class="dx-gr"><td colspan="3">${esc(x.srcName)} · <b>${esc(topic(x.name))}</b></td></tr>`; last = g; }
+      rows += `<tr><td><b>${esc(title(x.name))}</b><br><code class="dx-sq">${esc(x.sql.replace(/\s+/g, " ").slice(0, 120))}${x.sql.length > 120 ? "…" : ""}</code></td><td><small>${esc(x.by)}<br><span class="mut">${ago(x.at)}</span></small></td>
+        <td style="white-space:nowrap"><button class="b sm" data-dxo="${x.id}">▶ Open</button> <button class="b gh sm" data-dxd="${x.id}">Delete</button></td></tr>`; }
+    $("#dxSL").innerHTML = L.length ? `<div class="tw"><table><thead><tr><th>Query</th><th>Saved by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="mut">${S.length ? "No query matches." : "No saved query yet — write one in a system and press ⭐ Save query."}</p>`;
+    document.querySelectorAll("[data-dxsf]").forEach(b => b.classList.toggle("on", b.dataset.dxsf === DXS.src));
+  };
+  V(head("⭐ Saved queries", `${S.length} queries shared by all administrators · pick one and press Open`, `<button class="b gh" id="dxB">‹ Data explorer</button>`) +
+    `<div class="dx-sf"><input id="dxSF" placeholder="Search a query… (e.g. handover, overdue, vacant)" value="${esc(DXS.f)}">
+      <div class="dx-ch"><button data-dxsf="">All · ${S.length}</button>${ORD.filter(k => S.some(x => x.src === k)).map(k => `<button data-dxsf="${k}">${esc(DXN[k])} · ${S.filter(x => x.src === k).length}</button>`).join("")}</div></div><div id="dxSL"></div>`);
+  draw();
   $("#dxB").onclick = dx;
-  $("#main").onclick = async e => { const o = e.target.closest("[data-dxo]"); if (o){ const x = S.find(y => String(y.id) === o.dataset.dxo); DX.sql = x.sql; await dxSrc(x.src, x.sql); return dxRun(); }
+  $("#dxSF").oninput = e => { DXS.f = e.target.value; draw(); };
+  $("#main").onclick = async e => { const c = e.target.closest("[data-dxsf]"); if (c){ DXS.src = c.dataset.dxsf; return draw(); }
+    const o = e.target.closest("[data-dxo]"); if (o){ const x = S.find(y => String(y.id) === o.dataset.dxo); DX.sql = x.sql; await dxSrc(x.src, x.sql); return dxRun(); }
     const d = e.target.closest("[data-dxd]"); if (d && confirm("Delete this saved query for everyone?")){ try { await api("admin/cc/dbx/saved", { del: d.dataset.dxd }); toast("Deleted"); dxSaved(); } catch (er){ toast(er.message, true); } } };
 }
 async function sy(fresh){

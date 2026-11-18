@@ -81,6 +81,23 @@ async function remote(env, src, payload) {
 }
 const dbOf = (env, src) => { const S = DBX_SOURCES[src]; if (!S) throw err("Unknown system"); return S.bind ? env[S.bind] : null; };
 
+import { LIBRARY, LIB_VER, LIB_BY } from "./dbx-lib.js";
+
+/* adds the ready-made queries once per library version (modules/dbx-lib.js) */
+async function seedLib(env) {
+  const cur = await env.DB.prepare("SELECT v FROM meta WHERE k = 'dbx:lib'").first().catch(() => null);
+  if (cur && Number(cur.v) >= LIB_VER) return;
+  const have = new Map(((await env.DB.prepare("SELECT id, name, by_name FROM dbx_saved").all()).results || []).map(x => [x.name, x]));
+  const at = new Date().toISOString(), st = [];
+  for (const [src, name, sql] of LIBRARY) {
+    const h = have.get(name);
+    if (!h) st.push(env.DB.prepare("INSERT INTO dbx_saved (name, source, sql, by_name, at) VALUES (?,?,?,?,?)").bind(name, src, sql, LIB_BY, at));
+    else if (h.by_name === LIB_BY) st.push(env.DB.prepare("UPDATE dbx_saved SET source = ?, sql = ? WHERE id = ?").bind(src, sql, h.id));
+  }
+  st.push(env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('dbx:lib', ?)").bind(String(LIB_VER)));
+  for (let i = 0; i < st.length; i += 50) await env.DB.batch(st.slice(i, i + 50));
+}
+
 export async function dbxSchema(env) {
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS dbx_saved (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, source TEXT NOT NULL, sql TEXT NOT NULL,
     by_name TEXT NOT NULL DEFAULT '', at TEXT NOT NULL)`).run();
@@ -90,6 +107,7 @@ export async function dbxSchema(env) {
 export async function dbxRoute(env, p, method, b, url, d) {
   const { me } = d;
   await dbxSchema(env);
+  if (p === "sources" || p === "saved") await seedLib(env);
   if (p === "sources") {
     const saved = (await env.DB.prepare("SELECT COUNT(*) AS n FROM dbx_saved").first()).n;
     return { sources: Object.entries(DBX_SOURCES).map(([k, s]) => ({ k, name: s.name, icon: s.icon, color: s.color, local: !!s.bind, ready: s.bind ? !!env[s.bind] : !!env[s.key] })), saved };
@@ -118,7 +136,7 @@ export async function dbxRoute(env, p, method, b, url, d) {
       await env.DB.prepare("INSERT INTO dbx_saved (name, source, sql, by_name, at) VALUES (?,?,?,?,?)").bind(name, src, sql, me.full_name || me.email, new Date().toISOString()).run();
       return { saved: true };
     }
-    const { results } = await env.DB.prepare("SELECT * FROM dbx_saved ORDER BY id DESC LIMIT 300").all();
+    const { results } = await env.DB.prepare("SELECT * FROM dbx_saved ORDER BY id DESC LIMIT 500").all();
     return { saved: (results || []).map(x => ({ id: x.id, name: x.name, src: x.source, srcName: (DBX_SOURCES[x.source] || {}).name || x.source, sql: x.sql, by: x.by_name, at: x.at })) };
   }
   throw err("Unknown endpoint", 404);
