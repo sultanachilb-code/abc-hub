@@ -196,6 +196,15 @@ dialog.cc label{font-size:.76rem;font-weight:700;color:var(--cmut)}dialog.cc inp
 .seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--cpaper);border:1px solid var(--cline);padding:3px;border-radius:10px}.seg2 button{border:0;background:none;border-radius:8px;padding:7px;font:inherit;font-size:.78rem;font-weight:700;color:var(--ctext);cursor:pointer}.seg2 button.on{background:var(--ccard);box-shadow:0 2px 6px rgba(0,0,0,.1)}
 dialog.cc select,dialog.cc textarea{border:1px solid var(--cline);border-radius:10px;padding:9px;font:inherit;background:var(--ccard);color:var(--ctext)}
 .emo{display:flex;gap:4px;flex-wrap:wrap}.emo button{border:1px solid var(--cline);background:var(--ccard);border-radius:8px;width:34px;height:34px;font-size:17px;cursor:pointer}.emo button.on{border-color:#C8A24A;box-shadow:0 0 0 2px #C8A24A}
+.dx-ic{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}.dx-i{background:var(--ccard);border:1px solid var(--cline);border-radius:16px;padding:16px;text-align:center;cursor:pointer;color:var(--ctext);font:inherit}
+.dx-i:hover{border-color:#6B3FA0}.dx-i i{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 8px;border-radius:14px;color:#fff;font-style:normal;font-size:1.35rem}.dx-i b{display:block}.dx-i small{color:var(--cmut,#6D6479);font-size:.76rem}
+.dx-g{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:start}@media (max-width:860px){.dx-g{grid-template-columns:1fr}}
+.dx-l{max-height:75vh;overflow:auto;padding:10px}.dx-l input{width:100%;border:1px solid var(--cline);border-radius:10px;padding:8px 10px;font:inherit;background:var(--ccard);color:var(--ctext);margin-bottom:8px}
+.dx-t{display:flex;justify-content:space-between;gap:8px;padding:7px 8px;border-radius:9px;cursor:pointer;font-size:.84rem}.dx-t:hover,.dx-t.on{background:rgba(107,63,160,.12)}.dx-t small{opacity:.65}
+.dx-c{font:500 .74rem/1.5 ui-monospace,Menlo,Consolas,monospace;margin:2px 0 8px 10px;opacity:.9}.dx-c i{color:#C0392B}
+.dx-r{padding:12px;min-width:0}.dx-r textarea{width:100%;min-height:140px;border:1px solid var(--cline);border-radius:12px;padding:10px;font:500 .84rem/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--ccard);color:var(--ctext);resize:vertical}
+.dx-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}.dx-tw{max-height:60vh;overflow:auto}.dx-tw td{white-space:nowrap;max-width:420px;overflow:hidden;text-overflow:ellipsis;font-size:.8rem}.dx-tw th{position:sticky;top:0}
+.b.sm{padding:5px 9px;font-size:.74rem}
 </style>
 </head>
 <body>
@@ -213,7 +222,7 @@ function setTheme(t){ THEME = t; document.documentElement.setAttribute("data-adm
 setTheme(THEME);
 let ME = null, PAGE = (location.hash || "#hm").slice(1), UF = "all", UQ = "", USERS = null;
 const NAV = [["ov", "🏠", "Overview"], ["sep", "People"], ["pr", "🪪", "People & roles"], ["hy", "🌳", "Hierarchy"], ["us", "👥", "Users & access"], ["ur", "📈", "Usage report"], ["sec", "🔐", "Security & sign-ins"], ["hi", "🕘", "Change history"],
-  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["lp", "🧭", "Positions & landing pages"], ["is", "🚨", "Incident Report settings"], ["ws", "🎚", "Tool switches & folders"], ["rp", "📑", "Reports"], ["bk", "💾", "Data & backup"],
+  ["sep", "Platform"], ["al", "📊", "Allowances & usage"], ["db", "🗄", "Storage & database"], ["sy", "🔌", "Systems & jobs"], ["mb", "📥", "Report mailbox"], ["pc", "🧭", "Projects & GitHub"], ["ss", "🔑", "Hub sign-in"], ["lp", "🧭", "Positions & landing pages"], ["is", "🚨", "Incident Report settings"], ["ws", "🎚", "Tool switches & folders"], ["rp", "📑", "Reports"], ["bk", "💾", "Data & backup"], ["dx", "🔎", "Data explorer"],
   ["sep", "Content"], ["em", "📮", "Email Control"], ["ex", "✉️", "Tenant pages & emails"], ["an", "📣", "Announcements"], ["fc", "🖼", "Flagship covers"], ["se", "🎃", "Seasons"], ["mm", "💬", "Message of the moment"]];
 const fmtN = n => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + " M" : n >= 1e4 ? Math.round(n / 1e3) + " k" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
 const fmtB = b => b == null ? "—" : b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : b >= 1e3 ? Math.round(b / 1e3) + " KB" : b + " B";
@@ -254,7 +263,7 @@ function go(p){
   document.querySelectorAll("#nav [data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === PAGE)); if (LAY) drawNav();
   const mm = $("#main"); mm.onclick = mm.onkeydown = mm.onpointerdown = mm.oncontextmenu = null;   // the landing page's handlers stay on its own page
   V(`<p class="mut">Loading…</p>`); scrollTo(0, 0);
-  ({ hm, ss, ov, pr, hy, us, ur, sec, hi, al, db, sy, mb, ws, lp, is, rp, pc, tl, bk, ex, an, fc, se, mm, em })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
+  ({ hm, ss, ov, pr, hy, us, ur, sec, hi, al, db, sy, mb, ws, lp, is, rp, pc, tl, bk, ex, an, fc, se, mm, em, dx })[PAGE]().catch(e => e.status === 428 ? lockScreen() : V(`<div class="al bad"><div class="m"><b>${esc(e.message)}</b></div></div>`));
 }
 /* the Admin Control Center asks for the admin's password again (kept 2 hours on this device) */
 function lockScreen(){
@@ -688,6 +697,73 @@ async function al(fresh){
 }
 
 /* ---------- systems & jobs ---------- */
+/* ---------- 🔎 Data explorer (Nov 2026, modules/dbx.js): read-only queries on the Hub, Restroom, Incidents, Snaglist and ABC Audit ---------- */
+const DX = { src: "", tables: null, sql: "", res: null, open: "", busy: false, f: "" };
+async function dx(){
+  DX.src = ""; DX.res = null;
+  const S = await api("admin/cc/dbx/sources");
+  V(head("🔎 Data explorer", "Read-only — look at the data of every system, never change it. Passwords, two-step secrets and tokens stay hidden; each run is logged.") +
+    `<div class="dx-ic">${S.sources.map(x => `<button class="dx-i" data-dxs="${x.k}"><i style="background:${x.color}">${x.icon}</i><b>${esc(x.name)}</b><small>${x.ready ? (x.local ? "this account" : "linked system") : "not connected"}</small></button>`).join("")}
+      <button class="dx-i" data-dxsv="1"><i style="background:#2E7D32">⭐</i><b>Saved queries</b><small>${S.saved} saved · shared</small></button></div>`);
+  $("#main").onclick = e => { const b = e.target.closest("[data-dxs]"); if (b) return dxSrc(b.dataset.dxs); if (e.target.closest("[data-dxsv]")) dxSaved(); };
+}
+async function dxSrc(src, sql){
+  DX.src = src; DX.res = null; DX.open = ""; DX.f = ""; DX.sql = sql || DX.sql || "";
+  V(`<p class="mut">Reading the tables…</p>`);
+  try { DX.tables = (await api("admin/cc/dbx/schema?src=" + src)).tables; } catch (e) { return V(`<button class="b gh" id="dxB">‹ Data explorer</button><div class="al bad" style="margin-top:10px"><div class="m"><b>${esc(e.message)}</b></div></div>`), $("#dxB").onclick = dx; }
+  dxDraw();
+}
+const DXN = { hub: "Hub", restroom: "Restroom", incidents: "Incidents", snaglist: "Snaglist", audit: "ABC Audit" };
+function dxDraw(){
+  const T = DX.tables || [], f = DX.f.toLowerCase(), L = T.filter(t => !f || t.name.toLowerCase().includes(f) || t.cols.some(c => c.name.toLowerCase().includes(f)));
+  const qi = n => /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) ? n : `"${n.replace(/"/g, '""')}"`;
+  V(`<div class="hd"><div><h1>🔎 ${esc(DXN[DX.src])}</h1><small>${T.length} tables · read-only</small></div><div style="display:flex;gap:8px"><button class="b gh" id="dxB">‹ Data explorer</button><button class="b gh" id="dxSv">⭐ Saved queries</button></div></div>
+    <div class="dx-g"><div class="card dx-l"><input id="dxF" placeholder="Find a table or column…" value="${esc(DX.f)}">
+      ${L.map(t => `<div class="dx-t ${DX.open === t.name ? "on" : ""}" data-dxt="${esc(t.name)}"><span>${t.view ? "👁 " : ""}${esc(t.name)}</span><small>${fmtN(t.rows)}</small></div>
+        ${DX.open === t.name ? `<div class="dx-c">${t.cols.map(c => `<div><b>${esc(c.name)}</b> ${esc(c.type)}${c.pk ? " · PK" : ""}${c.nn ? " · not null" : ""}${c.hidden ? ` · <i>hidden</i>` : ""}</div>`).join("")}
+          ${t.idx.length ? `<div style="margin-top:6px">${t.idx.map(i => `<div>⚡ ${esc(i.name)} (${esc(i.on)})</div>`).join("")}</div>` : `<div style="margin-top:6px">No index</div>`}
+          <button class="b gh sm" data-dxp="${esc(qi(t.name))}" style="margin-top:6px">Preview 20 rows</button></div>` : ""}`).join("") || `<p class="mut">No table matches.</p>`}</div>
+      <div class="card dx-r"><textarea id="dxQ" spellcheck="false" placeholder="SELECT … FROM … WHERE … ORDER BY …">${esc(DX.sql)}</textarea>
+        <div class="dx-bar"><button class="b" id="dxRun">${DX.busy ? "Running…" : "▶ Run"}</button><button class="b gh" id="dxSave">⭐ Save query</button><button class="b gh" id="dxX">⤓ Excel</button><button class="b gh" id="dxC">⤓ CSV</button>
+          <span class="mut">${DX.res ? `${DX.res.rows.length.toLocaleString("en-US")} row${DX.res.rows.length === 1 ? "" : "s"}${DX.res.more ? ` (first ${DX.res.max.toLocaleString("en-US")})` : ""} · ${DX.res.ms} ms` : "Ctrl + Enter runs · up to 5,000 rows shown, 50,000 in an export"}</span></div>
+        <div id="dxOut">${DX.err ? `<div class="al bad"><div class="m"><b>${esc(DX.err)}</b></div></div>` : DX.res ? dxTable(DX.res) : ""}</div></div></div>`);
+  $("#dxB").onclick = dx; $("#dxSv").onclick = dxSaved;
+  $("#dxF").oninput = e => { DX.f = e.target.value; const pos = e.target.selectionStart; dxDraw(); const i = $("#dxF"); i.focus(); i.setSelectionRange(pos, pos); };
+  const q = $("#dxQ"); q.oninput = () => DX.sql = q.value; q.onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); dxRun(); } };
+  $("#dxRun").onclick = () => dxRun(); $("#dxC").onclick = () => dxExport("csv"); $("#dxX").onclick = () => dxExport("xlsx");
+  $("#dxSave").onclick = async () => { const name = prompt("Name of this query (all administrators will see it):"); if (!name) return;
+    try { await api("admin/cc/dbx/saved", { src: DX.src, sql: $("#dxQ").value, name }); toast("Query saved"); } catch (e){ toast(e.message, true); } };
+  $("#main").onclick = e => { const t = e.target.closest("[data-dxt]"); if (t){ DX.open = DX.open === t.dataset.dxt ? "" : t.dataset.dxt; return dxDraw(); }
+    const p = e.target.closest("[data-dxp]"); if (p){ DX.sql = `SELECT * FROM ${p.dataset.dxp} LIMIT 20`; return dxRun(); } };
+}
+const dxCell = v => v == null ? `<span class="mut">null</span>` : esc(String(v).length > 300 ? String(v).slice(0, 300) + "…" : String(v));
+const dxTable = r => `<div class="tw dx-tw"><table><thead><tr>${r.cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5000).map(x => `<tr>${x.map(v => `<td>${dxCell(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+async function dxRun(exp){
+  DX.sql = ($("#dxQ") || {}).value ?? DX.sql; if (!DX.sql.trim()) return toast("Write a query", true);
+  DX.busy = true; DX.err = ""; if (!exp) dxDraw();
+  try { const r = await api("admin/cc/dbx/run", { src: DX.src, sql: DX.sql, export: !!exp }); if (exp) return r; DX.res = r; }
+  catch (e){ if (exp) throw e; DX.res = null; DX.err = e.message; }
+  finally { DX.busy = false; }
+  dxDraw();
+}
+async function dxExport(kind){
+  let r; try { toast("Preparing the export…"); r = await dxRun(true); } catch (e){ return toast(e.message, true); }
+  const name = `${DX.src}-query-${new Date().toISOString().slice(0, 10)}`;
+  if (kind === "csv"){ const c = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+    const blob = new Blob(["﻿" + [r.cols.map(c).join(","), ...r.rows.map(x => x.map(c).join(","))].join("\n")], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name + ".csv"; a.click(); return; }
+  if (!window.XLSX) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "/tools/xlsx.full.min.js"; sc.onload = ok; sc.onerror = no; document.head.append(sc); });
+  const ws = XLSX.utils.aoa_to_sheet([r.cols, ...r.rows]), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Query"); XLSX.writeFile(wb, name + ".xlsx");
+}
+async function dxSaved(){
+  const S = (await api("admin/cc/dbx/saved")).saved;
+  V(head("⭐ Saved queries", "Shared by all administrators", `<button class="b gh" id="dxB">‹ Data explorer</button>`) +
+    (S.length ? `<div class="tw"><table><thead><tr><th>Name</th><th>System</th><th>Query</th><th>Saved by</th><th></th></tr></thead><tbody>${S.map(x => `<tr><td><b>${esc(x.name)}</b></td><td>${esc(x.srcName)}</td><td><code style="font-size:.74rem">${esc(x.sql.slice(0, 140))}${x.sql.length > 140 ? "…" : ""}</code></td><td>${esc(x.by)}<br><small class="mut">${ago(x.at)}</small></td>
+      <td style="white-space:nowrap"><button class="b sm" data-dxo="${x.id}">Open</button> <button class="b gh sm" data-dxd="${x.id}">Delete</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="mut">No saved query yet — write one in a system and press ⭐ Save query.</p>`));
+  $("#dxB").onclick = dx;
+  $("#main").onclick = async e => { const o = e.target.closest("[data-dxo]"); if (o){ const x = S.find(y => String(y.id) === o.dataset.dxo); DX.sql = x.sql; await dxSrc(x.src, x.sql); return dxRun(); }
+    const d = e.target.closest("[data-dxd]"); if (d && confirm("Delete this saved query for everyone?")){ try { await api("admin/cc/dbx/saved", { del: d.dataset.dxd }); toast("Deleted"); dxSaved(); } catch (er){ toast(er.message, true); } } };
+}
 async function sy(fresh){
   const S = await api("admin/cc/systems" + (fresh ? "?fresh=1" : ""));
   V(head("Systems &amp; jobs", `Connected systems, settings and the automatic jobs · checked ${ago(S.at)}`, `<button class="b g" id="ta">↻ Test all now</button>`) +
