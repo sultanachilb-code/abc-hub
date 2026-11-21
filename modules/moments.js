@@ -18,7 +18,7 @@ export const MOMENT_SEED = [
   { time: "18:00", text: "Evening team, welcome aboard 🌙 · أهلا وسهلا بفريق المسا" },
   { time: "21:30", text: "Almost closing — great work today 👏 · يعطيكم ألف عافية" }
 ];
-const OPS_ROLES = ["ADMIN"];   // admin only (Oct 2026) — add "MANAGER", "SUPERVISOR" to show it to the operations team
+/* shown to every hub user (Nov 2026; was admin only) */
 const mins = t => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
 
 async function readAll(env) {
@@ -28,7 +28,6 @@ async function readAll(env) {
 }
 /* the message for this person right now (or null) */
 export async function momentFor(env, me, hm) {
-  if (!OPS_ROLES.includes(me.role)) return null;
   const all = await readAll(env);
   if (!all.on) return null;
   const now = mins(hm), L = (all.list || []).filter(m => m.active && HM.test(m.time) && m.text).sort((a, b) => mins(a.time) - mins(b.time));

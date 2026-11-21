@@ -1,7 +1,7 @@
 /* =====================================================================
    SEASONAL DECORATIONS — the admin chooses each season's design, dates and greeting (tools/seasons.html).
    On the home page the decorations hang on ropes from the header into the empty side spaces, with a greeting chip.
-   Admin only (Oct 2026). Kept in meta 'seasons'.
+   Shown to every hub user (Nov 2026); set by the admin. Kept in meta 'seasons'.
    Routes : GET /api/seasons (the list, admin) · GET/POST /api/admin/seasons          See docs/FEATURE-seasons.md
    ===================================================================== */
 const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
@@ -25,8 +25,7 @@ async function readAll(env) {
   try { return JSON.parse(r.v); } catch { return { on: true, list: [] }; }
 }
 export async function seasonsFor(env, me) {
-  if (me.role !== "ADMIN") return { on: false, list: [] };   // admin only
-  return readAll(env);
+  return readAll(env);   // every hub user (Nov 2026; was admin only)
 }
 export async function seasonsAdmin(env, method, b, me, now) {
   if (method === "GET") return { ...(await readAll(env)), designs: SEASON_DESIGNS };

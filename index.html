@@ -2822,12 +2822,12 @@ function openFolder(g, fromEl){
 addEventListener("keydown", e => { if (e.key === "Escape" && $("#folderOv").classList.contains("on")) $("#folderOv").onkeydown(e); });
 
 /* ---------- Seasonal decorations: the admin sets each season's design and dates (tools/seasons.html); they hang from the header
-   into the empty side spaces. Admin only. Art in tools/season-art.js — see docs/FEATURE-seasons.md ---------- */
+   into the empty side spaces. Every hub user sees them. Art in tools/season-art.js — see docs/FEATURE-seasons.md ---------- */
 const SEA = { cfg: null };
 async function paintSeason(){
   const hang = $("#seasonHang"), chipOld = $("#seasonChip"); if (chipOld) chipOld.remove();
   if (!hang) return;
-  if (!ME || ME.user.role !== "ADMIN" || !window.SEASON_ART){ hang.innerHTML = ""; return; }
+  if (!ME || !window.SEASON_ART){ hang.innerHTML = ""; return; }
   if (!SEA.cfg){ try { SEA.cfg = await api("seasons"); } catch { SEA.cfg = { on: false, list: [] }; } }
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Beirut" }).format(new Date());
   const pv = store.get("hub.seasonPreview", null), preview = pv && pv.until > Date.now() ? (SEA.cfg.list || []).find(x => x.id === pv.id) : null;
