@@ -21,3 +21,7 @@ gate-worker/**
 # Cleaning app: deployed as its own worker (cleaning-worker/), never served by the hub
 cleaning-worker
 cleaning-worker/**
+
+# Head Office board: deployed as its own worker (head-office/), never served by the hub
+head-office
+head-office/**
