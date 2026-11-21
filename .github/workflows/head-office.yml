@@ -1,0 +1,33 @@
+# Sultan's Head Office (online copy) — deploys worker abc-head-office when head-office/** changes on main
+name: Deploy Head Office board
+
+on:
+  push:
+    branches: [main]
+    paths: ["head-office/**", ".github/workflows/head-office.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-head-office
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get the files
+        uses: actions/checkout@v4
+
+      - name: Deploy with Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61f649b35159d4a26df7dde3c09a91dd
+          wranglerVersion: "4"
+          workingDirectory: head-office
+          command: deploy
+          secrets: |
+            HO_KEY
+        env:
+          HO_KEY: ${{ secrets.HO_KEY }}

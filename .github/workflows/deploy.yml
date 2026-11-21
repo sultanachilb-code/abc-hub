@@ -1,10 +1,12 @@
 # ABC Property Hub — deploy to Cloudflare on every upload to main (the hub, then the Loading Gate app)
 # (and by hand: GitHub → Actions → "Deploy hub to Cloudflare" → Run workflow)
+# head-office/** has its own workflow (head-office.yml): uploads that only touch it do not redeploy the hub
 name: Deploy hub to Cloudflare
 
 on:
   push:
     branches: [main]
+    paths-ignore: ["head-office/**", ".github/workflows/head-office.yml"]
   workflow_dispatch:
 
 concurrency:
