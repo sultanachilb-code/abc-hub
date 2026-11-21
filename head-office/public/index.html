@@ -1,0 +1,529 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Sultan's Head Office</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: one top-down pixel office map (canvas, 9 agent rooms + meeting room); approval queue + tap-to-open agent panel below */
+:root{
+  --bg:#141824; --panel:#232842; --ink:#f3ead6; --dim:#a9a3b8;
+  --gold:#f2c14e; --good:#5fd38d; --warn:#f2a23a; --bad:#ef5b5b;
+  --px:"Press Start 2P", ui-monospace, monospace; --mono:"VT323", ui-monospace, monospace;
+  color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:20px;line-height:1.25;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 32px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:8px}
+h1{font-family:var(--px);font-size:clamp(14px,3.6vw,22px);margin:0;color:var(--gold);text-shadow:3px 3px 0 #000;line-height:1.4}
+.sub{color:var(--dim)}
+.example{font-family:var(--px);font-size:9px;color:#000;background:var(--warn);padding:4px 6px}
+.ticker{background:#000;border:4px solid #3b3355;padding:6px 12px;color:var(--good);overflow:hidden;white-space:nowrap}
+.ticker span{display:inline-block;animation:scroll 34s linear infinite;padding-left:100%}
+@keyframes scroll{to{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){.ticker span{animation:none;padding-left:0}}
+.mapbox{overflow-x:auto;border:4px solid #000;box-shadow:6px 6px 0 #000;background:#0b0d16;position:relative}
+canvas{display:block;width:100%;min-width:980px;image-rendering:pixelated;cursor:pointer}
+.hint{color:var(--dim);font-size:17px}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+button{font-family:var(--mono);font-size:18px;color:var(--ink);background:var(--panel);border:3px solid #000;padding:4px 10px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold)}
+button:disabled{opacity:.5;cursor:default}
+.tab{display:flex;gap:6px;align-items:center}
+.tab.sel{background:#3b3355;border-color:var(--gold)}
+.btn-gold{background:var(--gold);color:#000}
+.dot{width:10px;height:10px;border:2px solid #000}
+.box{background:var(--panel);border:4px solid #000;box-shadow:6px 6px 0 #000;padding:14px}
+.panel{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel.wide{grid-template-columns:1fr}
+@media (max-width:700px){.panel{grid-template-columns:1fr}}
+.panel > div{min-width:0;display:flex;flex-direction:column;gap:8px}
+.pt{font-family:var(--px);font-size:11px;color:var(--gold);line-height:1.6}
+.role{color:var(--dim)}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:2px solid #000;padding:0 6px;background:#161a2c}
+.good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+ul{margin:0;padding-left:18px} li{margin:2px 0}
+.xp{height:12px;background:#000;border:2px solid #000}.xp i{display:block;height:100%;background:var(--gold);transition:width .6s}
+.meta{color:var(--dim);display:flex;justify-content:space-between}
+.skills{display:flex;flex-wrap:wrap;gap:8px}
+.skill{background:#3b3355;border:3px solid #000;padding:2px 10px}
+.items{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px}
+.items label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.items input{width:18px;height:18px;margin-top:3px;accent-color:#f2c14e;flex:none}
+.items .done span{text-decoration:line-through;color:var(--dim)}
+.spark{width:100%;height:64px;display:block}
+.ask{display:flex;gap:8px}
+.ask input,.search{flex:1;min-width:0;font-family:var(--mono);font-size:18px;background:#161a2c;color:var(--ink);border:3px solid #000;padding:4px 8px}
+.answer{white-space:pre-wrap;background:#161a2c;border:2px solid #000;padding:8px;min-height:2em}
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{background:#161a2c;border:2px solid #000;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+.card b{color:var(--gold);font-weight:normal}
+.card a{color:#8ec5ff}
+.queue{display:flex;flex-direction:column;gap:10px}
+.draft{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-bottom:2px solid #000;padding-bottom:8px}
+.draft > div{min-width:0}
+.draft .sub{font-size:17px}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.status-ok{color:var(--good)} .status-no{color:var(--dim)}
+.levelup{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--px);font-size:clamp(14px,3vw,22px);color:#000;background:var(--gold);border:4px solid #000;padding:14px 18px;box-shadow:6px 6px 0 #000;text-align:center;line-height:1.6}
+.ro-note{color:var(--dim);font-size:16px}
+.chat{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;background:#161a2c;border:2px solid #000;padding:8px}
+.msg{padding:4px 8px;border:2px solid #000;max-width:92%;white-space:pre-wrap}
+.msg.me{align-self:flex-end;background:#3b3355}
+.msg.bot{align-self:flex-start;background:#232842}
+.tbl{overflow-x:auto;border:2px solid #000;max-height:360px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:17px}
+th,td{border-bottom:1px solid #000;padding:3px 8px;text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:#3b3355;color:var(--gold);font-weight:normal}
+td.src{color:var(--warn)}
+[hidden]{display:none!important}
+.rtabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+</style>
+
+<div class="wrap">
+  <header>
+    <div><h1>SULTAN'S HEAD OFFICE</h1><div class="sub">Operations &amp; Digital Transformation · 5 flagships · 9 agents</div></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="exampleTag" class="example" hidden>LOADING LIVE DATA…</span><span class="sub" id="updated"></span></div>
+  </header>
+  <div class="ticker"><span id="ticker"></span></div>
+  <div class="mapbox"><canvas id="c" width="2112" height="896" aria-label="Sultan's Head Office map. Tap a room or a character."></canvas><div id="lvlup" class="levelup" hidden></div></div>
+  <div class="hint" style="color:var(--warn)">Online copy (read-only): ticking items, approvals, Ask and Records work only when the board is open in Claude.</div>
+  <div class="hint">Tap a room or a character on the map, or pick an agent below.</div>
+  <div class="legend" id="legend"></div>
+  <section class="box panel" id="panel" aria-live="polite"></section>
+  <section class="box">
+    <div class="pt" style="margin-bottom:8px">APPROVAL QUEUE · <span id="qcount">0</span> WAITING</div>
+    <div class="queue" id="queue"></div>
+    <div class="ro-note warn" id="qerr" hidden></div>
+    <div class="ro-note" style="margin-top:8px">Drafts sit in your Outlook Drafts folder. Approve = sends it now from your Outlook (the first time, Claude asks you to allow it). Skip = it stays a draft.</div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const SAMPLE={example:true,updated:"Example data",
+ ticker:"Welcome to Sultan's Head Office · daily brief weekdays 7:42am · Sunday staff meeting 5:39pm",
+ top5:["Reply to 2 tenant emails waiting over 24h","Chase HVAC contractor on Verdun Mall chiller job","Review aging snags at Verdun Mall","Approve Snaglist role changes","Prep Sunday staff meeting notes"],
+ agents:[
+  {id:"cos",name:"CHIEF OF STAFF",role:"Daily brief · Sunday meeting",room:"CEO Office",shirt:"#c0392b",level:1,xp:10,status:"good",say:"Brief ready",stats:[["Unread","—"],["Meetings","—"]],items:[{id:"ex-cos-1",text:"Example: prep Sunday notes"}],metric:"Actions open",history:[6,5,7,4,5,6,5],recent:["Example: brief sent 7:42am"]},
+  {id:"tenant",name:"TENANT RELATIONS",role:"Replies · VM Manual enforcement",room:"Leasing",shirt:"#8e44ad",level:1,xp:10,status:"warn",say:"2 tenants waiting",stats:[["Awaiting reply","2"],["Violations","—"]],items:[{id:"ex-ten-1",text:"Example: food court tenant, signage request"}],metric:"Tenants waiting",history:[1,3,2,2,4,3,2],recent:["Example: 2 tenants waiting"]},
+  {id:"fm",name:"CONTRACTORS & FM",role:"Follow-ups · SLA slippage",room:"Workshop",shirt:"#d35400",level:1,xp:10,status:"warn",say:"1 job overdue",stats:[["Overdue","1"],["Open","—"]],items:[{id:"ex-fm-1",text:"Example: chiller maintenance report pending"}],metric:"Overdue jobs",history:[0,1,1,2,1,1,1],recent:["Example: 1 job overdue"]},
+  {id:"records",name:"RECORDS OFFICER",role:"Tenants · Contractors · Projects data entry",room:"Records Office",shirt:"#7f8c8d",level:1,xp:0,status:"good",say:"Ready for entries",stats:[],items:[],metric:"Records",history:[],recent:[]},
+  {id:"hub",name:"HUB ADMIN",role:"Operations Hub · Cloudflare storage & usage",room:"Server Room",shirt:"#5d6d7e",level:1,xp:10,status:"good",say:"Storage OK",stats:[["Hub D1","—"],["R2 files","—"]],items:[{id:"ex-hub-1",text:"Example: check free-plan limits weekly"}],metric:"Hub D1 (MB)",history:[],recent:["Example: storage OK"],
+   notes:[{title:"Free plan limits",text:"D1: 5 GB total storage, 500 MB per database on Free. R2: 10 GB free. Example card until the first run."}]},
+  {id:"ops",name:"INCIDENTS & SNAGLIST",role:"5 flagships · aging items",room:"Control Room",shirt:"#16a085",level:1,xp:10,status:"bad",say:"VRM 981 > 30d",stats:[["Open snags","1,610"],["> 30 days","1,186"]],items:[{id:"ex-ops-1",text:"Example: Verdun Mall 1,012 open, 0 solved in 24h"}],metric:"Snags > 7 days",history:[],recent:["Example: VRM 981 > 30d"]},
+  {id:"lab",name:"DIGITAL TRANSFORMATION",role:"Hub · Snaglist · Audit · ABC Connect",room:"Digital Lab",shirt:"#2980b9",level:1,xp:10,status:"good",say:"4 projects on track",stats:[["Blockers","0"],["Due this week","—"]],items:[{id:"ex-lab-1",text:"Example: Audit system scope sign-off"}],metric:"Blockers",history:[1,1,0,0,1,0,0],recent:["Example: 4 projects on track"]},
+  {id:"research",name:"RESEARCH",role:"GitHub skills & tools to improve the office",room:"Research Library",shirt:"#27ae60",level:1,xp:10,status:"good",say:"3 finds this week",stats:[["New finds","—"],["Adopted","—"]],items:[],metric:"Finds",history:[],recent:["Example: first scan Sunday"],
+   notes:[{title:"Example find",text:"A Claude skill or GitHub tool that could improve the office, with why it fits. Real finds arrive with the Sunday run."}]},
+  {id:"learn",name:"LEARNING",role:"Daily lesson · AI & digital transformation",room:"Academy",shirt:"#f39c12",level:1,xp:10,status:"good",say:"Today's lesson ready",stats:[["Lessons","—"],["Streak","—"]],items:[],metric:"Lessons",history:[],recent:["Example: lesson 1 tomorrow"],
+   notes:[{title:"Example lesson",text:"A 5-minute lesson on one AI or digital-transformation topic, tied to your work, with one link to go deeper. The first real lesson arrives with tomorrow's brief."}]}
+ ],
+ drafts:[{id:"ex-d1",agent:"tenant",to:"Example tenant",subject:"Example: Re: signage request",summary:"Example draft citing VM Manual signage rules"}],
+ skills:["Tenant reply drafter","Violation notice (VM Manual)","Contractor chaser","Snag aging report","Weekly project line","Sunday roll-up","Record interview"],
+ meeting:{date:"Sun 8 Nov, 6:00pm",notes:["First staff meeting runs next Sunday."]}};
+
+/* ---------- records schema ---------- */
+const SCHEMA={
+ tenants:{label:"Tenant",key:["flagship","name"],fields:[["flagship","Flagship"],["name","Tenant / brand"],["unit","Unit"],["level","Level"],["category","Category"],["gla","GLA (sqm)"],["status","Status"],["contact","Contact name"],["email","Contact email"],["phone","Phone"],["source","Source"],["notes","Notes"]]},
+ contractors:{label:"Contractor",key:["name"],fields:[["name","Company"],["service","Service"],["flagships","Flagships covered"],["contact","Contact name"],["email","Contact email"],["phone","Phone"],["sla_response_h","Response SLA (h)"],["sla_resolution_d","Resolution SLA (days)"],["contract_end","Contract end"],["status","Status"],["notes","Notes"]]},
+ projects:{label:"Project",key:["name"],fields:[["name","Project"],["milestone","Next milestone"],["due","Due date"],["status","Status"],["blocker","Blocker"],["owner","Owner"],["last_update","Last update"],["notes","Notes"]]}
+};
+const FLAGSHIPS="Verdun Mall, Achrafieh Mall, Dbayeh Department Store, Achrafieh Department Store, Verdun Department Store";
+
+/* ---------- state ---------- */
+let DATA=SAMPLE, sel="cos", selBot=null, last=performance.now();
+let DONE={}, APPROVALS={}, REC={tenants:{},contractors:{},projects:{}}, recLoaded=false;
+let db=null, canWrite=false, sample=null, downloads=null, mcp=null, QERR="";
+let recTab="tenants", recQ="", chat=[], chatType=null, chatBusy=false, chatCtl=null;
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const itemsOf=a=>(a.items||[]).map((it,i)=>typeof it=="string"?{id:a.id+"-"+i+"-"+it.slice(0,24),text:it}:it);
+const bonus=a=>Object.values(DONE).filter(d=>d.agent==a.id&&!d.counted).length*10;
+function lvl(a){let L=a.level||1,X=(a.xp||0)+bonus(a);while(X>=100){X-=100;L++}return{L,X}}
+const slug=s=>String(s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,90)||"x";
+const recCount=t=>Object.values(REC[t]).filter(r=>r.active!==false).length;
+
+/* ---------- map ---------- */
+const T=16, W=66, H=28, S=2;
+const COLS=[1,14,27,40,53];
+const ROOMS={
+  tenant:{x:1,y:1,w:12,h:11,floor:"carpetP",label:"LEASING"},
+  cos:{x:14,y:1,w:12,h:11,floor:"wood",label:"CEO OFFICE"},
+  fm:{x:27,y:1,w:12,h:11,floor:"tile",label:"WORKSHOP"},
+  records:{x:40,y:1,w:12,h:11,floor:"carpetR",label:"RECORDS OFFICE"},
+  hub:{x:53,y:1,w:12,h:11,floor:"metal",label:"SERVER ROOM"},
+  ops:{x:1,y:15,w:12,h:12,floor:"carpetG",label:"CONTROL ROOM"},
+  meet:{x:14,y:15,w:12,h:12,floor:"wood2",label:"MEETING ROOM"},
+  lab:{x:27,y:15,w:12,h:12,floor:"carpetB",label:"DIGITAL LAB"},
+  research:{x:40,y:15,w:12,h:12,floor:"wood3",label:"RESEARCH LIBRARY"},
+  learn:{x:53,y:15,w:12,h:12,floor:"carpetO",label:"ACADEMY"}
+};
+const DESK={};for(const [id,r] of Object.entries(ROOMS))if(id!="meet")DESK[id]=[r.x+4,r.y+(r.y<12?4:5)];
+const cv=document.getElementById("c"), g=cv.getContext("2d");
+g.imageSmoothingEnabled=false;
+const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+const FLOORS={wood:["#9a6a3a","#8a5c30"],wood2:["#7d5a3c","#6f4f34"],wood3:["#6e4a2e","#634229"],tile:["#8d93a0","#7f8593"],metal:["#4a5160","#434a58"],
+  carpetP:["#5b3f6e","#563b68"],carpetG:["#2f5048","#2b4a42"],carpetB:["#2f4570","#2b4068"],carpetR:["#6b4a3a","#654536"],carpetO:["#5a4a2a","#544527"]};
+function floorTile(kind,px,py,i,j){
+  const P=FLOORS[kind];
+  if(kind.startsWith("wood")){R(px,py,T,T,P[(j%2)]);R(px,py+T-1,T,1,"rgba(0,0,0,.25)");if((i+j*3)%5==0)R(px+T-1,py,1,T,"rgba(0,0,0,.25)")}
+  else if(kind=="tile"||kind=="metal"){R(px,py,T,T,P[(i+j)%2]);R(px,py,T,1,"rgba(255,255,255,.08)");if(kind=="metal")R(px+7,py+7,2,2,"rgba(255,255,255,.12)")}
+  else{R(px,py,T,T,P[(i+j)%2]);if((i*7+j*3)%11==0)R(px+5,py+6,2,2,"rgba(255,255,255,.06)")}
+}
+function desk(tx,ty,w=3){const x=tx*T,y=ty*T;R(x,y+6,w*T,14,"#6b4423");R(x,y+18,w*T,4,"#4a2e17");R(x+2,y+20,3,8,"#3a2412");R(x+w*T-5,y+20,3,8,"#3a2412")}
+function monitor(tx,ty,state,t){const x=tx*T+4,y=ty*T-6;R(x,y,22,14,"#222");
+  const col=state=="good"?"#5fd38d":state=="warn"?"#f2a23a":state=="bad"?"#ef5b5b":"#3a6ea5";
+  const on=state!="bad"||Math.floor(t/400)%2;R(x+2,y+2,18,10,on?col:"#401818");
+  if(on){R(x+4,y+4,10,1,"rgba(0,0,0,.35)");R(x+4,y+7,13,1,"rgba(0,0,0,.35)")}R(x+9,y+14,4,4,"#222")}
+function plant(tx,ty){const x=tx*T,y=ty*T;R(x+4,y+9,8,7,"#8a4b2a");R(x+2,y,12,10,"#2e8b57");R(x+5,y-3,6,5,"#3cb371")}
+function chair(tx,ty){const x=tx*T,y=ty*T;R(x+3,y+3,10,10,"#333a55");R(x+3,y+3,10,3,"#454c6e")}
+function shelf(tx,ty,w){const x=tx*T,y=ty*T;R(x,y,w*T,12,"#5a3a1e");for(let k=0;k<w*4;k++)R(x+2+k*4,y+1,3,9,["#c0392b","#2980b9","#f1c40f","#27ae60"][k%4])}
+function rug(tx,ty,w,h,c){R(tx*T,ty*T,w*T,h*T,c);R(tx*T+3,ty*T+3,w*T-6,h*T-6,"rgba(255,255,255,.08)")}
+function sofa(tx,ty){const x=tx*T,y=ty*T;R(x,y,3*T,6,"#7b2d3b");R(x,y+6,3*T,10,"#a33a4d");R(x,y,4,16,"#7b2d3b");R(x+3*T-4,y,4,16,"#7b2d3b")}
+function trophy(tx,ty,t){const x=tx*T+4,y=ty*T;R(x+2,y+11,8,4,"#6b4423");R(x+4,y+7,4,4,"#d4a017");R(x,y,12,8,"#f2c14e");if(Math.floor(t/600)%2)R(x+2,y+1,2,2,"#fff")}
+function lamp(tx,ty){const x=tx*T+6,y=ty*T;R(x,y+4,3,12,"#555");R(x-4,y,11,5,"#f7e08a")}
+function cabinet(tx,ty,n){for(let k=0;k<n;k++){const x=(tx+k)*T,y=ty*T;R(x+1,y,14,30,"#7f8c8d");R(x+1,y+9,14,1,"#566");R(x+1,y+19,14,1,"#566");R(x+6,y+4,4,2,"#333");R(x+6,y+13,4,2,"#333");R(x+6,y+23,4,2,"#333")}}
+function rack(tx,ty,t,k0){const x=tx*T,y=ty*T;R(x,y,2*T,3*T,"#20242e");for(let k=0;k<5;k++)R(x+4,y+4+k*8,24,3,(Math.floor(t/250)+k+k0)%3?"#5fd38d":"#1a3a28")}
+function board(tx,ty,w){R(tx*T,ty*T,w*T,14,"#e8e8e8");R(tx*T+6,ty*T+4,w*T*0.6,2,"#2980b9");R(tx*T+6,ty*T+8,w*T*0.4,2,"#c0392b")}
+const UNLOCKS=[["lamp",2],["sofa",3],["trophy",4]];
+function decor(id,r,t,st){
+  const top=r.y<12, d=DESK[id];
+  if(d){desk(d[0]-1,d[1],3); monitor(d[0],d[1],st(id),t); chair(d[0],d[1]+2);}
+  const P=(dx,dy)=>[r.x+dx,r.y+dy];
+  switch(id){
+   case"tenant":shelf(...P(1,0),4);plant(...P(10,1));rug(...P(1,7),5,3,"#7a5a2a");desk(...P(7,7),3);chair(...P(8,9));break;
+   case"cos":rug(...P(2,5),8,4,"#7a2230");shelf(...P(7,0),4);plant(...P(1,1));plant(...P(10,1));monitor(...P(5,4),st(id),t);break;
+   case"fm":R((r.x+1)*T,(r.y+7)*T,6*T,14,"#555c6e");for(let k=0;k<6;k++)R((r.x+1)*T+6+k*15,(r.y+7)*T+2,8,8,["#c0392b","#f39c12","#7f8c8d"][k%3]);R((r.x+9)*T,(r.y+1)*T,2*T,4*T,"#3d4250");R((r.x+9)*T+4,(r.y+1)*T+4,2*T-8,10,"#f2a23a");plant(...P(10,8));break;
+   case"records":cabinet(...P(1,1),3);cabinet(...P(8,1),3);desk(...P(7,7),3);R((r.x+8)*T,(r.y+7)*T,20,6,"#f3ead6");plant(...P(1,8));break;
+   case"hub":rack(...P(1,1),t,0);rack(...P(1,5),t,1);rack(...P(9,1),t,2);rack(...P(9,5),t,3);R((r.x+3)*T,(r.y+9)*T,6*T,4,"#2980b9");break;
+   case"ops":for(let a=0;a<4;a++)for(let b=0;b<2;b++){const x=(r.x+1+a*2.6)*T,y=(r.y+1)*T+b*16;R(x,y,38,14,"#111");R(x+2,y+2,34,10,(Math.floor(t/700+a+b)%5)?"#1f4d3d":"#2e7d63")}desk(...P(8,5),3);monitor(...P(9,5),"idle",t);plant(...P(1,10));plant(...P(10,10));break;
+   case"meet":R((r.x+2)*T,(r.y+4)*T,8*T,4*T,"#5a3a1e");R((r.x+2)*T+3,(r.y+4)*T+3,8*T-6,4*T-6,"#6b4423");for(let k=0;k<4;k++){chair(r.x+2.5+k*2,r.y+3);chair(r.x+2.5+k*2,r.y+8)}board(...P(3,1),6);plant(...P(1,10));plant(...P(10,10));break;
+   case"lab":shelf(...P(1,1),5);plant(...P(10,1));rack(...P(1,8),t,4);desk(...P(8,9),3);monitor(...P(9,9),"idle",t);break;
+   case"research":shelf(...P(1,1),4);shelf(...P(7,1),4);shelf(...P(1,9),3);R((r.x+8)*T,(r.y+8)*T,3*T,2*T,"#6b4423");R((r.x+8)*T+6,(r.y+8)*T+6,14,10,"#f3ead6");R((r.x+9)*T+6,(r.y+8)*T+6,14,10,"#f3ead6");plant(...P(10,10));break;
+   case"learn":board(...P(2,1),8);for(let k=0;k<3;k++)for(let m=0;m<2;m++){desk(r.x+1+k*4,r.y+7+m*2.4,2)}plant(...P(10,10));break;
+  }
+  const L=lvl(DATA.agents.find(a=>a.id==id)||{}).L;
+  if(id!="meet"){ if(L>=2)lamp(...P(11,top?3:3)); if(L>=3)sofa(...P(top?1:8,top?9:10)); if(L>=4)trophy(...P(11,top?6:6),t); }
+}
+function drawStatic(t){
+  R(0,0,W*T,H*T,"#2b2540");
+  for(let j=12;j<15;j++)for(let i=0;i<W;i++)floorTile("tile",i*T,j*T,i,j);
+  for(const r of Object.values(ROOMS)){
+    for(let j=r.y;j<r.y+r.h;j++)for(let i=r.x;i<r.x+r.w;i++)floorTile(r.floor,i*T,j*T,i,j);
+    R(r.x*T,r.y*T,r.w*T,10,"#4a4068");R(r.x*T,r.y*T+10,r.w*T,2,"#1a1626");
+  }
+  for(const r of Object.values(ROOMS)){const dx=(r.x+Math.floor(r.w/2)-1)*T;
+    if(r.y<12)R(dx,(r.y+r.h)*T-2,2*T,4,"#8d93a0"); else R(dx,r.y*T-2,2*T,14,"#8d93a0");}
+  const st=id=>(DATA.agents.find(a=>a.id==id)||{}).status;
+  for(const [id,r] of Object.entries(ROOMS))decor(id,r,t,st);
+  g.font="8px 'Press Start 2P', monospace"; g.textBaseline="top";
+  for(const r of Object.values(ROOMS)){const lw=g.measureText(r.label).width+6;R(r.x*T+1,r.y*T,lw,10,"#1a1626");g.fillStyle="#f2c14e";g.fillText(r.label,r.x*T+4,r.y*T+1)}
+}
+
+/* ---------- characters ---------- */
+const bots=[];
+function mkBots(){
+  const old=Object.fromEntries(bots.map(b=>[b.a.id,b])); bots.length=0;
+  DATA.agents.forEach(a=>{const d=DESK[a.id]||[20,20],o=old[a.id];
+    bots.push(o?Object.assign(o,{a}):{a,x:(d[0]+1)*T,y:(d[1]+2)*T,tx:null,ty:null,path:null,wait:500+Math.random()*2000,dir:1,step:0,home:d})});
+}
+function meetingTime(){const n=new Date();return n.getDay()==0&&n.getHours()>=17&&n.getHours()<20}
+function pickTarget(b,i){
+  const M=ROOMS.meet;
+  if(meetingTime()){const seats=[];for(let k=0;k<4;k++){seats.push([M.x+2.5+k*2,M.y+3]);seats.push([M.x+2.5+k*2,M.y+8])}seats.push([M.x+1,M.y+6]);
+    const s=seats[i%seats.length];b.tx=(s[0]+.5)*T;b.ty=(s[1]+.5)*T;return}
+  const r=Math.random();
+  if(r<0.45){b.tx=(b.home[0]+1)*T;b.ty=(b.home[1]+2)*T;return}
+  let room=ROOMS[b.a.id]||M; if(r>0.88)room=M;
+  b.tx=(room.x+1+Math.random()*(room.w-3))*T; b.ty=(room.y+2+Math.random()*(room.h-4))*T;
+}
+const inRoom=(x,y,r)=>x>=r.x*T&&x<(r.x+r.w)*T&&y>=r.y*T&&y<(r.y+r.h)*T;
+const roomAt=(x,y)=>Object.values(ROOMS).find(r=>inRoom(x,y,r));
+const doorX=r=>(r.x+Math.floor(r.w/2))*T;
+function route(b){
+  const cur=roomAt(b.x,b.y),dst=roomAt(b.tx,b.ty),cy=13.5*T;
+  if(!cur||!dst||cur===dst){b.path=[[b.tx,b.y],[b.tx,b.ty]];return}
+  b.path=[[doorX(cur),b.y],[doorX(cur),cy],[doorX(dst),cy],[doorX(dst),b.ty],[b.tx,b.ty]];
+}
+function pathStep(b,dt){
+  if(!b.path)route(b);
+  const [gx,gy]=b.path[0];const m=0.045*dt;
+  const dx=gx-b.x,dy=gy-b.y;
+  if(Math.abs(dx)>0.5){const s=Math.sign(dx);b.x+=s*Math.min(m,Math.abs(dx));b.dir=s}
+  else if(Math.abs(dy)>0.5){b.y+=Math.sign(dy)*Math.min(m,Math.abs(dy))}
+  else{b.x=gx;b.y=gy;b.path.shift();if(!b.path.length){b.path=null;b.tx=null;b.wait=(meetingTime()?20000:1500)+Math.random()*4000}}
+  b.step+=dt;
+}
+function drawBot(b,t){
+  const x=Math.round(b.x),y=Math.round(b.y),walking=b.tx!==null,f=walking?Math.floor(b.step/150)%2:0;
+  if(selBot===b.a.id){g.strokeStyle="#f2c14e";g.lineWidth=1;g.strokeRect(x-8,y-10,16,26)}
+  R(x-6,y+13,12,3,"rgba(0,0,0,.3)");
+  R(x-4,y+9,3,5+(f?1:0),"#2c2c3a");R(x+1,y+9,3,5+(f?0:1),"#2c2c3a");
+  R(x-5,y+1,10,9,b.a.shirt); R(x-6,y+2,2,6,b.a.shirt);R(x+4,y+2,2,6,b.a.shirt);
+  R(x-4,y-7,8,8,"#e9b98a"); R(x-4,y-8,8,3,"#3a2a1a"); R(x+(b.dir>0?1:-3),y-4,2,2,"#000");
+  if(!walking&&Math.floor(t/300)%2) R(x-6,y+6,2,2,"#e9b98a");
+}
+function sayOf(a){ if(a.id=="records"&&recLoaded) return `${recCount("tenants")} tenants · ${recCount("contractors")} contr.`; return a.say||"" }
+function bubble(b,t){
+  const s=sayOf(b.a); g.font="11px VT323, monospace"; const w=Math.ceil(g.measureText(s).width)+8;
+  let x=Math.round(b.x-w/2),y=Math.round(b.y)-24; x=Math.max(2,Math.min(W*T-w-2,x));
+  R(x,y,w,11,"#000");R(x+1,y+1,w-2,9,"#f3ead6");R(Math.round(b.x)-2,y+10,4,3,"#f3ead6");
+  g.fillStyle="#111";g.textBaseline="middle";g.fillText(s,x+4,y+6);
+  if(b.a.status!="good"){const by=y-12+(Math.floor(t/250)%2)*2;R(Math.round(b.x)-4,by,8,10,b.a.status=="bad"?"#ef5b5b":"#f2a23a");R(Math.round(b.x)-1,by+2,2,4,"#000");R(Math.round(b.x)-1,by+7,2,2,"#000")}
+}
+
+/* ---------- panels ---------- */
+function spark(a){
+  const h=(a.history||[]).slice(-7); if(h.length<2)return `<div class="role">${esc(a.metric||"Trend")}: chart appears after 2 runs.</div>`;
+  const max=Math.max(1,...h),w=280,ht=56,p=6,step=(w-2*p)/(h.length-1);
+  const pts=h.map((v,i)=>[p+i*step,ht-p-(v/max)*(ht-2*p)]);
+  const line=pts.map(q=>q.join(",")).join(" ");
+  const [lx,ly]=pts[pts.length-1];
+  return `<div class="role">${esc(a.metric||"Open items")} · last ${h.length} runs (max ${max})</div>
+  <svg class="spark" viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none" role="img" aria-label="${esc(a.metric)} trend: ${h.join(", ")}">
+   <line x1="0" y1="${ht-p}" x2="${w}" y2="${ht-p}" stroke="#3b3355" stroke-width="1"/>
+   <polygon points="${p},${ht-p} ${line} ${lx},${ht-p}" fill="rgba(242,193,78,.18)"/>
+   <polyline points="${line}" fill="none" stroke="#f2c14e" stroke-width="2"/>
+   <rect x="${lx-3}" y="${ly-3}" width="6" height="6" fill="#f3ead6" stroke="#000"/>
+  </svg>`;
+}
+function itemList(a){
+  const its=itemsOf(a); if(!its.length)return `<div class="role">Nothing open.</div>`;
+  return `<ul class="items">${its.map(it=>{const d=!!DONE[it.id];
+    return `<li class="${d?'done':''}"><label><input type="checkbox" id="chk-${esc(it.id)}" data-id="${esc(it.id)}" data-agent="${a.id}" data-text="${esc(it.text)}" ${d?'checked':''} ${canWrite?'':'disabled'}><span>${esc(it.text)}</span></label></li>`}).join("")}</ul>
+   ${canWrite?'':'<div class="ro-note">Ticking items needs the board open in Claude while signed in.</div>'}`;
+}
+function notesHtml(a){
+  if(!a.notes||!a.notes.length)return "";
+  const t={research:"THIS WEEK'S FINDS",learn:"LESSONS",hub:"STORAGE & USAGE"}[a.id]||"NOTES";
+  return `<div class="pt">${t}</div><div class="cards">${a.notes.map(n=>`<div class="card"><b>${esc(n.title)}</b><span>${esc(n.text)}</span>${n.url&&/^https:\/\//.test(n.url)?`<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.url.replace(/^https:\/\//,"").slice(0,60))}</a>`:""}</div>`).join("")}</div>`;
+}
+function askBox(a){
+  return sample?`<div class="pt" style="margin-top:6px">ASK ${esc(a.name)}</div><form class="ask" id="askform"><input id="askq" placeholder="e.g. What's most urgent here?" autocomplete="off"><button class="btn-gold" id="askbtn">ASK</button></form><div class="answer" id="ans">Answers come from this board's data only.</div>`:`<div class="ro-note">Open the board in Claude to ask agents questions.</div>`;
+}
+function renderUI(){
+  const d=DATA;
+  updated.textContent=d.updated; ticker.textContent=d.ticker; exampleTag.hidden=!d.example;
+  const col={good:"var(--good)",warn:"var(--warn)",bad:"var(--bad)"};
+  legend.innerHTML=d.agents.map(a=>`<button class="tab ${a.id==sel?'sel':''}" id="tab-${a.id}" data-id="${a.id}"><span class="dot" style="background:${col[a.status]||col.good}"></span>${esc(a.name)}</button>`).join("")+
+    `<button class="tab ${sel=='meet'?'sel':''}" id="tab-meet" data-id="meet">SUNDAY MEETING</button>`;
+  legend.querySelectorAll("button").forEach(b=>b.onclick=()=>{sel=b.dataset.id;selBot=null;renderUI()});
+  panel.classList.toggle("wide",sel=="records");
+  if(sel=="meet"){panel.innerHTML=`<div><div class="pt">SUNDAY MEETING</div><div class="role">${esc(d.meeting.date)}</div><ul>${d.meeting.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div><div><div class="pt">SKILLS LIBRARY</div><div class="skills">${d.skills.map(s=>`<span class="skill">${esc(s)}</span>`).join("")}</div></div>`;}
+  else if(sel=="records"){renderRecords()}
+  else{
+  const a=d.agents.find(x=>x.id==sel)||d.agents[0], {L,X}=lvl(a), b=bonus(a);
+  const recent=selBot==a.id?`<div class="pt">LAST FINDINGS</div><ul>${(a.recent||[a.say]).slice(0,3).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
+  panel.innerHTML=`<div><div class="pt">${esc(a.name)} · LV ${L}</div><div class="role">${esc(a.room)} · ${esc(a.role)}</div>
+   <div class="stats">${(a.stats||[]).map(([k,v])=>`<span class="chip ${a.status}">${esc(k)}: ${esc(v)}</span>`).join("")}</div>
+   <div class="xp"><i style="width:${X}%"></i></div><div class="meta"><span>XP ${X}/100${b?` (+${b} from your ticks)`:""}</span><span class="${a.status}">${a.status=='good'?'On track':a.status=='warn'?'Needs you':'Urgent'}</span></div>
+   ${spark(a)}${recent}
+   ${a.id=="cos"?`<div class="pt">TODAY'S TOP 5</div><ol style="margin:0;padding-left:22px">${d.top5.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`:""}</div>
+   <div>${notesHtml(a)}<div class="pt">OPEN ITEMS</div>${itemList(a)}${askBox(a)}</div>`;
+  panel.querySelectorAll("input[type=checkbox]").forEach(c=>c.onchange=()=>toggleDone(c));
+  const f=document.getElementById("askform"); if(f)f.onsubmit=e=>{e.preventDefault();ask(a)};
+  }
+  renderQueue();
+}
+
+/* ---------- records office ---------- */
+function rowsOf(t){
+  const q=recQ.toLowerCase();
+  return Object.entries(REC[t]).filter(([id,r])=>r.active!==false&&(!q||JSON.stringify(r).toLowerCase().includes(q)))
+    .sort((a,b)=>String(a[1].flagship||"").localeCompare(String(b[1].flagship||""))||String(a[1].name||"").localeCompare(String(b[1].name||"")));
+}
+function renderRecords(){
+  const t=recTab, sc=SCHEMA[t], rows=rowsOf(t);
+  const cols=sc.fields.filter(([k])=>k!="notes");
+  panel.innerHTML=`<div>
+    <div class="pt">RECORDS OFFICER · ${recCount("tenants")} TENANTS · ${recCount("contractors")} CONTRACTORS · ${recCount("projects")} PROJECTS</div>
+    <div class="role">Tap a button and the Records Officer interviews you, or type freely (e.g. "add contractor Khoury HVAC, all flagships, 4h response").</div>
+    <div class="acts">${Object.entries(SCHEMA).map(([k,v])=>`<button class="btn-gold" data-start="${k}" ${sample&&canWrite?'':'disabled'}>+ ${v.label.toUpperCase()}</button>`).join("")}<button data-start="free" ${sample&&canWrite?'':'disabled'}>Update / other</button></div>
+    ${sample&&canWrite?'':'<div class="ro-note">Entering records needs the board open in Claude while signed in.</div>'}
+    <div class="chat" id="chat" ${chat.length?'':'hidden'}>${chat.filter(m=>!m.hidden).map(m=>`<div class="msg ${m.role=='user'?'me':'bot'}">${esc(m.content)}</div>`).join("")}${chatBusy?'<div class="msg bot" id="typing">…</div>':''}</div>
+    <form class="ask" id="chatform" ${chat.length?'':'hidden'}><input id="chatin" placeholder="Answer here…" autocomplete="off"><button class="btn-gold" ${chatBusy?'disabled':''}>SEND</button><button type="button" id="chatend">Done</button></form>
+    <div class="rtabs" style="margin-top:6px">${Object.entries(SCHEMA).map(([k,v])=>`<button class="tab ${k==t?'sel':''}" data-rtab="${k}">${v.label.toUpperCase()}S (${recCount(k)})</button>`).join("")}
+      <input class="search" id="recsearch" placeholder="Search…" value="${esc(recQ)}" autocomplete="off" style="max-width:260px">
+      <button id="xlsx" ${downloads&&window.XLSX?'':'disabled'}>Download Excel</button></div>
+    <div class="tbl">${rows.length?`<table><thead><tr>${cols.map(([,l])=>`<th>${esc(l)}</th>`).join("")}</tr></thead><tbody>${rows.map(([id,r])=>`<tr>${cols.map(([k])=>`<td class="${k=='source'&&/email/i.test(r[k]||'')?'src':''}">${esc(r[k])}</td>`).join("")}</tr>`).join("")}</tbody></table>`:
+      `<div style="padding:10px" class="role">${recLoaded?(recQ?"No match.":`No ${sc.label.toLowerCase()}s yet. ${t=="tenants"?"The Verdun Mall list loads from the Hub on the next daily run.":"Tap + "+sc.label.toUpperCase()+" to add the first one."}`):"Loading records…"}</div>`}</div>
+    <div class="ro-note">Orange source = contact found in your emails, please confirm.</div>
+  </div>`;
+  panel.querySelectorAll("[data-start]").forEach(b=>b.onclick=()=>startChat(b.dataset.start));
+  panel.querySelectorAll("[data-rtab]").forEach(b=>b.onclick=()=>{recTab=b.dataset.rtab;renderRecords()});
+  const s=document.getElementById("recsearch"); s.oninput=()=>{recQ=s.value;const p=s.selectionStart;renderRecords();const n=document.getElementById("recsearch");n.focus();n.setSelectionRange(p,p)};
+  document.getElementById("xlsx").onclick=exportXlsx;
+  const f=document.getElementById("chatform"); f.onsubmit=e=>{e.preventDefault();const v=chatin.value.trim();if(v&&!chatBusy){chat.push({role:"user",content:v});runChat()}};
+  document.getElementById("chatend").onclick=()=>{chatCtl?.abort();chat=[];chatBusy=false;renderRecords()};
+  const c=document.getElementById("chat"); if(c)c.scrollTop=c.scrollHeight;
+  if(chat.length&&!chatBusy)document.getElementById("chatin")?.focus();
+}
+function startChat(type){
+  chatCtl?.abort(); chatType=type;
+  const opener=type=="free"?"I want to update or add records.":`I want to add a new ${SCHEMA[type].label.toLowerCase()} or update an existing one.`;
+  chat=[{role:"user",content:opener}]; runChat();
+}
+function sysPrompt(){
+  const sch=Object.entries(SCHEMA).map(([k,v])=>`${k}: ${v.fields.map(f=>f[0]).join(", ")}`).join("\n");
+  return `You are the RECORDS OFFICER in Sultan's Head Office, the data-entry agent for Sultan Al Achi (Operations & Digital Transformation lead, ABC Lebanon). You keep three record lists: tenants, contractors, projects.
+Flagships: ${FLAGSHIPS}.
+Fields per list:\n${sch}
+How to work:
+- Interview him ONE short question at a time. Ask only what's missing; accept "skip" for optional fields. Required: tenants = flagship + name; contractors = name + service; projects = name + status.
+- Before adding, call search_records to check for an existing record and offer to update it instead of duplicating.
+- If he types several details at once, extract them all.
+- Before saving, show a compact summary and ask "Save?". Only call save_record after he confirms. For an update, pass the existing id.
+- Projects status must be one of: On track, At risk, Blocked, Done. Tenant status e.g. Open, Closed, Fit-out, Vacant.
+- Set source to "manual" for what he enters.
+- After saving, confirm in one line and ask if there's another record.
+- Corporate, direct, brief. English.`;
+}
+const TOOLS=[
+ {name:"search_records",description:"Search a record list by free text. Returns up to 10 matches with their id and fields.",
+  inputSchema:{type:"object",properties:{type:{type:"string",enum:["tenants","contractors","projects"]},q:{type:"string"}},required:["type","q"]},
+  execute:i=>{const t=String(i.type);if(!REC[t])throw new Error("unknown list");const q=String(i.q||"").toLowerCase();
+    return Object.entries(REC[t]).filter(([,r])=>!q||JSON.stringify(r).toLowerCase().includes(q)).slice(0,10).map(([id,r])=>({id,...r}))}},
+ {name:"save_record",description:"Create or update one record after the user confirmed. Pass id to update an existing record (fields are merged). Returns the saved id.",
+  inputSchema:{type:"object",properties:{type:{type:"string",enum:["tenants","contractors","projects"]},id:{type:"string"},fields:{type:"object"}},required:["type","fields"]},
+  execute:async i=>{const t=String(i.type),sc=SCHEMA[t];if(!sc)throw new Error("unknown list");if(!db||!canWrite)throw new Error("saving is not available in this view");
+    const allowed=Object.fromEntries(sc.fields.map(f=>[f[0],1]));const f={};for(const [k,v] of Object.entries(i.fields||{}))if(allowed[k]&&v!=null)f[k]=String(v).slice(0,300);
+    let id=i.id?String(i.id):slug(sc.key.map(k=>f[k]||"").join(" "));if(!id||id=="x")throw new Error("missing "+sc.key.join(" + "));
+    const prev=REC[t][id]||{};const doc={...prev,...f,active:true,updated_at:new Date().toISOString()};if(!prev.source&&!f.source)doc.source="manual";
+    await db.doc(`${t}/${slug(id)}`).set(doc);REC[t][slug(id)]=doc;return {saved:slug(id)}}},
+ {name:"deactivate_record",description:"Mark a record inactive (hidden from lists) after the user confirmed. Returns ok.",
+  inputSchema:{type:"object",properties:{type:{type:"string",enum:["tenants","contractors","projects"]},id:{type:"string"}},required:["type","id"]},
+  execute:async i=>{const t=String(i.type),id=String(i.id);if(!REC[t]?.[id])throw new Error("no such record");await db.doc(`${t}/${id}`).update({active:false,updated_at:new Date().toISOString()});return "ok"}}
+];
+async function runChat(){
+  if(!sample)return; chatBusy=true; chatCtl?.abort(); chatCtl=new AbortController(); renderRecords();
+  const msgs=chat.map((m,i)=>({role:m.role,content:i==0?sysPrompt()+"\n\n---\nSultan: "+m.content:m.content}));
+  const live={role:"assistant",content:""};
+  try{
+    const r=await sample(msgs,{signal:chatCtl.signal,cache:false,tools:TOOLS,onText:({text})=>{live.content=text;const t=document.getElementById("typing");if(t)t.textContent=text}});
+    chat.push({role:"assistant",content:r.text||live.content||"Saved."});
+  }catch(e){ if(e?.name=="AbortError"||e?.code=="aborted"){chatBusy=false;return}
+    chat.push({role:"assistant",content:e?.code=="rate_limited"?"Too many requests. Try again in a minute.":e?.code=="not_granted"?"The Records Officer wasn't allowed to run on this board.":"Something went wrong. Please repeat your last answer."}); }
+  chatBusy=false; renderRecords();
+}
+async function exportXlsx(){
+  if(!window.XLSX||!downloads)return;
+  const wb=XLSX.utils.book_new();
+  for(const [t,sc] of Object.entries(SCHEMA)){
+    const rows=Object.values(REC[t]).filter(r=>r.active!==false).map(r=>Object.fromEntries(sc.fields.map(([k,l])=>[l,r[k]??""])));
+    const ws=rows.length?XLSX.utils.json_to_sheet(rows):XLSX.utils.aoa_to_sheet([sc.fields.map(f=>f[1])]);
+    XLSX.utils.book_append_sheet(wb,ws,sc.label+"s");
+  }
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const d=new Date().toISOString().slice(0,10);
+  try{await downloads.save({filename:`Head Office Records ${d}.xlsx`,data:new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})})}catch(e){}
+}
+
+function renderQueue(){
+  const ds=DATA.drafts||[]; const pending=ds.filter(x=>!APPROVALS[x.id]);
+  qcount.textContent=pending.length; qerr.textContent=QERR; qerr.hidden=!QERR;
+  const name=id=>(DATA.agents.find(a=>a.id==id)||{}).name||id;
+  queue.innerHTML=ds.length?ds.map(x=>{const s=APPROVALS[x.id]?.status;
+   return `<div class="draft"><div><div>${esc(x.subject)}</div><div class="sub">${esc(name(x.agent))} → ${esc(x.to)} · ${esc(x.summary)}</div></div>
+    <div class="acts">${s?`<span class="${s=='skipped'?'status-no':'status-ok'}">${s=='sent'?'SENT ✓':s=='approved'?'SENDS NEXT RUN':'SKIPPED'}</span>${s=='sent'?'':` <button data-undo="${esc(x.id)}" ${canWrite?'':'disabled'}>Undo</button>`}`:
+     `<button class="btn-gold" data-ok="${esc(x.id)}" ${canWrite?'':'disabled'}>Approve</button><button data-no="${esc(x.id)}" ${canWrite?'':'disabled'}>Skip</button>`}</div></div>`}).join(""):`<div class="role">No drafts waiting. New ones appear after each daily run.</div>`;
+  queue.querySelectorAll("[data-ok]").forEach(b=>b.onclick=()=>setApproval(b.dataset.ok,"approved"));
+  queue.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>setApproval(b.dataset.no,"skipped"));
+  queue.querySelectorAll("[data-undo]").forEach(b=>b.onclick=()=>setApproval(b.dataset.undo,null));
+}
+
+/* ---------- db writes ---------- */
+const safeId=s=>String(s).replace(/[^A-Za-z0-9_-]/g,"_").slice(0,120);
+async function toggleDone(c){
+  if(!db)return; c.disabled=true; const ref=db.doc("done/"+safeId(c.dataset.id));
+  try{ if(c.checked) await ref.set({item:c.dataset.id,agent:c.dataset.agent,text:c.dataset.text,at:new Date().toISOString(),counted:false});
+       else await ref.delete(); }
+  catch(e){ c.checked=!c.checked; }
+  c.disabled=false;
+}
+async function setApproval(id,status){
+  if(!db)return; const ref=db.doc("approvals/"+safeId(id));
+  const dr=(DATA.drafts||[]).find(x=>x.id==id);
+  if(status=="approved"&&mcp&&dr&&dr.messageId){ // instant send from Outlook Drafts
+    const btn=queue.querySelector(`[data-ok="${CSS.escape(id)}"]`); if(btn){btn.disabled=true;btn.textContent="Sending…"}
+    try{ await mcp.callTool("Microsoft 365","outlook_send_draft",{messageId:dr.messageId});
+      await ref.set({draft:id,status:"sent",at:new Date().toISOString()}); return; }
+    catch(e){ const why=e?.code=="not_granted"||e?.code=="denied"?"Outlook access was not allowed":"Couldn't send now";
+      if(btn){btn.disabled=false;btn.textContent="Approve"} QERR=`${why}. It will send on the next run instead.`; }
+  }
+  try{ status? await ref.set({draft:id,status,at:new Date().toISOString()}) : await ref.delete(); }catch(e){}
+}
+
+/* ---------- ask an agent ---------- */
+let askCtl=null;
+async function ask(a){
+  const q=askq.value.trim(); if(!q||!sample)return;
+  askCtl?.abort(); askCtl=new AbortController(); ans.textContent="Thinking…"; askbtn.disabled=true;
+  const ctx={agent:{name:a.name,role:a.role,status:a.status,stats:a.stats,items:itemsOf(a).map(i=>i.text),recent:a.recent,metric:a.metric,history:a.history,notes:a.notes},
+    top5:DATA.top5,drafts:(DATA.drafts||[]).filter(x=>x.agent==a.id),updated:DATA.updated,example:DATA.example,
+    records:{tenants:recCount("tenants"),contractors:recCount("contractors"),projects:Object.values(REC.projects).filter(r=>r.active!==false)}};
+  try{
+    await sample(`You are the "${a.name}" agent in Sultan's Head Office, working for Sultan Al Achi, Operations & Digital Transformation lead at ABC (5 Lebanese flagships: ${FLAGSHIPS}). Answer in a corporate, direct tone, max 6 short lines. Use ONLY the board data below${a.id=="learn"||a.id=="research"?", plus your general knowledge for explanations":""}; if the data doesn't contain the answer, say so and say what source would. ${DATA.example?"Note: the board currently holds example data, say so.":""}\n\nBOARD DATA:\n${JSON.stringify(ctx)}\n\nQUESTION: ${q}`,
+      {signal:askCtl.signal,cache:false,modelTier:"quick",onText:({text})=>{ans.textContent=text}});
+  }catch(e){ ans.textContent=e?.code=="rate_limited"?"Too many questions. Try again in a minute.":e?.code=="not_granted"?"Asking agents was not allowed for this board.":"Couldn't get an answer. Try again."; }
+  askbtn.disabled=false;
+}
+
+/* ---------- level-up ---------- */
+function checkLevels(){
+  let seen={}; try{seen=JSON.parse(localStorage.getItem("abchq-levels")||"{}")}catch(e){}
+  const ups=[]; DATA.agents.forEach(a=>{const L=lvl(a).L; if(seen[a.id]&&L>seen[a.id])ups.push(a); seen[a.id]=L});
+  try{localStorage.setItem("abchq-levels",JSON.stringify(seen))}catch(e){}
+  if(ups.length&&!DATA.example){lvlup.innerHTML=ups.map(a=>`LEVEL UP!<br>${esc(a.name)} → LV ${lvl(a).L}`).join("<br>");lvlup.hidden=false;setTimeout(()=>lvlup.hidden=true,4000)}
+}
+
+/* ---------- input + loop ---------- */
+cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect();const px=(e.clientX-r.left)/r.width*W*T,py=(e.clientY-r.top)/r.height*H*T;
+  const hit=bots.find(b=>Math.abs(b.x-px)<10&&py>b.y-12&&py<b.y+16);
+  if(hit){sel=hit.a.id;selBot=hit.a.id}
+  else{selBot=null;for(const [id,rm] of Object.entries(ROOMS))if(inRoom(px,py,rm))sel=id}
+  renderUI();panel.scrollIntoView({behavior:"smooth",block:"nearest"})});
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function frame(now){
+  const dt=Math.min(50,now-last);last=now;
+  g.setTransform(S,0,0,S,0,0); drawStatic(now);
+  if(sel&&ROOMS[sel]&&!selBot){const r=ROOMS[sel];g.strokeStyle="#f2c14e";g.lineWidth=2;g.strokeRect(r.x*T+1,r.y*T+1,r.w*T-2,r.h*T-2)}
+  bots.forEach((b,i)=>{ if(!reduce){ if(b.tx===null){b.wait-=dt;if(b.wait<=0)pickTarget(b,i)} else pathStep(b,dt) } });
+  [...bots].sort((p,q)=>p.y-q.y).forEach(b=>drawBot(b,now));
+  bots.forEach(b=>bubble(b,now));
+  requestAnimationFrame(frame);
+}
+function mergeAgents(d){ // keep new agents visible even if data.json predates them
+  const ids=new Set(d.agents.map(a=>a.id)); SAMPLE.agents.forEach((a,i)=>{if(!ids.has(a.id))d.agents.splice(Math.min(i,d.agents.length),0,{...a,items:[],notes:a.notes&&!d.example?[]:a.notes,say:a.id=="records"?a.say:"First run tomorrow"})});
+  d.agents.sort((a,b)=>SAMPLE.agents.findIndex(x=>x.id==a.id)-SAMPLE.agents.findIndex(x=>x.id==b.id)); return d;
+}
+function boot(d){DATA=mergeAgents(d);mkBots();renderUI();checkLevels()}
+boot(SAMPLE);
+(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>requestAnimationFrame(frame));
+let FROM_FILE=false;
+function bootLive(d,file){if(!d||!d.agents)return;if(file)FROM_FILE=true;else if(FROM_FILE)return;boot(d)}
+function loadFile(){fetch(new URL("data.json",location.href).href+"?t="+Date.now(),{cache:"no-store",credentials:"include"}).then(r=>r.ok?r.json():null).then(d=>bootLive(d,true)).catch(()=>{})}
+loadFile();
+setTimeout(()=>{if(DATA.example){exampleTag.textContent="LIVE DATA NOT LOADED · PULL TO REFRESH"}},8000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadFile()});
+
+/* ---------- capabilities ---------- */
+(async()=>{
+  try{ sample=await window.claude?.use?.("sample"); }catch(e){ sample=null }
+  try{ downloads=await window.claude?.use?.("downloads"); }catch(e){ downloads=null }
+  try{ mcp=await window.claude?.use?.("mcp"); }catch(e){ mcp=null }
+  try{
+    const user=await window.claude?.use?.("user");
+    db=await window.claude?.use?.("db");
+    canWrite=!!db && (user?.can?.("data.write")!==false);
+    if(db){
+      db.collection("done").onSnapshot(s=>{DONE={};s.docs.forEach(x=>DONE[x.data().item]=x.data());renderUI();checkLevels()},()=>{});
+      db.collection("approvals").onSnapshot(s=>{APPROVALS={};s.docs.forEach(x=>APPROVALS[x.data().draft]=x.data());renderQueue()},()=>{});
+      db.collection("board").onSnapshot(s=>{s.docs.forEach(x=>{if(x.id=="live"){try{const v=x.data();if(v&&v.json)bootLive(JSON.parse(v.json))}catch(e){}}})},()=>{});
+      for(const t of Object.keys(SCHEMA)) db.collection(t).onSnapshot(s=>{REC[t]={};s.docs.forEach(x=>REC[t][x.id]=x.data());recLoaded=true;if(sel=="records"&&!chatBusy)renderRecords()},()=>{recLoaded=true});
+    } else recLoaded=true;
+  }catch(e){ db=null; canWrite=false; recLoaded=true }
+  renderUI();
+})();
+</script>
+
+</body></html>
